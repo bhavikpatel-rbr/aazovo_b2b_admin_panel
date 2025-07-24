@@ -180,12 +180,12 @@ const Input = (props: InputProps) => {
 
     const renderAffixInput = (
         <span className={inputWrapperClass}>
-            {prefix ? (
+            {/* {prefix ? (
                 <div ref={prefixNode} className="input-suffix-start">
                     {' '}
                     {prefix}{' '}
                 </div>
-            ) : null}
+            ) : null} */}
             {renderInput}
             {suffix ? (
                 <div ref={suffixNode} className="input-suffix-end">

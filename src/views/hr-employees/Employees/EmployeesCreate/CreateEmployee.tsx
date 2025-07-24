@@ -20,12 +20,12 @@ import { HiOutlineTrash } from 'react-icons/hi';
 import { TbPlus, TbTrash, TbX, TbChevronLeft, TbChevronRight, TbFile, TbFileSpreadsheet, TbFileTypePdf } from "react-icons/tb";
 
 // Redux
-import { addEmployeesAction, editEmployeesAction, apiGetEmployeeById } from '@/reduxtool/master/middleware';
+import { addEmployeesAction, editEmployeesAction, apiGetEmployeeById, getParentCategoriesAction } from '@/reduxtool/master/middleware';
 import { masterSelector } from '@/reduxtool/master/masterSlice';
 import {
     getRolesAction, getDepartmentsAction, getDesignationsAction,
     getCountriesAction, getCategoriesAction,
-    getBrandAction, getAllProductsAction, getMemberAction, getEmployeesListingAction
+    getBrandAction, getProductsAction, getMemberAction, getEmployeesListingAction
 } from '@/reduxtool/master/middleware';
 
 
@@ -199,8 +199,8 @@ interface EquipmentItemFE {
 
 interface EmployeeFormSchema {
     id?: string;
-    registration: { fullName: string; dateOfJoining: Date | null; mobileNumber: string; mobileNumberCode: { label: string, value: string }; email: string; experience: string; password?: string; };
-    personalInformation: { status: { label: string, value: string }; dateOfBirth: Date | null; age: number | string; gender: { label: string, value: string } | null; nationalityId: { label: string, value: string } | null; bloodGroup: { label: string, value: string } | null; permanentAddress: string; localAddress: string; maritual_status: { label: string, value: string } | null; };
+    registration: { fullName: string; dateOfJoining: Date | null; mobileNumber: string; mobileNumberCode: { label: string, value: string }; email: string; experience: string; password?: string; status: { label: string, value: string }; jobStatus: { label: string, value: string } | null; };
+    personalInformation: { dateOfBirth: Date | null; age: number | string; gender: { label: string, value: string } | null; nationalityId: { label: string, value: string } | null; bloodGroup: { label: string, value: string } | null; permanentAddress: string; localAddress: string; maritual_status: { label: string, value: string } | null; };
     roleResponsibility: { roleId: { label: string, value: string } | null; departmentId: { label: string, value: string }[]; designationId: { label: string, value: string } | null; countryId: { label: string, value: string }[]; categoryId: { label: string, value: string }[]; subcategoryId: { label: string, value: string }[]; brandId: { label: string, value: string }[]; productServiceId: { label: string, value: string }[]; reportingHrId: { label: string, value: string }[]; reportingHeadId: { label: string, value: string } | null; };
     training: { inductionDateCompletion: Date | null; inductionRemarks: string; departmentTrainingDateCompletion: Date | null; departmentTrainingRemarks: string; };
     offBoarding: { exit_interview_conducted: 'yes' | 'no' | ''; exit_interview_remark: string; resignation_letter_received: 'yes' | 'no' | ''; resignation_letter_remark: string; company_assets_returned: 'all' | 'partial' | 'none' | ''; assets_returned_remarks: string; full_and_final_settlement: 'yes' | 'no' | ''; fnf_remarks: string; notice_period_status: 'served' | 'waived' | ''; notice_period_remarks: string; };
@@ -212,47 +212,22 @@ type FormSectionKey = keyof Omit<EmployeeFormSchema, 'id'>;
 
 
 // --- ZOD SCHEMA ---
-const requiredSelectSchema = z.object({ label: z.string(), value: z.string() }, { required_error: "This field is required." });
-const optionalSelectSchema = z.object({ label: z.string(), value: z.string() }).nullable().optional();
-const requiredFileSchema = z.any().refine(val => val !== null && val !== undefined && val !== '', { message: "This file is required." });
-
 const employeeFormValidationSchema = z.object({
     id: z.string().optional(),
     registration: z.object({
         fullName: z.string().min(1, 'Full Name is required'),
         dateOfJoining: z.date({ required_error: "Date of joining is required." }),
-        mobileNumber: z.string().min(10, 'Mobile number must be at least 10 digits').regex(/^\d+$/, "Invalid phone number"),
-        mobileNumberCode: requiredSelectSchema,
+        mobileNumber: z.string().min(1, 'Mobile number is required'),
         email: z.string().min(1, 'Email is required').email('Invalid email format'),
-        experience: z.string().min(1, 'Experience is required'),
-        password: z.string().min(6, "Password must be at least 6 characters.").optional().or(z.literal('')),
-    }),
-    personalInformation: z.object({
-        status: requiredSelectSchema,
-        dateOfBirth: z.date({ required_error: "Date of birth is required." }),
-        nationalityId: requiredSelectSchema,
-    }).passthrough(),
-    documentSubmission: z.object({
-        identity_proof: requiredFileSchema,
-        address_proof: requiredFileSchema,
-    }).passthrough(),
-    roleResponsibility: z.object({
-        roleId: requiredSelectSchema,
-        departmentId: z.array(requiredSelectSchema).min(1, "At least one department is required."),
-        designationId: requiredSelectSchema,
-    }).passthrough(),
+    }).passthrough(), // Use passthrough to allow other (non-validated) fields
+
+    // All other sections are completely optional and will not be validated.
+    personalInformation: z.any().optional(),
+    roleResponsibility: z.any().optional(),
     training: z.any().optional(),
     offBoarding: z.any().optional(),
     equipmentsAssetsProvided: z.any().optional(),
-}).superRefine((data, ctx) => {
-    if (!data.id && (!data.registration.password || data.registration.password.length < 6)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Password is required for new employees.", path: ["registration", "password"] });
-    }
-    if (data.registration.dateOfJoining && data.personalInformation.dateOfBirth) {
-        if (dayjs(data.personalInformation.dateOfBirth).isAfter(data.registration.dateOfJoining)) {
-            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "DOB cannot be after joining date.", path: ["personalInformation", "dateOfBirth"] });
-        }
-    }
+    documentSubmission: z.any().optional(),
 });
 
 
@@ -264,7 +239,7 @@ const Navigator = ({ activeSection, onNavigate }: { activeSection: FormSectionKe
     ];
     return (
         <div className="flex overflow-x-auto sm:justify-center">
-            <div className="flex flex-nowrap gap-x-25 gap-y-2">
+            <div className="flex flex-nowrap gap-x-10 gap-y-2">
                 {sections.map(sec => (
                     <button
                         key={sec.key} type="button" onClick={() => onNavigate(sec.key)}
@@ -286,20 +261,43 @@ const RegistrationSection = ({ control, errors }: FormSectionBaseProps) => {
     const { CountriesData = [] } = useSelector(masterSelector);
     useEffect(() => { if (!Array.isArray(CountriesData) || CountriesData.length === 0) dispatch(getCountriesAction()); }, [dispatch, CountriesData]);
 
-    const countryCodeOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData
-        .filter((c: any) => c.phone_code)
-        .map((c: any) => ({ value: `+${c.phone_code}`, label: `+${c.phone_code} (${c.name})` }))
-        .sort((a, b) => a.label.localeCompare(b.label)) : [], [CountriesData]);
+    // const countryCodeOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData
+    //     .filter((c: any) => c.phone_code)
+    //     .map((c: any) => ({ value: `+${c.phone_code}`, label: `+${c.phone_code} (${c.name})` }))
+    //     .sort((a, b) => a.label.localeCompare(b.label)) : [], [CountriesData]);
+    const countryCodeOptions = useMemo(() => {
+    const uniqueCountriesMap = new Map();
+    (CountriesData || []).forEach((country: any) => {
+      uniqueCountriesMap.set(country.id, country);
+    });
+    return Array.from(uniqueCountriesMap.values()).map((value: any) => ({
+      value: value.phone_code,
+      label: value.phone_code,
+    }));
+  }, [CountriesData]);
+    const statusOptions = [
+        { value: "Active", label: "Active" },
+        { value: "Disabled", label: "Disabled" },
+        { value: "Blocked", label: "Blocked" },
+    ];
+    
+    const jobStatusOptions = [
+        { value: 'Probation', label: 'Probation' },
+        { value: 'On notice', label: 'On notice' },
+        { value: 'Warning', label: 'Warning' },
+    ];
 
     return (
         <Card id="registration"><h4 className="mb-6">Registration</h4><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <FormItem label={<>Full Name <span className="text-red-500">*</span></>} invalid={!!errors.registration?.fullName} errorMessage={errors.registration?.fullName?.message}><Controller name="registration.fullName" control={control} render={({ field }) => <Input placeholder="Enter full name" {...field} />} /></FormItem>
             <FormItem label={<>Date of Joining <span className="text-red-500">*</span></>} invalid={!!errors.registration?.dateOfJoining} errorMessage={errors.registration?.dateOfJoining?.message}><Controller name="registration.dateOfJoining" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} /></FormItem>
-            <FormItem label={<>Mobile Number <span className="text-red-500">*</span></>} invalid={!!errors.registration?.mobileNumber || !!errors.registration?.mobileNumberCode} errorMessage={errors.registration?.mobileNumber?.message || (errors.registration?.mobileNumberCode as any)?.message}>
+            <FormItem label={<>Mobile Number <span className="text-red-500">*</span></>} invalid={!!errors.registration?.mobileNumber} errorMessage={errors.registration?.mobileNumber?.message}>
                 <div className='flex gap-2'><div className='w-1/3'><Controller name="registration.mobileNumberCode" control={control} render={({ field }) => <Select options={countryCodeOptions} placeholder="Code" {...field} />} /></div><div className='w-2/3'><Controller name="registration.mobileNumber" control={control} render={({ field }) => <Input type="tel" placeholder="9876543210" {...field} />} /></div></div></FormItem>
             <FormItem label={<>Email <span className="text-red-500">*</span></>} invalid={!!errors.registration?.email} errorMessage={errors.registration?.email?.message}><Controller name="registration.email" control={control} render={({ field }) => <Input type="email" placeholder="employee@company.com" {...field} />} /></FormItem>
-            <FormItem label={<>Experience <span className="text-red-500">*</span></>} invalid={!!errors.registration?.experience} errorMessage={errors.registration?.experience?.message}><Controller name="registration.experience" control={control} render={({ field }) => <Input placeholder="e.g., 3 years" {...field} />} /></FormItem>
-            <FormItem label={<>Password {!isEditMode && <span className="text-red-500">*</span>}</>} invalid={!!errors.registration?.password} errorMessage={errors.registration?.password?.message}><Controller name="registration.password" control={control} render={({ field }) => <Input type="password" placeholder={isEditMode ? "Enter new password (optional)" : "Enter password"} {...field} />} /></FormItem>
+            <FormItem label="Experience" invalid={!!errors.registration?.experience} errorMessage={errors.registration?.experience?.message}><Controller name="registration.experience" control={control} render={({ field }) => <Input placeholder="e.g., 3 years" {...field} />} /></FormItem>
+            <FormItem label="Password" invalid={!!errors.registration?.password} errorMessage={errors.registration?.password?.message}><Controller name="registration.password" control={control} render={({ field }) => <Input type="password" placeholder={isEditMode ? "Enter new password (optional)" : "Enter password"} {...field} />} /></FormItem>
+            <FormItem label="Status" invalid={!!(errors.registration as any)?.status} errorMessage={(errors.registration as any)?.status?.message}><Controller name="registration.status" control={control} defaultValue={{ value: 'Active', label: 'Active' }} render={({ field }) => <Select placeholder="Select Status" options={statusOptions} {...field} />} /></FormItem>
+            <FormItem label="Job Status" invalid={!!(errors.registration as any)?.jobStatus} errorMessage={(errors.registration as any)?.jobStatus?.message}><Controller name="registration.jobStatus" control={control} render={({ field }) => <Select placeholder="Select Job Status" options={jobStatusOptions} {...field} />} /></FormItem>
         </div></Card>
     );
 };
@@ -308,23 +306,19 @@ const PersonalInformationSection = ({ control, errors }: FormSectionBaseProps) =
     const { CountriesData = [] } = useSelector(masterSelector);
     useEffect(() => { if (!Array.isArray(CountriesData) || CountriesData.length === 0) dispatch(getCountriesAction()); }, [dispatch, CountriesData]);
     const nationalityOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData.map((c: any) => ({ value: String(c.id), label: c.name })) : [], [CountriesData]);
-    const statusOptions = [  { value: "Active", label: "Active" },
-    { value: "Disabled", label: "Disabled" },
-    { value: "Blocked", label: "Blocked" },];
     const genderOptions = [{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }, { value: 'Other', label: 'Other' }];
     const bloodGroupOptions = [{ value: 'A+', label: 'A+' }, { value: 'B+', label: 'B+' }, { value: 'O+', label: 'O+' }, { value: 'A-', label: 'A-' }, { value: 'B-', label: 'B-' }, { value: 'O-', label: 'O-' }, { value: 'AB+', label: 'AB+' }, { value: 'AB-', label: 'AB-' }, { value: 'Other', label: 'Other' }];
     const maritalStatusOptions = [{ value: 'single', label: 'Single' }, { value: 'married', label: 'Married' }];
     return (
         <Card id="personalInformation"><h4 className="mb-6">Personal Information</h4><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <FormItem label={<>Status <span className="text-red-500">*</span></>} invalid={!!errors.personalInformation?.status} errorMessage={(errors.personalInformation?.status as any)?.message}><Controller name="personalInformation.status" control={control} defaultValue={{ value: 'Active', label: 'Active' }} render={({ field }) => <Select placeholder="Select Status" options={statusOptions} {...field} />} /></FormItem>
-            <FormItem label={<>Date of Birth <span className="text-red-500">*</span></>} invalid={!!errors.personalInformation?.dateOfBirth} errorMessage={errors.personalInformation?.dateOfBirth?.message}><Controller name="personalInformation.dateOfBirth" control={control} render={({ field }) => <DatePicker placeholder="Select Date" value={field.value} onChange={field.onChange} />} /></FormItem>
+            <FormItem label="Date of Birth" invalid={!!errors.personalInformation?.dateOfBirth} errorMessage={errors.personalInformation?.dateOfBirth?.message}><Controller name="personalInformation.dateOfBirth" control={control} render={({ field }) => <DatePicker placeholder="Select Date" value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Age" invalid={!!errors.personalInformation?.age} errorMessage={errors.personalInformation?.age?.message}><Controller name="personalInformation.age" control={control} render={({ field }) => <Input type="number" placeholder="Enter Age" {...field} onChange={e => field.onChange(parseInt(e.target.value) || '')} />} /></FormItem>
             <FormItem label="Gender" invalid={!!errors.personalInformation?.gender} errorMessage={(errors.personalInformation?.gender as any)?.message}><Controller name="personalInformation.gender" control={control} render={({ field }) => <Select placeholder="Select Gender" options={genderOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Marital Status" invalid={!!errors.personalInformation?.maritual_status} errorMessage={(errors.personalInformation?.maritual_status as any)?.message}><Controller name="personalInformation.maritual_status" control={control} render={({ field }) => <Select placeholder="Select Marital Status" options={maritalStatusOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
-            <FormItem label={<>Nationality <span className="text-red-500">*</span></>} invalid={!!errors.personalInformation?.nationalityId} errorMessage={(errors.personalInformation?.nationalityId as any)?.message}><Controller name="personalInformation.nationalityId" control={control} render={({ field }) => <Select placeholder="Select Nationality" options={nationalityOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
+            <FormItem label="Nationality" invalid={!!errors.personalInformation?.nationalityId} errorMessage={(errors.personalInformation?.nationalityId as any)?.message}><Controller name="personalInformation.nationalityId" control={control} render={({ field }) => <Select placeholder="Select Nationality" options={nationalityOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Blood Group" invalid={!!errors.personalInformation?.bloodGroup} errorMessage={(errors.personalInformation?.bloodGroup as any)?.message}><Controller name="personalInformation.bloodGroup" control={control} render={({ field }) => <Select placeholder="Select Blood Group" options={bloodGroupOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
-            <FormItem label="Permanent Address" invalid={!!errors.personalInformation?.permanentAddress} errorMessage={errors.personalInformation?.permanentAddress?.message} className="md:col-span-2 lg:col-span-3"><Controller name="personalInformation.permanentAddress" control={control} render={({ field }) => <Input textArea placeholder="Enter Permanent Address" {...field} />} /></FormItem>
-            <FormItem label="Local Address" invalid={!!errors.personalInformation?.localAddress} errorMessage={errors.personalInformation?.localAddress?.message} className="md:col-span-2 lg:col-span-3"><Controller name="personalInformation.localAddress" control={control} render={({ field }) => <Input textArea placeholder="Enter Local Address" {...field} />} /></FormItem>
+            <FormItem label="Permanent Address" invalid={!!errors.personalInformation?.permanentAddress} errorMessage={errors.personalInformation?.permanentAddress?.message} className="md:col-span-2 lg:col-span-2"><Controller name="personalInformation.permanentAddress" control={control} render={({ field }) => <Input textArea placeholder="Enter Permanent Address" {...field} />} /></FormItem>
+            <FormItem label="Local Address" invalid={!!errors.personalInformation?.localAddress} errorMessage={errors.personalInformation?.localAddress?.message} className="md:col-span-2 lg:col-span-1"><Controller name="personalInformation.localAddress" control={control} render={({ field }) => <Input textArea placeholder="Enter Local Address" {...field} />} /></FormItem>
         </div></Card>
     );
 };
@@ -336,8 +330,8 @@ const DocumentSubmissionSection = ({ control, errors, formMethods }: FormSection
 
     const documentFields = useMemo(() => [
         { name: 'profile_pic' as const, label: "Profile Picture", accept: ".jpg,.jpeg,.png" },
-        { name: 'identity_proof' as const, label: "Identity Proof", required: true, accept: ".pdf,.jpg,.jpeg,.png" },
-        { name: 'address_proof' as const, label: "Address Proof", required: true, accept: ".pdf,.jpg,.jpeg,.png" },
+        { name: 'identity_proof' as const, label: "Identity Proof", accept: ".pdf,.jpg,.jpeg,.png" },
+        { name: 'address_proof' as const, label: "Address Proof", accept: ".pdf,.jpg,.jpeg,.png" },
         { name: 'educational_certificates' as const, label: "Educational Certificates", accept: ".pdf,.zip" },
         { name: 'experience_certificates' as const, label: "Experience Certificates", accept: ".pdf,.zip" },
         { name: 'offer_letter' as const, label: "Offer Letter", accept: ".pdf" },
@@ -409,23 +403,27 @@ const DocumentSubmissionSection = ({ control, errors, formMethods }: FormSection
 };
 
 const RoleResponsibilitySection = ({ control, errors }: FormSectionBaseProps) => {
-    const { Roles, departmentsData, designationsData, BrandData, CategoriesData, AllProducts, MemberData, EmployeesList, CountriesData } = useSelector(masterSelector);
+    const { Roles, departmentsData, designationsData, BrandData, ParentCategories, ProductsData, EmployeesList, CountriesData } = useSelector(masterSelector);
+console.log("productOptions",EmployeesList);
+console.log("productOptions",EmployeesList);
+
 
     const toOptions = (data: any, labelKey = 'name', valueKey = 'id') => Array.isArray(data) ? data.map((item) => ({ value: String(item[valueKey]), label: item[labelKey] })) : [];
     const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: any) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
     const departmentOptions = useMemo(() => toOptions(departmentsData?.data), [departmentsData]);
     const designationOptions = useMemo(() => toOptions(designationsData?.data), [designationsData]);
     const countryOptions = useMemo(() => toOptions(CountriesData), [CountriesData]);
-    const categoryOptions = useMemo(() => toOptions(CategoriesData), [CategoriesData]);
+    const categoryOptions = useMemo(() => toOptions(ParentCategories), [ParentCategories]);
     const brandOptions = useMemo(() => toOptions(BrandData), [BrandData]);
-    const productOptions = useMemo(() => toOptions(AllProducts), [AllProducts]);
-    const reportingHrOptions = useMemo(() => toOptions(EmployeesList?.data?.data), [EmployeesList]);
-    const reportingHeadOptions = useMemo(() => toOptions(MemberData.data), [MemberData]);
+    const productOptions = useMemo(() => toOptions(ProductsData), [ProductsData]);
+    
+    const reportingHrOptions = useMemo(() => toOptions(EmployeesList?.data), [EmployeesList]);
+    const reportingHeadOptions = useMemo(() => toOptions(EmployeesList?.data), [EmployeesList]);
     return (
         <Card id="roleResponsibility"><h4 className="mb-6">Role & Responsibility</h4><div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
-            <FormItem label={<>Role <span className="text-red-500">*</span></>} invalid={!!errors.roleResponsibility?.roleId} errorMessage={(errors.roleResponsibility?.roleId as any)?.message}><Controller name="roleResponsibility.roleId" control={control} render={({ field }) => <Select placeholder="Select Role" options={roleOptions} {...field} />} /></FormItem>
-            <FormItem label={<>Department <span className="text-red-500">*</span></>} invalid={!!errors.roleResponsibility?.departmentId} errorMessage={(errors.roleResponsibility?.departmentId as any)?.message}><Controller name="roleResponsibility.departmentId" control={control} render={({ field }) => <Select isMulti placeholder="Select Departments" options={departmentOptions} {...field} />} /></FormItem>
-            <FormItem label={<>Designation <span className="text-red-500">*</span></>} invalid={!!errors.roleResponsibility?.designationId} errorMessage={(errors.roleResponsibility?.designationId as any)?.message}><Controller name="roleResponsibility.designationId" control={control} render={({ field }) => <Select placeholder="Select Designation" options={designationOptions} {...field} />} /></FormItem>
+            <FormItem label="Role" invalid={!!errors.roleResponsibility?.roleId} errorMessage={(errors.roleResponsibility?.roleId as any)?.message}><Controller name="roleResponsibility.roleId" control={control} render={({ field }) => <Select placeholder="Select Role" options={roleOptions} {...field} />} /></FormItem>
+            <FormItem label="Department" invalid={!!errors.roleResponsibility?.departmentId} errorMessage={(errors.roleResponsibility?.departmentId as any)?.message}><Controller name="roleResponsibility.departmentId" control={control} render={({ field }) => <Select isMulti placeholder="Select Departments" options={departmentOptions} {...field} />} /></FormItem>
+            <FormItem label="Designation" invalid={!!errors.roleResponsibility?.designationId} errorMessage={(errors.roleResponsibility?.designationId as any)?.message}><Controller name="roleResponsibility.designationId" control={control} render={({ field }) => <Select placeholder="Select Designation" options={designationOptions} {...field} />} /></FormItem>
             <FormItem label="Country (Responsibility)"><Controller name="roleResponsibility.countryId" control={control} render={({ field }) => <Select isMulti placeholder="Select Countries" options={countryOptions} {...field} />} /></FormItem>
             <FormItem label="Category (Focus Area)"><Controller name="roleResponsibility.categoryId" control={control} render={({ field }) => <Select isMulti placeholder="Select Categories" options={categoryOptions} {...field} />} /></FormItem>
             <FormItem label="Brand (Responsibility)"><Controller name="roleResponsibility.brandId" control={control} render={({ field }) => <Select isMulti placeholder="Select Brands" options={brandOptions} {...field} />} /></FormItem>
@@ -551,7 +549,9 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('email', values.registration?.email || '');
         formData.append('experience', values.registration?.experience || '');
         if (values.registration.password) formData.append('password', values.registration.password);
-        formData.append('status', objToValue(values.personalInformation?.status));
+        formData.append('status', objToValue(values.registration?.status));
+        formData.append('job_status', objToValue(values.registration?.jobStatus));
+        
         formData.append('date_of_birth', formatDate(values.personalInformation?.dateOfBirth));
         formData.append('age', String(values.personalInformation?.age || ''));
         formData.append('gender', objToValue(values.personalInformation?.gender));
@@ -573,13 +573,11 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
 
         Object.entries(values.documentSubmission || {}).forEach(([key, file]) => {
             if (file instanceof File) {
-                // Backend expects these specific fields to be sent as arrays.
-                // The common convention for this with FormData is to append `[]` to the key name.
                 const isArrayField = [
                     'educational_certificates',
                     'experience_certificates',
                     'salary_slips',
-                    'past_offer_letter', // Based on original buggy implementation
+                    'past_offer_letter',
                 ].includes(key)
 
                 if (isArrayField) {
@@ -703,9 +701,9 @@ const EmployeeFormPage = () => {
         dispatch(getDepartmentsAction());
         dispatch(getDesignationsAction());
         dispatch(getCountriesAction());
-        dispatch(getCategoriesAction());
+        dispatch(getParentCategoriesAction());
         dispatch(getBrandAction());
-        dispatch(getAllProductsAction());
+        dispatch(getProductsAction());
         dispatch(getMemberAction());
         dispatch(getEmployeesListingAction());
     }, [dispatch]);
@@ -725,11 +723,11 @@ const EmployeeFormPage = () => {
         const departmentOptions = toOptions(lookups.departmentsData?.data);
         const designationOptions = toOptions(lookups.designationsData?.data);
         const countryOptions = toOptions(lookups.CountriesData);
-        const categoryOptions = toOptions(lookups.CategoriesData || []);
+        const categoryOptions = toOptions(lookups.ParentCategories || []);
         const brandOptions = toOptions(lookups.BrandData || []);
-        const productOptions = toOptions(lookups.AllProducts || []);
-        const reportingHrOptions = toOptions(lookups.EmployeesList?.data?.data);
-        const reportingHeadOptions = toOptions(lookups.MemberData?.data);
+        const productOptions = toOptions(lookups.ProductsData || []);
+        const reportingHrOptions = toOptions(lookups.EmployeesList?.data);
+        const reportingHeadOptions = toOptions(lookups.EmployeesList?.data);
 
         return {
             id: String(apiData.id),
@@ -740,9 +738,10 @@ const EmployeeFormPage = () => {
                 mobileNumberCode: { value: apiData.mobile_number_code || '', label: apiData.mobile_number_code || '' },
                 email: apiData.email || '',
                 experience: apiData.experience || '',
+                status: { value: apiData.status || 'Active', label: apiData.status || 'Active' },
+                jobStatus: apiData.job_status ? { value: apiData.job_status, label: apiData.job_status } : null,
             },
             personalInformation: {
-                status: { value: apiData.status || 'Active', label: apiData.status || 'Active' },
                 dateOfBirth: apiData.date_of_birth ? new Date(apiData.date_of_birth) : null,
                 age: apiData.age || '',
                 gender: apiData.gender ? { value: apiData.gender, label: apiData.gender } : null,
@@ -846,7 +845,6 @@ const EmployeeFormPage = () => {
             <Container className="h-full">
                 <div className="h-full flex flex-col items-center justify-center">
                     <Spinner size={40} />
-                    {/* <h3 className="mt-4">Loading Employee Data...</h3> */}
                 </div>
             </Container>
         );

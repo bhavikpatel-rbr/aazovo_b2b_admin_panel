@@ -17,3 +17,8 @@
 .table-default tr td{
     padding : 8px 0 8px 20px;
 }
+.truncate{
+    width: 200px;
+    white-space: pre-wrap
+
+}

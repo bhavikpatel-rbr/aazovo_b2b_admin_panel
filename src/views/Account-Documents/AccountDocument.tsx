@@ -110,6 +110,7 @@ import {
   getFormBuilderAction,
   getfromIDcompanymemberAction,
   submitExportReasonAction,
+  getDocumentListAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { encryptStorage } from "@/utils/secureLocalStorage";
@@ -175,12 +176,12 @@ const addEditDocumentSchema = z.object({
   document_type: z
     .number({ required_error: "Document Type is required." })
     .min(1, "Document Type is required."),
-  document_number: z.string().min(1, "Document Number is required."),
-  invoice_number: z.string().min(1, "Invoice Number is required."),
-  form_id: z.number({ required_error: "Token Form is required." }),
-  employee_id: z.number({ required_error: "Employee is required." }),
-  member_id: z.number({ required_error: "Member is required." }),
-  company_id: z.string({ required_error: "Company is required." }),
+  document_number: z.string().optional().nullable(),
+  invoice_number: z.string().optional().nullable(),
+  form_id: z.number().optional().nullable(),
+  employee_id: z.number().optional().nullable(),
+  member_id: z.number().optional().nullable(),
+  company_id: z.string().optional().nullable(),
 });
 type AddEditDocumentFormData = z.infer<typeof addEditDocumentSchema>;
 
@@ -1039,15 +1040,17 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
   });
 
   const {
-    DocumentTypeData = [],
+    DocumentListData = [],
     formsData: tokenForm = [],
     EmployeesList = [],
     AllCompanyData = [],
     getfromIDcompanymemberData = [],
   } = useSelector(masterSelector);
 
-  const DocumentTypeDataOptions =
-   DocumentTypeData.length > 0 && DocumentTypeData.map((p: any) => ({
+  console.log("DocumentListData",DocumentListData);
+  
+  const DocumentListDataOptions =
+   DocumentListData.length > 0 && DocumentListData.map((p: any) => ({
       value: p.id,
       label: p.name,
     }));
@@ -1059,7 +1062,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
     }));
 
   const EmployyDataOptions =
-    EmployeesList?.data?.data?.map((p: any) => ({
+    EmployeesList?.data?.map((p: any) => ({
       value: p.id,
       label: p.name,
     }));
@@ -1080,7 +1083,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
   );
 
   useEffect(() => {
-    dispatch(getDocumentTypeAction());
+    dispatch(getDocumentListAction());
     dispatch(getFormBuilderAction());
     dispatch(getEmployeesListingAction());
     dispatch(getAllCompany());
@@ -1095,7 +1098,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
           const companyId = data?.data?.company_id;
           const formData = {
             company_document: data?.data?.company_document,
-            document_type: data?.data?.document_type,
+            document_type:parseInt(data?.data?.document_type),
             document_number: data?.data?.document_number,
             invoice_number: data?.data?.invoice_number,
             form_id: data?.data?.form_id,
@@ -1262,11 +1265,11 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
                 <Select
                   {...field}
                   placeholder="Select Document Type"
-                  options={DocumentTypeDataOptions}
-                  value={DocumentTypeDataOptions?.find(
-                    (o) => o.value === field.value
+                  options={DocumentListDataOptions}
+                  value={DocumentListDataOptions?.find(
+                    (o) => o.label == field.value
                   )}
-                  onChange={(opt: any) => field.onChange(opt?.value)}
+                  onChange={(opt: any) => field.onChange(opt?.label)}
                 />
               )}
             />
@@ -2541,29 +2544,29 @@ const AccountDocument = () => {
           </Tag>
         ),
       },
-      {
-        header: "Enquiry",
-        accessorKey: "leadNumber",
-        size: 130,
-        cell: (props) => {
-          const { leadNumber, enquiryType } = props.row.original;
-          return (
-            <div className="flex flex-col gap-0.5 text-xs">
-              <div>
-                <Tag
-                  className={`${
-                    enquiryTypeColor[
-                      enquiryType as keyof typeof enquiryTypeColor
-                    ] || enquiryTypeColor.default
-                  } capitalize px-2 py-1 text-xs`}
-                >
-                  {enquiryType}
-                </Tag>
-              </div>
-            </div>
-          );
-        },
-      },
+      // {
+      //   header: "Enquiry",
+      //   accessorKey: "leadNumber",
+      //   size: 130,
+      //   cell: (props) => {
+      //     const { leadNumber, enquiryType } = props.row.original;
+      //     return (
+      //       <div className="flex flex-col gap-0.5 text-xs">
+      //         <div>
+      //           <Tag
+      //             className={`${
+      //               enquiryTypeColor[
+      //                 enquiryType as keyof typeof enquiryTypeColor
+      //               ] || enquiryTypeColor.default
+      //             } capitalize px-2 py-1 text-xs`}
+      //           >
+      //             {enquiryType}
+      //           </Tag>
+      //         </div>
+      //       </div>
+      //     );
+      //   },
+      // },
       {
         header: "Company",
         accessorKey: "memberName",
@@ -2749,7 +2752,7 @@ const AccountDocument = () => {
                 </Card>
               </div>
             </Tooltip>
-            <Tooltip title="Total Aazovo documents">
+            {/* <Tooltip title="Total Aazovo documents"> */}
               <div className="cursor-default">
                 <Card
                   bodyClass={cardBodyClass}
@@ -2764,8 +2767,8 @@ const AccountDocument = () => {
                   </div>
                 </Card>
               </div>
-            </Tooltip>
-            <Tooltip title="Total OMC documents">
+            {/* </Tooltip> */}
+            {/* <Tooltip title="Total OMC documents"> */}
               <div className="cursor-default">
                 <Card
                   bodyClass={cardBodyClass}
@@ -2780,7 +2783,7 @@ const AccountDocument = () => {
                   </div>
                 </Card>
               </div>
-            </Tooltip>
+            {/* </Tooltip> */}
           </div>
           <AccountDocumentTableTools
             onSearchChange={handleSearchChange}

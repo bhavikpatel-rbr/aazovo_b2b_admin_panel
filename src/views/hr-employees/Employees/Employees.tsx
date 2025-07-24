@@ -22,7 +22,7 @@ import {
   Select as UiSelect,
   Checkbox,
   DatePicker,
-  Skeleton // Skeleton Imported
+  Skeleton
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
@@ -43,20 +43,16 @@ import {
   TbColumns,
   TbEye,
   TbFilter,
-  TbKey,
   TbMail,
   TbPencil,
   TbPlus,
   TbReload,
   TbSearch,
   TbTagStarred,
-  TbUserBolt,
+  TbUserCheck,
   TbUserCircle,
   TbUserExclamation,
   TbUsers,
-  TbUserScreen,
-  TbUserShare,
-  TbUserSquareRounded,
   TbUserX,
   TbX,
 } from "react-icons/tb";
@@ -91,7 +87,7 @@ import { config } from "localforage";
 
 
 // --- Type Definitions ---
-export type EmployeeStatus = "active" | "inactive" | "on_leave" | "terminated";
+export type EmployeeStatus = "active" | "Blocked" | "Disabled" ;
 export type EmployeeItem = {
   id: string;
   employeeId: string;
@@ -113,8 +109,9 @@ export type ModalType = | "email" | "whatsapp" | "notification" | "schedule" | "
 export interface ModalState { isOpen: boolean; type: ModalType | null; data: EmployeeItem | null; }
 
 // --- Constants ---
-const EMPLOYEE_STATUS_OPTIONS: { value: EmployeeStatus; label: string }[] = [ { value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }, { value: "on_leave", label: "On Leave" }, { value: "terminated", label: "Terminated" } ];
-export const employeeStatusColor: Record<EmployeeStatus, string> = { active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100", inactive: "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100", on_leave: "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100", terminated: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100" };
+// MODIFIED: Reverted labels to match the desired terminology
+const EMPLOYEE_STATUS_OPTIONS: { value: EmployeeStatus; label: string }[] = [ { value: "active", label: "Active" }, { value: "Blocked", label: "Blocked" }, { value: "Disabled", label: "Disabled" } ];
+export const employeeStatusColor: Record<EmployeeStatus, string> = { active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100", Blocked: "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100", Disabled: "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100"};
 const eventTypeOptions: SelectOption[] = [ { value: 'Meeting', label: 'Meeting' }, { value: 'Task', label: 'Task' }, { value: 'Reminder', label: 'Reminder' }, { value: 'Other', label: 'Other' } ];
 
 // --- Zod Schemas ---
@@ -122,7 +119,7 @@ const employeeFilterFormSchema = z.object({ filterDepartments: z.array(z.object(
 type EmployeeFilterFormData = z.infer<typeof employeeFilterFormSchema>;
 const exportReasonSchema = z.object({ reason: z.string().min(10, "Reason must be at least 10 characters.").max(255, "Reason cannot exceed 255 characters.") });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
-const notificationSchema = z.object({ subject: z.string().min(3, "Subject is required."), message: z.string().min(10, "Message must be at least 10 characters."), send_users: z.array(z.string()).min(1, "At least one recipient is required.") });
+const notificationSchema = z.object({ notification_title: z.string().min(3, "Subject is required."), message: z.string().min(10, "Message must be at least 10 characters."), send_users: z.array(z.string()).min(1, "At least one recipient is required.") });
 type NotificationFormData = z.infer<typeof notificationSchema>;
 const scheduleSchema = z.object({ event_title: z.string().min(3, "Title is required."), event_type: z.string().min(1, "Event type is required."), date_time: z.date({ required_error: "Event date & time is required." }), remind_from: z.date().nullable().optional(), notes: z.string().optional() });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
@@ -134,7 +131,7 @@ const headerToKeyMap: Record<string, keyof EmployeeItem | string> = { "ID": "id"
 const EMPLOYEE_CSV_HEADERS = Object.keys(headerToKeyMap);
 function exportEmployeesToCsv(filename: string, rows: EmployeeItem[]) {
   if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
-  const transformedRows = rows.map(row => { const statusText = row.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); return { id: String(row.id) || "N/A", employeeId: row.employeeId || "N/A", name: row.name || "N/A", email: row.email || "N/A", mobile: row.mobile || "N/A", status: statusText, department: row.department || "N/A", designation: row.designation || "N/A", roles: Array.isArray(row.roles) ? row.roles.join(', ') : 'N/A', joiningDate: row.joiningDate ? dayjs(row.joiningDate).format("DD-MMM-YYYY") : "N/A" }; });
+  const transformedRows = rows.map(row => { const statusText = EMPLOYEE_STATUS_OPTIONS.find(o => o.value === row.status)?.label || 'Blocked'; return { id: String(row.id) || "N/A", employeeId: row.employeeId || "N/A", name: row.name || "N/A", email: row.email || "N/A", mobile: row.mobile || "N/A", status: statusText, department: row.department || "N/A", designation: row.designation || "N/A", roles: Array.isArray(row.roles) ? row.roles.join(', ') : 'N/A', joiningDate: row.joiningDate ? dayjs(row.joiningDate).format("DD-MMM-YYYY") : "N/A" }; });
   const csvContent = [ EMPLOYEE_CSV_HEADERS.join(','), ...transformedRows.map(row => EMPLOYEE_CSV_HEADERS.map(header => JSON.stringify(row[headerToKeyMap[header] as keyof typeof row] ?? '')).join(',')) ].join('\n');
   const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement("a");
@@ -146,8 +143,8 @@ function exportEmployeesToCsv(filename: string, rows: EmployeeItem[]) {
 // --- Reusable Dialog Components ---
 const AddNotificationDialog = ({ isOpen, onClose, employee, onSubmit, isLoading, userOptions }: { isOpen: boolean; onClose: () => void; employee: EmployeeItem; onSubmit: (data: NotificationFormData) => void; isLoading: boolean; userOptions: SelectOption[]; }) => {
     const { control, handleSubmit, reset, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), mode: 'onChange' });
-    useEffect(() => { if (!isOpen) { reset({ subject: '', message: '', send_users: [] }); } else { reset({ subject: `Regarding Employee: ${employee.name}`, message: `This is a notification for ${employee.name} (ID: ${employee.employeeId}).`, send_users: [employee.id] }) } }, [isOpen, reset, employee]);
-    return (<Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose}> <h5 className="mb-4">Add Notification for {employee.name}</h5> <Form onSubmit={handleSubmit(onSubmit)}> <FormItem label="Subject" invalid={!!errors.subject} errorMessage={errors.subject?.message}><Controller name="subject" control={control} render={({ field }) => <Input {...field} autoFocus />} /></FormItem> <FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter((o) => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map((o) => o.value) || [])} />)} /></FormItem> <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem> <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send</Button></div> </Form> </Dialog>);
+    useEffect(() => { if (!isOpen) { reset({ notification_title: '', message: '', send_users: [] }); } else { reset({ notification_title: `Regarding Employee: ${employee.name}`, message: `This is a notification for ${employee.name} (ID: ${employee.employeeId}).`, send_users: [employee.id] }) } }, [isOpen, reset, employee]);
+    return (<Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose}> <h5 className="mb-4">Add Notification for {employee.name}</h5> <Form onSubmit={handleSubmit(onSubmit)}> <FormItem label="Subject" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></FormItem> <FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter((o) => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map((o) => o.value) || [])} />)} /></FormItem> <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem> <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send</Button></div> </Form> </Dialog>);
 };
 const AddScheduleDialog = ({ isOpen, onClose, employee, onSubmit, isLoading }: { isOpen: boolean; onClose: () => void; employee: EmployeeItem; onSubmit: (data: ScheduleFormData) => void; isLoading: boolean; }) => {
     const { control, handleSubmit, reset, formState: { errors, isValid } } = useForm<ScheduleFormData>({ resolver: zodResolver(scheduleSchema), mode: 'onChange' });
@@ -162,7 +159,7 @@ const AddActivityDialog = ({ isOpen, onClose, employee, onSubmit, isLoading }: {
 
 // --- Direct Action Components (no UI) ---
 const SendEmailAction = ({ employee, onClose }: { employee: EmployeeItem; onClose: () => void; }) => {
-    useEffect(() => { const subject = `Regarding Your Profile`; const body = `Hello ${employee.name},\n\nWe are contacting you regarding...\n\nRegards.`; window.open(`mailto:${employee.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`); onClose(); }, [employee, onClose]);
+    useEffect(() => { const notification_title = `Regarding Your Profile`; const body = `Hello ${employee.name},\n\nWe are contacting you regarding...\n\nRegards.`; window.open(`mailto:${employee.email}?notification_title=${encodeURIComponent(notification_title)}&body=${encodeURIComponent(body)}`); onClose(); }, [employee, onClose]);
     return null;
 };
 const SendWhatsAppAction = ({ employee, onClose }: { employee: EmployeeItem; onClose: () => void; }) => {
@@ -360,10 +357,19 @@ const EmployeesListing = () => {
     // Data Formatting
     useEffect(() => {
         if (Employees?.data) {
+            // Helper to map API status string to our EmployeeStatus type
+            const mapApiStatus = (apiStatus: string | null): EmployeeStatus => {
+                const status = (apiStatus || '').toLowerCase();
+                if (status === 'active') return 'active';
+                if (status === 'blocked') return 'Blocked';
+                if (status === 'disabled') return 'Disabled';
+                return 'Blocked'; // Default to a safe value
+            };
+
             const formattedData = Employees.data.map((emp: any) => ({
                 id: String(emp.id),
                 employeeId: emp.employee_id || 'N/A',
-                status: (emp.status?.toLowerCase().replace(' ', '_') || 'inactive') as EmployeeStatus,
+                status: mapApiStatus(emp.status),
                 name: emp.name || 'Unknown',
                 email: emp.email || 'No Email',
                 mobile: emp.mobile_number ? `${emp.mobile_number_code || ''}${emp.mobile_number}`.trim() : null,
@@ -391,6 +397,25 @@ const EmployeesListing = () => {
     const onApplyFiltersSubmit = (data: EmployeeFilterFormData) => { setFilterCriteria(data); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); };
     const onClearFilters = () => { filterFormMethods.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" })); };
     const handleRemoveFilter = (key: keyof EmployeeFilterFormData, valueToRemove: string) => { setFilterCriteria(prev => { const newCriteria = { ...prev }; const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined; if (currentFilterArray) { (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove); } return newCriteria; }); handleSetTableData({ pageIndex: 1 }); };
+    
+    const handleCardFilterClick = (status: EmployeeStatus | null) => {
+        if (status === null) {
+            onClearFilters();
+        } else {
+            const statusOption = EMPLOYEE_STATUS_OPTIONS.find(o => o.value === status);
+            if (statusOption) {
+                const newCriteria: EmployeeFilterFormData = {
+                    filterStatuses: [statusOption],
+                    filterDepartments: [],
+                    filterDesignations: [],
+                    filterRoles: [],
+                };
+                setFilterCriteria(newCriteria);
+                filterFormMethods.reset(newCriteria);
+                handleSetTableData({ pageIndex: 1, query: "" }); 
+            }
+        }
+    };
     
     // Memoized Data Processing
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
@@ -420,10 +445,13 @@ const EmployeesListing = () => {
 
     // Table Columns
     const columns: ColumnDef<EmployeeItem>[] = useMemo(() => [
-        { header: "Status", accessorKey: "status", cell: (props) => { const { status } = props.row.original || {}; const validStatus: EmployeeStatus = EMPLOYEE_STATUS_OPTIONS.some(o => o.value === status) ? status : 'inactive'; const displayStatus = validStatus.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()); return (<Tag className={`${employeeStatusColor[validStatus]} capitalize font-semibold border-0`}>{displayStatus}</Tag>); } },
-        { header: "Name", accessorKey: "name", cell: (props) => { const { name, email, mobile, avatar, employeeId } = props.row.original || {}; return (<div className="flex items-center"><Avatar size={40} shape="circle" src={avatar} icon={<TbUserCircle />} className={classNames('cursor-pointer hover:ring-2 hover:ring-indigo-500 ring-offset-2 dark:ring-offset-gray-800', !avatar && 'bg-gray-200 dark:bg-gray-600')} onClick={() => openImageViewer(avatar)}>{!avatar && name ? name.charAt(0).toUpperCase() : ""}</Avatar><div className="ml-3 rtl:mr-3"><span className="font-semibold heading-text">{name}</span><div className="text-xs text-gray-500">{email}</div><div className="flex items-center gap-2 mt-1"><Tag className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 text-[10px] font-semibold">ID: {employeeId}</Tag>{mobile && (<span className="text-xs text-gray-500 flex items-center gap-1"><TbBrandWhatsapp className="text-green-500"/>{mobile}</span>)}</div></div></div>); } },
-        { header: "Designation", accessorKey: "designation", size: 200, cell: (props) => (<div className="font-semibold">{props.row.original?.designation ?? ""}</div>) },
-        { header: "Department", accessorKey: "department", size: 200, cell: (props) => (<div className="font-semibold">{props.row.original?.department ?? ""}</div>) },
+        { header: "Status", accessorKey: "status", cell: (props) => 
+            { const { status } = props.row.original || {};
+             const validStatus: EmployeeStatus = EMPLOYEE_STATUS_OPTIONS.some(o => o.value === status) ? status : 'Blocked'; const statusLabel = EMPLOYEE_STATUS_OPTIONS.find(o => o.value === validStatus)?.label || 'Blocked'; return (<Tag className={`${employeeStatusColor[validStatus]} capitalize font-semibold border-0`}>{statusLabel}</Tag>); } },
+        { header: "Name", accessorKey: "name", cell: (props) => 
+            { const { name, email, mobile, avatar, employeeId } = props.row.original || {}; return (<div className="flex items-center"><Avatar size={40} shape="circle" src={avatar} icon={<TbUserCircle />} className={classNames('cursor-pointer hover:ring-2 hover:ring-indigo-500 ring-offset-2 dark:ring-offset-gray-800', !avatar && 'bg-gray-200 dark:bg-gray-600')} onClick={() => openImageViewer(avatar)}>{!avatar && name ? name.charAt(0).toUpperCase() : ""}</Avatar><div className="ml-3 rtl:mr-3"><span className="font-semibold heading-text">{employeeId} || {name}</span><div className="text-xs text-gray-500">{email}</div><div className="flex items-center gap-2 mt-1">{mobile && (<span className="text-xs text-gray-500 flex items-center gap-1"><TbBrandWhatsapp className="text-green-500"/>{mobile}</span>)}</div></div></div>); } },
+        { header: "Designation", accessorKey: "designation", size: 200, cell: (props) => (<div >{props.row.original?.designation ?? ""}</div>) },
+        { header: "Department", accessorKey: "department", size: 200, cell: (props) => (<div >{props.row.original?.department ?? ""}</div>) },
         { header: "Roles", accessorKey: "roles", cell: (props) => (<div className="flex flex-wrap gap-1">{props.row.original?.roles?.map((role: any) => (<Tag key={role} className="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100 text-[10px] font-semibold border-0">{role || ""}</Tag>))}</div>) },
         { header: "Joined At", accessorKey: "joiningDate", size: 150, cell: (props) => props.row.original?.joiningDate ? <span className="text-sm">{dayjs(props.row.original.joiningDate).format("D MMM YYYY")}</span> : '-' },
         { header: "Action", id: "action", size: 120, meta: { HeaderClass: "text-center" }, cell: (props) => (<ActionColumn rowData={props.row.original} onOpenModal={handleOpenModal} />) },
@@ -452,14 +480,46 @@ const EmployeesListing = () => {
             <Container className="h-auto">
                 <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                     <div className="lg:flex items-center justify-between mb-4"><h5 className="mb-4 lg:mb-0">Employees Listing</h5><Button variant="solid" icon={<TbPlus />} onClick={() => navigate('/hr-employees/employees/add')} disabled={!isDataReady}>Add New</Button></div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
-                        <Tooltip title="Click to show all employees"><div onClick={onClearFilters} className="cursor-pointer"><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUsers size={24} /></div><div><div className="text-blue-500">{renderCardContent(employeesCount?.total)}</div><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
-                        <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbUserSquareRounded size={24} /></div><div><div className="text-violet-500">{renderCardContent(employeesCount?.this_month)}</div><span className="font-semibold text-xs">This Month</span></div></Card>
-                        <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbUserBolt size={24} /></div><div><div className="text-pink-500">{renderCardContent(employeesCount?.avg_present_percent)}</div><span className="font-semibold text-xs"> % Avg. Present</span></div></Card>
-                        <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbUserExclamation size={24} /></div><div><div className="text-orange-500">{renderCardContent(employeesCount?.late_arrivals)}</div><span className="font-semibold text-xs">Late Arrivals</span></div></Card>
-                        <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbUserScreen size={24} /></div><div><div className="text-green-500">{renderCardContent(employeesCount?.training_rate)}</div><span className="font-semibold text-xs">Training Rate</span></div></Card>
-                        <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbUserShare size={24} /></div><div><div className="text-red-500">{renderCardContent(employeesCount?.offboarding)}</div><span className="font-semibold text-xs">Offboarding</span></div></Card>
+                    
+                    <div className="grid grid-cols-2 lg:grid-cols-4 mb-4 gap-4">
+                        <div onClick={() => handleCardFilterClick(null)} className="cursor-pointer">
+                            <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}>
+                                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUsers size={24} /></div>
+                                <div>
+                                    <div className="text-blue-500">{renderCardContent(employeesCount?.total)}</div>
+                                    <span className="font-semibold text-xs">Total Employees</span>
+                                </div>
+                            </Card>
+                        </div>
+                        <div onClick={() => handleCardFilterClick('active')} className="cursor-pointer">
+                            <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}>
+                                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbUserCheck size={24} /></div>
+                                <div>
+                                    <div className="text-emerald-500">{renderCardContent(employeesCount?.active)}</div>
+                                    <span className="font-semibold text-xs">Active</span>
+                                </div>
+                            </Card>
+                        </div>
+                        <div onClick={() => handleCardFilterClick('Blocked')} className="cursor-pointer">
+                            <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-gray-200")}>
+                                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-gray-100 text-gray-500"><TbUserX size={24} /></div>
+                                <div>
+                                    <div className="text-gray-500">{renderCardContent(employeesCount?.blocked)}</div>
+                                    <span className="font-semibold text-xs">Blocked</span>
+                                </div>
+                            </Card>
+                        </div>
+                        <div onClick={() => handleCardFilterClick('Disabled')} className="cursor-pointer">
+                            <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-amber-200")}>
+                                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-amber-100 text-amber-500"><TbUserExclamation size={24} /></div>
+                                <div>
+                                    <div className="text-amber-500">{renderCardContent(employeesCount?.disabled)}</div>
+                                    <span className="font-semibold text-xs">Disabled</span>
+                                </div>
+                            </Card>
+                        </div>
                     </div>
+
                     <div className="mb-4"><EmployeeTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady} /></div>
                     <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
                     <div className="flex-grow overflow-auto"><DataTable selectable columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} noData={!isDataReady && pageData.length === 0} /></div>
@@ -468,7 +528,6 @@ const EmployeesListing = () => {
             
             <EmployeeSelected selectedEmployees={selectedEmployees} onDeleteSelected={() => { /* Implement bulk delete logic */ }} />
             
-            {/* Dialogs, Modals & Drawers */}
             <EmployeeModals modalState={modalState} onClose={handleCloseModal} userData={userData} userOptions={userOptions} />
             <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600} bodyOpenClassName="overflow-hidden"><div className="flex justify-center items-center p-4">{viewerImageSrc ? (<img src={viewerImageSrc} alt="Employee Profile View" style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}/>) : (<p>No image to display.</p>)}</div></Dialog>
             <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterEmployeeForm" type="submit">Apply</Button></div>}><Form id="filterEmployeeForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4"><FormItem label="Department"><Controller name="filterDepartments" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Any Department" options={departmentOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem><FormItem label="Designation"><Controller name="filterDesignations" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Any Designation" options={designationOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem><FormItem label="Status"><Controller name="filterStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Any Status" options={EMPLOYEE_STATUS_OPTIONS} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem><FormItem label="Role"><Controller name="filterRoles" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Any Role" options={roleOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem></Form></Drawer>

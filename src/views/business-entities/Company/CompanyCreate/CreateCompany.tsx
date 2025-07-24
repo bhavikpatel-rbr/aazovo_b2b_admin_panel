@@ -1,14 +1,12 @@
-// src/views/companies/CompanyForm.tsx (or your file name)
-
 import classNames from "classnames";
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Control,
   Controller,
   FieldErrors,
-  UseFormReturn,
   useFieldArray,
   useForm,
+  UseFormReturn,
 } from "react-hook-form";
 import { NavLink, useNavigate, useParams } from "react-router-dom";
 
@@ -16,40 +14,38 @@ import { NavLink, useNavigate, useParams } from "react-router-dom";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import NumericInput from "@/components/shared/NumericInput";
+import { Dialog, Spinner } from "@/components/ui";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import Checkbox from "@/components/ui/Checkbox";
-import { Form, FormItem } from "@/components/ui/Form";
+import { FormItem } from "@/components/ui/Form";
 import Input from "@/components/ui/Input";
 import Notification from "@/components/ui/Notification";
 import Select from "@/components/ui/Select";
 import toast from "@/components/ui/toast";
-import { Dialog, Spinner } from "@/components/ui";
 
 
 // Icons & Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addcompanyAction,
-  addMemberAction, // Import the action to add a member
-  getEmployeesListingAction,
+  addMemberAction,
   editCompanyAction,
-  getBrandAction,
-  getCategoriesAction,
   getCompanyAction,
   getCompanyByIdAction,
   getContinentsAction,
   getCountriesAction,
-  getMemberAction,
   getDocumentListAction,
-  getParentCategoriesAction,
+  getEmployeesListingAction,
+  getMemberAction,
+  getParentCategoriesAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BiChevronRight } from "react-icons/bi";
-import { TbPlus, TbTrash, TbX, TbChevronLeft, TbChevronRight, TbFile, TbFileSpreadsheet, TbFileTypePdf, TbUserCircle, TbPhone, TbMail, TbWorld, TbCategory, TbBrandWhatsapp } from "react-icons/tb";
-import { z } from "zod";
+import { TbBrandWhatsapp, TbCategory, TbChevronLeft, TbChevronRight, TbFile, TbFileSpreadsheet, TbFileTypePdf, TbMail, TbPhone, TbPlus, TbTrash, TbUserCircle, TbWorld, TbX } from "react-icons/tb";
 import { useSelector } from "react-redux";
+import { z } from "zod";
 
 
 // --- START: Helper Components for Document Viewing ---
@@ -62,13 +58,13 @@ interface ImageViewerProps {
 const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }) => {
   const [currentIndex, setCurrentIndex] = useState(startIndex);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
-  };
+  }, [images.length]);
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
     setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
-  };
+  }, [images.length]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -80,7 +76,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [handleNext, handlePrev, onClose]);
 
   if (!images || images.length === 0) {
     return null;
@@ -183,20 +179,79 @@ const DocumentPlaceholder = ({ fileName, fileUrl }: { fileName: string; fileUrl:
   };
 
   return (
-    <a
-      href={fileUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="w-full h-24 border rounded-md p-2 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+    <div
+      className="w-full h-full p-2 flex flex-col items-center justify-center text-center"
     >
       {getFileIcon()}
-      <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 break-all truncate">
+      <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 break-all">
         {fileName}
       </p>
-    </a>
+    </div>
   );
 };
 // --- END: Helper Components ---
+const GenericFileViewer = ({ file, onClose }: { file: File | string; onClose: () => void; }) => {
+    const fileUrl = useMemo(() => (file instanceof File ? URL.createObjectURL(file) : file), [file]);
+    const fileName = useMemo(() => (file instanceof File ? file.name : (file.split('/').pop() || 'file')), [file]);
+    const fileExtension = useMemo(() => fileName.split('.').pop()?.toLowerCase(), [fileName]);
+  
+    const isPdf = fileExtension === 'pdf';
+  
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') onClose();
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [onClose]);
+  
+    const getFileIcon = () => {
+      switch (fileExtension) {
+        case 'pdf': return <TbFileTypePdf className="text-red-500" size={64} />;
+        case 'xls': case 'xlsx': case 'csv': return <TbFileSpreadsheet className="text-green-500" size={64} />;
+        default: return <TbFile className="text-gray-500" size={64} />;
+      }
+    };
+  
+    return (
+      <div
+        className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-50 transition-opacity duration-300 p-4"
+        onClick={onClose}
+      >
+        <Button
+          type="button"
+          shape="circle"
+          variant="solid"
+          icon={<TbX />}
+          className="absolute top-4 right-4 z-[52] bg-black/50 hover:bg-black/80"
+          onClick={onClose}
+        />
+  
+        <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+          {isPdf ? (
+            <iframe src={fileUrl} title={fileName} className="w-full h-full border-none rounded-lg bg-white" />
+          ) : (
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center flex flex-col items-center justify-center max-w-md">
+              {getFileIcon()}
+              <h4 className="mb-2 mt-4">Preview not available</h4>
+              <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-xs">
+                This file type can't be shown here. You can open it in a new tab to view or download it.
+              </p>
+              <Button
+                variant="solid"
+                onClick={() => window.open(fileUrl, '_blank')}
+              >
+                Open '{fileName}'
+              </Button>
+            </div>
+          )}
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md">
+            {fileName}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
 // --- Type Definitions ---
 interface ReferenceItemFE {
@@ -276,7 +331,6 @@ interface EnabledBillingDocItemFE {
   document?: File | string | null;
 }
 
-// --- MODIFICATION START: Added is_default fields for primary/secondary banks ---
 export interface CompanyFormSchema {
   id?: string | number;
   company_name?: string;
@@ -351,7 +405,7 @@ export interface CompanyFormSchema {
   primary_bank_verification_photo?: File | string | null;
   primary_is_default?: boolean;
   secondary_account_number?: string;
-  secondary_benificeiry_number?: string;
+  secondary_benificeiry_name?: string;
   secondary_bank_name?: string;
   secondary_ifsc_code?: string;
   secondary_swift_code?: string;
@@ -368,16 +422,16 @@ export interface CompanyFormSchema {
   company_spot_verification?: SpotVerificationItemFE[];
   company_references?: ReferenceItemFE[];
 }
-// --- MODIFICATION END ---
 
+// MODIFIED PROPS INTERFACE
 export interface FormSectionBaseProps {
   control: Control<CompanyFormSchema>;
   errors: FieldErrors<CompanyFormSchema>;
   formMethods: UseFormReturn<CompanyFormSchema>;
   getValues: UseFormReturn<CompanyFormSchema>['getValues'];
+  handlePreviewClick: (file: File | string | null | undefined, label: string) => void;
 }
 
-// --- MODIFICATION START: Added is_default to API response for primary/secondary ---
 interface ApiSingleCompanyItem {
   id: number;
   company_name?: string;
@@ -454,7 +508,7 @@ interface ApiSingleCompanyItem {
   primary_bank_verification_photo?: string | null;
   primary_is_default?: boolean | string;
   secondary_account_number?: string | null;
-  secondary_benificeiry_number?: string | null;
+  secondary_benificeiry_name?: string | null;
   secondary_bank_name?: string | null;
   secondary_ifsc_code?: string | null;
   secondary_swift_code?: string | null;
@@ -468,7 +522,6 @@ interface ApiSingleCompanyItem {
   company_spot_verification?: Array<{ id: number; verified_by_id?: string | number; verified_by_name?: string; verified: boolean | string; remark: string | null; photo_upload: string | null; }>;
   company_references?: Array<{ id: number; person_name: string; company_id: string; number: string; remark: string | null; }>;
 }
-// --- MODIFICATION END ---
 
 // --- Helper to transform API data to CompanyFormSchema for EDIT mode ---
 const transformApiToFormSchema = (
@@ -586,7 +639,6 @@ const transformApiToFormSchema = (
     other_document_remark: apiData.other_document_remark || "",
     other_document_remark_enabled: stringToBoolean(apiData.other_document_verified),
 
-    // --- MODIFICATION START: Transform is_default for all bank types ---
     primary_account_number: apiData.primary_account_number || '',
     primary_bank_name: apiData.primary_bank_name || '',
     primary_benificeiry_name: apiData.primary_benificeiry_name || '',
@@ -595,7 +647,7 @@ const transformApiToFormSchema = (
     primary_bank_verification_photo: apiData.primary_bank_verification_photo || null,
     primary_is_default: stringToBoolean(apiData.primary_is_default),
     secondary_account_number: apiData.secondary_account_number || '',
-    secondary_benificeiry_number: apiData?.secondary_benificeiry_number || '',
+    secondary_benificeiry_name: apiData?.secondary_benificeiry_name || '',
     secondary_bank_name: apiData.secondary_bank_name || '',
     secondary_ifsc_code: apiData.secondary_ifsc_code || '',
     secondary_swift_code: apiData.secondary_swift_code || '',
@@ -611,17 +663,16 @@ const transformApiToFormSchema = (
       verification_photo: bank.verification_photo || null,
       is_default: stringToBoolean(bank.is_default),
     })) || [],
-    // --- MODIFICATION END ---
 
     USER_ACCESS: stringToBoolean(apiData.kyc_verified),
     billing_documents: apiData.billing_documents?.map(doc => ({
       id: String(doc.id),
-      document_name: findOptionByValue(documentTypeOptions, doc.document_name),
+      document_name: findOptionByValue(documentTypeOptions, doc.document_name as any), // Cast to any to handle potential type mismatch
       document: doc.document || null,
     })) || [],
     enabled_billing_docs: apiData.enable_billing_documents?.map(doc => ({
       id: String(doc.id),
-      document_name: findOptionByValue(documentTypeOptions, doc.document_name),
+      document_name: findOptionByValue(documentTypeOptions, doc.document_name as any), // Cast to any
       document: doc.document || null
     })) || [],
 
@@ -664,24 +715,16 @@ const preparePayloadForApi = (
 
   const appendField = (key: string, value: any) => {
     if (value === null || value === undefined) {
-      apiPayload.append(key, "");
+      // Keep it empty for backend
     } else if (typeof value === 'boolean') {
       apiPayload.append(key, value ? "1" : "0");
-    } else if (typeof value === 'object' && !Array.isArray(value) && value.value !== undefined && value.label !== undefined) {
-      apiPayload.append(key, value.value);
     } else if (value instanceof File) {
       apiPayload.append(key, value);
+    } else if (typeof value === 'object' && !Array.isArray(value) && value.value !== undefined) {
+      apiPayload.append(key, value.value);
     }
     else {
       apiPayload.append(key, String(value));
-    }
-  };
-
-  const appendFileIfExists = (key: string, value: any) => {
-    if (value instanceof File) {
-      apiPayload.append(key, value);
-    } else if (value === null || value === '') {
-      apiPayload.append(key, '');
     }
   };
 
@@ -690,29 +733,28 @@ const preparePayloadForApi = (
     apiPayload.append("_method", "PUT");
   }
 
-  // --- MODIFICATION START: Add is_default fields to simple fields list ---
   const simpleFields: (keyof CompanyFormSchema)[] = [
     "company_name", "primary_contact_number", "primary_contact_number_code", "general_contact_number", "general_contact_number_code",
     "alternate_contact_number", "alternate_contact_number_code", "primary_email_id", "alternate_email_id", "ownership_type", "owner_name",
     "company_address", "city", "state", "zip_code", "country_id", "continent_id", "gst_number", "pan_number", "trn_number", "tan_number",
     "establishment_year", "no_of_employees", "company_website", "primary_business_type", "status", "support_email", "notification_email",
     "primary_account_number", "primary_benificeiry_name", "primary_bank_name", "primary_ifsc_code", "primary_swift_code", "primary_is_default",
-    "secondary_account_number", "secondary_benificeiry_number", "secondary_bank_name", "secondary_ifsc_code", "secondary_swift_code", "secondary_is_default"
+    "secondary_account_number", "secondary_benificeiry_name", "secondary_bank_name", "secondary_ifsc_code", "secondary_swift_code", "secondary_is_default"
   ];
-  // --- MODIFICATION END ---
-  simpleFields.forEach(field => appendField(field, data[field]));
+  simpleFields.forEach(field => {
+    if (data[field] !== undefined) appendField(field, data[field])
+  });
 
   appendField("kyc_verified", data.USER_ACCESS);
-
   appendField("company_logo", data.company_logo);
   appendField("primary_bank_verification_photo", data.primary_bank_verification_photo);
   appendField("secondary_bank_verification_photo", data.secondary_bank_verification_photo);
 
   // Certificates
   data.company_certificate?.forEach((cert: CertificateItemFE, index: number) => {
-    apiPayload.append(`company_certificate[${index}][certificate_id]`, cert.certificate_id || "");
-    apiPayload.append(`company_certificate[${index}][certificate_name]`, cert.certificate_name || "");
-    apiPayload.append(`company_certificate[${index}][upload_certificate]`, cert.upload_certificate);
+    appendField(`company_certificate[${index}][certificate_id]`, cert.certificate_id);
+    appendField(`company_certificate[${index}][certificate_name]`, cert.certificate_name);
+    appendField(`company_certificate[${index}][upload_certificate]`, cert.upload_certificate);
   });
 
   // Office Info
@@ -743,24 +785,24 @@ const preparePayloadForApi = (
     { feFileKey: "other_document_file", beFileKey: "other_document_file", feVerifyKey: "other_document_remark_enabled", beVerifyKey: "other_document_verified", feRemarkKey: "other_document_remark", beRemarkKey: "other_document_remark" },
   ];
   kycDocsConfig.forEach(doc => {
-    apiPayload.append(doc.beFileKey, data[doc.feFileKey]);
-    apiPayload.append(doc.beVerifyKey, data[doc.feVerifyKey] ? "1" : "0");
-    apiPayload.append(doc.beRemarkKey, data[doc.feRemarkKey] || "");
+    appendField(doc.beFileKey, data[doc.feFileKey]);
+    appendField(doc.beVerifyKey, data[doc.feVerifyKey]);
+    appendField(doc.beRemarkKey, data[doc.feRemarkKey]);
   });
 
   data.company_bank_details?.forEach((bank: CompanyBankDetailItemFE, index: number) => {
-    apiPayload.append(`company_bank_details[${index}][bank_account_number]`, bank.bank_account_number || '');
-    apiPayload.append(`company_bank_details[${index}][bank_name]`, bank.bank_name || '');
-    apiPayload.append(`company_bank_details[${index}][ifsc_code]`, bank.ifsc_code || '');
-    apiPayload.append(`company_bank_details[${index}][swift_code]`, bank.swift_code || '');
-    apiPayload.append(`company_bank_details[${index}][type]`, bank.type?.value || 'Other');
-    apiPayload.append(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
-    apiPayload.append(`company_bank_details[${index}][is_default]`, bank.is_default ? "1" : "0");
+    appendField(`company_bank_details[${index}][bank_account_number]`, bank.bank_account_number);
+    appendField(`company_bank_details[${index}][bank_name]`, bank.bank_name);
+    appendField(`company_bank_details[${index}][ifsc_code]`, bank.ifsc_code);
+    appendField(`company_bank_details[${index}][swift_code]`, bank.swift_code);
+    appendField(`company_bank_details[${index}][type]`, bank.type?.value);
+    appendField(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
+    appendField(`company_bank_details[${index}][is_default]`, bank.is_default);
   });
 
   data.billing_documents?.forEach((doc: BillingDocItemFE, index: number) => {
-    apiPayload.append(`billing_documents[${index}][document_name]`, doc.document_name?.value || "");
-    apiPayload.append(`billing_documents[${index}][document]`, doc.document);
+    appendField(`billing_documents[${index}][document_name]`, doc.document_name?.value);
+    appendField(`billing_documents[${index}][document]`, doc.document);
   });
 
   data.enabled_billing_docs?.forEach((doc: EnabledBillingDocItemFE, index: number) => {
@@ -772,31 +814,31 @@ const preparePayloadForApi = (
   });
 
   data.company_members?.forEach((member: CompanyMemberItemFE, index: number) => {
-    apiPayload.append(`company_member_management[${index}][member_id]`, member.member_id?.value || '');
-    apiPayload.append(`company_member_management[${index}][designation]`, member.designation || '');
-    apiPayload.append(`company_member_management[${index}][person_name]`, member.person_name || '');
-    apiPayload.append(`company_member_management[${index}][number]`, member.number || '');
+    appendField(`company_member_management[${index}][member_id]`, member.member_id?.value);
+    appendField(`company_member_management[${index}][designation]`, member.designation);
+    appendField(`company_member_management[${index}][person_name]`, member.person_name);
+    appendField(`company_member_management[${index}][number]`, member.number);
   });
 
   data.company_teams?.forEach((member: CompanyTeamItemFE, index: number) => {
-    apiPayload.append(`company_team_members[${index}][team_name]`, member.team_name || '');
-    apiPayload.append(`company_team_members[${index}][designation]`, member.designation || '');
-    apiPayload.append(`company_team_members[${index}][person_name]`, member.person_name || '');
-    apiPayload.append(`company_team_members[${index}][number]`, member.number || '');
+    appendField(`company_team_members[${index}][team_name]`, member.team_name);
+    appendField(`company_team_members[${index}][designation]`, member.designation);
+    appendField(`company_team_members[${index}][person_name]`, member.person_name);
+    appendField(`company_team_members[${index}][number]`, member.number);
   });
 
   data.company_spot_verification?.forEach((item: SpotVerificationItemFE, index: number) => {
-    apiPayload.append(`company_spot_verification[${index}][verified]`, item.verified ? "1" : "0");
+    appendField(`company_spot_verification[${index}][verified]`, item.verified);
     appendField(`company_spot_verification[${index}][verified_by_id]`, item.verified_by_id);
-    apiPayload.append(`company_spot_verification[${index}][remark]`, item.remark || "");
-    apiPayload.append(`company_spot_verification[${index}][photo_upload]`, item.photo_upload);
+    appendField(`company_spot_verification[${index}][remark]`, item.remark);
+    appendField(`company_spot_verification[${index}][photo_upload]`, item.photo_upload);
   });
 
   data.company_references?.forEach((ref: ReferenceItemFE, index: number) => {
-    apiPayload.append(`company_references[${index}][person_name]`, ref.person_name || "");
-    apiPayload.append(`company_references[${index}][company_id]`, ref.company_id?.value || "");
-    apiPayload.append(`company_references[${index}][number]`, ref.number || "");
-    apiPayload.append(`company_references[${index}][remark]`, ref.remark || "");
+    appendField(`company_references[${index}][person_name]`, ref.person_name);
+    appendField(`company_references[${index}][company_id]`, ref.company_id?.value);
+    appendField(`company_references[${index}][number]`, ref.number);
+    appendField(`company_references[${index}][remark]`, ref.remark);
   });
 
   return apiPayload;
@@ -847,11 +889,12 @@ const NavigatorComponent = (props: NavigatorComponentProps) => {
   );
 };
 
-// --- CompanyDetails Section ---
+// --- CompanyDetailsSection ---
 const CompanyDetailsSection = ({
   control,
   errors,
   formMethods,
+  handlePreviewClick,
 }: FormSectionBaseProps) => {
   const {
     CountriesData = [],
@@ -859,23 +902,37 @@ const CompanyDetailsSection = ({
   } = useSelector(masterSelector);
   const { watch } = formMethods;
 
-  const countryOptions = CountriesData.map((value: any) => ({
+  const countryOptions = useMemo(() => {
+    const uniqueCountriesMap = new Map();
+    (CountriesData || []).forEach((country: any) => {
+      uniqueCountriesMap.set(country.id, country);
+    });
+    return Array.from(uniqueCountriesMap.values()).map((value: any) => ({
+      value: String(value.id),
+      label: value.name,
+    }));
+  }, [CountriesData]);
+
+  const countryCodeOptions = useMemo(() => {
+    const uniqueCodes = new Set<string>();
+    (CountriesData || []).forEach((c: any) => {
+      if (c.phone_code) {
+        uniqueCodes.add(`${c.phone_code}`);
+      }
+    });
+    return Array.from(uniqueCodes)
+      .sort((a, b) => a.localeCompare(b))
+      .map(code => ({
+        value: code,
+        label: code,
+      }));
+  }, [CountriesData]);
+
+  const continentOptions = useMemo(() => ContinentsData.map((value: any) => ({
     value: String(value.id),
     label: value.name,
-  }));
+  })), [ContinentsData]);
 
-  const countryCodeOptions = CountriesData
-    .filter((c: any) => c.phone_code)
-    .map((c: any) => ({
-      value: `${c.phone_code}`,
-      label: `${c.phone_code}`,
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-
-  const continentOptions = ContinentsData.map((value: any) => ({
-    value: String(value.id),
-    label: value.name,
-  }));
   const ownershipTypeOptions = [
     { value: "Sole Proprietorship", label: "Sole Proprietorship" },
     { value: "Partner", label: "Partner" },
@@ -917,6 +974,12 @@ const CompanyDetailsSection = ({
 
   const selectedCountry = watch("country_id");
   const isIndiaSelected = selectedCountry?.value === '101';
+
+  const isViewableImage = (file: unknown): boolean => {
+    if (file instanceof File) return file.type.startsWith('image/');
+    if (typeof file === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(file);
+    return false;
+  }
 
   return (
     <Card id="companyDetails">
@@ -1011,12 +1074,37 @@ const CompanyDetailsSection = ({
           <Controller name="no_of_employees" control={control} render={({ field }) => (<NumericInput placeholder="e.g., 100" {...field} onChange={(value) => field.onChange(value)} />)} />
         </FormItem>
         <FormItem label="Company Logo/Brochure" invalid={!!errors.company_logo} errorMessage={errors.company_logo?.message as string}>
-          <Controller name="company_logo" control={control} render={({ field: { onChange, ref, value, ...restField } }) => (<Input type="file" ref={ref} onChange={(e) => onChange(e.target.files?.[0])} {...restField} />)} />
-          {companyLogoValue && (
+          <Controller 
+            name="company_logo"
+            control={control}
+            render={({ field: { value, onChange, ...rest } }) => (
+              <Input 
+                {...rest}
+                type="file" 
+                accept="image/*,application/pdf"
+                onChange={(e) => onChange(e.target.files?.[0] || null)}
+              />
+          )} />
+           {companyLogoValue && (
             <div className="mt-2">
-              {companyLogoValue instanceof File ? (<img src={URL.createObjectURL(companyLogoValue)} alt="logo preview" className="h-16 w-auto object-contain border rounded" />)
-                : typeof companyLogoValue === 'string' ? (<img src={`${companyLogoValue}`} alt="logo preview" className="h-16 w-auto object-contain border rounded" />)
-                  : null}
+                <button
+                    type="button"
+                    onClick={() => handlePreviewClick(companyLogoValue, 'Company Logo')}
+                    className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+                >
+                    {isViewableImage(companyLogoValue) ? (
+                        <img
+                            src={companyLogoValue instanceof File ? URL.createObjectURL(companyLogoValue) : String(companyLogoValue)}
+                            alt="Company Logo Preview"
+                            className="max-h-full max-w-full object-contain"
+                        />
+                    ) : (
+                        <DocumentPlaceholder
+                            fileName={companyLogoValue instanceof File ? companyLogoValue.name : companyLogoValue.split('/').pop() || 'Document'}
+                            fileUrl={companyLogoValue instanceof File ? URL.createObjectURL(companyLogoValue) : String(companyLogoValue)}
+                        />
+                    )}
+                </button>
             </div>
           )}
         </FormItem>
@@ -1032,6 +1120,7 @@ const CompanyDetailsSection = ({
       </div>
       {certFields.map((item, index) => {
         const uploadCertificateValue = watch(`company_certificate.${index}.upload_certificate`);
+        const certificateName = watch(`company_certificate.${index}.certificate_name`);
         return (
           <Card key={item.id} className="mb-4 rounded-md border dark:border-gray-600" bodyClass="p-4">
             <div className="grid md:grid-cols-10 gap-3 items-start">
@@ -1042,14 +1131,39 @@ const CompanyDetailsSection = ({
                 <Controller name={`company_certificate.${index}.certificate_name`} control={control} render={({ field }) => (<Input placeholder="e.g., ISO 9001" {...field} />)} />
               </FormItem>
               <FormItem label={`Upload ${index + 1}`} className="col-span-10 md:col-span-3">
-                <Controller name={`company_certificate.${index}.upload_certificate`} control={control} render={({ field: { onChange, value, ref, ...restField } }) => (<Input type="file" ref={ref} onChange={(e) => onChange(e.target.files?.[0])} {...restField} />)} />
-                {uploadCertificateValue && (
-                  <div className="mt-1">
-                    {uploadCertificateValue instanceof File ? (<span className="text-sm text-gray-500">{uploadCertificateValue.name}</span>)
-                      : typeof uploadCertificateValue === 'string' ? (<a href={`${uploadCertificateValue}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline"> View Uploaded </a>)
-                        : null}
-                  </div>
-                )}
+                <Controller 
+                  name={`company_certificate.${index}.upload_certificate`}
+                  control={control}
+                  render={({ field: { value, onChange, ...rest } }) => (
+                    <Input 
+                      {...rest}
+                      type="file" 
+                      accept="image/*,application/pdf"
+                      onChange={(e) => onChange(e.target.files?.[0] || null)}
+                    />
+                )} />
+                 {uploadCertificateValue && (
+                    <div className="mt-2">
+                        <button
+                            type="button"
+                            onClick={() => handlePreviewClick(uploadCertificateValue, certificateName || `Certificate ${index + 1}`)}
+                            className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+                        >
+                            {isViewableImage(uploadCertificateValue) ? (
+                                <img
+                                    src={uploadCertificateValue instanceof File ? URL.createObjectURL(uploadCertificateValue) : String(uploadCertificateValue)}
+                                    alt="Certificate Preview"
+                                    className="max-h-full max-w-full object-contain"
+                                />
+                            ) : (
+                                <DocumentPlaceholder
+                                    fileName={uploadCertificateValue instanceof File ? uploadCertificateValue.name : uploadCertificateValue.split('/').pop() || 'Document'}
+                                    fileUrl={uploadCertificateValue instanceof File ? URL.createObjectURL(uploadCertificateValue) : String(uploadCertificateValue)}
+                                />
+                            )}
+                        </button>
+                    </div>
+                  )}
               </FormItem>
               <div className="text-right col-span-10 md:col-span-1 md:self-center">
                 <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => removeCert(index)} variant="plain" className="text-red-500 hover:text-red-700" />
@@ -1112,306 +1226,183 @@ const CompanyDetailsSection = ({
     </Card>
   );
 };
-// --- START: New Helper Component for Generic File Viewing ---
-const GenericFileViewer = ({ file, onClose }: { file: File | string; onClose: () => void; }) => {
-  const fileUrl = useMemo(() => (file instanceof File ? URL.createObjectURL(file) : file), [file]);
-  const fileName = useMemo(() => (file instanceof File ? file.name : (file.split('/').pop() || 'file')), [file]);
-  const fileExtension = useMemo(() => fileName.split('.').pop()?.toLowerCase(), [fileName]);
 
-  const isPdf = fileExtension === 'pdf';
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-
-  const getFileIcon = () => {
-    switch (fileExtension) {
-      case 'pdf': return <TbFileTypePdf className="text-red-500" size={64} />;
-      case 'xls': case 'xlsx': case 'csv': return <TbFileSpreadsheet className="text-green-500" size={64} />;
-      default: return <TbFile className="text-gray-500" size={64} />;
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-50 transition-opacity duration-300 p-4"
-      onClick={onClose}
-    >
-      <Button
-        type="button"
-        shape="circle"
-        variant="solid"
-        icon={<TbX />}
-        className="absolute top-4 right-4 z-[52] bg-black/50 hover:bg-black/80"
-        onClick={onClose}
-      />
-
-      <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-        {isPdf ? (
-          <iframe src={fileUrl} title={fileName} className="w-full h-full border-none rounded-lg bg-white" />
-        ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center flex flex-col items-center justify-center max-w-md">
-            {getFileIcon()}
-            <h4 className="mb-2 mt-4">Preview not available</h4>
-            <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-xs">
-              This file type can't be shown here. You can open it in a new tab to view or download it.
-            </p>
-            <Button
-              variant="solid"
-              onClick={() => window.open(fileUrl, '_blank')}
-            >
-              Open '{fileName}'
-            </Button>
-          </div>
-        )}
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md">
-          {fileName}
-        </div>
-      </div>
-    </div>
-  );
-};
-// --- END: New Helper Component ---
 // --- KYCDetailSection ---
-const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
-  const { watch, getValues } = formMethods;
-  const selectedCountry = watch("country_id");
-  const isIndiaSelected = selectedCountry?.value === '101';
-
-  const [viewerIsOpen, setViewerIsOpen] = useState(false);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [viewingFile, setViewingFile] = useState<File | string | null>(null);
-
-  const handleShare = useCallback(async (shareType: 'email' | 'whatsapp' | 'native', file: File | string | null, docLabel: string) => {
-    if (!file) {
-      toast.push(<Notification type="warning" title="No File">No document to share.</Notification>);
-      return;
-    }
-
-    const companyName = getValues("company_name") || "this company";
-    const subject = `${docLabel} for ${companyName}`;
-    const message = `Please find the ${docLabel} for ${companyName}.`;
-
-    // --- Case 1: The file is an existing URL (already saved) ---
-    // We can create mailto: and whatsapp: links.
-    if (typeof file === 'string' && (file.startsWith('http') || file.startsWith('blob:'))) {
-      const fullMessage = `${message}\n\nLink: ${file}`;
-      const encodedMessage = encodeURIComponent(fullMessage);
-      let shareUrl = '';
-
-      if (shareType === 'email') {
-        const encodedSubject = encodeURIComponent(subject);
-        shareUrl = `mailto:?subject=${encodedSubject}&body=${encodedMessage}`;
-      } else if (shareType === 'whatsapp') {
-        shareUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
+const KYCDetailSection = ({ control, errors, formMethods, handlePreviewClick }: FormSectionBaseProps) => {
+    const { watch, getValues } = formMethods;
+    const selectedCountry = watch("country_id");
+    const isIndiaSelected = selectedCountry?.value === '101';
+  
+    const handleShare = useCallback(async (shareType: 'email' | 'whatsapp' | 'native', file: File | string | null, docLabel: string) => {
+      if (!file) {
+        toast.push(<Notification type="warning" title="No File">No document to share.</Notification>);
+        return;
       }
-
-      if (shareUrl) {
-        window.open(shareUrl, '_blank', 'noopener,noreferrer');
-      }
-      return;
-    }
-
-    // --- Case 2: The file is a new File object (not yet saved) ---
-    // We must use the Web Share API to share the actual file content.
-    if (file instanceof File) {
-      // Check if the browser supports the Web Share API for files
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          // This opens the device's native share dialog (on mobile, Windows, ChromeOS, etc.)
-          await navigator.share({
-            files: [file],
-            title: subject,
-            text: message,
-          });
-        } catch (error: any) {
-          // The user might cancel the share dialog, which is not a real error. We ignore it.
-          if (error.name !== 'AbortError') {
-            console.error("Web Share API failed:", error);
-            toast.push(<Notification type="danger" title="Sharing Failed">Could not share the file directly.</Notification>);
-          }
+  
+      const companyName = getValues("company_name") || "this company";
+      const subject = `${docLabel} for ${companyName}`;
+      const message = `Please find the ${docLabel} for ${companyName}.`;
+  
+      if (typeof file === 'string' && (file.startsWith('http') || file.startsWith('blob:'))) {
+        const fullMessage = `${message}\n\nLink: ${file}`;
+        const encodedMessage = encodeURIComponent(fullMessage);
+        let shareUrl = '';
+  
+        if (shareType === 'email') {
+          const encodedSubject = encodeURIComponent(subject);
+          shareUrl = `mailto:?subject=${encodedSubject}&body=${encodedMessage}`;
+        } else if (shareType === 'whatsapp') {
+          shareUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
         }
-      } else {
-        // This is the fallback for browsers that do NOT support sharing local files (e.g., Firefox, Safari on macOS)
-        toast.push(
-          <Notification type="info" title="Action Required" duration={6000}>
-            To share this new file, please save the company first. Your browser doesn't support direct sharing of unsaved files.
-          </Notification>
-        );
+  
+        if (shareUrl) {
+          window.open(shareUrl, '_blank', 'noopener,noreferrer');
+        }
+        return;
       }
-      return;
-    }
-
-    // Fallback for any other unexpected type
-    toast.push(<Notification type="danger" title="Unsupported File">Cannot share this file type.</Notification>);
-
-  }, [getValues]);
-
-
-
-  const kycDocs = useMemo(() => [
-    { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_remark_enabled" as const, required: isIndiaSelected },
-    { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_remark_enabled" as const, required: isIndiaSelected },
-    { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_remark_enabled" as const, required: true },
-    { label: "Visiting Card", name: "visiting_card_file" as const, remarkName: "visiting_card_remark" as const, enabledName: "visiting_card_remark_enabled" as const },
-    { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_remark_enabled" as const, required: true },
-    { label: "Authority Letter", name: "authority_letter_file" as const, remarkName: "authority_letter_remark" as const, enabledName: "authority_letter_remark_enabled" as const },
-    { label: "Cancelled Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_remark_enabled" as const, required: true },
-    { label: "194Q Declaration", name: "ABCQ_file" as const, remarkName: "ABCQ_remark" as const, enabledName: "ABCQ_remark_enabled" as const },
-    { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_remark_enabled" as const },
-  ], [isIndiaSelected]);
-
-  const watchedFileValues = watch(kycDocs.map(doc => doc.name));
-
-  const imageDocsForViewer = useMemo(() => {
-    return kycDocs
-      .map((doc, index) => ({
-        ...doc,
-        fileValue: watchedFileValues[index]
-      }))
-      .filter(doc => {
-        const url = doc.fileValue;
-        if (!url) return false;
-        if (url instanceof File) return url.type.startsWith('image/');
-        if (typeof url === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
+  
+      if (file instanceof File) {
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: subject,
+              text: message,
+            });
+          } catch (error: any) {
+            if (error.name !== 'AbortError') {
+              console.error("Web Share API failed:", error);
+              toast.push(<Notification type="danger" title="Sharing Failed">Could not share the file directly.</Notification>);
+            }
+          }
+        } else {
+          toast.push(
+            <Notification type="info" title="Action Required" duration={6000}>
+              To share this new file, please save the company first. Your browser doesn't support direct sharing of unsaved files.
+            </Notification>
+          );
+        }
+        return;
+      }
+  
+      toast.push(<Notification type="danger" title="Unsupported File">Cannot share this file type.</Notification>);
+  
+    }, [getValues]);
+  
+    const kycDocs = useMemo(() => [
+        { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_remark_enabled" as const, required: isIndiaSelected },
+        { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_remark_enabled" as const, required: isIndiaSelected },
+        { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_remark_enabled" as const, required: false },
+        { label: "Visiting Card", name: "visiting_card_file" as const, remarkName: "visiting_card_remark" as const, enabledName: "visiting_card_remark_enabled" as const },
+        { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_remark_enabled" as const, required: false },
+        { label: "Authority Letter", name: "authority_letter_file" as const, remarkName: "authority_letter_remark" as const, enabledName: "authority_letter_remark_enabled" as const },
+        { label: "Cancelled Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_remark_enabled" as const, required: false },
+        { label: "194Q Declaration", name: "ABCQ_file" as const, remarkName: "ABCQ_remark" as const, enabledName: "ABCQ_remark_enabled" as const },
+        { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_remark_enabled" as const },
+      ], [isIndiaSelected]);
+  
+    const isViewableImage = (file: unknown): boolean => {
+        if (file instanceof File) return file.type.startsWith('image/');
+        if (typeof file === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(file);
         return false;
-      })
-      .map(doc => ({
-        src: doc.fileValue instanceof File ? URL.createObjectURL(doc.fileValue) : doc.fileValue as string,
-        alt: doc.label
-      }));
-  }, [kycDocs, watchedFileValues]);
-
-  const openImageViewer = (docLabel: string) => {
-    const index = imageDocsForViewer.findIndex(img => img.alt === docLabel);
-    if (index > -1) {
-      setSelectedImageIndex(index);
-      setViewerIsOpen(true);
     }
-  };
-
-  const closeImageViewer = () => setViewerIsOpen(false);
-
-  const handlePreviewClick = (fileValue: File | string | null | undefined, docLabel: string) => {
-    if (!fileValue) return;
-
-    const isImage = (file: unknown): boolean => {
-      if (file instanceof File) return file.type.startsWith('image/');
-      if (typeof file === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(file);
-      return false;
-    }
-
-    if (isImage(fileValue)) {
-      openImageViewer(docLabel);
-    } else {
-      setViewingFile(fileValue);
-    }
-  };
-
-  return (
-    <Card id="kycDocuments">
-      <h5 className="mb-4">KYC Documents</h5>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-6">
-        {kycDocs.map((doc) => {
-          const fileValue = watch(doc.name);
-          const isViewableImage = (fileValue instanceof File && fileValue.type.startsWith("image/")) || (typeof fileValue === "string" && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(fileValue));
-
-          return (
-            <div key={doc.name}>
-              <label className="flex items-center gap-2 mb-1">
-                <Controller name={doc.enabledName} control={control} render={({ field }) => (<Checkbox checked={!!field.value} onChange={field.onChange} />)} />
-                {doc.label} {doc.required && <span className="text-red-500">*</span>}
-              </label>
-              <FormItem invalid={!!(errors as any)[doc.name]} errorMessage={(errors as any)[doc.name]?.message as string} >
-                <Controller
-                  name={doc.name}
-                  control={control}
-                  render={({ field: { value, onChange, ...fieldProps } }) => (
-                    <Input
-                      {...fieldProps}
-                      type="file"
-                      onChange={(e) => onChange(e.target.files?.[0])}
-                    />
-                  )}
-                />
-              </FormItem>
-
-              {fileValue && (
-                <div className="mt-2">
-                  <button
-                    type="button"
-                    onClick={() => handlePreviewClick(fileValue, doc.label)}
-                    className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
-                  >
-                    {isViewableImage ? (
-                      <img
-                        src={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
-                        alt={doc.label}
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    ) : (
-                      <DocumentPlaceholder
-                        fileName={fileValue instanceof File ? fileValue.name : fileValue.split('/').pop() || 'Document'}
-                        fileUrl={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
+  
+    return (
+      <Card id="kycDocuments">
+        <h5 className="mb-4">KYC Documents</h5>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-6">
+          {kycDocs.map((doc) => {
+            const fileValue = watch(doc.name);
+            return (
+              <div key={doc.name}>
+                <label className="flex items-center gap-2 mb-1">
+                  <Controller
+                    name={doc.enabledName}
+                    control={control}
+                    render={({ field }) => (
+                      <Checkbox
+                        checked={!!field.value}
+                        onChange={field.onChange}
+                        disabled={!fileValue}
                       />
                     )}
-                  </button>
-                  {doc.name === 'cancel_cheque_file' && (
-                    <div className="mt-2 flex items-center justify-end gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="xs"
-                        icon={<TbMail />}
-                        onClick={() => handleShare('email', fileValue, doc.label)}
-                        title="Share via Email"
-                      >
-                        Email
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="xs"
-                        icon={<TbBrandWhatsapp />}
-                        onClick={() => handleShare('whatsapp', fileValue, doc.label)}
-                        title="Share on WhatsApp"
-                      >
-                        WhatsApp
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-              <FormItem className="mt-2" invalid={!!(errors as any)[doc.remarkName]} errorMessage={(errors as any)[doc.remarkName]?.message as string} >
-                <Controller name={doc.remarkName} control={control} render={({ field }) => (<Input placeholder={`Remark for ${doc.label}`} {...field} />)} />
-              </FormItem>
-            </div>
-          );
-        })}
-      </div>
-
-      {viewerIsOpen && (
-        <ImageViewer
-          images={imageDocsForViewer}
-          startIndex={selectedImageIndex}
-          onClose={closeImageViewer}
-        />
-      )}
-
-      {viewingFile && (
-        <GenericFileViewer file={viewingFile} onClose={() => setViewingFile(null)} />
-      )}
-    </Card>
-  );
-};
-
+                  />
+                  {doc.label} {doc.required && <span className="text-red-500">*</span>}
+                </label>
+                <FormItem invalid={!!(errors as any)[doc.name]} errorMessage={(errors as any)[doc.name]?.message as string} >
+                  <Controller
+                    name={doc.name}
+                    control={control}
+                    render={({ field: { value, onChange, ...rest } }) => (
+                      <Input
+                        {...rest}
+                        type="file"
+                        accept="image/*,application/pdf"
+                        onChange={(e) => onChange(e.target.files?.[0] || null)}
+                      />
+                    )}
+                  />
+                </FormItem>
+  
+                {fileValue && (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={() => handlePreviewClick(fileValue, doc.label)}
+                      className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+                    >
+                      {isViewableImage(fileValue) ? (
+                        <img
+                          src={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
+                          alt={doc.label}
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      ) : (
+                        <DocumentPlaceholder
+                          fileName={fileValue instanceof File ? fileValue.name : fileValue.split('/').pop() || 'Document'}
+                          fileUrl={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
+                        />
+                      )}
+                    </button>
+                    {doc.name === 'cancel_cheque_file' && (
+                      <div className="mt-2 flex items-center justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="xs"
+                          icon={<TbMail />}
+                          onClick={() => handleShare('email', fileValue, doc.label)}
+                          title="Share via Email"
+                        >
+                          Email
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="xs"
+                          icon={<TbBrandWhatsapp />}
+                          onClick={() => handleShare('whatsapp', fileValue, doc.label)}
+                          title="Share on WhatsApp"
+                        >
+                          WhatsApp
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <FormItem className="mt-2" invalid={!!(errors as any)[doc.remarkName]} errorMessage={(errors as any)[doc.remarkName]?.message as string} >
+                  <Controller name={doc.remarkName} control={control} render={({ field }) => (<Input placeholder={`Remark for ${doc.label}`} {...field} />)} />
+                </FormItem>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+    );
+  };
 // --- BankDetailsSection ---
-// --- MODIFICATION START: Complete rewrite of BankDetailsSection for new logic ---
-const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
+const BankDetailsSection = ({ control, errors, formMethods, handlePreviewClick }: FormSectionBaseProps) => {
   const { watch, setValue, getValues } = formMethods;
   const bankTypeOptions = [{ value: "Primary", label: "Primary" }, { value: "Secondary", label: "Secondary" }, { value: "Other", label: "Other" }];
 
@@ -1420,6 +1411,12 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
   const primaryBankPhotoValue = watch("primary_bank_verification_photo");
   const secondaryBankPhotoValue = watch("secondary_bank_verification_photo");
 
+  const isViewableImage = (file: unknown): boolean => {
+    if (file instanceof File) return file.type.startsWith('image/');
+    if (typeof file === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(file);
+    return false;
+  }
+  
   const handleShare = useCallback((shareType: 'email' | 'whatsapp', file: File | string | null, docLabel: string) => {
     if (!file) {
       toast.push(<Notification type="warning" title="No File">No document to share.</Notification>);
@@ -1454,24 +1451,48 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
     }
   }, [getValues]);
 
-  const handleSetDefaultBank = (type: 'primary' | 'secondary' | 'additional', index?: number) => {
+  const handleSetDefaultBank = useCallback((type: 'primary' | 'secondary' | 'additional', index?: number) => {
     // Reset all defaults first
-    setValue('primary_is_default', false);
-    setValue('secondary_is_default', false);
+    setValue('primary_is_default', false, { shouldDirty: true });
+    setValue('secondary_is_default', false, { shouldDirty: true });
     const additionalBanks = getValues('company_bank_details') || [];
     const updatedAdditionalBanks = additionalBanks.map(bank => ({ ...bank, is_default: false }));
 
     // Set the new default
     if (type === 'primary') {
-      setValue('primary_is_default', true);
+      setValue('primary_is_default', true, { shouldDirty: true });
     } else if (type === 'secondary') {
-      setValue('secondary_is_default', true);
+      setValue('secondary_is_default', true, { shouldDirty: true });
     } else if (type === 'additional' && index !== undefined) {
       updatedAdditionalBanks[index].is_default = true;
     }
 
     setValue('company_bank_details', updatedAdditionalBanks, { shouldDirty: true, shouldTouch: true });
-  };
+  }, [getValues, setValue]);
+
+  const renderPreview = (fileValue: File | string | null, label: string) => {
+    if (!fileValue) return null;
+    return (
+        <button
+            type="button"
+            onClick={() => handlePreviewClick(fileValue, label)}
+            className="w-24 h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+        >
+            {isViewableImage(fileValue) ? (
+                <img
+                    src={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
+                    alt={label}
+                    className="max-h-full max-w-full object-contain"
+                />
+            ) : (
+                <DocumentPlaceholder
+                    fileName={fileValue instanceof File ? fileValue.name : fileValue.split('/').pop() || 'Document'}
+                    fileUrl={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
+                />
+            )}
+        </button>
+    )
+  }
 
   return (
     <Card id="bankDetails">
@@ -1490,12 +1511,15 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
           <Controller name="primary_account_number" control={control} render={({ field }) => (<Input placeholder="Primary Account No." {...field} />)} />
         </FormItem>
         <FormItem label="Primary Bank Verification Photo" className="md:col-span-3" invalid={!!errors.primary_bank_verification_photo} errorMessage={(errors.primary_bank_verification_photo as any)?.message as string}>
-          <Controller name="primary_bank_verification_photo" control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
+          <Controller 
+            name="primary_bank_verification_photo" 
+            control={control} 
+            render={({ field: { value, onChange, ...rest } }) => (
+              <Input {...rest} type="file" accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+          )} />
           {primaryBankPhotoValue && (
             <div className="mt-2 flex items-start gap-4">
-              <div className="w-24 h-24 border rounded flex items-center justify-center">
-                <img src={typeof primaryBankPhotoValue === 'string' ? primaryBankPhotoValue : URL.createObjectURL(primaryBankPhotoValue)} alt="Primary bank photo" className="max-h-full max-w-full" />
-              </div>
+               {renderPreview(primaryBankPhotoValue, 'Primary Bank Verification Photo')}
               <div className="flex flex-col gap-2">
                 <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', primaryBankPhotoValue, 'Primary Bank Verification Photo')}>Email</Button>
                 <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', primaryBankPhotoValue, 'Primary Bank Verification Photo')}>WhatsApp</Button>
@@ -1515,8 +1539,8 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
 
       <h4 className="mb-6">Bank Details (Secondary)</h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
-        <FormItem label="Secondary Beneficiary Number" invalid={!!errors.secondary_benificeiry_number} errorMessage={errors.secondary_benificeiry_number?.message as string}>
-          <Controller name="secondary_benificeiry_number" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
+        <FormItem label="Secondary Beneficiary Number" invalid={!!errors.secondary_benificeiry_name} errorMessage={errors.secondary_benificeiry_name?.message as string}>
+          <Controller name="secondary_benificeiry_name" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
         </FormItem>
         <FormItem label="Secondary Bank Name" invalid={!!errors.secondary_bank_name} errorMessage={errors.secondary_bank_name?.message as string}>
           <Controller name="secondary_bank_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
@@ -1528,12 +1552,15 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
           <Controller name="secondary_account_number" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
         </FormItem>
         <FormItem label="Secondary Bank Verification Photo" className="md:col-span-3" invalid={!!errors.secondary_bank_verification_photo} errorMessage={(errors.secondary_bank_verification_photo as any)?.message as string}>
-          <Controller name="secondary_bank_verification_photo" control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
+          <Controller 
+            name="secondary_bank_verification_photo" 
+            control={control} 
+            render={({ field: { value, onChange, ...rest } }) => (
+              <Input {...rest} type="file" accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+          )} />
           {secondaryBankPhotoValue && (
             <div className="mt-2 flex items-start gap-4">
-              <div className="w-24 h-24 border rounded flex items-center justify-center">
-                <img src={typeof secondaryBankPhotoValue === 'string' ? secondaryBankPhotoValue : URL.createObjectURL(secondaryBankPhotoValue)} alt="Secondary bank photo" className="max-h-full max-w-full" />
-              </div>
+              {renderPreview(secondaryBankPhotoValue, 'Secondary Bank Verification Photo')}
               <div className="flex flex-col gap-2">
                 <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', secondaryBankPhotoValue, 'Secondary Bank Verification Photo')}>Email</Button>
                 <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', secondaryBankPhotoValue, 'Secondary Bank Verification Photo')}>WhatsApp</Button>
@@ -1556,6 +1583,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
       </div>
       {fields.map((item, index) => {
         const bankPhotoValue = watch(`company_bank_details.${index}.verification_photo`);
+        const photoLabel = `Bank ${index + 1} Verification Photo`;
         return (
           <Card key={item.id} className="mb-4 border dark:border-gray-600 relative rounded-md" bodyClass="p-4">
             <Button type="button" size="xs" variant="plain" icon={<TbTrash size={16} />} onClick={() => remove(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10"> Remove </Button>
@@ -1575,16 +1603,19 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
               <FormItem label={`Swift Code ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.swift_code} errorMessage={errors.company_bank_details?.[index]?.swift_code?.message as string}>
                 <Controller name={`company_bank_details.${index}.swift_code`} control={control} render={({ field }) => (<Input placeholder="Swift Code" {...field} />)} />
               </FormItem>
-              <FormItem label={`Bank Verification Photo ${index + 1}`} className="md:col-span-1">
-                <Controller name={`company_bank_details.${index}.verification_photo`} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
+              <FormItem label={photoLabel} className="md:col-span-1">
+                <Controller 
+                  name={`company_bank_details.${index}.verification_photo`} 
+                  control={control} 
+                  render={({ field: { value, onChange, ...rest } }) => (
+                    <Input {...rest} type="file" accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+                )} />
                 {bankPhotoValue && (
                   <div className="mt-2 flex items-start gap-4">
-                    <div className="w-24 h-24 border rounded flex items-center justify-center">
-                      <img src={typeof bankPhotoValue === 'string' ? bankPhotoValue : URL.createObjectURL(bankPhotoValue)} alt={`Bank ${index + 1} photo`} className="max-h-full max-w-full" />
-                    </div>
+                    {renderPreview(bankPhotoValue, photoLabel)}
                     <div className="flex flex-col gap-2">
-                      <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', bankPhotoValue, `Bank ${index + 1} Verification Photo`)}>Email</Button>
-                      <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', bankPhotoValue, `Bank ${index + 1} Verification Photo`)}>WhatsApp</Button>
+                      <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', bankPhotoValue, photoLabel)}>Email</Button>
+                      <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', bankPhotoValue, photoLabel)}>WhatsApp</Button>
                     </div>
                   </div>
                 )}
@@ -1599,11 +1630,9 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
     </Card>
   );
 };
-// --- MODIFICATION END ---
-
 
 // --- SpotVerificationSection ---
-const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
+const SpotVerificationSection = ({ control, errors, formMethods, handlePreviewClick }: FormSectionBaseProps) => {
   const { watch } = formMethods;
   const { fields, append, remove } = useFieldArray({ control, name: "company_spot_verification" });
   const { EmployeesList } = useSelector(masterSelector);
@@ -1618,6 +1647,12 @@ const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBa
     }));
   }, [EmployeesList]);
 
+  const isViewableImage = (file: unknown): boolean => {
+    if (file instanceof File) return file.type.startsWith('image/');
+    if (typeof file === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(file);
+    return false;
+  }
+
   return (
     <Card id="spotVerification">
       <div className="flex justify-between items-center mb-4">
@@ -1626,6 +1661,7 @@ const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBa
       </div>
       {fields.map((item, index) => {
         const photoValue = watch(`company_spot_verification.${index}.photo_upload`);
+        const photoLabel = `Spot Verification Document ${index + 1}`;
         return (
           <Card key={item.id} className="mb-4 border dark:border-gray-600 rounded-md relative" bodyClass="p-4">
             <Button type="button" variant="plain" size="xs" icon={<TbTrash size={16} />} onClick={() => remove(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10" > Remove </Button>
@@ -1636,15 +1672,35 @@ const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBa
                   <Controller name={`company_spot_verification.${index}.verified_by_id`} control={control} render={({ field }) => (<Select placeholder="Select Employee" options={employeeOptions} {...field} />)} />
                 </FormItem>
               </div>
-              <FormItem label={`Upload Document ${index + 1}`}>
-                <Controller name={`company_spot_verification.${index}.photo_upload`} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
-                {photoValue && (
-                  <div className="mt-1">
-                    {photoValue instanceof File ? (<a href={`${URL.createObjectURL(photoValue)}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline"> View Uploaded </a>)
-                      : typeof photoValue === 'string' ? (<a href={`${photoValue}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline"> View Uploaded </a>)
-                        : null}
-                  </div>
-                )}
+              <FormItem label={photoLabel}>
+                <Controller 
+                  name={`company_spot_verification.${index}.photo_upload`} 
+                  control={control} 
+                  render={({ field: { value, onChange, ...rest } }) => (
+                    <Input {...rest} type="file" accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+                )} />
+                 {photoValue && (
+                    <div className="mt-2">
+                        <button
+                            type="button"
+                            onClick={() => handlePreviewClick(photoValue, photoLabel)}
+                            className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+                        >
+                            {isViewableImage(photoValue) ? (
+                                <img
+                                    src={photoValue instanceof File ? URL.createObjectURL(photoValue) : String(photoValue)}
+                                    alt={photoLabel}
+                                    className="max-h-full max-w-full object-contain"
+                                />
+                            ) : (
+                                <DocumentPlaceholder
+                                    fileName={photoValue instanceof File ? photoValue.name : photoValue.split('/').pop() || 'Document'}
+                                    fileUrl={photoValue instanceof File ? URL.createObjectURL(photoValue) : String(photoValue)}
+                                />
+                            )}
+                        </button>
+                    </div>
+                  )}
               </FormItem>
               <FormItem label={`Remark ${index + 1}`} className="md:col-span-2">
                 <Controller name={`company_spot_verification.${index}.remark`} control={control} render={({ field }) => (<Input placeholder="Add remark here..." {...field} />)} />
@@ -1658,13 +1714,8 @@ const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBa
 };
 
 // --- ReferenceSection ---
-const ReferenceSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
+const ReferenceSection = ({ control, errors, formMethods, handlePreviewClick }: FormSectionBaseProps) => {
   const { CompanyData } = useSelector(masterSelector);
-  const dispatch = useAppDispatch();
-
-  useEffect(() => {
-    dispatch(getCompanyAction());
-  }, [dispatch]);
 
   const companyOptions = useMemo(() =>
     (CompanyData?.data || []).map((c: any) => ({
@@ -1704,10 +1755,9 @@ const ReferenceSection = ({ control, errors, formMethods }: FormSectionBaseProps
 };
 
 // --- AccessibilitySection ---
-const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
+const AccessibilitySection = ({ control, errors, formMethods, handlePreviewClick }: FormSectionBaseProps) => {
   const { watch } = formMethods;
 
-  const dispatch = useAppDispatch();
   const { fields, append, remove } = useFieldArray({ control, name: "billing_documents" });
   const { fields: enabledFields, append: appendEnabled, remove: removeEnabled } = useFieldArray({ control, name: "enabled_billing_docs" });
   const { DocumentListData = [] } = useSelector(masterSelector);
@@ -1716,9 +1766,40 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
     return Array.isArray(DocumentListData) ? DocumentListData.map((d: any) => ({ value: d.id, label: d.name })) : [];
   }, [DocumentListData]);
 
-  useEffect(() => {
-    dispatch(getDocumentListAction());;
-  }, [dispatch]);
+  const isViewableImage = (file: unknown): boolean => {
+    if (file instanceof File) return file.type.startsWith('image/');
+    if (typeof file === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(file);
+    return false;
+  }
+
+  const renderPreview = (fileValue: File | string | null, label: string, index: number, fieldName: 'billing_documents' | 'enabled_billing_docs') => {
+    const docName = watch(`${fieldName}.${index}.document_name`)?.label;
+    const finalLabel = `${label}: ${docName || `File ${index + 1}`}`;
+    if (!fileValue) return null;
+    return (
+        <div className="mt-2">
+            <button
+                type="button"
+                onClick={() => handlePreviewClick(fileValue, finalLabel)}
+                className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+            >
+                {isViewableImage(fileValue) ? (
+                    <img
+                        src={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
+                        alt={finalLabel}
+                        className="max-h-full max-w-full object-contain"
+                    />
+                ) : (
+                    <DocumentPlaceholder
+                        fileName={fileValue instanceof File ? fileValue.name : fileValue.split('/').pop() || 'Document'}
+                        fileUrl={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
+                    />
+                )}
+            </button>
+        </div>
+    )
+  }
+
   return (
     <Card id="accessibility">
       <h4 className="mb-6">Accessibility & Configuration</h4>
@@ -1732,7 +1813,7 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
         <div className="flex justify-between items-center">
           <h5 className="mb-0">Billing Documents</h5>
           <div className="flex gap-2">
-            <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ document_name: null, document: null })}> Add Billing Doc </Button>
+            <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ document_name: null, document: null })}> Add Document </Button>
             <Button type="button" icon={<TbPlus />} size="sm" onClick={() => appendEnabled({ document_name: null, document: null })}> Add Enable Billing Documents </Button>
           </div>
         </div>
@@ -1743,7 +1824,7 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
           return (
             <Card key={item.id} className="border dark:border-gray-600 rounded-md" bodyClass="p-4">
               <div className="md:grid grid-cols-1 md:grid-cols-9 gap-4 items-start">
-                <FormItem label={`Doc Name ${index + 1}`} className="md:col-span-4" invalid={!!errors.billing_documents?.[index]?.document_name} errorMessage={errors.billing_documents?.[index]?.document_name?.message as string}>
+                <FormItem label={`Doc Name ${index + 1}`} className="md:col-span-4" invalid={!!errors.billing_documents?.[index]?.document_name} errorMessage={(errors.billing_documents?.[index]?.document_name as any)?.message as string}>
                   <Controller name={`billing_documents.${index}.document_name`} control={control} render={({ field }) => (
                     <Select
                       placeholder="Document Name"
@@ -1756,14 +1837,13 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
                   )} />
                 </FormItem>
                 <FormItem label={`Upload Doc ${index + 1}`} className="md:col-span-4">
-                  <Controller name={`billing_documents.${index}.document`} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
-                  {docFileValue && (
-                    <div className="mt-1">
-                      {docFileValue instanceof File ? (<span className="text-sm text-gray-500">{docFileValue.name}</span>)
-                        : typeof docFileValue === 'string' ? (<a href={`${docFileValue}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline"> View Uploaded </a>)
-                          : null}
-                    </div>
-                  )}
+                  <Controller 
+                    name={`billing_documents.${index}.document`} 
+                    control={control} 
+                    render={({ field: { value, onChange, ...rest } }) => (
+                      <Input {...rest} type="file" accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+                  )} />
+                  {renderPreview(docFileValue, 'Billing Document', index, 'billing_documents')}
                 </FormItem>
                 <Button type="button" shape="circle" size="sm" className="mt-2 md:mt-0 md:self-center" icon={<TbTrash />} onClick={() => remove(index)} variant="plain" />
               </div>
@@ -1791,14 +1871,13 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
                   )} />
                 </FormItem>
                 <FormItem label={`Upload File ${index + 1}`} className="md:col-span-4">
-                  <Controller name={`enabled_billing_docs.${index}.document`} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
-                  {docFileValue && (
-                    <div className="mt-1">
-                      {docFileValue instanceof File ? (<span className="text-sm text-gray-500">{docFileValue.name}</span>)
-                        : typeof docFileValue === 'string' ? (<a href={`${docFileValue}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline"> View Uploaded </a>)
-                          : null}
-                    </div>
-                  )}
+                  <Controller 
+                    name={`enabled_billing_docs.${index}.document`} 
+                    control={control} 
+                    render={({ field: { value, onChange, ...rest } }) => (
+                      <Input {...rest} type="file" accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+                  )} />
+                  {renderPreview(docFileValue, 'Enabled Billing Document', index, 'enabled_billing_docs')}
                 </FormItem>
                 <Button type="button" shape="circle" size="sm" className="mt-2 md:mt-0 md:self-center" icon={<TbTrash />} onClick={() => removeEnabled(index)} variant="plain" />
               </div>
@@ -1862,7 +1941,7 @@ const MemberAddForm = ({ onSuccess, onCancel }: { onSuccess: () => void; onCance
   } = useSelector(masterSelector);
 
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<MemberAddFormSchema>({
-    resolver: zodResolver(memberAddSchema),
+    // resolver: zodResolver(memberAddSchema),
     defaultValues: {
       status: { label: "Active", value: "Active" },
       name: '', mobile_no: '', contact_country_code: undefined, email: '', password: '', country_id: undefined, interested_category_ids: [],
@@ -1872,16 +1951,35 @@ const MemberAddForm = ({ onSuccess, onCancel }: { onSuccess: () => void; onCance
 
 
   useEffect(() => {
-    dispatch(getParentCategoriesAction());;
+    // Fetches categories only when this modal is opened. Good for performance.
+    dispatch(getParentCategoriesAction());
   }, [dispatch]);
-  const countryOptions = useMemo(() =>
-    CountriesData?.map((country: any) => ({ value: String(country.id), label: country.name }))
-    , [CountriesData]);
 
-  const countryCodeOptions = useMemo(() =>
-    [...new Set(CountriesData?.map((c: any) => `+${c.phone_code}`))]
-      .filter(Boolean).sort((a, b) => a.localeCompare(b)).map(code => ({ value: code, label: code }))
-    , [CountriesData]);
+  const countryOptions = useMemo(() => {
+    const uniqueCountriesMap = new Map();
+    (CountriesData || []).forEach((country: any) => {
+      uniqueCountriesMap.set(country.id, country);
+    });
+    return Array.from(uniqueCountriesMap.values()).map((country: any) => ({
+      value: String(country.id),
+      label: country.name
+    }));
+  }, [CountriesData]);
+
+  const countryCodeOptions = useMemo(() => {
+    const uniqueCodes = new Set<string>();
+    (CountriesData || []).forEach((c: any) => {
+      if (c.phone_code) {
+        uniqueCodes.add(`+${c.phone_code}`);
+      }
+    });
+    return Array.from(uniqueCodes)
+      .sort((a, b) => a.localeCompare(b))
+      .map(code => ({
+        value: code,
+        label: code
+      }));
+  }, [CountriesData]);
 
   const categoryOptions = useMemo(() =>
     ParentCategories.map((c: any) => ({ value: String(c.id), label: c.name }))
@@ -1918,7 +2016,7 @@ const MemberAddForm = ({ onSuccess, onCancel }: { onSuccess: () => void; onCance
           <Controller name="status" control={control} render={({ field }) => (<Select {...field} placeholder="Select Status" options={statusOptions} />)} />
         </FormItem>
         <FormItem label="Full Name" invalid={!!errors.name} errorMessage={errors.name?.message}>
-          <Controller name="name" control={control} render={({ field }) => (<Input {...field} prefix={<TbUserCircle />} placeholder="Member’s full name" onInput={(e) => { if (e.target.value) e.target.value = e.target.value.toUpperCase() }} />)} />
+          <Controller name="name" control={control} render={({ field }) => (<Input {...field} prefix={<TbUserCircle />} placeholder="Member’s full name" onInput={(e: any) => { if (e.target.value) e.target.value = e.target.value.toUpperCase() }} />)} />
         </FormItem>
         <FormItem label="Mobile Number" invalid={!!errors.mobile_no || !!errors.contact_country_code} errorMessage={errors.mobile_no?.message || errors.contact_country_code?.message}>
           <div className="flex items-center gap-2">
@@ -1955,17 +2053,15 @@ const MemberAddForm = ({ onSuccess, onCancel }: { onSuccess: () => void; onCance
 
 
 // --- MemberManagementSection ---
-const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
+const MemberManagementSection = ({ control, errors, formMethods, handlePreviewClick }: FormSectionBaseProps) => {
   const dispatch = useAppDispatch();
   const { MemberData } = useSelector(masterSelector);
   const { fields, append, remove } = useFieldArray({ control, name: "company_members" });
 
-  // State to manage the modal visibility
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
 
   const memberOptions = useMemo(() => {
     const data = MemberData?.data || MemberData || [];
-
     return Array.isArray(data)
       ? data.map((m: any) => ({
         value: String(m.id),
@@ -1975,18 +2071,10 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
       : [];
   }, [MemberData]);
 
-  useEffect(() => {
-    if (!MemberData) {
-      dispatch(getMemberAction());
-    }
-  }, [dispatch, MemberData]);
-
-  // Callback to handle successful member creation from the modal
-  const handleMemberAdded = () => {
+  const handleMemberAdded = useCallback(() => {
     setIsAddMemberModalOpen(false);
-    // Refetch the member list to ensure the new member is in the dropdown
     dispatch(getMemberAction());
-  };
+  }, [dispatch]);
 
   return (
     <>
@@ -2024,16 +2112,6 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
                       value={field.value}
                       onChange={(selectedOption) => {
                         field.onChange(selectedOption);
-
-                        const fullMember = memberOptions.find(opt => opt.value === selectedOption?.value);
-
-                        if (fullMember && fullMember.status?.toLowerCase() !== 'active') {
-                          toast.push(
-                            <Notification type="warning" title="Member Inactive" duration={4000}>
-                              The selected member '{fullMember.label}' is currently not active.
-                            </Notification>
-                          );
-                        }
                       }}
                     />
                   )}
@@ -2053,7 +2131,6 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
         ))}
       </Card>
 
-      {/* Modal Dialog for adding a new member */}
       <Dialog
         isOpen={isAddMemberModalOpen}
         onClose={() => setIsAddMemberModalOpen(false)}
@@ -2074,7 +2151,7 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
 
 
 // --- TeamManagementSection ---
-const TeamManagementSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
+const TeamManagementSection = ({ control, errors, formMethods, handlePreviewClick }: FormSectionBaseProps) => {
   const { fields, append, remove } = useFieldArray({ control, name: "company_teams" });
 
   return (
@@ -2120,7 +2197,11 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   const { onFormSubmit, defaultValues, isEditMode, onDiscard, isSubmitting } = props;
   const [activeSection, setActiveSection] = useState<string>(companyNavigationList[0].link);
 
-  const fileValidation = z.any().refine(val => val !== null && val !== undefined && val !== '', { message: "File is required." });
+  // --- START: CENTRALIZED VIEWER STATE ---
+  const [imageViewerState, setImageViewerState] = useState({ isOpen: false, startIndex: 0 });
+  const [genericFileViewerState, setGenericFileViewerState] = useState<{ isOpen: boolean, file: File | string | null }>({ isOpen: false, file: null });
+  // --- END: CENTRALIZED VIEWER STATE ---
+
 
   const companySchema = z.object({
     id: z.union([z.string(), z.number()]).optional(),
@@ -2130,105 +2211,104 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     alternate_email_id: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
     ownership_type: z.object({ label: z.string(), value: z.string().min(1, "Ownership Type is required.") }, { required_error: "Ownership Type is required." }),
     owner_name: z.string().trim().min(1, "Owner/Director Name is required."),
-    city: z.string().trim(),
+    city: z.string().trim().optional(),
     country_id: z.object({ label: z.string(), value: z.string().min(1, "Country is required.") }, { required_error: "Country is required." }),
     continent_id: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
-    establishment_year: z.string().trim().regex(/^\d{4}$/, "Invalid year format (YYYY).").optional().or(z.literal("")).nullable(),
-    no_of_employees: z.union([z.number().int().positive().optional().nullable(), z.string().regex(/^\d+$/).optional().nullable(), z.literal("")]).optional().nullable(),
-    company_website: z.string().trim().url("Invalid website URL.").optional().or(z.literal("")).nullable(),
-    company_logo: z.any().optional().nullable(),
-    primary_business_type: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
-    status: z.object({ label: z.string(), value: z.string().min(1, "Status is required.") }, { required_error: "Status is required." }),
-    notification_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
+   
+    // establishment_year: z.string().trim().regex(/^\d{4}$/, "Invalid year format (YYYY).").optional().or(z.literal("")).nullable(),
+    // no_of_employees: z.union([z.number().int().positive().optional().nullable(), z.string().regex(/^\d*$/).optional().nullable(), z.literal("")]).optional().nullable(),
+    // company_website: z.string().trim().url("Invalid website URL.").optional().or(z.literal("")).nullable(),
+    // company_logo: z.any().optional().nullable(),
+    // primary_business_type: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
+    // status: z.object({ label: z.string(), value: z.string().min(1, "Status is required.") }, { required_error: "Status is required." }),
+    // notification_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
 
-    company_certificate: z.array(z.object({
-      certificate_id: z.any(),
-      certificate_name: z.string().trim(),
-      upload_certificate: z.any().optional().nullable(),
-    })).optional(),
-    office_info: z.array(z.object({
-      office_type: z.object({ label: z.string(), value: z.string() }, { required_error: "Office type is required." }),
-      office_name: z.string().trim(),
-      address: z.string().trim(),
-      country_id: z.object({ label: z.string(), value: z.string() }, { required_error: "Country is required." }),
-      state: z.string().trim(),
-      city: z.string().trim(),
-      zip_code: z.string().trim().regex(/^\d{3,10}$/, "Invalid ZIP code format."),
-      gst_number: z.string().trim().optional().or(z.literal("")).nullable(),
-      contact_person: z.string().trim().optional().nullable(),
-      office_email: z.string().trim().email("Invalid email format.").optional().nullable(),
-      office_phone: z.string().optional().nullable(),
-    })).optional(),
+    // company_certificate: z.array(z.object({
+    //   certificate_id: z.any().optional(),
+    //   certificate_name: z.string().trim().optional(),
+    //   upload_certificate: z.any().optional().nullable(),
+    // })).optional(),
+    // office_info: z.array(z.object({
+    //   office_type: z.object({ label: z.string(), value: z.string() }, { required_error: "Office type is required." }),
+    //   office_name: z.string().trim().optional(),
+    //   address: z.string().trim().optional(),
+    //   country_id: z.object({ label: z.string(), value: z.string() }, { required_error: "Country is required." }),
+    //   state: z.string().trim().optional(),
+    //   city: z.string().trim().optional(),
+    //   zip_code: z.string().trim().regex(/^\d{3,10}$/, "Invalid ZIP code format.").optional(),
+    //   gst_number: z.string().trim().optional().or(z.literal("")).nullable(),
+    //   contact_person: z.string().trim().optional().nullable(),
+    //   office_email: z.string().trim().email("Invalid email format.").optional().nullable(),
+    //   office_phone: z.string().optional().nullable(),
+    // })).optional(),
 
-    aadhar_card_file: z.any().optional().nullable(),
-    pan_card_file: z.any().optional().nullable(),
-    gst_certificate_file: z.any().optional().nullable(),
-    cancel_cheque_file: z.any().optional().nullable(),
-    office_photo_file: z.any().optional().nullable(),
+    // aadhar_card_file: z.any().optional().nullable(),
+    // pan_card_file: z.any().optional().nullable(),
+    // gst_certificate_file: z.any().optional().nullable(),
+    // cancel_cheque_file: z.any().optional().nullable(),
+    // office_photo_file: z.any().optional().nullable(),
 
-    // --- MODIFICATION START: Update Zod schema for primary/secondary bank details ---
-    primary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
-    primary_contact_number: z.string().trim().regex(/^[0-9]{10}$/, "Invalid contact number").optional().or(z.literal("")).nullable(),
-    primary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
-    primary_benificeiry_name: z.string().trim().optional().or(z.literal("")).nullable(),
-    primary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
-    primary_swift_code: z.string().trim().optional().or(z.literal("")).nullable(),
-    primary_bank_verification_photo: z.any().optional().nullable(),
-    primary_is_default: z.boolean().optional(),
-    secondary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
-    secondary_benificeiry_number: z.string().trim().optional().or(z.literal("")).nullable(),
-    secondary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
-    secondary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
-    secondary_swift_code: z.string().trim().optional().or(z.literal("")).nullable(),
-    secondary_bank_verification_photo: z.any().optional().nullable(),
-    secondary_is_default: z.boolean().optional(),
-    company_bank_details: z.array(z.object({
-      bank_account_number: z.string().trim().min(1, "Account number required if bank entry added"),
-      bank_name: z.string().min(1, "Bank name required"),
-      ifsc_code: z.string().trim().min(1, "IFSC code required"),
-      swift_code: z.string().trim().optional().nullable(),
-      verification_photo: z.any().optional().nullable(),
-      type: z.object({ label: z.string(), value: z.string().min(1, "Bank type required") }, { required_error: "Bank type is required" }),
-      is_default: z.boolean().optional(),
-    })).optional(),
-    // --- MODIFICATION END ---
+    // primary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
+    // primary_contact_number: z.string().trim().regex(/^[0-9]{7,15}$/, "Invalid contact number").optional().or(z.literal("")).nullable(),
+    // primary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
+    // primary_benificeiry_name: z.string().trim().optional().or(z.literal("")).nullable(),
+    // primary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
+    // primary_swift_code: z.string().trim().optional().or(z.literal("")).nullable(),
+    // primary_bank_verification_photo: z.any().optional().nullable(),
+    // primary_is_default: z.boolean().optional(),
+    // secondary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
+    // secondary_benificeiry_name: z.string().trim().optional().or(z.literal("")).nullable(),
+    // secondary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
+    // secondary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
+    // secondary_swift_code: z.string().trim().optional().or(z.literal("")).nullable(),
+    // secondary_bank_verification_photo: z.any().optional().nullable(),
+    // secondary_is_default: z.boolean().optional(),
+    // company_bank_details: z.array(z.object({
+    //   bank_account_number: z.string().trim().min(1, "Account number required if bank entry added"),
+    //   bank_name: z.string().min(1, "Bank name required"),
+    //   ifsc_code: z.string().trim().min(1, "IFSC code required"),
+    //   swift_code: z.string().trim().optional().nullable(),
+    //   verification_photo: z.any().optional().nullable(),
+    //   type: z.object({ label: z.string(), value: z.string().min(1, "Bank type required") }, { required_error: "Bank type is required" }),
+    //   is_default: z.boolean().optional(),
+    // })).optional(),
 
-    USER_ACCESS: z.boolean({ required_error: "User Access selection is required" }),
-    billing_documents: z.array(z.object({
-      document_name: z.object({ label: z.string(), value: z.number() }, { required_error: "Document type is required." }),
-      document: z.any().optional().nullable(),
-    })).optional(),
-    enabled_billing_docs: z.array(z.object({
-      document_name: z.object({ label: z.string(), value: z.number() }, { required_error: "Document type is required." }),
-      document: z.any().optional().nullable()
-    })).optional(),
+    // USER_ACCESS: z.boolean({ required_error: "User Access selection is required" }),
+    // billing_documents: z.array(z.object({
+    //   document_name: z.any(),
+    //   document: z.any().optional().nullable(),
+    // })).optional(),
+    // enabled_billing_docs: z.array(z.object({
+    //   document_name: z.any(),
+    //   document: z.any().optional().nullable()
+    // })).optional(),
 
-    company_members: z.array(z.object({
-      member_id: z.object({ label: z.string(), value: z.string() }, { required_error: "Member selection is required." }),
-      designation: z.string().trim().min(1, "Designation is required."),
-      person_name: z.string().trim().optional().nullable(),
-      number: z.string().trim().optional().nullable(),
-    })).optional(),
+    // company_members: z.array(z.object({
+    //   member_id: z.object({ label: z.string(), value: z.string() }, { required_error: "Member selection is required." }),
+    //   designation: z.string().trim().min(1, "Designation is required."),
+    //   person_name: z.string().trim().optional().nullable(),
+    //   number: z.string().trim().optional().nullable(),
+    // })).optional(),
 
-    company_teams: z.array(z.object({
-      team_name: z.string().trim().min(1, "Team Name is required."),
-      designation: z.string().trim().min(1, "Designation is required."),
-      person_name: z.string().trim().min(1, "Person Name is required."),
-      number: z.string().trim().min(1, "Contact Number is required.").regex(/^\d+$/, "Invalid number format"),
-    })).optional(),
+    // company_teams: z.array(z.object({
+    //   team_name: z.string().trim().min(1, "Team Name is required."),
+    //   designation: z.string().trim().min(1, "Designation is required."),
+    //   person_name: z.string().trim().min(1, "Person Name is required."),
+    //   number: z.string().trim().min(1, "Contact Number is required.").regex(/^\d+$/, "Invalid number format"),
+    // })).optional(),
 
-    company_spot_verification: z.array(z.object({
-      verified: z.boolean().optional(),
-      verified_by_id: z.object({ label: z.string(), value: z.string() }, { required_error: "Verifier selection is required." }),
-      photo_upload: z.any().optional().nullable(),
-      remark: z.string().trim().optional().or(z.literal("")).nullable(),
-    })).optional(),
-    company_references: z.array(z.object({
-      person_name: z.string().trim().min(1, "Person name is required."),
-      company_id: z.object({ label: z.string(), value: z.string().min(1, "Company is required.") }, { required_error: "Company selection is required" }),
-      number: z.string().trim().min(1, "Contact number is required.").regex(/^\d+$/, "Invalid number format"),
-      remark: z.string().trim().optional().or(z.literal("")).nullable(),
-    })).optional(),
+    // company_spot_verification: z.array(z.object({
+    //   verified: z.boolean().optional(),
+    //   verified_by_id: z.object({ label: z.string(), value: z.string() }, { required_error: "Verifier selection is required." }),
+    //   photo_upload: z.any().optional().nullable(),
+    //   remark: z.string().trim().optional().or(z.literal("")).nullable(),
+    // })).optional(),
+    // company_references: z.array(z.object({
+    //   person_name: z.string().trim().min(1, "Person name is required."),
+    //   company_id: z.object({ label: z.string(), value: z.string().min(1, "Company is required.") }, { required_error: "Company selection is required" }),
+    //   number: z.string().trim().min(1, "Contact number is required.").regex(/^\d+$/, "Invalid number format"),
+    //   remark: z.string().trim().optional().or(z.literal("")).nullable(),
+    // })).optional(),
 
 
     gst_number: z.string().trim().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number format.").optional().or(z.literal("")).nullable(),
@@ -2256,6 +2336,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     formState: { errors },
     control,
     getValues,
+    watch
   } = formMethods;
 
   useEffect(() => {
@@ -2263,6 +2344,70 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       reset(defaultValues);
     }
   }, [defaultValues, reset]);
+
+  // --- START: CENTRALIZED PREVIEW LOGIC ---
+  const watchedFiles = watch([
+    "company_logo", "company_certificate", "aadhar_card_file", "pan_card_file", 
+    "gst_certificate_file", "visiting_card_file", "office_photo_file", 
+    "authority_letter_file", "cancel_cheque_file", "ABCQ_file", "other_document_file",
+    "primary_bank_verification_photo", "secondary_bank_verification_photo", 
+    "company_bank_details", "company_spot_verification", "billing_documents", "enabled_billing_docs"
+  ]);
+
+  const allImageDocsForViewer = useMemo(() => {
+    const images: { src: string; alt: string }[] = [];
+    const isImage = (file: unknown) => (file instanceof File && file.type.startsWith('image/')) || (typeof file === 'string' && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(file));
+    const getSrc = (file: any) => file instanceof File ? URL.createObjectURL(file) : String(file);
+
+    const formData = getValues(); // Get current form values
+
+    // Single fields
+    if (formData.company_logo && isImage(formData.company_logo)) images.push({ src: getSrc(formData.company_logo), alt: 'Company Logo' });
+    if (formData.aadhar_card_file && isImage(formData.aadhar_card_file)) images.push({ src: getSrc(formData.aadhar_card_file), alt: 'Aadhar Card' });
+    if (formData.pan_card_file && isImage(formData.pan_card_file)) images.push({ src: getSrc(formData.pan_card_file), alt: 'PAN Card' });
+    if (formData.gst_certificate_file && isImage(formData.gst_certificate_file)) images.push({ src: getSrc(formData.gst_certificate_file), alt: 'GST Certificate' });
+    if (formData.visiting_card_file && isImage(formData.visiting_card_file)) images.push({ src: getSrc(formData.visiting_card_file), alt: 'Visiting Card' });
+    if (formData.office_photo_file && isImage(formData.office_photo_file)) images.push({ src: getSrc(formData.office_photo_file), alt: 'Office Photo' });
+    if (formData.authority_letter_file && isImage(formData.authority_letter_file)) images.push({ src: getSrc(formData.authority_letter_file), alt: 'Authority Letter' });
+    if (formData.cancel_cheque_file && isImage(formData.cancel_cheque_file)) images.push({ src: getSrc(formData.cancel_cheque_file), alt: 'Cancelled Cheque' });
+    if (formData.ABCQ_file && isImage(formData.ABCQ_file)) images.push({ src: getSrc(formData.ABCQ_file), alt: '194Q Declaration' });
+    if (formData.other_document_file && isImage(formData.other_document_file)) images.push({ src: getSrc(formData.other_document_file), alt: 'Other Document' });
+    if (formData.primary_bank_verification_photo && isImage(formData.primary_bank_verification_photo)) images.push({ src: getSrc(formData.primary_bank_verification_photo), alt: 'Primary Bank Verification Photo' });
+    if (formData.secondary_bank_verification_photo && isImage(formData.secondary_bank_verification_photo)) images.push({ src: getSrc(formData.secondary_bank_verification_photo), alt: 'Secondary Bank Verification Photo' });
+    
+    // Array fields
+    formData.company_certificate?.forEach((cert, i) => { if(cert.upload_certificate && isImage(cert.upload_certificate)) images.push({ src: getSrc(cert.upload_certificate), alt: cert.certificate_name || `Certificate ${i+1}` }) });
+    formData.company_bank_details?.forEach((bank, i) => { if(bank.verification_photo && isImage(bank.verification_photo)) images.push({ src: getSrc(bank.verification_photo), alt: `Bank ${i+1} Verification Photo` }) });
+    formData.company_spot_verification?.forEach((spot, i) => { if(spot.photo_upload && isImage(spot.photo_upload)) images.push({ src: getSrc(spot.photo_upload), alt: `Spot Verification Document ${i+1}` }) });
+    formData.billing_documents?.forEach((doc, i) => { if(doc.document && isImage(doc.document)) images.push({ src: getSrc(doc.document), alt: doc.document_name?.label || `Billing Document ${i+1}` }) });
+    formData.enabled_billing_docs?.forEach((doc, i) => { if(doc.document && isImage(doc.document)) images.push({ src: getSrc(doc.document), alt: doc.document_name?.label || `Enabled Billing Document ${i+1}` }) });
+
+    return images;
+  }, [watchedFiles, getValues]);
+
+  const handlePreviewClick = useCallback((file: File | string | null | undefined, label: string) => {
+    if (!file) return;
+
+    const isImage = (f: unknown): boolean => {
+      if (f instanceof File) return f.type.startsWith('image/');
+      if (typeof f === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(f);
+      return false;
+    }
+
+    if (isImage(file)) {
+        const src = file instanceof File ? URL.createObjectURL(file) : String(file);
+        const index = allImageDocsForViewer.findIndex(img => img.src === src);
+        if (index > -1) {
+            setImageViewerState({ isOpen: true, startIndex: index });
+        } else {
+            // Fallback for an image not in the main list for some reason
+            setImageViewerState({ isOpen: true, startIndex: 0 });
+        }
+    } else {
+        setGenericFileViewerState({ isOpen: true, file: file as File | string });
+    }
+  }, [allImageDocsForViewer]);
+  // --- END: CENTRALIZED PREVIEW LOGIC ---
 
   const internalFormSubmit = (values: CompanyFormSchema) => {
     onFormSubmit?.(values, formMethods);
@@ -2280,7 +2425,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   };
 
   const renderActiveSection = () => {
-    const sectionProps = { errors, control, formMethods, getValues };
+    const sectionProps = { errors, control, formMethods, getValues, handlePreviewClick }; // Pass handlePreviewClick down
     switch (activeSection) {
       case "companyDetails": return <CompanyDetailsSection {...sectionProps} />;
       case "kycDocuments": return <KYCDetailSection {...sectionProps} />;
@@ -2308,9 +2453,26 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       <Card className="mb-6" bodyClass="px-4 py-2 md:px-6">
         <NavigatorComponent activeSection={activeSection} onNavigate={setActiveSection} />
       </Card>
+
       <form onSubmit={handleSubmit(internalFormSubmit, (err) => console.log("Zod Validation Errors:", err))} className="flex flex-col gap-4 pb-20">
         {renderActiveSection()}
       </form>
+      
+      {/* Render viewers at the top level */}
+      {imageViewerState.isOpen && (
+        <ImageViewer
+          images={allImageDocsForViewer}
+          startIndex={imageViewerState.startIndex}
+          onClose={() => setImageViewerState({ isOpen: false, startIndex: 0 })}
+        />
+      )}
+      {genericFileViewerState.isOpen && genericFileViewerState.file && (
+        <GenericFileViewer
+          file={genericFileViewerState.file}
+          onClose={() => setGenericFileViewerState({ isOpen: false, file: null })}
+        />
+      )}
+
       <Card className="mt-auto sticky bottom-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <div className="flex justify-between items-center p-4">
           <div>
@@ -2342,19 +2504,13 @@ const CompanyCreate = () => {
   const isEditMode = Boolean(id);
 
   const [initialData, setInitialData] = useState<Partial<CompanyFormSchema> | null>(null);
-  const [pageLoading, setPageLoading] = useState(isEditMode);
+  const [pageLoading, setPageLoading] = useState(true);
   const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { CountriesData, ContinentsData, MemberData, CompanyData: AllCompaniesData, EmployeesList, DocumentListData } = useSelector(masterSelector);
 
-
-
-  const documentTypeOptions = useMemo(() => {
-    return Array.isArray(DocumentListData) ? DocumentListData.map((d: any) => ({ value: d.id, label: d.name })) : [];
-  }, [DocumentListData]);
-
-  const getEmptyFormValues = (): CompanyFormSchema => ({
+  const getEmptyFormValues = useCallback((): CompanyFormSchema => ({
     company_name: "", primary_contact_number: "", primary_contact_number_code: undefined,
     general_contact_number: "", general_contact_number_code: undefined,
     alternate_contact_number: "", alternate_contact_number_code: null,
@@ -2377,74 +2533,72 @@ const CompanyCreate = () => {
     other_document_file: null, other_document_remark: "", other_document_remark_enabled: false,
     primary_account_number: "", primary_benificeiry_name: "", primary_bank_name: "", primary_ifsc_code: "",
     primary_swift_code: "", primary_bank_verification_photo: null, primary_is_default: false,
-    secondary_account_number: "", secondary_benificeiry_number: "", secondary_bank_name: "", secondary_ifsc_code: "",
+    secondary_account_number: "", secondary_benificeiry_name: "", secondary_bank_name: "", secondary_ifsc_code: "",
     secondary_swift_code: "", secondary_bank_verification_photo: null, secondary_is_default: false,
     company_bank_details: [],
     USER_ACCESS: false, billing_documents: [], enabled_billing_docs: [],
     company_members: [], company_teams: [],
     company_spot_verification: [], company_references: [],
-  });
+  }), []);
 
+  // Effect 1: Fetch all static lookup data once on component mount.
   useEffect(() => {
     dispatch(getCountriesAction());
     dispatch(getContinentsAction());
-    dispatch(getBrandAction());
     dispatch(getEmployeesListingAction());
-    dispatch(getCategoriesAction());
     dispatch(getMemberAction());
     dispatch(getCompanyAction());
     dispatch(getDocumentListAction());
   }, [dispatch]);
 
+  const lookupsReady = useMemo(() => {
+    return !!(
+      CountriesData?.length &&
+      ContinentsData?.length &&
+      MemberData &&
+      AllCompaniesData &&
+      EmployeesList &&
+      DocumentListData
+    );
+  }, [AllCompaniesData, CountriesData, ContinentsData, DocumentListData, EmployeesList, MemberData]);
+
+
+  // Effect 2: Initialize the form. Runs for Add mode immediately, or for Edit mode once lookups are ready.
   useEffect(() => {
-    const lookupsReady = CountriesData?.length > 0 && ContinentsData?.length > 0 && MemberData && AllCompaniesData && EmployeesList;
+    if (isEditMode) {
+      if (id && lookupsReady) {
+        const fetchCompanyData = async () => {
+          try {
+            const actionResult = await dispatch(getCompanyByIdAction(id)).unwrap();
+            if (actionResult) {
+              const documentTypeOptions = Array.isArray(DocumentListData) ? DocumentListData.map((d: any) => ({ value: d.id, label: d.name })) : [];
+              const allMembersForSelect = (MemberData?.data || []).map((m: any) => ({ value: String(m.id), label: `(${m.customer_code}) - ${m.name}` }));
+              const employeeDataSource = EmployeesList?.data?.data || EmployeesList?.data || EmployeesList;
+              const allEmployeesForSelect = (Array.isArray(employeeDataSource) ? employeeDataSource : []).map((m: any) => ({ value: String(m.id), label: `(${m.employee_id}) - ${m.name || 'N/A'}` }));
+              const allCompaniesForRefSelect = (AllCompaniesData?.data || []).map((c: any) => ({ value: String(c.id), label: `(${c.company_code}) - ${c.company_name}` }));
 
-    if (isEditMode && id && lookupsReady) {
-      const fetchCompanyData = async () => {
-        setPageLoading(true);
-        try {
-          const actionResult = await dispatch(getCompanyByIdAction(id)).unwrap();
-          if (actionResult) {
-            const allMembersForSelect = (MemberData?.data || []).map((m: any) => ({ value: String(m.id), label: `(${m.customer_code}) - ${m.name}` }));
-
-            const employeeDataSource = EmployeesList?.data?.data || EmployeesList?.data || EmployeesList;
-            const employeeList = Array.isArray(employeeDataSource) ? employeeDataSource : [];
-            const allEmployeesForSelect = employeeList.map((m: any) => ({
-              value: String(m.id),
-              label: `(${m.employee_id}) - ${m.name || 'N/A'}`,
-            }));
-
-            const allCompaniesForRefSelect = (AllCompaniesData?.data || []).map((c: any) => ({ value: String(c.id), label: `(${c.company_code}) - ${c.company_name}` }));
-            const transformed = transformApiToFormSchema(
-              actionResult,
-              CountriesData,
-              ContinentsData,
-              allMembersForSelect,
-              allEmployeesForSelect,
-              allCompaniesForRefSelect,
-              documentTypeOptions,
-            );
-            setInitialData({ ...getEmptyFormValues(), ...transformed });
-          } else {
-            toast.push(<Notification type="danger" title="Fetch Error"> Company data not found. </Notification>);
+              const transformed = transformApiToFormSchema(actionResult, CountriesData, ContinentsData, allMembersForSelect, allEmployeesForSelect, allCompaniesForRefSelect, documentTypeOptions);
+              setInitialData({ ...getEmptyFormValues(), ...transformed });
+            } else {
+              toast.push(<Notification type="danger" title="Fetch Error">Company data not found.</Notification>);
+              navigate("/business-entities/company");
+            }
+          } catch (error: any) {
+            toast.push(<Notification type="danger" title="Fetch Error">{error?.message || "Error fetching company data."}</Notification>);
             navigate("/business-entities/company");
+          } finally {
+            setPageLoading(false);
           }
-        } catch (error: any) {
-          toast.push(<Notification type="danger" title="Fetch Error"> {error?.message || "Error fetching company data."} </Notification>);
-          navigate("/business-entities/company");
-        } finally {
-          setPageLoading(false);
-        }
-      };
-      fetchCompanyData();
-    } else if (!isEditMode) {
+        };
+        fetchCompanyData();
+      }
+    } else {
       setInitialData(getEmptyFormValues());
       setPageLoading(false);
     }
-  }, [id, navigate, dispatch, isEditMode, AllCompaniesData, CountriesData, ContinentsData, DocumentListData, EmployeesList, MemberData, documentTypeOptions]);
+  }, [isEditMode, dispatch, navigate, getEmptyFormValues]);
 
-
-  const handleFormSubmit = async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
+  const handleFormSubmit = useCallback(async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
     setIsSubmitting(true);
     const payload = preparePayloadForApi(formValues, isEditMode);
 
@@ -2462,11 +2616,9 @@ const CompanyCreate = () => {
       if (error?.response?.data?.errors) {
         const validationErrors = error.response.data.errors;
         Object.keys(validationErrors).forEach((key) => {
-          let formKey = key as keyof CompanyFormSchema;
           const message = Array.isArray(validationErrors[key]) ? validationErrors[key][0] : validationErrors[key];
-
           try {
-            formMethods.setError(formKey, { type: "manual", message: message });
+            formMethods.setError(key as keyof CompanyFormSchema, { type: "manual", message: message });
           } catch (e) {
             console.warn(`API error for unmapped/unexpected key: ${key} - ${message}`);
           }
@@ -2478,7 +2630,7 @@ const CompanyCreate = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [dispatch, isEditMode, id, navigate]);
 
   const openDiscardDialog = () => setDiscardConfirmationOpen(true);
   const closeDiscardDialog = () => setDiscardConfirmationOpen(false);

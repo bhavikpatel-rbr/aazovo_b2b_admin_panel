@@ -170,20 +170,17 @@ const requestFeedbackFormSchema = z.object({
     .min(1, "Email is required."),
   mobile_no: z.string().min(1, "Mobile number is required.").max(20),
   company_name: z.string().max(150).optional().or(z.literal("")).nullable(),
-  type: z.enum(["Request", "Feedback"], {
-    errorMap: () => ({ message: "Please select a type." }),
-  }),
-  category_id: z.string().min(1, "Category is required."), // MODIFIED
-  department_id: z.string().min(1, "Department is required."),
+  type: z.enum(["Request", "Feedback"]).optional().nullable(),
+  category_id: z.string().optional().nullable(),
+  department_id: z.string().optional().nullable(),
   feedback_details: z
     .string()
-    .min(10, "Description must be at least 10 characters.")
-    .max(5000),
+   .optional().nullable(),
   status: z.enum(["Pending", "In progress", "Resolved", "Rejected"], {
     errorMap: () => ({ message: "Please select a status." }),
   }),
   rating: z.string().optional().nullable(),
-  attachment: z.any().optional(),
+  attachment: z.any().optional().nullable(),
 });
 type RequestFeedbackFormData = z.infer<typeof requestFeedbackFormSchema>;
 
@@ -644,13 +641,15 @@ const RequestAndFeedbackListing = () => {
       setEditingItem(item);
       setSelectedFile(null);
       setRemoveExistingAttachment(false);
+      console.log("item.category_id",item);
+      
       reset({
         name: item.name,
         email: item.email,
         mobile_no: item.mobile_no,
         company_name: item.company_name || "",
         type: item.type,
-        category_id: String(item.category_id), // MODIFIED
+        category_id: item.category_id != null ? String(item.category_id) : '', // MODIFIED
         department_id: String(item.department_id),
         feedback_details: item.feedback_details,
         status: item.status,
@@ -680,8 +679,15 @@ const RequestAndFeedbackListing = () => {
       if (value !== null && value !== undefined && value !== "")
         formData.append(key, String(value));
     });
+    console.log("editingItem",editingItem);
+    
     if (editingItem) {
       formData.append("_method", "PUT");
+     console.log("editingItem.category_id",editingItem.category_id);
+     console.log("editingItem.category_id",editingItem.category_id == null);
+      formData.append('department_id', editingItem.department_id == null ? '' : editingItem.department_id);
+    formData.append('category_id', editingItem.category_id == null ? '' : editingItem.category_id);
+     
       if (selectedFile instanceof File)
         formData.append("attachment", selectedFile);
       else if (removeExistingAttachment && editingItem.attachment)
@@ -1031,14 +1037,14 @@ const RequestAndFeedbackListing = () => {
         </FormItem>
         {/* MODIFIED: Using dynamic categoryOptions */}
         <FormItem
-          label={<div>Category<span className="text-red-500"> *</span></div>}
+          label={<div>Category</div>}
           invalid={!!errors.category_id}
           errorMessage={errors.category_id?.message}
         >
           <Controller name="category_id" control={control} render={({ field }) => <Select placeholder="Select Category" options={categoryOptions} value={categoryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbCategory />} />} />
         </FormItem>
         <FormItem
-          label={<div>Department<span className="text-red-500"> *</span></div>}
+          label={<div>Department</div>}
           className="md:col-span-2"
           invalid={!!errors.department_id}
           errorMessage={errors.department_id?.message}
@@ -1046,7 +1052,7 @@ const RequestAndFeedbackListing = () => {
           <Controller name="department_id" control={control} render={({ field }) => <Select placeholder="Select Department" options={departmentOptions} value={departmentOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbBuildingStore />} />} />
         </FormItem>
         <FormItem
-          label={<div>Description<span className="text-red-500"> *</span></div>}
+          label={<div>Description</div>}
           className="md:col-span-2"
           invalid={!!errors.feedback_details}
           errorMessage={errors.feedback_details?.message}
@@ -1082,7 +1088,7 @@ const RequestAndFeedbackListing = () => {
           {removeExistingAttachment && <div className="mt-1 text-xs text-red-500">Current attachment will be removed.</div>}
         </FormItem>
         <FormItem
-          label={<div>Status<span className="text-red-500"> *</span></div>}
+          label={<div>Status</div>}
           className="md:col-span-2"
           invalid={!!errors.status}
           errorMessage={errors.status?.message}

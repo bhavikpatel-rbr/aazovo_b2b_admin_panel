@@ -626,14 +626,14 @@ useEffect(() => {
                 <TbPencil />
               </div>
             </Tooltip>
-            <Tooltip title="Delete">
+            {/* <Tooltip title="Delete">
               <div
                   className="text-lg p-1.5 cursor-pointer hover:text-red-500"
                   onClick={() => handleDeleteClick(props.row.original)}
               >
                   <TbTrash />
               </div>
-            </Tooltip>
+            </Tooltip> */}
           </div>
         ),
       },
@@ -1054,7 +1054,7 @@ useEffect(() => {
           />
           {(activeFilterCount > 0 || tableData.query) && (
             <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">
-              Found <strong>{total}</strong> matching document(s).
+              Found <strong>{total}</strong> matching document.
             </div>
           )}
           <div className="flex-grow overflow-auto">

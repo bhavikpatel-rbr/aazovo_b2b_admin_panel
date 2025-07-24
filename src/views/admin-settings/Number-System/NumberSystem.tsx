@@ -202,7 +202,7 @@ const NumberSystems = () => {
     }
     if (tableData.query) {
       const query = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter(item => (item.name?.toLowerCase() ?? "").includes(query));
+      processedData = processedData.filter(item => (item.name?.toLowerCase() ?? "").includes(query) || item?.country_ids?.split(',')?.map(id => countryOptions?.find(c => c.value === id)?.label?.toLowerCase() ?? "")?.some(name => name.includes(query)));
     }
 
     const { order, key } = tableData.sort;
@@ -350,7 +350,7 @@ const NumberSystems = () => {
           </div>
           <ItemTableTools onSearchChange={(q) => handleSetTableData({ query: q, pageIndex: 1 })} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportModal} onClearAll={onClearAllFiltersAndReload} allColumns={baseColumns} visibleColumnKeys={visibleColumnKeys} setVisibleColumnKeys={setVisibleColumnKeys} activeFilterCount={activeFilterCount} isDataReady={isDataReady} />
           <div className="mt-4"><ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={onClearAllFiltersAndReload} countryOptions={countryOptions} /></div>
-          {(activeFilterCount > 0 || tableData.query) && <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching system(s).</div>}
+          {(activeFilterCount > 0 || tableData.query) && <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching system.</div>}
           <div className="mt-2 flex-grow overflow-y-auto">
             <DataTable selectable columns={visibleColumns} data={pageData} noData={!tableLoading && pageData.length === 0} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }} onPaginationChange={(p) => handleSetTableData({ pageIndex: p })} onSelectChange={(s) => handleSetTableData({ pageSize: s, pageIndex: 1 })} onSort={(s) => handleSetTableData({ sort: s })} checkboxChecked={(row) => selectedItems.some(s => s.id === row.id)} onCheckBoxChange={(c,r) => setSelectedItems(p => c ? [...p,r] : p.filter(i => i.id !== r.id))} onIndeterminateCheckBoxChange={(c,rs) => { const rIds = new Set(rs.map(r=>r.original.id)); setSelectedItems(p => c ? [...p, ...rs.map(r=>r.original).filter(r => !p.some(i => i.id === r.id))] : p.filter(i => !rIds.has(i.id)))}}/>
           </div>

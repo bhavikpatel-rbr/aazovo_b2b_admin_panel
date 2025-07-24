@@ -404,11 +404,10 @@ const ViewDetailsDialog: React.FC<{
       <div className="flex items-start justify-between">
         <h5 className="mb-4">Details for: {item.name}</h5>
         <span
-          className={`px-2 py-1 text-xs font-semibold rounded-full ${
-            item.type === "Offer"
+          className={`px-2 py-1 text-xs font-semibold rounded-full ${item.type === "Offer"
               ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
               : "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300"
-          }`}
+            }`}
         >
           {item.type}
         </span>
@@ -523,9 +522,8 @@ const AddNotificationDialog: React.FC<{
     defaultValues: {
       notification_title: `Regarding ${item.type}: ${item.name}`,
       send_users: [],
-      message: `This is a notification for the ${item.type.toLowerCase()}: "${
-        item.name
-      }".`,
+      message: `This is a notification for the ${item.type.toLowerCase()}: "${item.name
+        }".`,
     },
     mode: "onChange",
   });
@@ -737,9 +735,8 @@ const AddScheduleDialog: React.FC<{
       event_type: undefined,
       date_time: null as any,
       remind_from: null,
-      notes: `Details for ${item.type.toLowerCase()} "${item.name}" (ID: ${
-        item.id
-      }).`,
+      notes: `Details for ${item.type.toLowerCase()} "${item.name}" (ID: ${item.id
+        }).`,
     },
     mode: "onChange",
   });
@@ -942,11 +939,9 @@ const ViewAlertDialog: React.FC<{
           dummyAlerts.map((alert) => (
             <div
               key={alert.id}
-              className={`p-3 rounded-lg border-l-4 border-${
-                alertColors[alert.severity]
-              }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${
-                alertColors[alert.severity]
-              }-500/10`}
+              className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]
+                }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]
+                }-500/10`}
             >
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-2">
@@ -1393,9 +1388,9 @@ const transformApiOffer = (apiOffer: ActualApiOfferShape): OfferDemandItem => {
     },
     assignedToInfo: assignee
       ? {
-          userId: String(assignee.id),
-          userName: assignee.name,
-        }
+        userId: String(assignee.id),
+        userName: assignee.name,
+      }
       : undefined,
     createdDate: new Date(apiOffer.created_at),
     updated_at: apiOffer.updated_at ? new Date(apiOffer.updated_at) : undefined,
@@ -1450,9 +1445,9 @@ const transformApiDemand = (
     },
     assignedToInfo: apiDemand?.assign_user
       ? {
-          userId: String(apiDemand.assign_user?.id),
-          userName: apiDemand?.assign_user?.name,
-        }
+        userId: String(apiDemand.assign_user?.id),
+        userName: apiDemand?.assign_user?.name,
+      }
       : undefined,
     createdDate: new Date(apiDemand.created_at),
     updated_at: apiDemand.updated_at
@@ -1818,8 +1813,8 @@ const ItemSelected = React.memo(
       activeTab === TABS.OFFER
         ? "Offer"
         : activeTab === TABS.DEMAND
-        ? "Demand"
-        : "Item";
+          ? "Demand"
+          : "Item";
     return (
       <>
         <StickyFooter
@@ -1851,9 +1846,8 @@ const ItemSelected = React.memo(
         <ConfirmDialog
           isOpen={deleteOpen}
           type="danger"
-          title={`Delete ${selectedItems.length} ${itemType}${
-            selectedItems.length > 1 ? "s" : ""
-          }`}
+          title={`Delete ${selectedItems.length} ${itemType}${selectedItems.length > 1 ? "s" : ""
+            }`}
           onClose={() => setDeleteOpen(false)}
           onRequestClose={() => setDeleteOpen(false)}
           onCancel={() => setDeleteOpen(false)}
@@ -2005,9 +1999,9 @@ const OffersDemands = () => {
     () =>
       Array.isArray(getAllUserData)
         ? getAllUserData.map((user: any) => ({
-            value: String(user.id),
-            label: `(${user.employee_id}) - ${user.name || 'N/A'}`,
-          }))
+          value: String(user.id),
+          label: `(${user.employee_id}) - ${user.name || 'N/A'}`,
+        }))
         : [],
     [getAllUserData]
   );
@@ -2090,27 +2084,22 @@ const OffersDemands = () => {
   );
 
   const fetchData = useCallback(() => {
-    const params = prepareApiParams(currentTableConfig, filterCriteria);
-    const shouldFetchOffers =
-      currentTab === TABS.OFFER ||
-      (currentTab === TABS.ALL &&
-        (!filterCriteria.itemType || filterCriteria.itemType === "Offer"));
-    const shouldFetchDemands =
-      currentTab === TABS.DEMAND ||
-      (currentTab === TABS.ALL &&
-        (!filterCriteria.itemType || filterCriteria.itemType === "Demand"));
-    if (shouldFetchOffers) {
-      dispatch(getOffersAction(params));
-    }
-    if (shouldFetchDemands) {
-      dispatch(getDemandsAction(params));
-    }
+    const timerId = setTimeout(() => {
+      const params = prepareApiParams(currentTableConfig, filterCriteria);
+      const shouldFetchOffers = currentTab === TABS.OFFER ||(currentTab === TABS.ALL &&(!filterCriteria.itemType || filterCriteria.itemType === "Offer"));
+      const shouldFetchDemands = currentTab === TABS.DEMAND ||  (currentTab === TABS.ALL && (!filterCriteria.itemType || filterCriteria.itemType === "Demand"));
+      if (shouldFetchOffers) {
+        dispatch(getOffersAction(params));
+      }
+      if (shouldFetchDemands) {
+        dispatch(getDemandsAction(params));
+      }
+    }, 800);
+    return () => {
+      clearTimeout(timerId);
+    };
   }, [
-    dispatch,
-    currentTab,
-    currentTableConfig,
-    filterCriteria,
-    prepareApiParams,
+    dispatch,  currentTab, currentTableConfig, filterCriteria,  prepareApiParams,
   ]);
 
   useEffect(() => {
@@ -2118,8 +2107,8 @@ const OffersDemands = () => {
       setInitialLoading(true);
       try {
         await Promise.all([
-            dispatch(getAllUsersAction()),
-            fetchData()
+          dispatch(getAllUsersAction()),
+          fetchData()
         ]);
       } catch (error) {
         console.error("Failed to fetch initial data:", error);
@@ -2129,10 +2118,16 @@ const OffersDemands = () => {
     };
     fetchInitialData();
   }, [dispatch]);
-  
+
   useEffect(() => {
-    if (initialLoading) return;
-    fetchData();
+     const timerId = setTimeout(() => {
+       if (initialLoading) return;
+       fetchData();
+   
+    }, 500);
+    return () => {
+      clearTimeout(timerId);
+    };
   }, [fetchData, initialLoading]);
 
 
@@ -2579,7 +2574,7 @@ const OffersDemands = () => {
         enableSorting: true,
         size: 70,
         cell: (props: CellContext<OfferDemandItem, any>) => (
-          <span className="font-mono text-xs">
+          <span className="font-semibold text-xs">
             {props.row.original.originalApiItem.id}
           </span>
         ),
@@ -2594,15 +2589,15 @@ const OffersDemands = () => {
             <div className="font-semibold">{props.row.original.name}</div>
             {(props.row.original.numberOfBuyers !== undefined ||
               props.row.original.numberOfSellers !== undefined) && (
-              <>
-                <div className="text-xs text-gray-600 dark:text-gray-300">
-                  Buyers: {props.row.original.numberOfBuyers ?? "N/A"}
-                </div>
-                <div className="text-xs text-gray-600 dark:text-gray-300">
-                  Sellers: {props.row.original.numberOfSellers ?? "N/A"}
-                </div>
-              </>
-            )}
+                <>
+                  <div className="text-xs text-gray-600 dark:text-gray-300">
+                    Buyers: {props.row.original.numberOfBuyers ?? "N/A"}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300">
+                    Sellers: {props.row.original.numberOfSellers ?? "N/A"}
+                  </div>
+                </>
+              )}
           </div>
         ),
       },
@@ -2765,22 +2760,22 @@ const OffersDemands = () => {
   const cardBodyClass = "flex gap-2 p-2";
 
   const renderCardContent = (content: number | undefined, colorClass: string) => {
-      if (initialLoading) {
-          return <Skeleton width={40} height={24} />;
-      }
-      return <h6 className={colorClass}>{content ?? 0}</h6>;
+    if (initialLoading) {
+      return <Skeleton width={40} height={24} />;
+    }
+    return <h6 className={colorClass}>{content ?? 0}</h6>;
   };
-  
+
   const skeletonColumns: ColumnDef<OfferDemandItem>[] = useMemo(() =>
-      columns.map((column) => ({
-          ...column,
-          cell: () => <Skeleton height={48} className="my-2" />,
-      })),
-  [columns]);
+    columns.map((column) => ({
+      ...column,
+      cell: () => <Skeleton height={48} className="my-2" />,
+    })),
+    [columns]);
 
   const skeletonData = useMemo(() =>
-      Array.from({ length: currentTableConfig.pageSize as number }, (_, i) => ({ id: `skeleton-${i}` }) as any),
-  [currentTableConfig.pageSize]);
+    Array.from({ length: currentTableConfig.pageSize as number }, (_, i) => ({ id: `skeleton-${i}` }) as any),
+    [currentTableConfig.pageSize]);
 
   return (
     <>
@@ -2810,54 +2805,54 @@ const OffersDemands = () => {
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
-              <Tooltip title="Click to show all items">
-                  <div onClick={onClearFilters}>
-                      <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}>
-                          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={24} /></div>
-                          <div>{renderCardContent(offerDemandCounts?.total, "text-blue-500")}<span className="font-semibold text-xs">Total</span></div>
-                      </Card>
-                  </div>
-              </Tooltip>
-              <Tooltip title="Click to show only offers">
-                  <div onClick={() => handleCardClick("item", "Offer")}>
-                      <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}>
-                          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbArrowUpRight size={24} /></div>
-                          <div>{renderCardContent(offerDemandCounts?.offers, "text-green-500")}<span className="font-semibold text-xs">Offers</span></div>
-                      </Card>
-                  </div>
-              </Tooltip>
-              <Tooltip title="Click to show only demands">
-                  <div onClick={() => handleCardClick("item", "Demand")}>
-                      <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}>
-                          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbArrowDownLeft size={24} /></div>
-                          <div>{renderCardContent(offerDemandCounts?.demands, "text-violet-500")}<span className="font-semibold text-xs">Demands</span></div>
-                      </Card>
-                  </div>
-              </Tooltip>
-              <Tooltip title="Click to show items created today">
-                  <div onClick={() => handleCardClick("item", "Today")}>
-                      <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-amber-300")}>
-                          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-amber-100 text-amber-500"><TbClockHour4 size={24} /></div>
-                          <div>{renderCardContent(offerDemandCounts?.today, "text-amber-500")}<span className="font-semibold text-xs">Today</span></div>
-                      </Card>
-                  </div>
-              </Tooltip>
-              <Tooltip title="Click to show offers created today">
-                  <div onClick={() => handleCardClick("item", "Today")}>
-                      <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-teal-200")}>
-                          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-teal-100 text-teal-500"><TbCalendarUp size={24} /></div>
-                          <div>{renderCardContent(offerDemandCounts?.today_offers, "text-teal-500")}<span className="font-semibold text-xs">Today Offers</span></div>
-                      </Card>
-                  </div>
-              </Tooltip>
-              <Tooltip title="Click to show demands created today">
-                  <div onClick={() => handleCardClick("item", "Today")}>
-                      <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-rose-200")}>
-                          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-rose-100 text-rose-500"><TbCalendarDown size={24} /></div>
-                          <div>{renderCardContent(offerDemandCounts?.today_demands, "text-rose-500")}<span className="font-semibold text-xs">Today Demands</span></div>
-                      </Card>
-                  </div>
-              </Tooltip>
+            <Tooltip title="Click to show all items">
+              <div onClick={onClearFilters}>
+                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}>
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={24} /></div>
+                  <div>{renderCardContent(offerDemandCounts?.total, "text-blue-500")}<span className="font-semibold text-xs">Total</span></div>
+                </Card>
+              </div>
+            </Tooltip>
+            <Tooltip title="Click to show only offers">
+              <div onClick={() => handleCardClick("item", "Offer")}>
+                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}>
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbArrowUpRight size={24} /></div>
+                  <div>{renderCardContent(offerDemandCounts?.offers, "text-green-500")}<span className="font-semibold text-xs">Offers</span></div>
+                </Card>
+              </div>
+            </Tooltip>
+            <Tooltip title="Click to show only demands">
+              <div onClick={() => handleCardClick("item", "Demand")}>
+                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}>
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbArrowDownLeft size={24} /></div>
+                  <div>{renderCardContent(offerDemandCounts?.demands, "text-violet-500")}<span className="font-semibold text-xs">Demands</span></div>
+                </Card>
+              </div>
+            </Tooltip>
+            <Tooltip title="Click to show items created today">
+              <div onClick={() => handleCardClick("item", "Today")}>
+                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-amber-300")}>
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-amber-100 text-amber-500"><TbClockHour4 size={24} /></div>
+                  <div>{renderCardContent(offerDemandCounts?.today, "text-amber-500")}<span className="font-semibold text-xs">Today</span></div>
+                </Card>
+              </div>
+            </Tooltip>
+            <Tooltip title="Click to show offers created today">
+              <div onClick={() => handleCardClick("item", "Today")}>
+                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-teal-200")}>
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-teal-100 text-teal-500"><TbCalendarUp size={24} /></div>
+                  <div>{renderCardContent(offerDemandCounts?.today_offers, "text-teal-500")}<span className="font-semibold text-xs">Today Offers</span></div>
+                </Card>
+              </div>
+            </Tooltip>
+            <Tooltip title="Click to show demands created today">
+              <div onClick={() => handleCardClick("item", "Today")}>
+                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-rose-200")}>
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-rose-100 text-rose-500"><TbCalendarDown size={24} /></div>
+                  <div>{renderCardContent(offerDemandCounts?.today_demands, "text-rose-500")}<span className="font-semibold text-xs">Today Demands</span></div>
+                </Card>
+              </div>
+            </Tooltip>
           </div>
           <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
             <nav className="-mb-px flex space-x-8" aria-label="Tabs">
@@ -2898,39 +2893,39 @@ const OffersDemands = () => {
             allUsers={getAllUserData || []}
           />
           <div className="flex-grow overflow-auto">
-              {initialLoading ? (
-                  <ItemTable
-                      columns={skeletonColumns}
-                      data={skeletonData}
-                      loading={false}
-                      pagingData={{
-                          total: currentTableConfig.pageSize as number,
-                          pageIndex: 1,
-                          pageSize: currentTableConfig.pageSize as number,
-                      }}
-                      selectable={false}
-                      onPaginationChange={() => {}}
-                      onSelectChange={() => {}}
-                      onSort={() => {}}
-                  />
-              ) : (
-                  <ItemTable
-                      columns={filteredColumns}
-                      data={pageData}
-                      loading={isOverallLoading || dataForExportLoading}
-                      pagingData={{
-                          total: totalItems,
-                          pageIndex: currentTableConfig.pageIndex as number,
-                          pageSize: currentTableConfig.pageSize as number,
-                      }}
-                      selectedItems={currentSelectedItems}
-                      onPaginationChange={handlePaginationChange}
-                      onSelectChange={handlePageSizeChange}
-                      onSort={handleSort}
-                      onRowSelect={handleRowSelect}
-                      onAllRowSelect={handleAllRowSelect}
-                  />
-              )}
+            {initialLoading ? (
+              <ItemTable
+                columns={skeletonColumns}
+                data={skeletonData}
+                loading={false}
+                pagingData={{
+                  total: currentTableConfig.pageSize as number,
+                  pageIndex: 1,
+                  pageSize: currentTableConfig.pageSize as number,
+                }}
+                selectable={false}
+                onPaginationChange={() => { }}
+                onSelectChange={() => { }}
+                onSort={() => { }}
+              />
+            ) : (
+              <ItemTable
+                columns={filteredColumns}
+                data={pageData}
+                loading={isOverallLoading || dataForExportLoading}
+                pagingData={{
+                  total: totalItems,
+                  pageIndex: currentTableConfig.pageIndex as number,
+                  pageSize: currentTableConfig.pageSize as number,
+                }}
+                selectedItems={currentSelectedItems}
+                onPaginationChange={handlePaginationChange}
+                onSelectChange={handlePageSizeChange}
+                onSort={handleSort}
+                onRowSelect={handleRowSelect}
+                onAllRowSelect={handleAllRowSelect}
+              />
+            )}
           </div>
         </AdaptiveCard>
         <ItemSelected
@@ -2970,8 +2965,8 @@ const OffersDemands = () => {
           isSubmittingExportReason
             ? "Submitting..."
             : dataForExportLoading
-            ? "Fetching..."
-            : "Submit & Export"
+              ? "Fetching..."
+              : "Submit & Export"
         }
         cancelText="Cancel"
         confirmButtonProps={{

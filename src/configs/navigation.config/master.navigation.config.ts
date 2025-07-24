@@ -20,6 +20,22 @@ const masterNavigationConfig: NavigationTree[] = [
         },
         subMenu: [
             {
+                key: 'master.PageType',
+                path: `${MASTER_PREFIX_PATH}/pagetype-type`,
+                title: 'Page Type',
+                translateKey: 'nav.master.PageType',
+                icon: 'documentType',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN],
+                meta: {
+                    description: {
+                        translateKey: 'nav.master.PageTypeDesc',
+                        label: 'Page Type',
+                    },
+                },
+                subMenu: [],
+            },
+            {
                 key: 'master.documentType',
                 path: `${MASTER_PREFIX_PATH}/document-type`,
                 title: 'Document Type',

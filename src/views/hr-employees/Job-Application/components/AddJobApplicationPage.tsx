@@ -10,15 +10,16 @@ import { z } from 'zod';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import Container from '@/components/shared/Container';
 import Loading from '@/components/shared/Loading';
-import { Button, Card, DatePicker, Radio, Select as UiSelect } from '@/components/ui';
+import { Button, Card, DatePicker, Dialog, Radio, Select as UiSelect } from '@/components/ui'; // Added Dialog
 import { FormContainer, FormItem } from '@/components/ui/Form';
 import Input from '@/components/ui/Input';
 import Notification from '@/components/ui/Notification';
+import Spinner from '@/components/ui/Spinner'; // Added Spinner
 import toast from '@/components/ui/toast';
 
 // Icons
 import { BiChevronRight } from 'react-icons/bi';
-import { TbPlus, TbTrash } from 'react-icons/tb';
+import { TbDownload, TbEye, TbFile, TbFileTypePdf, TbPlus, TbTrash, TbX } from 'react-icons/tb'; // Added more icons
 
 // Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
@@ -35,6 +36,75 @@ import { useAppDispatch } from "@/reduxtool/store";
 import type {
     ApplicationFormData
 } from '../types';
+
+// --- START: DOCUMENT PREVIEW COMPONENTS ---
+interface DocumentRecord {
+    name: string;
+    type: 'image' | 'pdf' | 'other';
+    url: string;
+}
+
+const DocumentViewer: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    document: DocumentRecord | null;
+}> = ({ isOpen, onClose, document }) => {
+    const [isContentLoaded, setIsContentLoaded] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            setIsContentLoaded(false);
+        }
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onClose]);
+
+    if (!isOpen || !document) return null;
+
+    const renderContent = () => {
+        switch (document.type) {
+            case 'pdf':
+                return <iframe src={document.url} title={document.name} className={`w-full h-full border-0 transition-opacity duration-300 ${isContentLoaded ? 'opacity-100' : 'opacity-0'}`} onLoad={() => setIsContentLoaded(true)}></iframe>;
+            default:
+                if (!isContentLoaded) setIsContentLoaded(true); // Mark as loaded for non-previewable types
+                return (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-center p-10 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                        <TbFile size={60} className="mx-auto mb-4 text-gray-500" />
+                        <h5 className="mb-2">{document.name}</h5>
+                        <p className="mb-4 text-gray-600 dark:text-gray-300">Preview is not available for this file type.</p>
+                        <a href={document.url} download target="_blank" rel="noopener noreferrer"><Button variant="solid" icon={<TbDownload />}>Download File</Button></a>
+                    </div>
+                );
+        }
+    };
+
+    return (
+        <Dialog isOpen={isOpen} onClose={onClose} width="auto" height="85vh" closable={false} contentClassName="p-0 bg-transparent">
+            <div className="w-full h-full bg-black/80 backdrop-blur-sm flex flex-col">
+                <header className="flex-shrink-0 h-16 bg-gray-800/50 text-white flex items-center justify-between px-4">
+                    <h6 className="font-semibold truncate" title={document.name}>{document.name}</h6>
+                    <div className="flex items-center gap-2">
+                        <a href={document.url} download target="_blank" rel="noopener noreferrer"><Button shape="circle" variant="subtle" size="sm" icon={<TbDownload />} /></a>
+                        <Button shape="circle" variant="subtle" size="sm" icon={<TbX />} onClick={onClose} />
+                    </div>
+                </header>
+                <main className="relative flex-grow flex items-center justify-center p-4">
+                    {!isContentLoaded && <Spinner size={40} className="absolute" />}
+                    {renderContent()}
+                </main>
+            </div>
+        </Dialog>
+    );
+};
+// --- END: DOCUMENT PREVIEW COMPONENTS ---
+
 
 // --- Schemas & Types ---
 const phoneRegex = new RegExp(/^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/);
@@ -75,43 +145,48 @@ export const applicationFormSchema = z.object({
     name: z.string().min(1, "Applicant name is required."),
     email: z.string().email("Invalid email address."),
     mobileNo: z.string().min(10, "Mobile number must be at least 10 digits.").regex(phoneRegex, "Invalid phone number format"),
-    gender: z.string({ required_error: "Gender is required." }),
-    dateOfBirth: z.date({ required_error: "Date of Birth is required." }),
+    gender: z.string().optional().nullable(),
+    dateOfBirth: z.date().optional().nullable(),
     age: z.number().nullable(),
     nationality: z.number().optional().nullable(),
     maritalStatus: z.string().optional().nullable(),
     bloodGroup: z.string().optional().nullable(),
     country: z.number().optional().nullable(),
     // MODIFIED: Made state and city required fields
-    state: z.string().min(1, "State is required."),
-    city: z.string().min(1, "City is required."),
+    state: z.string().optional().nullable(),
+    city: z.string().optional().nullable(),
     localAddress: z.string().optional(),
     permanentAddress: z.string().optional(),
-    jobTitle: z.string().min(1, "Job title is required."),
-    jobId: z.string().optional(),
-    applicationDate: z.date({ required_error: "Application date is required." }),
+    jobTitle: z.string().optional().nullable(),
+    jobId: z.string().optional().nullable(),
+    applicationDate: z.date().optional().nullable(),
     status: z.enum(['New', 'In Review', 'Shortlisted', 'Hired', 'Rejected']),
-    resume: z.any().optional(),
-    jobApplicationLink: z.string().optional(),
-    coverLetter: z.string().optional(),
-    notes: z.string().optional(),
-    emergencyRelation: z.string().min(1, "Emergency contact relation is required."),
-    emergencyMobileNo: z.string().min(10, "Emergency mobile number is required.").regex(phoneRegex, "Invalid mobile number format"),
+    resume: z.any().optional().nullable(),
+    jobApplicationLink: z.string().optional().nullable(),
+    coverLetter: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
+    emergencyRelation: z.string().optional().nullable(),
+    emergencyMobileNo: z.string()
+        .min(7, "Contact number must be at least 10 digits.")
+        .regex(phoneRegex, "Invalid contact number format")
+        .or(z.literal("")) // <-- This is the key part. It allows an empty string.
+        .optional()
+        .nullable(),
     familyDetails: z.array(familyDetailSchema).optional(),
-    educationalDetails: z.array(educationalDetailSchema).min(1, "At least one educational detail is required."),
+    educationalDetails: z.array(educationalDetailSchema).optional().nullable(),
     workExperienceType: z.enum(['fresher', 'experienced']),
-    employmentDetails: z.array(employmentDetailSchema),
-    total_experience: z.string().optional(),
-    expected_salary: z.string().optional(),
-    notice_period: z.string().optional(),
-    reference: z.string().optional(),
-    reference_specify: z.string().optional(),
+    employmentDetails: z.array(employmentDetailSchema).optional().nullable(),
+    total_experience: z.string().optional().nullable(),
+    expected_salary: z.string().optional().nullable(),
+    notice_period: z.string().optional().nullable(),
+    reference: z.string().optional().nullable(),
+    reference_specify: z.string().optional().nullable(),
 }).superRefine((data, ctx) => {
     if (data.workExperienceType === 'experienced') {
         if (!data.total_experience?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Total experience is required.", path: ['total_experience'] });
         if (!data.expected_salary?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Expected salary is required.", path: ['expected_salary'] });
         if (!data.notice_period?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Notice period is required.", path: ['notice_period'] });
-        if (data.employmentDetails.length === 0) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "At least one employment detail is required for experienced candidates.", path: ['employmentDetails'] });
+        if (!data.employmentDetails || data.employmentDetails.length === 0) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "At least one employment detail is required for experienced candidates.", path: ['employmentDetails'] });
     }
     if (data.reference?.trim() && !data.reference_specify?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Please specify details for the reference provided.", path: ['reference_specify'] });
 });
@@ -279,6 +354,8 @@ const AddJobApplicationPage = () => {
     const [isLoadingData, setIsLoadingData] = useState(isEditMode);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+    const [viewerOpen, setViewerOpen] = useState(false);
+    const [documentToView, setDocumentToView] = useState<DocumentRecord | null>(null);
 
     const { jobApplicationsData, departmentsData, CountriesData } = useSelector(masterSelector);
 
@@ -312,12 +389,12 @@ const AddJobApplicationPage = () => {
                         reset(formData);
                     } else {
                         toast.push(<Notification title="Not Found" type="danger">Job application not found.</Notification>);
-                        navigate('/hr-employees/job-applications');
+                        navigate('/hr-employees/job-application');
                     }
                 } catch (error) {
                     console.error("Error processing application data:", error);
                     toast.push(<Notification title="Error" type="danger">Failed to process application data.</Notification>);
-                    navigate('/hr-employees/job-applications');
+                    navigate('/hr-employees/job-application');
                 } finally {
                     setIsLoadingData(false);
                 }
@@ -351,6 +428,33 @@ const AddJobApplicationPage = () => {
         }
     }, [workExperienceType, setValue]);
 
+    const handlePreview = () => {
+        if (!resumeValue) return;
+
+        let url: string;
+        let name: string;
+        let type: 'pdf' | 'other' = 'other';
+
+        if (resumeValue instanceof File) {
+            url = URL.createObjectURL(resumeValue);
+            name = resumeValue.name;
+            if (resumeValue.type === 'application/pdf') {
+                type = 'pdf';
+            }
+        } else if (typeof resumeValue === 'string') {
+            url = resumeValue;
+            name = "Uploaded Resume";
+            if (resumeValue.toLowerCase().endsWith('.pdf')) {
+                type = 'pdf';
+            }
+        } else {
+            return;
+        }
+
+        setDocumentToView({ name, url, type });
+        setViewerOpen(true);
+    };
+
     const onSubmitHandler = async (formData: ApplicationFormData) => {
         setIsSubmitting(true);
         const payload = transformFormDataToApiPayload(formData, applicationId);
@@ -369,7 +473,7 @@ const AddJobApplicationPage = () => {
 
     const handleCancel = () => {
         if (isDirty) setCancelConfirmOpen(true);
-        else navigate('/hr-employees/job-applications');
+        else navigate('/hr-employees/job-application');
     };
 
     if (isLoadingData) {
@@ -381,49 +485,87 @@ const AddJobApplicationPage = () => {
             <FormContainer>
                 <form onSubmit={handleSubmit(onSubmitHandler)}>
                     <div className='flex gap-1 items-center mb-3'>
-                        <NavLink to="/hr-employees/job-applications"><h6 className='font-semibold hover:text-primary-600'>Job Applications</h6></NavLink>
+                        <NavLink to="/hr-employees/job-application"><h6 className='font-semibold hover:text-primary-600'>Job Applications</h6></NavLink>
                         <BiChevronRight size={18} className="text-gray-500" />
                         <h6 className='font-semibold text-primary-600'>{isEditMode ? 'Edit Application' : 'Add New Application'}</h6>
                     </div>
 
                     <Card id="personalDetails" className="mb-6">
                         <h4 className="mb-6">1. Personal Details</h4>
-                        <div className="grid md:grid-cols-3 gap-x-4 gap-y-2">
+                        <div className="grid md:grid-cols-4 gap-x-4 gap-y-2">
+                             <FormItem label={<div>Application Status<span className="text-red-500"> * </span></div>} error={errors.status?.message}><Controller name="status" control={control} render={({ field }) => <UiSelect placeholder="Select status" invalid={!!errors.status} options={applicationStatusOptions} value={applicationStatusOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />} /></FormItem>
                             <FormItem label={<div>Job Department<span className="text-red-500"> * </span></div>} error={errors.department?.message}><Controller name="department" control={control} render={({ field }) => <UiSelect {...field} placeholder="Select Department" invalid={!!errors.department} options={departmentOptions} value={departmentOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
                             <FormItem label={<div>Applicant Name<span className="text-red-500"> * </span></div>} error={errors.name?.message}><Controller name="name" control={control} render={({ field }) => <Input {...field} invalid={!!errors.name} placeholder="Full name" />} /></FormItem>
                             <FormItem label={<div>Email<span className="text-red-500"> * </span></div>} error={errors.email?.message}><Controller name="email" control={control} render={({ field }) => <Input {...field} invalid={!!errors.email} type="email" placeholder="email@example.com" />} /></FormItem>
                             <FormItem label={<div>Mobile No.<span className="text-red-500"> * </span></div>} error={errors.mobileNo?.message}><Controller name="mobileNo" control={control} render={({ field }) => <Input {...field} invalid={!!errors.mobileNo} placeholder="+1234567890" />} /></FormItem>
-                            <FormItem label={<div>Gender<span className="text-red-500"> * </span></div>} error={errors.gender?.message}><Controller name="gender" control={control} render={({ field }) => <UiSelect placeholder="Select Gender" invalid={!!errors.gender} options={genderOptions} value={genderOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
-                            <FormItem label={<div>Date of Birth<span className="text-red-500"> * </span></div>} error={errors.dateOfBirth?.message}><Controller name="dateOfBirth" control={control} render={({ field }) => <DatePicker placeholder="Select DOB" {...field} invalid={!!errors.dateOfBirth} value={field.value} onChange={date => field.onChange(date)} maxDate={new Date()} />} /></FormItem>
+                            <FormItem label={<div>Gender</div>} error={errors.gender?.message}><Controller name="gender" control={control} render={({ field }) => <UiSelect placeholder="Select Gender" invalid={!!errors.gender} options={genderOptions} value={genderOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
+                            <FormItem label={<div>Date of Birth</div>} error={errors.dateOfBirth?.message}><Controller name="dateOfBirth" control={control} render={({ field }) => <DatePicker placeholder="Select DOB" {...field} invalid={!!errors.dateOfBirth} value={field.value} onChange={date => field.onChange(date)} maxDate={new Date()} />} /></FormItem>
                             <FormItem label="Age" error={errors.age?.message}><Controller name="age" control={control} render={({ field }) => (<Input type="number" invalid={!!errors.age} placeholder="Calculated/Enter Age" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value, 10))} />)} /></FormItem>
                             <FormItem label="Nationality" error={errors.nationality?.message}><Controller name="nationality" control={control} render={({ field }) => <UiSelect placeholder="Select Nationality" invalid={!!errors.nationality} options={formNationalityOptions} value={formNationalityOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
                             <FormItem label="Marital Status" error={errors.maritalStatus?.message}><Controller name="maritalStatus" control={control} render={({ field }) => <UiSelect placeholder="Select Marital Status" invalid={!!errors.maritalStatus} options={maritalStatusOptions} value={maritalStatusOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
                             <FormItem label="Blood Group" error={errors.bloodGroup?.message}><Controller name="bloodGroup" control={control} render={({ field }) => <UiSelect placeholder="Select Blood Group" invalid={!!errors.bloodGroup} options={bloodGroupOptions} value={bloodGroupOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
                             <FormItem label="Country" error={errors.country?.message}><Controller name="country" control={control} render={({ field }) => <UiSelect placeholder="Select Country" invalid={!!errors.country} options={countryOptions} value={countryOptions.find(o => o.value === field.value)} onChange={opt => { field.onChange(opt?.value); setValue('state', '', { shouldValidate: true }); setValue('city', '', { shouldValidate: true }); }} isClearable />} /></FormItem>
                             {/* MODIFIED: Added required indicator to State and City labels */}
-                            <FormItem label={<div>State<span className="text-red-500"> * </span></div>} error={errors.state?.message}><Controller name="state" control={control} render={({ field }) => <Input {...field} invalid={!!errors.state} placeholder="Enter State" />} /></FormItem>
-                            <FormItem label={<div>City<span className="text-red-500"> * </span></div>} error={errors.city?.message}><Controller name="city" control={control} render={({ field }) => <Input {...field} invalid={!!errors.city} placeholder="Enter City" />} /></FormItem>
-                            <FormItem label="Local Address" error={errors.localAddress?.message} className="md:col-span-3"><Controller name="localAddress" control={control} render={({ field }) => <Input textArea rows={2} invalid={!!errors.localAddress} placeholder="Enter Local Address" {...field} />} /></FormItem>
-                            <FormItem label="Permanent Address" error={errors.permanentAddress?.message} className="md:col-span-3"><Controller name="permanentAddress" control={control} render={({ field }) => <Input textArea rows={2} invalid={!!errors.permanentAddress} placeholder="Enter Permanent Address" {...field} />} /></FormItem>
-                            <FormItem label={<div>Work Experience<span className="text-red-500"> * </span></div>} error={errors.workExperienceType?.message} className="md:col-span-3"><Controller name="workExperienceType" control={control} render={({ field }) => (<Radio.Group value={field.value} onChange={field.onChange}><Radio value="fresher">Fresher</Radio><Radio value="experienced">Experienced</Radio></Radio.Group>)} /></FormItem>
+                            <FormItem label={<div>State</div>} error={errors.state?.message}><Controller name="state" control={control} render={({ field }) => <Input {...field} invalid={!!errors.state} placeholder="Enter State" />} /></FormItem>
+                            <FormItem label={<div>City</div>} error={errors.city?.message}><Controller name="city" control={control} render={({ field }) => <Input {...field} invalid={!!errors.city} placeholder="Enter City" />} /></FormItem>
+                            <FormItem label={<div>Work Experience</div>} error={errors.workExperienceType?.message} ><Controller name="workExperienceType" control={control} render={({ field }) => (<Radio.Group value={field.value} onChange={field.onChange}><Radio value="fresher">Fresher</Radio><Radio value="experienced">Experienced</Radio></Radio.Group>)} /></FormItem>
+                            <FormItem label={<div>Applying for Job Title</div>} error={errors.jobTitle?.message}><Controller name="jobTitle" control={control} render={({ field }) => <Input {...field} invalid={!!errors.jobTitle} placeholder="e.g., Software Engineer" />} /></FormItem>
+                            <FormItem label="Local Address" error={errors.localAddress?.message} className="md:col-span-2"><Controller name="localAddress" control={control} render={({ field }) => <Input textArea rows={2} invalid={!!errors.localAddress} placeholder="Enter Local Address" {...field} />} /></FormItem>
+                            <FormItem label="Permanent Address" error={errors.permanentAddress?.message} className="md:col-span-2"><Controller name="permanentAddress" control={control} render={({ field }) => <Input textArea rows={2} invalid={!!errors.permanentAddress} placeholder="Enter Permanent Address" {...field} />} /></FormItem>
+                            
                             {workExperienceType === 'experienced' && (<>
-                                <FormItem label={<div>Total Experience<span className="text-red-500"> * </span></div>} error={errors.total_experience?.message}><Controller name="total_experience" control={control} render={({ field }) => <Input {...field} invalid={!!errors.total_experience} placeholder="e.g., 2 years 3 months" />} /></FormItem>
-                                <FormItem label={<div>Expected Salary<span className="text-red-500"> * </span></div>} error={errors.expected_salary?.message}><Controller name="expected_salary" control={control} render={({ field }) => <Input {...field} invalid={!!errors.expected_salary} placeholder="e.g., 5 LPA or Negotiable" />} /></FormItem>
-                                <FormItem label={<div>Notice Period<span className="text-red-500"> * </span></div>} error={errors.notice_period?.message}><Controller name="notice_period" control={control} render={({ field }) => <Input {...field} invalid={!!errors.notice_period} placeholder="e.g., 1 month or Immediately" />} /></FormItem>
+                                <FormItem label={<div>Total Experience</div>} error={errors.total_experience?.message}><Controller name="total_experience" control={control} render={({ field }) => <Input {...field} invalid={!!errors.total_experience} placeholder="e.g., 2 years 3 months" />} /></FormItem>
+                                <FormItem label={<div>Expected Salary</div>} error={errors.expected_salary?.message}><Controller name="expected_salary" control={control} render={({ field }) => <Input {...field} invalid={!!errors.expected_salary} placeholder="e.g., 5 LPA or Negotiable" />} /></FormItem>
+                                <FormItem label={<div>Notice Period</div>} error={errors.notice_period?.message}><Controller name="notice_period" control={control} render={({ field }) => <Input {...field} invalid={!!errors.notice_period} placeholder="e.g., 1 month or Immediately" />} /></FormItem>
                                 <FormItem label="Reference" error={errors.reference?.message} className={referenceValue && referenceValue.trim() !== "" ? "md:col-span-1" : "md:col-span-3"}><Controller name="reference" control={control} render={({ field }) => <Input {...field} invalid={!!errors.reference} placeholder="Reference contact or details" />} /></FormItem>
-                                {referenceValue && referenceValue.trim() !== "" && (<FormItem label={<div>Specify Reference<span className="text-red-500"> * </span></div>} error={errors.reference_specify?.message} className="md:col-span-2"><Controller name="reference_specify" control={control} render={({ field }) => <Input textArea rows={1} invalid={!!errors.reference_specify} {...field} placeholder="More details about the reference" />} /></FormItem>)}
+                                {referenceValue && referenceValue.trim() !== "" && (<FormItem label={<div>Specify Reference</div>} error={errors.reference_specify?.message} className="md:col-span-2"><Controller name="reference_specify" control={control} render={({ field }) => <Input textArea rows={1} invalid={!!errors.reference_specify} {...field} placeholder="More details about the reference" />} /></FormItem>)}
                             </>)}
-                            <FormItem label={<div>Applying for Job Title<span className="text-red-500"> * </span></div>} error={errors.jobTitle?.message}><Controller name="jobTitle" control={control} render={({ field }) => <Input {...field} invalid={!!errors.jobTitle} placeholder="e.g., Software Engineer" />} /></FormItem>
+                            
                             <FormItem label="Job ID" error={errors.jobId?.message}><Controller name="jobId" control={control} render={({ field }) => <Input {...field} invalid={!!errors.jobId} placeholder="e.g., JP001 or 0015" />} /></FormItem>
-                            <FormItem label={<div>Application Date<span className="text-red-500"> * </span></div>} error={errors.applicationDate?.message}><Controller name="applicationDate" control={control} render={({ field }) => <DatePicker placeholder="Select date" {...field} invalid={!!errors.applicationDate} value={field.value} onChange={date => field.onChange(date)} />} /></FormItem>
-                            <FormItem label={<div>Application Status<span className="text-red-500"> * </span></div>} error={errors.status?.message}><Controller name="status" control={control} render={({ field }) => <UiSelect placeholder="Select status" invalid={!!errors.status} options={applicationStatusOptions} value={applicationStatusOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />} /></FormItem>
-                            <FormItem label="Resume" error={errors.resume?.message} className="lg:col-span-1 md:col-span-2">
-                                {isEditMode && typeof resumeValue === 'string' && resumeValue && (<div className="mb-2"> <a href={resumeValue} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-blue-600 hover:underline"> View Current Resume </a> </div>)}
-                                <Controller name="resume" control={control} render={({ field: { onChange, onBlur, name, ref } }) => (<Input type="file" name={name} ref={ref} onBlur={onBlur} invalid={!!errors.resume} onChange={(e) => { onChange(e.target.files?.[0] || null); }} accept=".pdf,.doc,.docx,.txt" />)} />
+                            <FormItem label={<div>Application Date</div>} error={errors.applicationDate?.message}><Controller name="applicationDate" control={control} render={({ field }) => <DatePicker placeholder="Select date" {...field} invalid={!!errors.applicationDate} value={field.value} onChange={date => field.onChange(date)} />} /></FormItem>
+                           
+                            {/* --- MODIFIED RESUME FIELD --- */}
+                            <FormItem label="Resume" error={errors.resume?.message} className="lg:col-span-2 md:col-span-2">
+                                <div className="flex items-center gap-2">
+                                    <Controller 
+                                        name="resume" 
+                                        control={control} 
+                                        render={({ field: { onChange, onBlur, name, ref } }) => (
+                                            <Input 
+                                                type="file" 
+                                                name={name} 
+                                                ref={ref} 
+                                                onBlur={onBlur} 
+                                                invalid={!!errors.resume} 
+                                                onChange={(e) => { onChange(e.target.files?.[0] || null); }} 
+                                                accept=".pdf,.doc,.docx,.txt" 
+                                                className="flex-grow"
+                                            />
+                                        )} 
+                                    />
+                                    {resumeValue && (
+                                        <Button 
+                                            type="button" 
+                                            variant="twoTone" 
+                                            icon={<TbEye />} 
+                                            onClick={handlePreview}
+                                        >
+                                            Preview
+                                        </Button>
+                                    )}
+                                </div>
+                                {isEditMode && typeof resumeValue === 'string' && resumeValue && (
+                                    <div className="mt-1">
+                                        <a href={resumeValue} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-500 hover:underline">
+                                            Current Resume: {resumeValue.split('/').pop()}
+                                        </a>
+                                    </div>
+                                )}
                             </FormItem>
-                            <FormItem label="Job Application Link" error={errors.jobApplicationLink?.message} className="lg:col-span-2 md:col-span-1"><Controller name="jobApplicationLink" control={control} render={({ field }) => <Input {...field} invalid={!!errors.jobApplicationLink} placeholder="https://job-portal/apply/123 or text" />} /></FormItem>
-                            <FormItem label="Cover Letter" error={errors.coverLetter?.message} className="md:col-span-3"><Controller name="coverLetter" control={control} render={({ field }) => <Input {...field} invalid={!!errors.coverLetter} textArea rows={3} placeholder="Enter cover letter content..." />} /></FormItem>
-                            <FormItem label="Remarks/General Notes" error={errors.notes?.message} className="md:col-span-3"><Controller name="notes" control={control} render={({ field }) => <Input {...field} invalid={!!errors.notes} textArea rows={3} placeholder="Enter additional notes or remarks..." />} /></FormItem>
+                            {/* --- END MODIFICATION --- */}
+                            <FormItem label="Job Application Link" error={errors.jobApplicationLink?.message}className="md:col-span-4" ><Controller name="jobApplicationLink" control={control} render={({ field }) => <Input {...field} invalid={!!errors.jobApplicationLink} placeholder="https://job-portal/apply/123 or text" />} /></FormItem>
+                            <FormItem label="Cover Letter" error={errors.coverLetter?.message} className="md:col-span-2"><Controller name="coverLetter" control={control} render={({ field }) => <Input {...field} invalid={!!errors.coverLetter} textArea rows={3} placeholder="Enter cover letter content..." />} /></FormItem>
+                            <FormItem label="Remarks/General Notes" error={errors.notes?.message} className="md:col-span-2"><Controller name="notes" control={control} render={({ field }) => <Input {...field} invalid={!!errors.notes} textArea rows={3} placeholder="Enter additional notes or remarks..." />} /></FormItem>
                         </div>
                     </Card>
 
@@ -443,25 +585,25 @@ const AddJobApplicationPage = () => {
                     </Card>
 
                     <Card id="emergencyContact" className="mb-6">
-                        <h4 className="mb-6">3. Emergency Contact Details<span className="text-red-500"> * </span></h4>
+                        <h4 className="mb-6">3. Emergency Contact Details</h4>
                         <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
-                            <FormItem label={<div>Relation<span className="text-red-500"> * </span></div>} error={errors.emergencyRelation?.message}><Controller name="emergencyRelation" control={control} render={({ field }) => <Input {...field} invalid={!!errors.emergencyRelation} placeholder="e.g., Spouse, Parent" />} /></FormItem>
-                            <FormItem label={<div>Mobile No.<span className="text-red-500"> * </span></div>} error={errors.emergencyMobileNo?.message}><Controller name="emergencyMobileNo" control={control} render={({ field }) => <Input {...field} invalid={!!errors.emergencyMobileNo} placeholder="Emergency contact number" />} /></FormItem>
+                            <FormItem label={<div>Relation</div>} error={errors.emergencyRelation?.message}><Controller name="emergencyRelation" control={control} render={({ field }) => <Input {...field} invalid={!!errors.emergencyRelation} placeholder="e.g., Spouse, Parent" />} /></FormItem>
+                            <FormItem label={<div>Mobile No.</div>} error={errors.emergencyMobileNo?.message}><Controller name="emergencyMobileNo" control={control} render={({ field }) => <Input {...field} invalid={!!errors.emergencyMobileNo} placeholder="Emergency contact number" />} /></FormItem>
                         </div>
                     </Card>
 
                     <Card id="educationalDetails" className="mb-6">
-                        <div className="flex justify-between items-center mb-4"><h4 className="mb-0">4. Educational Details<span className="text-red-500"> * </span></h4><Button size="sm" type="button" icon={<TbPlus />} onClick={() => appendEdu({ degree: '', university: '', percentageGrade: '', educationFromDate: null, educationToDate: null, specialization: '' })}>Add Education</Button></div>
+                        <div className="flex justify-between items-center mb-4"><h4 className="mb-0">4. Educational Details</h4><Button size="sm" type="button" icon={<TbPlus />} onClick={() => appendEdu({ degree: '', university: '', percentageGrade: '', educationFromDate: null, educationToDate: null, specialization: '' })}>Add Education</Button></div>
                         {errors.educationalDetails && !Array.isArray(errors.educationalDetails) && <p className="text-red-500 text-sm mb-2">{errors.educationalDetails.message as string}</p>}
                         {eduFields.map((item, index) => (
                             <div key={item.id} className="border p-4 rounded-md mb-4 relative">
                                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 items-start">
-                                    <FormItem label={<div>Degree {index + 1}<span className="text-red-500"> * </span></div>} error={errors.educationalDetails?.[index]?.degree?.message} className="mb-0"><Controller name={`educationalDetails.${index}.degree`} control={control} render={({ field }) => <Input {...field} invalid={!!errors.educationalDetails?.[index]?.degree} placeholder="e.g., B.Tech" />} /></FormItem>
-                                    <FormItem label={<div>University<span className="text-red-500"> * </span></div>} error={errors.educationalDetails?.[index]?.university?.message} className="mb-0"><Controller name={`educationalDetails.${index}.university`} control={control} render={({ field }) => <Input {...field} invalid={!!errors.educationalDetails?.[index]?.university} placeholder="Name of University" />} /></FormItem>
-                                    <FormItem label={<div>Percentage/Grade<span className="text-red-500"> * </span></div>} error={errors.educationalDetails?.[index]?.percentageGrade?.message} className="mb-0"><Controller name={`educationalDetails.${index}.percentageGrade`} control={control} render={({ field }) => <Input {...field} invalid={!!errors.educationalDetails?.[index]?.percentageGrade} placeholder="e.g., 75% or A+" />} /></FormItem>
+                                    <FormItem label={<div>Degree {index + 1}</div>} error={errors.educationalDetails?.[index]?.degree?.message} className="mb-0"><Controller name={`educationalDetails.${index}.degree`} control={control} render={({ field }) => <Input {...field} invalid={!!errors.educationalDetails?.[index]?.degree} placeholder="e.g., B.Tech" />} /></FormItem>
+                                    <FormItem label={<div>University</div>} error={errors.educationalDetails?.[index]?.university?.message} className="mb-0"><Controller name={`educationalDetails.${index}.university`} control={control} render={({ field }) => <Input {...field} invalid={!!errors.educationalDetails?.[index]?.university} placeholder="Name of University" />} /></FormItem>
+                                    <FormItem label={<div>Percentage/Grade</div>} error={errors.educationalDetails?.[index]?.percentageGrade?.message} className="mb-0"><Controller name={`educationalDetails.${index}.percentageGrade`} control={control} render={({ field }) => <Input {...field} invalid={!!errors.educationalDetails?.[index]?.percentageGrade} placeholder="e.g., 75% or A+" />} /></FormItem>
                                     {/* MODIFIED: The validation schema now properly requires these date fields */}
-                                    <FormItem label={<div>From Date<span className="text-red-500"> * </span></div>} error={errors.educationalDetails?.[index]?.educationFromDate?.message} className="mb-0"><Controller name={`educationalDetails.${index}.educationFromDate`} control={control} render={({ field }) => <DatePicker placeholder="Start Date" {...field} invalid={!!errors.educationalDetails?.[index]?.educationFromDate} value={field.value} onChange={date => field.onChange(date)} maxDate={new Date()} />} /></FormItem>
-                                    <FormItem label={<div>To Date<span className="text-red-500"> * </span></div>} error={errors.educationalDetails?.[index]?.educationToDate?.message} className="mb-0"><Controller name={`educationalDetails.${index}.educationToDate`} control={control} render={({ field }) => <DatePicker placeholder="End Date" {...field} invalid={!!errors.educationalDetails?.[index]?.educationToDate} value={field.value} onChange={date => field.onChange(date)} maxDate={new Date()} />} /></FormItem>
+                                    <FormItem label={<div>From Date</div>} error={errors.educationalDetails?.[index]?.educationFromDate?.message} className="mb-0"><Controller name={`educationalDetails.${index}.educationFromDate`} control={control} render={({ field }) => <DatePicker placeholder="Start Date" {...field} invalid={!!errors.educationalDetails?.[index]?.educationFromDate} value={field.value} onChange={date => field.onChange(date)} maxDate={new Date()} />} /></FormItem>
+                                    <FormItem label={<div>To Date</div>} error={errors.educationalDetails?.[index]?.educationToDate?.message} className="mb-0"><Controller name={`educationalDetails.${index}.educationToDate`} control={control} render={({ field }) => <DatePicker placeholder="End Date" {...field} invalid={!!errors.educationalDetails?.[index]?.educationToDate} value={field.value} onChange={date => field.onChange(date)} maxDate={new Date()} />} /></FormItem>
                                     <FormItem label="Specialization" error={errors.educationalDetails?.[index]?.specialization?.message} className="mb-0"><Controller name={`educationalDetails.${index}.specialization`} control={control} render={({ field }) => <Input {...field} invalid={!!errors.educationalDetails?.[index]?.specialization} placeholder="e.g., CS" />} /></FormItem>
                                 </div>
                                 <Button size="xs" color="red-500" variant="plain" icon={<TbTrash />} type="button" onClick={() => removeEdu(index)} className="absolute top-2 right-2">Remove</Button>
@@ -471,16 +613,16 @@ const AddJobApplicationPage = () => {
 
                     {workExperienceType === 'experienced' && (
                         <Card id="employmentDetails" className="mb-6">
-                            <div className="flex justify-between items-center mb-4"><h4 className="mb-0">5. Employment Details<span className="text-red-500"> * </span></h4><Button size="sm" type="button" icon={<TbPlus />} onClick={() => appendEmp({ organization: '', designation: '', annualCTC: '', periodServiceFrom: null, periodServiceTo: null })}>Add Employment</Button></div>
+                            <div className="flex justify-between items-center mb-4"><h4 className="mb-0">5. Employment Details</h4><Button size="sm" type="button" icon={<TbPlus />} onClick={() => appendEmp({ organization: '', designation: '', annualCTC: '', periodServiceFrom: null, periodServiceTo: null })}>Add Employment</Button></div>
                             {errors.employmentDetails && !Array.isArray(errors.employmentDetails) && <p className="text-red-500 text-sm mb-2">{errors.employmentDetails.message as string}</p>}
                             {empFields.map((item, index) => (
                                 <div key={item.id} className="border p-4 rounded-md mb-4 relative">
                                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 items-start">
-                                        <FormItem label={<div>Organization {index + 1}<span className="text-red-500"> * </span></div>} error={errors.employmentDetails?.[index]?.organization?.message} className="mb-0"><Controller name={`employmentDetails.${index}.organization`} control={control} render={({ field }) => <Input {...field} invalid={!!errors.employmentDetails?.[index]?.organization} placeholder="Company Name" />} /></FormItem>
-                                        <FormItem label={<div>Designation<span className="text-red-500"> * </span></div>} error={errors.employmentDetails?.[index]?.designation?.message} className="mb-0"><Controller name={`employmentDetails.${index}.designation`} control={control} render={({ field }) => <Input {...field} invalid={!!errors.employmentDetails?.[index]?.designation} placeholder="Your Role" />} /></FormItem>
+                                        <FormItem label={<div>Organization {index + 1}</div>} error={errors.employmentDetails?.[index]?.organization?.message} className="mb-0"><Controller name={`employmentDetails.${index}.organization`} control={control} render={({ field }) => <Input {...field} invalid={!!errors.employmentDetails?.[index]?.organization} placeholder="Company Name" />} /></FormItem>
+                                        <FormItem label={<div>Designation</div>} error={errors.employmentDetails?.[index]?.designation?.message} className="mb-0"><Controller name={`employmentDetails.${index}.designation`} control={control} render={({ field }) => <Input {...field} invalid={!!errors.employmentDetails?.[index]?.designation} placeholder="Your Role" />} /></FormItem>
                                         <FormItem label="Annual CTC" error={errors.employmentDetails?.[index]?.annualCTC?.message} className="mb-0"><Controller name={`employmentDetails.${index}.annualCTC`} control={control} render={({ field }) => <Input {...field} invalid={!!errors.employmentDetails?.[index]?.annualCTC} placeholder="e.g., 12 LPA" />} /></FormItem>
-                                        <FormItem label={<div>From<span className="text-red-500"> * </span></div>} error={errors.employmentDetails?.[index]?.periodServiceFrom?.message} className="mb-0"><Controller name={`employmentDetails.${index}.periodServiceFrom`} control={control} render={({ field }) => <DatePicker placeholder="Start Date" {...field} invalid={!!errors.employmentDetails?.[index]?.periodServiceFrom} value={field.value} onChange={date => field.onChange(date)} maxDate={new Date()} />} /></FormItem>
-                                        <FormItem label={<div>To<span className="text-red-500"> * </span></div>} error={errors.employmentDetails?.[index]?.periodServiceTo?.message} className="mb-0"><Controller name={`employmentDetails.${index}.periodServiceTo`} control={control} render={({ field }) => <DatePicker placeholder="End Date" {...field} invalid={!!errors.employmentDetails?.[index]?.periodServiceTo} value={field.value} onChange={date => field.onChange(date)} maxDate={new Date()} />} /></FormItem>
+                                        <FormItem label={<div>From</div>} error={errors.employmentDetails?.[index]?.periodServiceFrom?.message} className="mb-0"><Controller name={`employmentDetails.${index}.periodServiceFrom`} control={control} render={({ field }) => <DatePicker placeholder="Start Date" {...field} invalid={!!errors.employmentDetails?.[index]?.periodServiceFrom} value={field.value} onChange={date => field.onChange(date)} maxDate={new Date()} />} /></FormItem>
+                                        <FormItem label={<div>To</div>} error={errors.employmentDetails?.[index]?.periodServiceTo?.message} className="mb-0"><Controller name={`employmentDetails.${index}.periodServiceTo`} control={control} render={({ field }) => <DatePicker placeholder="End Date" {...field} invalid={!!errors.employmentDetails?.[index]?.periodServiceTo} value={field.value} onChange={date => field.onChange(date)} maxDate={new Date()} />} /></FormItem>
                                     </div>
                                     <Button size="xs" color="red-500" variant="plain" icon={<TbTrash />} type="button" onClick={() => removeEmp(index)} className="absolute top-2 right-2">Remove</Button>
                                 </div>
@@ -497,10 +639,16 @@ const AddJobApplicationPage = () => {
                 </form>
             </FormContainer>
 
-            <ConfirmDialog isOpen={cancelConfirmOpen} type="warning" title="Discard Changes?" onClose={() => setCancelConfirmOpen(false)} onConfirm={() => { setCancelConfirmOpen(false); reset(); navigate('/hr-employees/job-applications'); }} onCancel={() => setCancelConfirmOpen(false)}>
+            <ConfirmDialog isOpen={cancelConfirmOpen} type="warning" title="Discard Changes?" onClose={() => setCancelConfirmOpen(false)} onConfirm={() => { setCancelConfirmOpen(false); reset(); navigate('/hr-employees/job-application'); }} onCancel={() => setCancelConfirmOpen(false)}>
                 <p>You have unsaved changes. Discard them and leave?</p>
             </ConfirmDialog>
+
+            <DocumentViewer
+                isOpen={viewerOpen}
+                onClose={() => setViewerOpen(false)}
+                document={documentToView}
+            />
         </Container>
     );
 };
-export default AddJobApplicationPage;
+export default AddJobApplicationPage; 

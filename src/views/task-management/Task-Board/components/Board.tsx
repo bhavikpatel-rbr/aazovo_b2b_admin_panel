@@ -194,7 +194,7 @@ interface ScrumBoardHeaderProps { boardMembers?: Member[]; currentView: 'board' 
 const ScrumBoardHeader = ({ boardMembers = [], currentView, onViewChange }: ScrumBoardHeaderProps) => {
     const viewOptions = [ { value: 'board', label: 'Board', icon: <TbLayoutKanban className="text-lg" /> }, { value: 'list', label: 'List', icon: <TbList className="text-lg" /> }, ];
     return (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 px-1">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 px-1 ">
             <div className="flex-1"><h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-2 ml-5">Task Board</h3></div>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                 <div className="flex-shrink-0">
@@ -210,24 +210,45 @@ type RenameBoardFormSchema = { title: string };
 const RenameForm = ({ title, closeRenameForm }: { title: string, closeRenameForm: () => void }) => { const { setFocus } = useForm<RenameBoardFormSchema>({ defaultValues: { title } }); useEffect(() => { setFocus('title') }, [setFocus]); return <Input defaultValue={title} onBlur={closeRenameForm} autoFocus />; };
 const BoardTitle = (props: { dragHandleProps?: DraggableProvidedDragHandleProps | null; title: string; taskCount: number; }) => {
     const { dragHandleProps, title, taskCount } = props;
+
+    // Get the color classes based on the title, or use the default if not found
+    const colorClasses = taskLabelColors[title] || taskLabelColors['default'];
+
     return (
-        <div className="board-title px-3.5 py-3 flex justify-between items-center border-b border-slate-200 dark:border-slate-700/50 cursor-grab" {...dragHandleProps}>
-            <div className="flex items-center gap-2"><h6 className="font-semibold text-base text-slate-700 dark:text-slate-200 truncate max-w-[150px]" title={title}>{title}</h6><Badge innerClass="bg-sky-100 text-sky-700 dark:bg-sky-700/30 dark:text-sky-200">{taskCount}</Badge></div>
-            <EllipsisButton />
+        <div 
+            className="board-title px-3.5 py-3 flex justify-between items-center border-b border-slate-200 dark:border-slate-700/50 cursor-grab" 
+            {...dragHandleProps}
+        >
+            <h6 
+                className="font-semibold text-base capitalize text-slate-700 dark:text-slate-200 truncate max-w-[150px]" 
+                title={title}
+            >
+                {/* Replaces underscores with spaces for a cleaner display */}
+                {title.replace(/_/g, ' ')}
+            </h6>
+            <h6 
+                className={classNames(
+                    "text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-700/30 dark:text-amber-200"
+                )}
+            >
+                {taskCount}
+            </h6>
+            {/* <EllipsisButton /> */}
         </div>
     );
 };
 interface BoardCardProps extends CardProps { data: Ticket; ref?: Ref<HTMLDivElement>; onEdit: (task: Ticket) => void; }
 const BoardCard = React.forwardRef<HTMLDivElement, BoardCardProps>((props, ref) => {
+    const navigate = useNavigate()
     const { openDialog, updateDialogView, setSelectedTicketId } = useScrumBoardStore();
     const { data, onEdit, ...rest } = props;
     const { id, name, comments, attachments, members, labels, priority } = data;
-    const onViewDetails = () => { openDialog(); updateDialogView('TICKET'); setSelectedTicketId(id); };
+    const onViewDetails = () => { navigate(`/task/task-list/create/${data.id}`, { state: { taskToEdit: data } }); };
     return (
         <Card ref={ref} className="hover:shadow-xl transition-shadow duration-200 rounded-lg mb-4 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800" bodyClass="p-4 flex flex-col" {...rest}>
             <div className="flex justify-between items-start mb-2.5">
                 <h6 className="font-semibold text-base text-slate-800 dark:text-slate-100 leading-tight break-words cursor-pointer hover:text-sky-600 dark:hover:text-sky-400" onClick={onViewDetails}>{name}</h6>
-                <Dropdown placement="bottom-end" renderTitle={<EllipsisButton />}><Dropdown.Item eventKey="edit" onClick={() => onEdit(data)} className="gap-2"><TbPencil />Edit Task</Dropdown.Item></Dropdown>
+                
             </div>
             {(labels && labels.length > 0 || priority) && (<div className="mb-3 flex flex-wrap gap-1.5 items-center">{priority && <Tag className={taskLabelColors[priority] || taskLabelColors.default}>Priority: {priority}</Tag>}{labels?.map((label) => <Tag key={label} className={`${taskLabelColors[label] || taskLabelColors.default}`}>{label}</Tag>)}</div>)}
             <div className="flex items-center justify-between mt-auto pt-2"><UsersAvatarGroup avatarProps={{ size: 28, className:"ring-1 ring-white dark:ring-slate-800" }} users={members || []} /><div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">{comments && comments.length > 0 && <IconText className="gap-1 items-center" icon={<TbMessageCircle className="text-base" />}>{comments.length}</IconText>}{attachments && attachments.length > 0 && <IconText className="gap-1 items-center" icon={<TbPaperclip className="text-base" />}>{attachments.length}</IconText>}</div></div>
@@ -280,7 +301,10 @@ interface TaskListViewProps { tasks: TaskWithStatus[]; onEdit: (task: TaskWithSt
 const ActualTaskListView: React.FC<TaskListViewProps> = ({ tasks, onEdit }) => {
     const { openDialog, updateDialogView, setSelectedTicketId } = useScrumBoardStore();
     const handleViewTicket = (ticketId: string) => { openDialog(); updateDialogView('TICKET'); setSelectedTicketId(ticketId); };
+
+    
     if (!tasks || tasks.length === 0) { return <Card className="mt-6"><div className="text-center py-10 text-slate-500 dark:text-slate-400">No tasks to display.</div></Card>; }
+   
     return (
         <Card className="mt-6 shadow-sm border border-slate-200 dark:border-slate-700" bodyClass="p-0"><div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
             <thead className="bg-slate-50 dark:bg-slate-800"><tr><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Task Title</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Priority</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Assignees</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Due Date</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th></tr></thead>
@@ -381,7 +405,7 @@ const Board = (props: BoardProps) => {
 
     return (
         <div className="p-4 sm:p-6 md:p-8 bg-slate-50 dark:bg-slate-900 min-h-screen">
-            <Card className="h-full shadow-none bg-transparent" bodyClass="h-full flex flex-col p-0">
+            <Card className="h-full shadow-none bg-transparent" bodyClass="h-full flex flex-col p-5">
                 <ScrumBoardHeader currentView={currentView} onViewChange={handleViewChange} />
                 {masterLoadingStatus === 'loading' && currentView === 'board' && (
                      <div className="flex justify-center items-center py-20"><Spinner size={50} className="text-sky-500"/><p className="ml-3 text-slate-600 dark:text-slate-300">Loading board...</p></div>

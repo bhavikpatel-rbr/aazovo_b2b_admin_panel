@@ -1355,7 +1355,7 @@ const PartnerListTable = () => {
       </ConfirmDialog>
       <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
         <div className="flex justify-center items-center p-4">
-          {imageToView ? <img src={`https://aazovo.codefriend.in/${imageToView}`} alt="Partner Logo Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} /> : <p>No image to display.</p>}
+          {imageToView ? <img src={`${imageToView}`} alt="Partner Logo Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} /> : <p>No image to display.</p>}
         </div>
       </Dialog>
     </>

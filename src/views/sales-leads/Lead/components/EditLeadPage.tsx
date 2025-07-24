@@ -62,7 +62,7 @@ export const leadFormSchema = z.object({
 
   // Fields not in the new UI but required for payload/logic
   lead_status: z.string(),
-  enquiry_type: z.string().optional(),
+  // enquiry_type: z.string().optional(),
   assigned_sales_person_id: z.number().nullable(),
   lead_date: z.date().nullable(), 
   source_qty: z.number().nullable(),
@@ -167,7 +167,7 @@ const EditLeadPage = () => {
   // This useEffect now correctly maps the API response to the form fields.
   // =========================================================================
   useEffect(() => {
-    if (currentLeadStatus === "succeeded" && currentLead) {
+    if (currentLead) {
       // Helper to safely convert API values (which can be string/null) to numbers.
       const toNumber = (val: any): number | null => {
         if (val === null || val === undefined || val === "") return null;
@@ -210,7 +210,7 @@ const EditLeadPage = () => {
         product_spec_id: toNumber(currentLead.product_spec_id),
         source_qty: toNumber(currentLead.source_qty),
         lead_status: currentLead.lead_status,
-        enquiry_type: currentLead.enquiry_type,
+        // enquiry_type: currentLead.enquiry_type,
 
         // --- Fields in schema but not in API response (set to default/null) ---
         lead_date: null,
@@ -242,7 +242,7 @@ const EditLeadPage = () => {
       id: parseInt(id, 10),
       lead_intent: data.lead_intent,
       lead_member: data.member_id,
-      enquiry_type: data.enquiry_type,
+      // enquiry_type: data.enquiry_type,
       product_id: data.product_id,
       qty: data.qty,
       target_price: data.target_price,
@@ -300,6 +300,7 @@ const EditLeadPage = () => {
       </Container>
     );
   }
+console.log(errors, 'errors');
 
   return (
     <Container className="h-full">
@@ -574,7 +575,7 @@ const EditLeadPage = () => {
               type="submit"
               variant="solid"
               loading={isSubmitting}
-              disabled={isSubmitting || currentLeadStatus !== 'succeeded'}
+              disabled={isSubmitting}
             >
               Save Changes
             </Button>

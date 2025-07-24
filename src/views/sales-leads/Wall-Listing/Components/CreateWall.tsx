@@ -34,6 +34,7 @@ import {
   addWallItemAction,
   editWallItemAction,
   getAllProductAction,
+  getEmployeesAction,
   getMembersAction,
   getPaymentTermAction,
   getProductSpecificationsAction,
@@ -86,7 +87,7 @@ const dispatchStatusOptions: OptionType[] = [ { value: "Pending", label: "Pendin
 const defaultItem: SingleWallItemFormData = { status: "Pending", productId: 0, member_id: 0, qty: 1, intent: "Sell", productStatus: "Active", activeHours: "", productSpecId: null, price: null, color: "", cartoonTypeId: null, dispatchStatus: "Pending", paymentTermId: null, eta: null, location: "", deviceCondition: null, assignedTeamId: null, remarks: "" };
 
 // Helper Functions (Unchanged)
-const transformApiDataToSingleFormItem = (apiData: any): SingleWallItemFormData => ({ status: apiData?.status || "Pending", productId: Number(apiData?.product_id), member_id: Number(apiData?.customer_id), qty: Number(apiData?.qty) || 1, intent: apiData?.want_to || "Sell", productStatus: apiData?.product_status || "Active", activeHours: apiData?.active_hrs || "", productSpecId: apiData?.product_spec_id ? Number(apiData.product_spec_id) : null, price: apiData?.price ? Number(apiData.price) : null, color: apiData?.color || null, cartoonTypeId: apiData?.cartoon_type || null, dispatchStatus: apiData?.dispatch_status || "Pending", paymentTermId: apiData?.payment_term ? Number(apiData.payment_term) : null, eta: apiData?.eta_details ? dayjs(apiData.eta_details).toDate() : null, location: apiData?.location || null, deviceCondition: apiData?.device_condition || null, assignedTeamId: apiData?.assigned_team_id ? Number(apiData.assigned_team_id) : null, remarks: apiData?.warranty_info || apiData?.internal_remarks || null });
+const transformApiDataToSingleFormItem = (apiData: any): SingleWallItemFormData => ({ status: apiData?.status || "Pending", productId: Number(apiData?.product_id), member_id: Number(apiData?.customer_id), qty: Number(apiData?.qty) || 1, intent: apiData?.want_to || "Sell", productStatus: apiData?.product_status || "Active", activeHours: String(apiData?.active_hrs) || "", productSpecId: apiData?.product_spec_id ? Number(apiData.product_spec_id) : null, price: apiData?.price ? Number(apiData.price) : null, color: apiData?.color || null, cartoonTypeId: apiData?.cartoon_type || null, dispatchStatus: apiData?.dispatch_status || "Pending", paymentTermId: apiData?.payment_term ? Number(apiData.payment_term) : null, eta: apiData?.eta_details ? dayjs(apiData.eta_details).toDate() : null, location: apiData?.location || null, deviceCondition: apiData?.device_condition || null, assignedTeamId: apiData?.assigned_team_id ? Number(apiData.assigned_team_id) : null, remarks: apiData?.warranty_info || apiData?.internal_remarks || null });
 const transformSingleItemToApiPayload = (formData: SingleWallItemFormData, initialData: any | null) => { const payload = { status: formData.status, product_id: String(formData.productId), customer_id: String(formData.member_id), qty: String(formData.qty), want_to: formData.intent, product_status: formData.productStatus, active_hrs: formData.activeHours, product_spec_id: formData.productSpecId ? String(formData.productSpecId) : null, price: formData.price != null ? String(formData.price) : null, color: formData.color || null, cartoon_type: formData.cartoonTypeId || null, dispatch_status: formData.dispatchStatus || null, payment_term: formData.paymentTermId ? String(formData.paymentTermId) : null, eta_details: formData.eta ? dayjs(formData.eta).format("YYYY-MM-DD") : null, location: formData.location || null, device_condition: formData.deviceCondition || null, assigned_team_id: formData.assignedTeamId ? String(formData.assignedTeamId) : null, warranty_info: formData.remarks || null, }; if (initialData) { return { ...payload, id: initialData.id, }; } return payload; };
 
 
@@ -101,7 +102,7 @@ const WallItemForm = () => {
 
   const {
     productsMasterData = [], memberData = [], ProductSpecificationsData = [],
-    PaymentTermsData = [], salesPerson = [], getwallItemsData,
+    PaymentTermsData = [], salesPerson = [],Employees = [] ,getwallItemsData,
   } = useSelector(masterSelector);
 
   const formMethods = useForm<WallItemFormData>({
@@ -119,7 +120,7 @@ const WallItemForm = () => {
     const fetchData = async () => {
       setIsLoadingPageData(true);
       try {
-        const promises = [ dispatch(getAllProductAction()), dispatch(getMembersAction()), dispatch(getProductSpecificationsAction()), dispatch(getPaymentTermAction()), dispatch(getSalesPersonAction()), ];
+        const promises = [ dispatch(getAllProductAction()), dispatch(getMembersAction()), dispatch(getProductSpecificationsAction()), dispatch(getPaymentTermAction()), dispatch(getEmployeesAction()), ];
         if (isEditMode) {
           promises.push(dispatch(getWallItemById(itemId)));
         }
@@ -139,7 +140,7 @@ const WallItemForm = () => {
   const memberOptions: OptionType<number>[] = useMemo(() => Array.isArray(memberData) ? memberData.map((c: any) => ({ value: c.id, label: `(${c.customer_code}) - ${c.name || 'N/A'}`, })) : [], [memberData]);
   const paymentTermsOption: OptionType<number>[] = useMemo(() => Array.isArray(PaymentTermsData) ? PaymentTermsData.map((p: any) => ({ value: p.id, label: p.term_name || 'Unnamed' })) : [], [PaymentTermsData]);
   const productSpecOptionsForSelect: OptionType<number>[] = useMemo(() => Array.isArray(ProductSpecificationsData) ? ProductSpecificationsData.map((s: any) => ({ value: s.id, label: s.name })) : [], [ProductSpecificationsData]);
-  const salesPersonOptions: OptionType<number>[] = useMemo(() => Array.isArray(salesPerson) ? salesPerson.map((p: any) => ({ value: p.id, label: `(${p.employee_id}) - ${p.name || 'N/A'}` })) : [], [salesPerson]);
+  const salesPersonOptions: OptionType<number>[] = useMemo(() => Array.isArray(Employees) ? Employees.map((p: any) => ({ value: p.id, label: `(${p.employee_id}) - ${p.name || 'N/A'}` })) : [], [Employees]);
 
   const onFormSubmit = async (formData: WallItemFormData) => {
     setIsSubmitting(true);
@@ -204,7 +205,7 @@ const WallItemForm = () => {
                   <h5 className="font-semibold mb-4">Editing Wall Item</h5>
                   <div className="grid md:grid-cols-3 gap-4">
                       <FormItem label={<div>Status<span className="text-red-500"> *</span></div>}>
-                        <Controller name="wallItems.0.status" control={formMethods.control} render={({ field }) => (<UiSelect options={statusOptions} value={statusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
+                        <Controller name="wallItems.0.status" control={formMethods.control} render={({ field }) => (<UiSelect isDisabled={true}  options={statusOptions} value={statusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
                         {formMethods.formState.errors.wallItems?.[0]?.status && <p className="text-red-500 text-xs mt-1">{formMethods.formState.errors.wallItems[0].status.message}</p>}
                       </FormItem>
                       <FormItem label={<div>Product Name<span className="text-red-500"> *</span></div>}>
@@ -240,7 +241,7 @@ const WallItemForm = () => {
                       <FormItem label="ETA"><Controller name="wallItems.0.eta" control={formMethods.control} render={({ field }) => <DatePicker {...field} value={field.value} onChange={date => field.onChange(date)} inputFormat="YYYY-MM-DD" /> } /></FormItem>
                       <FormItem label="Location"><Controller name="wallItems.0.location" control={formMethods.control} render={({ field }) => <Input {...field} value={field.value || ''} /> } /></FormItem>
                       <FormItem label="Device Condition"><Controller name="wallItems.0.deviceCondition" control={formMethods.control} render={({ field }) => (<Radio.Group value={field.value} onChange={field.onChange}> {deviceConditionRadioOptions.map(opt => <Radio key={opt.value} value={opt.value}>{opt.label}</Radio>)} </Radio.Group>)} /></FormItem>
-                      <FormItem label="Assigned Team"><Controller name="wallItems.0.assignedTeamId" control={formMethods.control} render={({ field }) => (<UiSelect isLoading={isLoadingPageData} options={salesPersonOptions} value={salesPersonOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
+                      <FormItem label="Assigned Team Member"><Controller name="wallItems.0.assignedTeamId" control={formMethods.control} render={({ field }) => (<UiSelect isLoading={isLoadingPageData} options={salesPersonOptions} value={salesPersonOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
                       <FormItem label="Remarks" className="md:col-span-3"><Controller name="wallItems.0.remarks" control={formMethods.control} render={({ field }) => <Input textArea {...field} value={field.value || ''} rows={3} /> } /></FormItem>
                   </div>
                 </div>
@@ -255,7 +256,7 @@ const WallItemForm = () => {
                                 {formMethods.formState.errors.wallItems?.[0]?.member_id && <p className="text-red-500 text-xs mt-1">{formMethods.formState.errors.wallItems[0].member_id.message}</p>}
                             </FormItem>
                             <FormItem label={<div>Status<span className="text-red-500"> *</span></div>}>
-                                <Controller name="wallItems.0.status" control={formMethods.control} render={({ field }) => (<UiSelect options={statusOptions} value={statusOptions.find(opt => opt.value === field.value)} onChange={opt => syncCommonField('status', opt?.value)} /> )}/>
+                                <Controller name="wallItems.0.status" control={formMethods.control} render={({ field }) => (<UiSelect isDisabled options={statusOptions} value={statusOptions.find(opt => opt.value === field.value)} onChange={opt => syncCommonField('status', opt?.value)} /> )}/>
                                 {formMethods.formState.errors.wallItems?.[0]?.status && <p className="text-red-500 text-xs mt-1">{formMethods.formState.errors.wallItems[0].status.message}</p>}
                             </FormItem>
                             <FormItem label={<div>Product Status<span className="text-red-500"> *</span></div>}>

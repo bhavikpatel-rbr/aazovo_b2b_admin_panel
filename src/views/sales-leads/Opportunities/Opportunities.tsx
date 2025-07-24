@@ -200,9 +200,7 @@ export type ApiOpportunityItem = {
   updated_by_role?: string;
   device_condition?: string | null;
   device_type?: string | null;
-  member?: {
-      favourite_brands_list?: { name: string }[];
-  } | null;
+  member?: any | null;
 };
 export type AutoSpbApiItem = {
   id: number;
@@ -342,16 +340,16 @@ type ActivityFormData = z.infer<typeof activitySchema>;
 
 // START: Alert-related types and schemas
 interface AlertNote {
-    id: number;
-    note: string; // HTML content from RichTextEditor
-    created_by: string;
-    created_at: string; // ISO date string
-    created_by_user?: {
-        name: string;
-    } | null;
+  id: number;
+  note: string; // HTML content from RichTextEditor
+  created_by: string;
+  created_at: string; // ISO date string
+  created_by_user?: {
+    name: string;
+  } | null;
 }
 const alertNoteSchema = z.object({
-    newNote: z.string().min(10, "Note must contain at least 10 characters."),
+  newNote: z.string().min(10, "Note must contain at least 10 characters."),
 });
 type AlertNoteFormData = z.infer<typeof alertNoteSchema>;
 // END: Alert-related types and schemas
@@ -865,13 +863,13 @@ const AddActivityDialog: React.FC<{
   );
 };
 const ViewOpportunitiesDialog: React.FC<{
-  opportunity:any,
+  opportunity: any,
   onClose: () => void;
-}> = ({ opportunity:lead, onClose }) => {
+}> = ({ opportunity: lead, onClose }) => {
   const dispatch = useAppDispatch();
   const [data, setData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   useEffect(() => {
     const fetchOpportunities = async () => {
       if (!lead.product_id) {
@@ -924,8 +922,8 @@ const ViewOpportunitiesDialog: React.FC<{
       cell: ({ row }: { row: { original: any } }) => {
         const { want_to, product_name, brand_name, color, device_condition } = row.original;
         const intentTagColor: Record<string, string> = {
-            Buy: 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-200',
-            Sell: 'bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-200',
+          Buy: 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-200',
+          Sell: 'bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-200',
         };
         return (
           <div>
@@ -942,13 +940,13 @@ const ViewOpportunitiesDialog: React.FC<{
     },
     {
       header: 'Member',
-      accessorKey: 'member_name',
+      accessorKey: 'member',
       cell: ({ row }: { row: { original: any } }) => {
-        const { member_name, customer_code, country_name } = row.original;
+        const { name, member_code, country_name } = row.original.member;
         return (
           <div>
-            <p className="font-semibold">{member_name}</p>
-            <p className="text-xs text-gray-500">{customer_code}</p>
+            <p className="font-semibold">{name}</p>
+            <p className="text-xs text-gray-500">{member_code}</p>
             <p className="text-xs text-gray-500">{country_name}</p>
           </div>
         );
@@ -1019,167 +1017,167 @@ const ViewOpportunitiesDialog: React.FC<{
   );
 };
 const OpportunityAlertModal: React.FC<{ opportunity: OpportunityItem; onClose: () => void }> = ({ opportunity, onClose }) => {
-    const [alerts, setAlerts] = useState<AlertNote[]>([]);
-    const [isFetching, setIsFetching] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const dispatch = useAppDispatch();
-    const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
-        resolver: zodResolver(alertNoteSchema),
-        defaultValues: { newNote: '' },
-        mode: 'onChange'
-    });
+  const [alerts, setAlerts] = useState<AlertNote[]>([]);
+  const [isFetching, setIsFetching] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const dispatch = useAppDispatch();
+  const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
+    resolver: zodResolver(alertNoteSchema),
+    defaultValues: { newNote: '' },
+    mode: 'onChange'
+  });
 
-    const stringToColor = (str: string) => {
-        let hash = 0;
-        if (!str) return '#cccccc';
-        for (let i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        let color = '#';
-        for (let i = 0; i < 3; i++) {
-            const value = (hash >> (i * 8)) & 0xFF;
-            color += ('00' + value.toString(16)).substr(-2);
-        }
-        return color;
-    };
+  const stringToColor = (str: string) => {
+    let hash = 0;
+    if (!str) return '#cccccc';
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    let color = '#';
+    for (let i = 0; i < 3; i++) {
+      const value = (hash >> (i * 8)) & 0xFF;
+      color += ('00' + value.toString(16)).substr(-2);
+    }
+    return color;
+  };
 
-    useEffect(() => {
-        setIsFetching(true);
-        dispatch(getAlertsAction({ module_id: opportunity.id, module_name: 'Opportunity' }))
-            .unwrap()
-            .then((data) => setAlerts(data.data || []))
-            .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
-            .finally(() => setIsFetching(false));
-            reset({ newNote: '' })
-    }, [opportunity.id, dispatch, reset]);
+  useEffect(() => {
+    setIsFetching(true);
+    dispatch(getAlertsAction({ module_id: opportunity.id, module_name: 'Opportunity' }))
+      .unwrap()
+      .then((data) => setAlerts(data.data || []))
+      .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
+      .finally(() => setIsFetching(false));
+    reset({ newNote: '' })
+  }, [opportunity.id, dispatch, reset]);
 
-    const onAddNote = async (data: AlertNoteFormData) => {
-        setIsSubmitting(true);
-        try {
-            await dispatch(addAllAlertsAction({ note: data.newNote, module_id: opportunity.id, module_name: 'Opportunity' })).unwrap();
-            toast.push(<Notification type="success" title="Alert Note Added" />);
-            reset({ newNote: '' });
-            // Refetch alerts
-            dispatch(getAlertsAction({ module_id: opportunity.id, module_name: 'Opportunity' }))
-                .unwrap()
-                .then((data) => setAlerts(data.data || []));
-        } catch (error: any) {
-            toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+  const onAddNote = async (data: AlertNoteFormData) => {
+    setIsSubmitting(true);
+    try {
+      await dispatch(addAllAlertsAction({ note: data.newNote, module_id: opportunity.id, module_name: 'Opportunity' })).unwrap();
+      toast.push(<Notification type="success" title="Alert Note Added" />);
+      reset({ newNote: '' });
+      // Refetch alerts
+      dispatch(getAlertsAction({ module_id: opportunity.id, module_name: 'Opportunity' }))
+        .unwrap()
+        .then((data) => setAlerts(data.data || []));
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    return (
-        <Dialog
-            isOpen={true}
-            onClose={onClose}
-            onRequestClose={onClose}
-            width={1200}
-            contentClassName="p-0 flex flex-col max-h-[90vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
-        >
-            <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 flex-shrink-0 rounded-t-lg">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <TbBellRinging className="text-2xl text-white" />
-                        <h5 className="mb-0 text-white font-bold text-base sm:text-xl">Alerts for: {opportunity.opportunity_id}</h5>
-                    </div>
-                    <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
-                        <TbX className="h-6 w-6" />
-                    </button>
-                </div>
-            </header>
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={1200}
+      contentClassName="p-0 flex flex-col max-h-[90vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
+    >
+      <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 flex-shrink-0 rounded-t-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <TbBellRinging className="text-2xl text-white" />
+            <h5 className="mb-0 text-white font-bold text-base sm:text-xl">Alerts for: {opportunity.opportunity_id}</h5>
+          </div>
+          <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
+            <TbX className="h-6 w-6" />
+          </button>
+        </div>
+      </header>
 
-            <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-hidden">
-                <div className="relative flex flex-col h-full overflow-hidden">
-                    <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
-                        Activity Timeline
-                    </h6>
-                    <div className="flex-grow overflow-y-auto lg:pr-4 lg:-mr-4">
-                        {isFetching ? (
-                            <div className="flex justify-center items-center h-full"><Spinner size="lg"/></div>
-                        ) : alerts.length > 0 ? (
-                            <div className="space-y-8">
-                                {alerts.map((alert, index) => {
-                                    const userName = alert?.created_by_user?.name || 'System';
-                                    const userInitial = userName.charAt(0).toUpperCase();
-                                    return (
-                                        <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
-                                            <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
-                                                <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>
-                                                    {userInitial}
-                                                </Avatar>
-                                                {index < alerts.length - 1 && (
-                                                    <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
-                                                )}
-                                            </div>
-                                            <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                                                <div className="p-4">
-                                                    <header className="flex justify-between items-center mb-2">
-                                                        <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
-                                                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                                            <TbCalendarEvent />
-                                                            <span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span>
-                                                        </div>
-                                                    </header>
-                                                    <div
-                                                        className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300"
-                                                        dangerouslySetInnerHTML={{ __html: alert.note }}
-                                                    />
-                                                </div>
-                                            </Card>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
-                                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
-                                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">No Alerts Found</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Be the first to add a note.</p>
-                            </div>
+      <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-hidden">
+        <div className="relative flex flex-col h-full overflow-hidden">
+          <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
+            Activity Timeline
+          </h6>
+          <div className="flex-grow overflow-y-auto lg:pr-4 lg:-mr-4">
+            {isFetching ? (
+              <div className="flex justify-center items-center h-full"><Spinner size="lg" /></div>
+            ) : alerts.length > 0 ? (
+              <div className="space-y-8">
+                {alerts.map((alert, index) => {
+                  const userName = alert?.created_by_user?.name || 'System';
+                  const userInitial = userName.charAt(0).toUpperCase();
+                  return (
+                    <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
+                      <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
+                        <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>
+                          {userInitial}
+                        </Avatar>
+                        {index < alerts.length - 1 && (
+                          <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
                         )}
-                    </div>
-                </div>
-
-                <div className="flex flex-col mt-8 lg:mt-0 h-full">
-                    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
-                        <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
-                            <div className="flex items-center gap-2">
-                                <TbPencilPlus className="text-xl text-red-600 dark:text-red-400" />
-                                <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6>
+                      </div>
+                      <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                        <div className="p-4">
+                          <header className="flex justify-between items-center mb-2">
+                            <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                              <TbCalendarEvent />
+                              <span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span>
                             </div>
-                        </header>
-                        <Form onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
-                            <FormItem invalid={!!errors.newNote} errorMessage={errors.newNote?.message} className="flex-grow flex flex-col">
-                                <Controller
-                                    name="newNote"
-                                    control={control}
-                                    render={({ field }) => (
-                                        <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
-                                            <RichTextEditor
-                                                {...field}
-                                                onChange={(val) => field.onChange(val.html)}
-                                                className="flex-grow min-h-[150px] sm:min-h-[200px]"
-                                            />
-                                        </div>
-                                    )}
-                                />
-                            </FormItem>
-                            <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
-                                <Button type="button" className="mr-3" onClick={onClose} disabled={isSubmitting}>
-                                    Cancel
-                                </Button>
-                                <Button variant="solid" color="red" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>
-                                    Submit Note
-                                </Button>
-                            </footer>
-                        </Form>
-                    </Card>
-                </div>
-            </main>
-        </Dialog>
-    );
+                          </header>
+                          <div
+                            className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300"
+                            dangerouslySetInnerHTML={{ __html: alert.note }}
+                          />
+                        </div>
+                      </Card>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
+                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
+                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">No Alerts Found</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Be the first to add a note.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col mt-8 lg:mt-0 h-full">
+          <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
+            <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <TbPencilPlus className="text-xl text-red-600 dark:text-red-400" />
+                <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6>
+              </div>
+            </header>
+            <Form onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
+              <FormItem invalid={!!errors.newNote} errorMessage={errors.newNote?.message} className="flex-grow flex flex-col">
+                <Controller
+                  name="newNote"
+                  control={control}
+                  render={({ field }) => (
+                    <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
+                      <RichTextEditor
+                        {...field}
+                        onChange={(val) => field.onChange(val.html)}
+                        className="flex-grow min-h-[150px] sm:min-h-[200px]"
+                      />
+                    </div>
+                  )}
+                />
+              </FormItem>
+              <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
+                <Button type="button" className="mr-3" onClick={onClose} disabled={isSubmitting}>
+                  Cancel
+                </Button>
+                <Button variant="solid" color="red" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>
+                  Submit Note
+                </Button>
+              </footer>
+            </Form>
+          </Card>
+        </div>
+      </main>
+    </Dialog>
+  );
 };
 
 const OpportunityModals: React.FC<OpportunityModalsProps> = ({
@@ -1191,13 +1189,13 @@ const OpportunityModals: React.FC<OpportunityModalsProps> = ({
   const { user } = useSelector(authSelector);
   const [isSubmittingAction, setIsSubmittingAction] = useState(false);
   const { type, data: item, isOpen } = modalState;
- const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<any>(null);
 
-    useEffect(() => {
-        const { useEncryptApplicationStorage } = config;
-        try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); }
-        catch (error) { console.error("Error getting UserData:", error); }
-    }, []);
+  useEffect(() => {
+    const { useEncryptApplicationStorage } = config;
+    try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); }
+    catch (error) { console.error("Error getting UserData:", error); }
+  }, []);
   if (!isOpen || !item) return null;
 
   const handleConfirmNotification = async (formData: NotificationFormData) => {
@@ -1350,19 +1348,19 @@ const OpportunityModals: React.FC<OpportunityModalsProps> = ({
             isLoading={isSubmittingAction}
           />
         );
-       case "alert":
+      case "alert":
         return (
-            <OpportunityAlertModal
-                opportunity={item}
-                onClose={onClose}
-            />
+          <OpportunityAlertModal
+            opportunity={item}
+            onClose={onClose}
+          />
         );
-         case "Opportunity":
+      case "Opportunity":
         return (
-            <ViewOpportunitiesDialog
-                opportunity={item}
-                onClose={onClose}
-            />
+          <ViewOpportunitiesDialog
+            opportunity={item}
+            onClose={onClose}
+          />
         );
       default:
         return null;
@@ -1781,7 +1779,7 @@ const DataTableComponent = React.forwardRef(
                         <div
                           className={classNames(
                             header.column.getCanSort() &&
-                              "cursor-pointer select-none point",
+                            "cursor-pointer select-none point",
                             loading && "pointer-events-none",
                             (header.column.columnDef.meta as any)?.HeaderClass
                           )}
@@ -2026,158 +2024,158 @@ const OpportunityFilterDrawer: React.FC<{
   productSpecOptions,
   wantToOptions,
 }) => {
-  const { control, handleSubmit, reset } = useForm({
-    defaultValues: initialFilters,
-  });
+    const { control, handleSubmit, reset } = useForm({
+      defaultValues: initialFilters,
+    });
 
-  useEffect(() => {
-    reset(initialFilters);
-  }, [initialFilters, reset]);
+    useEffect(() => {
+      reset(initialFilters);
+    }, [initialFilters, reset]);
 
-  const onSubmit = (data: any) => {
-    onApply(data);
-    onClose();
-  };
+    const onSubmit = (data: any) => {
+      onApply(data);
+      onClose();
+    };
 
-  const handleClear = () => {
-    onClear();
-    onClose();
-  };
+    const handleClear = () => {
+      onClear();
+      onClose();
+    };
 
-  const multiSelectProps = (field: any, options: SelectOption[]) => ({
+    const multiSelectProps = (field: any, options: SelectOption[]) => ({
       isMulti: true,
       options,
       value: options.filter((option) => field.value?.includes(option.value)),
       onChange: (options: any) => field.onChange(options.map((opt: any) => opt.value)),
-  });
+    });
 
-  return (
-    <Drawer
-      title="Filters"
-      isOpen={isOpen}
-      onClose={onClose}
-      onRequestClose={onClose}
-      width={480}
-      footer={
-        <div className="text-right w-full">
-          <Button size="sm" className="mr-2" onClick={handleClear}>
-            Clear All
-          </Button>
-          <Button
-            size="sm"
-            variant="solid"
-            form="filterOpportunityForm"
-            type="submit"
-          >
-            Apply
-          </Button>
-        </div>
-      }
-    >
-      <Form id="filterOpportunityForm" onSubmit={handleSubmit(onSubmit)}>
-        <div className=" flex flex-col gap-6">
+    return (
+      <Drawer
+        title="Filters"
+        isOpen={isOpen}
+        onClose={onClose}
+        onRequestClose={onClose}
+        width={480}
+        footer={
+          <div className="text-right w-full">
+            <Button size="sm" className="mr-2" onClick={handleClear}>
+              Clear All
+            </Button>
+            <Button
+              size="sm"
+              variant="solid"
+              form="filterOpportunityForm"
+              type="submit"
+            >
+              Apply
+            </Button>
+          </div>
+        }
+      >
+        <Form id="filterOpportunityForm" onSubmit={handleSubmit(onSubmit)}>
+          <div className=" flex flex-col gap-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <FormItem label="Seller/Buyer">
-                    <Controller name="wantTo" control={control} render={({ field }) => (
-                        <Select placeholder="Select..." {...multiSelectProps(field, wantToOptions)} />
-                    )} />
-                </FormItem>
-                 <FormItem label="Member Type">
-                    <Controller name="memberTypes" control={control} render={({ field }) => (
-                         <Select placeholder="Select..." {...multiSelectProps(field, memberTypeOptions)} />
-                    )} />
-                </FormItem>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormItem label="KYC Verified">
-                    <Controller name="kycVerified" control={control} render={({ field }) => (
-                         <Select placeholder="Select..." options={kycVerifiedOptions}
-                            value={kycVerifiedOptions.find(o => o.value === field.value)}
-                            onChange={(opt: any) => field.onChange(opt?.value)} isClearable />
-                    )} />
-                </FormItem>
-                 <FormItem label="Status">
-                    <Controller name="statuses" control={control} render={({ field }) => (
-                        <Select placeholder="Select status..." {...multiSelectProps(field, statusOptionsForFilter)} />
-                    )} />
-                </FormItem>
-            </div>
-           
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <FormItem label="Category">
-                    <Controller name="categories" control={control} render={({ field }) => (
-                        <Select placeholder="Select..." {...multiSelectProps(field, categoryOptions)} />
-                    )} />
-                </FormItem>
-                 <FormItem label="Sub Category">
-                    <Controller name="subCategories" control={control} render={({ field }) => (
-                        <Select placeholder="Select..." {...multiSelectProps(field, subCategoryOptions)} />
-                    )} />
-                </FormItem>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <FormItem label="Brand">
-                    <Controller name="brands" control={control} render={({ field }) => (
-                        <Select placeholder="Select..." {...multiSelectProps(field, brandOptions)} />
-                    )} />
-                </FormItem>
-                 <FormItem label="Product">
-                    <Controller name="products" control={control} render={({ field }) => (
-                        <Select placeholder="Select..." {...multiSelectProps(field, productOptions)} />
-                    )} />
-                </FormItem>
-            </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <FormItem label="Product Spec">
-                    <Controller name="productSpecs" control={control} render={({ field }) => (
-                        <Select placeholder="Select..." {...multiSelectProps(field, productSpecOptions)} />
-                    )} />
-                </FormItem>
-                 <FormItem label="Product Status">
-                    <Controller name="productStatuses" control={control} render={({ field }) => (
-                        <Select placeholder="Select..." {...multiSelectProps(field, productStatusOptions)} />
-                    )} />
-                </FormItem>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormItem label="Continent">
-                    <Controller name="continents" control={control} render={({ field }) => (
-                        <Select placeholder="Select..." {...multiSelectProps(field, continentOptions)} />
-                    )} />
-                </FormItem>
-                 <FormItem label="Country">
-                    <Controller name="countries" control={control} render={({ field }) => (
-                        <Select placeholder="Select..." {...multiSelectProps(field, countryOptions)} />
-                    )} />
-                </FormItem>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <FormItem label="State">
-                    <Controller name="states" control={control} render={({ field }) => (
-                        <Input {...field} placeholder="Enter state..." />
-                    )} />
-                </FormItem>
-                 <FormItem label="City">
-                    <Controller name="cities" control={control} render={({ field }) => (
-                        <Input {...field} placeholder="Enter city..." />
-                    )} />
-                </FormItem>
-            </div>
-             <FormItem label="Pincode">
-                <Controller name="pincodes" control={control} render={({ field }) => (
-                    <Input {...field} placeholder="Enter pincode..." />
+              <FormItem label="Seller/Buyer">
+                <Controller name="wantTo" control={control} render={({ field }) => (
+                  <Select placeholder="Select..." {...multiSelectProps(field, wantToOptions)} />
                 )} />
+              </FormItem>
+              <FormItem label="Member Type">
+                <Controller name="memberTypes" control={control} render={({ field }) => (
+                  <Select placeholder="Select..." {...multiSelectProps(field, memberTypeOptions)} />
+                )} />
+              </FormItem>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormItem label="KYC Verified">
+                <Controller name="kycVerified" control={control} render={({ field }) => (
+                  <Select placeholder="Select..." options={kycVerifiedOptions}
+                    value={kycVerifiedOptions.find(o => o.value === field.value)}
+                    onChange={(opt: any) => field.onChange(opt?.value)} isClearable />
+                )} />
+              </FormItem>
+              <FormItem label="Status">
+                <Controller name="statuses" control={control} render={({ field }) => (
+                  <Select placeholder="Select status..." {...multiSelectProps(field, statusOptionsForFilter)} />
+                )} />
+              </FormItem>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormItem label="Category">
+                <Controller name="categories" control={control} render={({ field }) => (
+                  <Select placeholder="Select..." {...multiSelectProps(field, categoryOptions)} />
+                )} />
+              </FormItem>
+              <FormItem label="Sub Category">
+                <Controller name="subCategories" control={control} render={({ field }) => (
+                  <Select placeholder="Select..." {...multiSelectProps(field, subCategoryOptions)} />
+                )} />
+              </FormItem>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormItem label="Brand">
+                <Controller name="brands" control={control} render={({ field }) => (
+                  <Select placeholder="Select..." {...multiSelectProps(field, brandOptions)} />
+                )} />
+              </FormItem>
+              <FormItem label="Product">
+                <Controller name="products" control={control} render={({ field }) => (
+                  <Select placeholder="Select..." {...multiSelectProps(field, productOptions)} />
+                )} />
+              </FormItem>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormItem label="Product Spec">
+                <Controller name="productSpecs" control={control} render={({ field }) => (
+                  <Select placeholder="Select..." {...multiSelectProps(field, productSpecOptions)} />
+                )} />
+              </FormItem>
+              <FormItem label="Product Status">
+                <Controller name="productStatuses" control={control} render={({ field }) => (
+                  <Select placeholder="Select..." {...multiSelectProps(field, productStatusOptions)} />
+                )} />
+              </FormItem>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormItem label="Continent">
+                <Controller name="continents" control={control} render={({ field }) => (
+                  <Select placeholder="Select..." {...multiSelectProps(field, continentOptions)} />
+                )} />
+              </FormItem>
+              <FormItem label="Country">
+                <Controller name="countries" control={control} render={({ field }) => (
+                  <Select placeholder="Select..." {...multiSelectProps(field, countryOptions)} />
+                )} />
+              </FormItem>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormItem label="State">
+                <Controller name="states" control={control} render={({ field }) => (
+                  <Input {...field} placeholder="Enter state..." />
+                )} />
+              </FormItem>
+              <FormItem label="City">
+                <Controller name="cities" control={control} render={({ field }) => (
+                  <Input {...field} placeholder="Enter city..." />
+                )} />
+              </FormItem>
+            </div>
+            <FormItem label="Pincode">
+              <Controller name="pincodes" control={control} render={({ field }) => (
+                <Input {...field} placeholder="Enter pincode..." />
+              )} />
             </FormItem>
             <FormItem label="Assigned To">
-                <Controller name="assignedTo" control={control} render={({ field }) => (
-                    <Select placeholder="Select users..." {...multiSelectProps(field, userOptions)} />
-                )} />
+              <Controller name="assignedTo" control={control} render={({ field }) => (
+                <Select placeholder="Select users..." {...multiSelectProps(field, userOptions)} />
+              )} />
             </FormItem>
-        </div>
-      </Form>
-    </Drawer>
-  );
-};
+          </div>
+        </Form>
+      </Drawer>
+    );
+  };
 
 const ColumnToggler: React.FC<{ table: any }> = ({ table }) => (
   <Dropdown
@@ -2276,54 +2274,54 @@ const ActiveFiltersDisplay = ({
   onRemoveFilter: (key: string, value: any) => void;
   onClearAll: () => void;
 }) => {
-    const filterEntries = Object.entries(filters).filter(([, value]) => {
-        if (Array.isArray(value)) return value.length > 0;
-        if (typeof value === 'object' && value !== null) { // For dateRange
-            return (value as any[]).every(v => v !== null);
-        }
-        return Boolean(value);
-    });
+  const filterEntries = Object.entries(filters).filter(([, value]) => {
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'object' && value !== null) { // For dateRange
+      return (value as any[]).every(v => v !== null);
+    }
+    return Boolean(value);
+  });
 
-    if (filterEntries.length === 0) return null;
+  if (filterEntries.length === 0) return null;
 
-    const renderTag = (key: string, value: any) => {
-        const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
-        return (
-            <Tag key={`${key}-${value}`} prefix className="capitalize">
-                {label}: {String(value).replace('_', ' ')}
-                <TbX
-                    className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
-                    onClick={() => onRemoveFilter(key, value)}
-                />
-            </Tag>
-        );
-    };
-
-    const renderTextTag = (key: string, value: string) => (
-        <Tag key={key} prefix className="capitalize">
-             {key.replace(/s$/, '')}: {value}
-             <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(key, value)} />
-        </Tag>
+  const renderTag = (key: string, value: any) => {
+    const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
+    return (
+      <Tag key={`${key}-${value}`} prefix className="capitalize">
+        {label}: {String(value).replace('_', ' ')}
+        <TbX
+          className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
+          onClick={() => onRemoveFilter(key, value)}
+        />
+      </Tag>
     );
+  };
+
+  const renderTextTag = (key: string, value: string) => (
+    <Tag key={key} prefix className="capitalize">
+      {key.replace(/s$/, '')}: {value}
+      <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(key, value)} />
+    </Tag>
+  );
 
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
       <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">
         Active Filters:
       </span>
-        {filterEntries.map(([key, value]) => {
-            if (Array.isArray(value)) {
-                return value.map(item => renderTag(key, item));
-            }
-             if (['states', 'cities', 'pincodes'].includes(key)) {
-                return renderTextTag(key, value as string);
-            }
-            if (key === 'kycVerified') {
-                return renderTag(key, value as string);
-            }
-            
-            return null;
-        })}
+      {filterEntries.map(([key, value]) => {
+        if (Array.isArray(value)) {
+          return value.map(item => renderTag(key, item));
+        }
+        if (['states', 'cities', 'pincodes'].includes(key)) {
+          return renderTextTag(key, value as string);
+        }
+        if (key === 'kycVerified') {
+          return renderTag(key, value as string);
+        }
+
+        return null;
+      })}
       <Button
         size="xs"
         variant="plain"
@@ -2400,17 +2398,17 @@ const OpportunitySelectedFooter = ({
 };
 
 const generateOpportunityMessage = (item: OpportunityItem): string => {
-    const parts = [
-        `Opportunity: ${item.opportunity_id}`,
-        `Product: ${item.product_name}`,
-        `Quantity: ${item.qty || 'N/A'}`,
-        `Type: ${item.want_to || 'N/A'}`,
-        `Company: ${item.company_name}`,
-        `Member: ${item.customer_name}`,
-        `Contact: ${item.mobile_no || item.email || 'Not Available'}`,
-        `Status: ${item.opportunity_status}`,
-    ];
-    return parts.join('\n');
+  const parts = [
+    `Opportunity: ${item.opportunity_id}`,
+    `Product: ${item.product_name}`,
+    `Quantity: ${item.qty || 'N/A'}`,
+    `Type: ${item.want_to || 'N/A'}`,
+    `Company: ${item.company_name}`,
+    `Member: ${item.customer_name}`,
+    `Contact: ${item.mobile_no || item.email || 'Not Available'}`,
+    `Status: ${item.opportunity_status}`,
+  ];
+  return parts.join('\n');
 };
 
 const MainRowActionColumn = ({
@@ -2428,11 +2426,11 @@ const MainRowActionColumn = ({
     e.stopPropagation();
     const message = generateOpportunityMessage(item);
     navigator.clipboard.writeText(message).then(() => {
-        toast.push(
-            <Notification title="Copied to clipboard" type="success" duration={2000}>
-                Opportunity details have been copied.
-            </Notification>
-        );
+      toast.push(
+        <Notification title="Copied to clipboard" type="success" duration={2000}>
+          Opportunity details have been copied.
+        </Notification>
+      );
     });
   };
 
@@ -2479,7 +2477,7 @@ const MainRowActionColumn = ({
           <BsThreeDotsVertical className="ml-3 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
-        
+
         <Dropdown.Item
           onClick={() => onOpenModal("notification", item)}
           className="flex items-center gap-2"
@@ -2533,7 +2531,7 @@ const MainRowActionColumn = ({
           <TbDiscount size={18} />{" "}
           <span className="text-xs">Create Offer/Demand</span>{" "}
         </Dropdown.Item>{" "}
-        
+
         <Dropdown.Item
           onClick={() => onOpenModal("email", item)}
           className="flex items-center gap-2"
@@ -2583,9 +2581,8 @@ const ExpandedOpportunityDetails: React.FC<{
           <InfoLine
             icon={<TbTag size={14} />}
             label="Category"
-            text={`${item.product_category || "N/A"}${
-              item.product_subcategory ? ` > ${item.product_subcategory}` : ""
-            }`}
+            text={`${item.product_category || "N/A"}${item.product_subcategory ? ` > ${item.product_subcategory}` : ""
+              }`}
           />
           <InfoLine
             icon={<TbTag size={14} />}
@@ -2781,10 +2778,9 @@ const ExpandedOpportunityDetails: React.FC<{
               label="Opp. Status"
             />
             <Tag
-              className={`${
-                opportunityStatusTagColor[item.opportunity_status] ||
+              className={`${opportunityStatusTagColor[item.opportunity_status] ||
                 opportunityStatusTagColor.default
-              } capitalize`}
+                } capitalize`}
             >
               {item.opportunity_status}
             </Tag>
@@ -2835,7 +2831,7 @@ const SpbActionToolbar: React.FC<{
     { value: "master", label: "Master" },
     { value: "wtb", label: "WTB" },
   ];
-  
+
   const selectedTemplateLabel =
     messageTemplateOptions.find((o) => o.value === messageTemplate)?.label ||
     "Select Template";
@@ -2847,15 +2843,14 @@ const SpbActionToolbar: React.FC<{
         : [...prev, optionKey]
     );
   };
-  
+
   const generateMessage = () => {
     if (!items || items.length === 0) return "";
 
     const individualMessages = items.map(item => {
       const prefix = matchType === "Buy" ? "WTB" : "WTS";
       let messageParts: string[] = [
-        `${prefix} - ${item.product_name || "N/A"}(${item.color}) | ${
-          item.qty || "N/A"
+        `${prefix} - ${item.product_name || "N/A"}(${item.color}) | ${item.qty || "N/A"
         } ${item.unit || ""}unit`,
       ];
 
@@ -2888,7 +2883,7 @@ const SpbActionToolbar: React.FC<{
       }
       return messageParts.join("\n");
     });
-    
+
     return individualMessages.join("\n\n---\n\n");
   };
 
@@ -2905,8 +2900,8 @@ const SpbActionToolbar: React.FC<{
 
   const handleWhatsApp = () => {
     if (items.length !== 1) {
-        toast.push(<Notification title="Action Not Available" type="info">Please select exactly one item to send via WhatsApp.</Notification>);
-        return;
+      toast.push(<Notification title="Action Not Available" type="info">Please select exactly one item to send via WhatsApp.</Notification>);
+      return;
     }
     const item = items[0];
 
@@ -2930,109 +2925,109 @@ const SpbActionToolbar: React.FC<{
   if (items.length === 0) {
     return null;
   }
-  
+
   return (
-      <div className="p-3 border-t bg-gray-100 dark:bg-gray-800/50 rounded-b-md space-y-4">
-        <h6 className="font-semibold text-xs text-gray-600 dark:text-gray-300">Actions for {items.length} selected item(s)</h6>
-        
-        <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              <Dropdown
-                renderTitle={
-                  <Button variant="default" size="sm" icon={<TbPlus />} className="w-full sm:w-auto">
-                    Add Details
-                  </Button>
-                }
-                placement="bottom-start"
-              >
-                <div className="p-2 w-56 max-h-60 overflow-y-auto">
-                  {Object.entries(messageOptionMap).map(([key, { label }]) => (
-                    <div key={key} className="px-1">
-                      <label className="flex items-center gap-2 cursor-pointer py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md px-2">
-                        <Checkbox
-                          checked={selectedMessageOptions.includes(key)}
-                          onChange={() => handleToggleOption(key)}
-                        />
-                        <span className="text-sm">{label}</span>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </Dropdown>
-               <Dropdown
-                renderTitle={
-                  <Button variant="default" size="sm" className="w-full sm:w-56 justify-start text-left">
-                    {selectedTemplateLabel}
-                  </Button>
-                }
-                placement="bottom-start"
-              >
-                 <div className="w-56">
-                    {messageTemplateOptions.map((option) => (
-                        <Dropdown.Item
-                            key={option.value}
-                            onClick={() => setMessageTemplate(option.value as any)}
-                            className={classNames('flex items-center justify-between', {
-                                'bg-gray-100 dark:bg-gray-700': messageTemplate === option.value,
-                            })}
-                        >
-                            <span>{option.label}</span>
-                            {messageTemplate === option.value && (
-                                <BsCheckCircleFill className="text-emerald-500" />
-                            )}
-                        </Dropdown.Item>
-                    ))}
-                 </div>
-              </Dropdown>
-            </div>
-            
-            {selectedMessageOptions.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-2">Including:</span>
-                    {selectedMessageOptions.map((key) => (
-                        <Tag
-                            key={key}
-                            prefix
-                            className="capitalize"
-                        >
-                            {messageOptionMap[key]?.label || key}
-                            <TbX
-                                className="ml-1.5 h-3 w-3 cursor-pointer hover:text-red-500"
-                                onClick={() => handleToggleOption(key)}
-                            />
-                        </Tag>
-                    ))}
-                </div>
-            )}
+    <div className="p-3 border-t bg-gray-100 dark:bg-gray-800/50 rounded-b-md space-y-4">
+      <h6 className="font-semibold text-xs text-gray-600 dark:text-gray-300">Actions for {items.length} selected item(s)</h6>
 
-            {messageTemplate === "default" && (
-              <FormItem label="Custom Message" className="mb-0">
-                <Input
-                  textArea
-                  size="sm"
-                  value={customMessage}
-                  onChange={(e) => setCustomMessage(e.target.value)}
-                  placeholder="Enter your custom message here..."
-                />
-              </FormItem>
-            )}
-        </div>
-
-        <div className="text-right">
-          <Button size="sm" className="mr-2" icon={<TbCopy />} onClick={handleCopyDetails}>
-            Copy Details
-          </Button>
-          <Button
-            size="sm"
-            className="mr-2"
-            icon={<TbBrandWhatsapp />}
-            onClick={handleWhatsApp}
-            disabled={items.length !== 1 || !items[0]?.mobile_no}
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <Dropdown
+            renderTitle={
+              <Button variant="default" size="sm" icon={<TbPlus />} className="w-full sm:w-auto">
+                Add Details
+              </Button>
+            }
+            placement="bottom-start"
           >
-            WhatsApp
-          </Button>
+            <div className="p-2 w-56 max-h-60 overflow-y-auto">
+              {Object.entries(messageOptionMap).map(([key, { label }]) => (
+                <div key={key} className="px-1">
+                  <label className="flex items-center gap-2 cursor-pointer py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md px-2">
+                    <Checkbox
+                      checked={selectedMessageOptions.includes(key)}
+                      onChange={() => handleToggleOption(key)}
+                    />
+                    <span className="text-sm">{label}</span>
+                  </label>
+                </div>
+              ))}
+            </div>
+          </Dropdown>
+          <Dropdown
+            renderTitle={
+              <Button variant="default" size="sm" className="w-full sm:w-56 justify-start text-left">
+                {selectedTemplateLabel}
+              </Button>
+            }
+            placement="bottom-start"
+          >
+            <div className="w-56">
+              {messageTemplateOptions.map((option) => (
+                <Dropdown.Item
+                  key={option.value}
+                  onClick={() => setMessageTemplate(option.value as any)}
+                  className={classNames('flex items-center justify-between', {
+                    'bg-gray-100 dark:bg-gray-700': messageTemplate === option.value,
+                  })}
+                >
+                  <span>{option.label}</span>
+                  {messageTemplate === option.value && (
+                    <BsCheckCircleFill className="text-emerald-500" />
+                  )}
+                </Dropdown.Item>
+              ))}
+            </div>
+          </Dropdown>
         </div>
+
+        {selectedMessageOptions.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-2">Including:</span>
+            {selectedMessageOptions.map((key) => (
+              <Tag
+                key={key}
+                prefix
+                className="capitalize"
+              >
+                {messageOptionMap[key]?.label || key}
+                <TbX
+                  className="ml-1.5 h-3 w-3 cursor-pointer hover:text-red-500"
+                  onClick={() => handleToggleOption(key)}
+                />
+              </Tag>
+            ))}
+          </div>
+        )}
+
+        {messageTemplate === "default" && (
+          <FormItem label="Custom Message" className="mb-0">
+            <Input
+              textArea
+              size="sm"
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              placeholder="Enter your custom message here..."
+            />
+          </FormItem>
+        )}
       </div>
+
+      <div className="text-right">
+        <Button size="sm" className="mr-2" icon={<TbCopy />} onClick={handleCopyDetails}>
+          Copy Details
+        </Button>
+        <Button
+          size="sm"
+          className="mr-2"
+          icon={<TbBrandWhatsapp />}
+          onClick={handleWhatsApp}
+          disabled={items.length !== 1 || !items[0]?.mobile_no}
+        >
+          WhatsApp
+        </Button>
+      </div>
+    </div>
   )
 }
 interface SpbSummaryRowProps {
@@ -3045,7 +3040,9 @@ const SpbSummaryRow: React.FC<SpbSummaryRowProps> = ({
   isSelected,
   onToggleSelect,
 }) => {
-  const memberName = `Member: ${item.customer_code}` || `Member ID: ${item.id}`;
+  console.log(item, 'item');
+  
+  const memberName = `Member: ${item.member_code}` || `Member ID: ${item.id}`;
   const memberPhone = `Phone: ${item.mobile_no || 'N/A'}`;
   // const createDate = `Date: ${formatCustomDateTime(item.created_at)}`;
   const prodColor = `Color: ${item.color}`;
@@ -3101,11 +3098,11 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
     );
   };
   const handleSelectAll = (type: 'Buy' | 'Sell', isChecked: boolean) => {
-      if (type === 'Buy') {
-          setSelectedBuyItems(isChecked ? buyItems : []);
-      } else {
-          setSelectedSellItems(isChecked ? sellItems : []);
-      }
+    if (type === 'Buy') {
+      setSelectedBuyItems(isChecked ? buyItems : []);
+    } else {
+      setSelectedSellItems(isChecked ? sellItems : []);
+    }
   }
 
   return (
@@ -3115,34 +3112,34 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
     >
       <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
-           <div className="flex justify-between items-center mb-2">
+          <div className="flex justify-between items-center mb-2">
             <h6 className="text-sm font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-2">
               <TbChecks /> Buyer ({buyItems.length})
             </h6>
-             {buyItems.length > 0 && 
-                <label className="flex items-center gap-2 text-xs cursor-pointer">
-                    <Checkbox
-                        checked={selectedBuyItems.length === buyItems.length}
-                        indeterminate={selectedBuyItems.length > 0 && selectedBuyItems.length < buyItems.length}
-                        onChange={(e) => handleSelectAll('Buy', e)}
-                    />
-                    <span>Select All</span>
-                </label>
-             }
+            {buyItems.length > 0 &&
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <Checkbox
+                  checked={selectedBuyItems.length === buyItems.length}
+                  indeterminate={selectedBuyItems.length > 0 && selectedBuyItems.length < buyItems.length}
+                  onChange={(e) => handleSelectAll('Buy', e)}
+                />
+                <span>Select All</span>
+              </label>
+            }
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-md">
             <div className="max-h-60 overflow-y-auto">
               {buyItems.length > 0 ? (
-                  <div className="px-2">
-                    {buyItems.map((item) => (
-                      <SpbSummaryRow
-                        key={`buy-${item.id}`}
-                        item={item}
-                        isSelected={selectedBuyItems.some(i => i.id === item.id)}
-                        onToggleSelect={() => handleToggleBuyItem(item)}
-                      />
-                    ))}
-                  </div>
+                <div className="px-2">
+                  {buyItems.map((item) => (
+                    <SpbSummaryRow
+                      key={`buy-${item.id}`}
+                      item={item}
+                      isSelected={selectedBuyItems.some(i => i.id === item.id)}
+                      onToggleSelect={() => handleToggleBuyItem(item)}
+                    />
+                  ))}
+                </div>
               ) : (
                 <p className="text-xs text-gray-500 py-4 text-center">
                   No buy demand in this match.
@@ -3157,16 +3154,16 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
             <h6 className="text-sm font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-2">
               <TbBox /> Seller ({sellItems.length})
             </h6>
-             {sellItems.length > 0 && 
-                <label className="flex items-center gap-2 text-xs cursor-pointer">
-                    <Checkbox
-                        checked={selectedSellItems.length === sellItems.length}
-                        indeterminate={selectedSellItems.length > 0 && selectedSellItems.length < sellItems.length}
-                        onChange={(e) => handleSelectAll('Sell', e)}
-                    />
-                    <span>Select All</span>
-                </label>
-             }
+            {sellItems.length > 0 &&
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <Checkbox
+                  checked={selectedSellItems.length === sellItems.length}
+                  indeterminate={selectedSellItems.length > 0 && selectedSellItems.length < sellItems.length}
+                  onChange={(e) => handleSelectAll('Sell', e)}
+                />
+                <span>Select All</span>
+              </label>
+            }
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-md">
             <div className="max-h-60 overflow-y-auto">
@@ -3206,7 +3203,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
     getAllUserData = [],
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
-  
+
   const [tableQueries, setTableQueries] = useState<
     Record<string, TableQueries>
   >({});
@@ -3217,7 +3214,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
   const [expanded, setExpanded] = useState<ExpandedState>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  
+
   const initialFilterState = useMemo(() => ({
     statuses: [],
     assignedTo: [],
@@ -3305,149 +3302,155 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
     () =>
       Array.isArray(getAllUserData)
         ? getAllUserData.map((user: any) => ({
-            value: user.id,
-            label: `(${user.employee_id}) - ${user.name || 'N/A'}`,
-          }))
+          value: user.id,
+          label: `(${user.employee_id}) - ${user.name || 'N/A'}`,
+        }))
         : [],
     [getAllUserData]
   );
 
   // SERVER-SIDE CHANGE: This effect now orchestrates the server-side data fetching.
   useEffect(() => {
-    const fetchOpportunitiesData = (tab: string) => {
+    const timerId = setTimeout(() => {
+      const fetchOpportunitiesData = (tab: string) => {
         const tableData = tableQueries[tab];
         if (!tableData) return;
 
         const payload: any = {
-            page: tableData.pageIndex,
-            per_page: tableData.pageSize,
-            sort_field: (tableData.sort as ColumnSort).key,
-            sort_order: (tableData.sort as ColumnSort).order,
-            search: tableData.query,
-            status: filters.statuses.join(','),
-            assigned_to: filters.assignedTo.join(','),
-            member_type: filters.memberTypes.join(','),
-            continent: filters.continents.join(','),
-            country: filters.countries.join(','),
-            state: filters.states,
-            city: filters.cities,
-            pincode: filters.pincodes,
-            kyc_verified: filters.kycVerified,
-            category: filters.categories.join(','),
-            sub_category: filters.subCategories.join(','),
-            brand: filters.brands.join(','),
-            product: filters.products.join(','),
-            product_status: filters.productStatuses.join(','),
-            product_spec: filters.productSpecs.join(','),
+          page: tableData.pageIndex,
+          per_page: tableData.pageSize,
+          sort_field: (tableData.sort as ColumnSort).key,
+          sort_order: (tableData.sort as ColumnSort).order,
+          search: tableData.query,
+          status: filters.statuses.join(','),
+          assigned_to: filters.assignedTo.join(','),
+          member_type: filters.memberTypes.join(','),
+          continent: filters.continents.join(','),
+          country: filters.countries.join(','),
+          state: filters.states,
+          city: filters.cities,
+          pincode: filters.pincodes,
+          kyc_verified: filters.kycVerified,
+          category: filters.categories.join(','),
+          sub_category: filters.subCategories.join(','),
+          brand: filters.brands.join(','),
+          product: filters.products.join(','),
+          product_status: filters.productStatuses.join(','),
+          product_spec: filters.productSpecs.join(','),
         };
-        
+
         let want_to_filter = [...filters.wantTo];
         if (tab === TABS.SELLER) {
-            want_to_filter = ['Sell'];
+          want_to_filter = ['Sell'];
         } else if (tab === TABS.BUYER) {
-            want_to_filter = ['Buy'];
+          want_to_filter = ['Buy'];
         }
         payload.want_to = want_to_filter.join(',');
 
         dispatch(getOpportunitieslistingAction(payload));
-    };
-    
-    if(!initialLoading) {
-      if (currentTab === TABS.AUTO_MATCH) {
+      };
+
+      if (!initialLoading) {
+        if (currentTab === TABS.AUTO_MATCH) {
           dispatch(getAutoMatchDataAction());
           return;
+        }
+        fetchOpportunitiesData(currentTab);
       }
-      fetchOpportunitiesData(currentTab);
-    }
+    }, 600);
+    return () => {
+      clearTimeout(timerId);
+    };
   }, [dispatch, currentTab, tableQueries, filters, initialLoading]);
-  
+
   useEffect(() => {
-      const fetchInitialData = async () => {
-          setInitialLoading(true);
-          try {
-              await Promise.all([
-                  dispatch(getAllUsersAction()),
-                  dispatch(getAutoMatchDataAction()),
-                  dispatch(getOpportunitieslistingAction({ page: 1, per_page: 10 }))
-              ]);
-          } catch (error) {
-              console.error("Failed to fetch initial data:", error);
-          } finally {
-              setInitialLoading(false);
-          }
-      };
-      fetchInitialData();
+    const fetchInitialData = async () => {
+      setInitialLoading(true);
+      try {
+        await Promise.all([
+          dispatch(getAllUsersAction()),
+          dispatch(getAutoMatchDataAction()),
+          dispatch(getOpportunitieslistingAction({ page: 1, per_page: 10 }))
+        ]);
+      } catch (error) {
+        console.error("Failed to fetch initial data:", error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+    fetchInitialData();
   }, [dispatch]);
-  
+
 
   const mappedOpportunities = useMemo(() => {
     // This function maps raw API data to the component's internal data structure.
     const mapItem = (apiItem: ApiOpportunityItem): OpportunityItem => {
-        let uiStatus: OpportunityItem["status"] = "pending";
-        if (apiItem.status?.toLowerCase() === "pending") uiStatus = "pending";
-        else if (apiItem.status?.toLowerCase() === "active") uiStatus = "active";
-        else if (apiItem.status?.toLowerCase() === "on hold" || apiItem.status?.toLowerCase() === "on_hold") uiStatus = "on_hold";
-        else if (apiItem.status?.toLowerCase() === "closed") uiStatus = "closed";
-        else if (apiItem.status) uiStatus = apiItem.status.toLowerCase();
-        
-        let uiOppStatus: OpportunityItem["opportunity_status"] = "New";
-        if (apiItem.opportunity_status?.toLowerCase() === "new") uiOppStatus = "New";
-        else if (apiItem.opportunity_status?.toLowerCase() === "shortlisted") uiOppStatus = "Shortlisted";
-        else if (apiItem.opportunity_status?.toLowerCase() === "converted") uiOppStatus = "Converted";
-        else if (apiItem.opportunity_status?.toLowerCase() === "rejected") uiOppStatus = "Rejected";
-        else if (apiItem.opportunity_status) uiOppStatus = apiItem.opportunity_status;
-        
-        return {
-          id: String(apiItem.id),
-          opportunity_id: apiItem.opportunity_id || `OPP-${apiItem.id}`,
-          product_name: apiItem.product_name || "N/A",
-          status: uiStatus,
-          opportunity_status: uiOppStatus,
-          match_score: apiItem.match_score ?? 0,
-          created_date: apiItem.created_at || new Date().toISOString(),
-          buy_listing_id: apiItem.buy_listing_id || undefined,
-          sell_listing_id: apiItem.sell_listing_id || undefined,
-          spb_role: apiItem.spb_role || undefined,
-          product_category: apiItem.product_category || undefined,
-          product_subcategory: apiItem.product_subcategory || undefined,
-          brand: apiItem.brand || undefined,
-          product_specs: apiItem.product_specs_name || apiItem.product_specs || undefined,
-          qty: (typeof apiItem.qty === "string" ? parseInt(apiItem.qty, 10) : apiItem.qty) ?? undefined,
-          product_status_listing: apiItem.product_status || apiItem.product_status_listing,
-          want_to: apiItem.want_to || undefined,
-          company_name: apiItem.company_name || "N/A",
-          company_id: apiItem.company_id || undefined,
-          customer_name: apiItem.customer_name || "N/A",
-          member_id: apiItem.member_id || undefined,
-          email: apiItem.email || undefined,
-          mobile_no: apiItem.phonecode && apiItem.mobile_no ? `${apiItem.phonecode}${apiItem.mobile_no}` : apiItem.mobile_no || undefined,
-          member_type: apiItem.member_type || "Standard",
-          matches_found_count: apiItem.matches_found_count ?? undefined,
-          updated_at: apiItem.updated_at || undefined,
-          assigned_to: String(apiItem.assigned_to || ""),
-          notes: apiItem.notes || undefined,
-          listing_url: apiItem.listing_url || undefined,
-          updated_by_name: apiItem.updated_by_name || "System",
-          updated_by_role: apiItem.updated_by_role || "Auto-Update",
-          device_condition: apiItem.device_condition || undefined,
-          device_type: apiItem.device_type || undefined,
-          product_image_url: apiItem.product_image_url || `https://placehold.co/100x100/e2e8f0/64748b?text=${(apiItem.product_name || "P").substring(0, 2).toUpperCase()}`,
-          company_code: apiItem.company_code || `C-${apiItem.company_id}`,
-          company_verified: apiItem.company_verified ?? Math.random() > 0.5,
-          company_billing_enabled: apiItem.company_billing_enabled ?? Math.random() > 0.7,
-          customer_code: apiItem.customer_code || `M-${apiItem.member_id}`,
-          member_verified: apiItem.member_verified ?? false,
-          country: apiItem.country || "USA",
-          country_flag: apiItem.country_flag || undefined,
-          member_business_type: apiItem.member_business_type || "Wholesaler",
-          continent: apiItem.continent || undefined,
-          state: apiItem.state || undefined,
-          city: apiItem.city || undefined,
-          pincode: apiItem.pincode || undefined,
-          favouriteBrands: apiItem.member?.favourite_brands_list?.map(b => b.name) || [],
-        };
+      let uiStatus: OpportunityItem["status"] = "pending";
+      if (apiItem.status?.toLowerCase() === "pending") uiStatus = "pending";
+      else if (apiItem.status?.toLowerCase() === "active") uiStatus = "active";
+      else if (apiItem.status?.toLowerCase() === "on hold" || apiItem.status?.toLowerCase() === "on_hold") uiStatus = "on_hold";
+      else if (apiItem.status?.toLowerCase() === "closed") uiStatus = "closed";
+      else if (apiItem.status) uiStatus = apiItem.status.toLowerCase();
+
+      let uiOppStatus: OpportunityItem["opportunity_status"] = "New";
+      if (apiItem.opportunity_status?.toLowerCase() === "new") uiOppStatus = "New";
+      else if (apiItem.opportunity_status?.toLowerCase() === "shortlisted") uiOppStatus = "Shortlisted";
+      else if (apiItem.opportunity_status?.toLowerCase() === "converted") uiOppStatus = "Converted";
+      else if (apiItem.opportunity_status?.toLowerCase() === "rejected") uiOppStatus = "Rejected";
+      else if (apiItem.opportunity_status) uiOppStatus = apiItem.opportunity_status;
+
+      return {
+        id: String(apiItem.id),
+        opportunity_id: apiItem.opportunity_id || `OPP-${apiItem.id}`,
+        product_name: apiItem.product_name || "N/A",
+        status: uiStatus,
+        opportunity_status: uiOppStatus,
+        match_score: apiItem.match_score ?? 0,
+        created_date: apiItem.created_at || new Date().toISOString(),
+        buy_listing_id: apiItem.buy_listing_id || undefined,
+        sell_listing_id: apiItem.sell_listing_id || undefined,
+        spb_role: apiItem.spb_role || undefined,
+        product_category: apiItem.product_category || undefined,
+        product_subcategory: apiItem.product_subcategory || undefined,
+        brand: apiItem.brand || undefined,
+        product_specs: apiItem.product_specs_name || apiItem.product_specs || undefined,
+        qty: (typeof apiItem.qty === "string" ? parseInt(apiItem.qty, 10) : apiItem.qty) ?? undefined,
+        product_status_listing: apiItem.product_status || apiItem.product_status_listing,
+        want_to: apiItem.want_to || undefined,
+        member: apiItem.member || {},
+        company_name: apiItem.company_name || "N/A",
+        company_id: apiItem.company_id || undefined,
+        customer_name: apiItem.customer_name || "N/A",
+        member_id: apiItem.member_id || undefined,
+        email: apiItem.email || undefined,
+        mobile_no: apiItem.phonecode && apiItem.mobile_no ? `${apiItem.phonecode}${apiItem.mobile_no}` : apiItem.mobile_no || undefined,
+        member_type: apiItem.member_type || "Standard",
+        matches_found_count: apiItem.matches_found_count ?? undefined,
+        updated_at: apiItem.updated_at || undefined,
+        assigned_to: String(apiItem.assigned_to || ""),
+        notes: apiItem.notes || undefined,
+        listing_url: apiItem.listing_url || undefined,
+        updated_by_name: apiItem.updated_by_name || "System",
+        updated_by_role: apiItem.updated_by_role || "Auto-Update",
+        device_condition: apiItem.device_condition || undefined,
+        device_type: apiItem.device_type || undefined,
+        product_image_url: apiItem.product_image_url || `https://placehold.co/100x100/e2e8f0/64748b?text=${(apiItem.product_name || "P").substring(0, 2).toUpperCase()}`,
+        company_code: apiItem.company_code || `C-${apiItem.company_id}`,
+        company_verified: apiItem.company_verified ?? Math.random() > 0.5,
+        company_billing_enabled: apiItem.company_billing_enabled ?? Math.random() > 0.7,
+        customer_code: apiItem.customer_code || `M-${apiItem.member_id}`,
+        member_verified: apiItem.member_verified ?? false,
+        country: apiItem.country || "USA",
+        country_flag: apiItem.country_flag || undefined,
+        member_business_type: apiItem.member_business_type || "Wholesaler",
+        continent: apiItem.continent || undefined,
+        state: apiItem.state || undefined,
+        city: apiItem.city || undefined,
+        pincode: apiItem.pincode || undefined,
+        favouriteBrands: apiItem.member?.favourite_brands_list?.map(b => b.name) || [],
+      };
     };
-    
+
     const allOpportunities = Opportunitieslist?.data?.map(mapItem) || [];
     const paginatedOpportunities = Opportunitieslist?.data?.map(mapItem) || [];
 
@@ -3486,26 +3489,26 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
       setExpanded({});
     }
   }, [currentTab, isDashboard]);
-  
-  const filterOptions = useMemo(() => {
-        const createUniqueOptions = (key: keyof OpportunityItem, source: OpportunityItem[]) =>
-            Array.from(new Set(source.map((item) => item[key]).filter(Boolean)))
-                 .map(value => ({ value: String(value), label: String(value) }));
 
-        return {
-            memberTypeOptions: createUniqueOptions('member_type', mappedOpportunities.allOpportunities),
-            continentOptions: createUniqueOptions('continent', mappedOpportunities.allOpportunities),
-            countryOptions: createUniqueOptions('country', mappedOpportunities.allOpportunities),
-            categoryOptions: createUniqueOptions('product_category', mappedOpportunities.allOpportunities),
-            subCategoryOptions: createUniqueOptions('product_subcategory', mappedOpportunities.allOpportunities),
-            brandOptions: createUniqueOptions('brand', mappedOpportunities.allOpportunities),
-            productOptions: createUniqueOptions('product_name', mappedOpportunities.allOpportunities),
-            productStatusOptions: createUniqueOptions('product_status_listing', mappedOpportunities.allOpportunities),
-            productSpecOptions: createUniqueOptions('product_specs', mappedOpportunities.allOpportunities),
-            kycVerifiedOptions: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }],
-            wantToOptions: [{ value: 'Buy', label: 'Buyer' }, { value: 'Sell', label: 'Seller' }],
-        };
-    }, [mappedOpportunities.allOpportunities]);
+  const filterOptions = useMemo(() => {
+    const createUniqueOptions = (key: keyof OpportunityItem, source: OpportunityItem[]) =>
+      Array.from(new Set(source.map((item) => item[key]).filter(Boolean)))
+        .map(value => ({ value: String(value), label: String(value) }));
+
+    return {
+      memberTypeOptions: createUniqueOptions('member_type', mappedOpportunities.allOpportunities),
+      continentOptions: createUniqueOptions('continent', mappedOpportunities.allOpportunities),
+      countryOptions: createUniqueOptions('country', mappedOpportunities.allOpportunities),
+      categoryOptions: createUniqueOptions('product_category', mappedOpportunities.allOpportunities),
+      subCategoryOptions: createUniqueOptions('product_subcategory', mappedOpportunities.allOpportunities),
+      brandOptions: createUniqueOptions('brand', mappedOpportunities.allOpportunities),
+      productOptions: createUniqueOptions('product_name', mappedOpportunities.allOpportunities),
+      productStatusOptions: createUniqueOptions('product_status_listing', mappedOpportunities.allOpportunities),
+      productSpecOptions: createUniqueOptions('product_specs', mappedOpportunities.allOpportunities),
+      kycVerifiedOptions: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }],
+      wantToOptions: [{ value: 'Buy', label: 'Buyer' }, { value: 'Sell', label: 'Seller' }],
+    };
+  }, [mappedOpportunities.allOpportunities]);
 
   const statusCounts = useMemo(() => {
     return (mappedOpportunities.allOpportunities || []).reduce(
@@ -3522,13 +3525,13 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
 
   const activeFilterCount = useMemo(() => {
     return Object.values(filters).reduce((count, value) => {
-        if (Array.isArray(value)) {
-            return value.length > 0 ? count + 1 : count;
-        }
-        if (typeof value === 'object' && value !== null) { // dateRange
-            return (value as (Date | null)[]).every(v => v !== null) ? count + 1 : count;
-        }
-        return value ? count + 1 : count;
+      if (Array.isArray(value)) {
+        return value.length > 0 ? count + 1 : count;
+      }
+      if (typeof value === 'object' && value !== null) { // dateRange
+        return (value as (Date | null)[]).every(v => v !== null) ? count + 1 : count;
+      }
+      return value ? count + 1 : count;
     }, 0);
   }, [filters]);
 
@@ -3603,19 +3606,19 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
             item._rawSpbSellItems?.some((subItem) => Object.values(subItem).some((val) => String(val).toLowerCase().includes(query)))
         );
       }
-      
+
       const { order, key } = currentTableData.sort as unknown as OnSortParamTanstack;
       if (order && key) {
         processedData.sort((a, b) => {
-            const aVal = a[key as keyof OpportunityItem];
-            const bVal = b[key as keyof OpportunityItem];
-            if (key === 'created_date' || key === 'updated_at') {
-                return order === 'asc' ? new Date(aVal as string).getTime() - new Date(bVal as string).getTime() : new Date(bVal as string).getTime() - new Date(aVal as string).getTime();
-            }
-            if (typeof aVal === 'number' && typeof bVal === 'number') {
-                return order === 'asc' ? aVal - bVal : bVal - aVal;
-            }
-            return order === 'asc' ? String(aVal ?? '').localeCompare(String(bVal ?? '')) : String(bVal ?? '').localeCompare(String(aVal ?? ''));
+          const aVal = a[key as keyof OpportunityItem];
+          const bVal = b[key as keyof OpportunityItem];
+          if (key === 'created_date' || key === 'updated_at') {
+            return order === 'asc' ? new Date(aVal as string).getTime() - new Date(bVal as string).getTime() : new Date(bVal as string).getTime() - new Date(aVal as string).getTime();
+          }
+          if (typeof aVal === 'number' && typeof bVal === 'number') {
+            return order === 'asc' ? aVal - bVal : bVal - aVal;
+          }
+          return order === 'asc' ? String(aVal ?? '').localeCompare(String(bVal ?? '')) : String(bVal ?? '').localeCompare(String(aVal ?? ''));
         });
       }
 
@@ -3890,10 +3893,10 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
         },
         {
           header: "Member",
-          accessorKey: "company_name",
+          accessorKey: "member",
           size: 100,
           cell: ({ row }) => {
-            const item = row.original;
+            const item = row?.original?.member || {};
             return (
               <div className="text-xs space-y-2">
                 {" "}
@@ -3905,13 +3908,13 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                   />{" "}
                   <span className="font-semibold text-gray-800 dark:text-gray-100">
                     {" "}
-                    {item.customer_name} ({item.customer_code}){" "}
+                    {item.name}{" "} ({item.member_code}{" "})
                   </span>{" "}
                   <Tooltip
-                    title={item.company_verified ? "Verified" : "Not Verified"}
+                    title={row?.original.company_verified ? "Verified" : "Not Verified"}
                   >
                     {" "}
-                    
+
                   </Tooltip>{" "}
                 </div>{" "}
                 <div className="pl-6 border-l ml-1.5 dark:border-gray-600 space-y-1.5">
@@ -3924,7 +3927,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                     />{" "}
                     <span className="font-medium text-gray-700 dark:text-gray-200">
                       {" "}
-                      {item.company_name}{" "}
+                      {row?.original.company_name}{" "}
                     </span>{" "}
                     <Tooltip
                       title={item.member_verified ? "Verified" : "Not Verified"}
@@ -3946,14 +3949,14 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                     icon={<TbPhone size={13} />}
                     text={
                       <div className="flex items-center gap-1.5">
-                        <span>{item.mobile_no || "N/A"}</span>
-                        {item.mobile_no && (
+                        <span>{item.number || "N/A"}</span>
+                        {item.number && (
                           <Tooltip title="Copy number">
                             <button
                               className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleCopyClick(item.mobile_no);
+                                handleCopyClick(item.number);
                               }}
                             >
                               <TbCopy
@@ -4017,7 +4020,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                       className={classNames(
                         "capitalize",
                         productListingStatusTagColor[
-                          item.product_status_listing.toLowerCase()
+                        item.product_status_listing.toLowerCase()
                         ] || productListingStatusTagColor.default
                       )}
                     >
@@ -4027,24 +4030,23 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                   </div>
                 </Tooltip>
               )}{" "}
-              
+
               {item.opportunity_status && (
                 <Tooltip title="Opportunity Status">
-                    <div className="flex items-center gap-1.5">
-                      {" "}
-                      <span className="text-gray-400 dark:text-gray-500 flex-shrink-0">
-                        <TbTargetArrow size={14} />
-                      </span>{" "}
-                      <Tag
-                        className={`${
-                          opportunityStatusTagColor[item.opportunity_status] ||
-                          opportunityStatusTagColor.default
+                  <div className="flex items-center gap-1.5">
+                    {" "}
+                    <span className="text-gray-400 dark:text-gray-500 flex-shrink-0">
+                      <TbTargetArrow size={14} />
+                    </span>{" "}
+                    <Tag
+                      className={`${opportunityStatusTagColor[item.opportunity_status] ||
+                        opportunityStatusTagColor.default
                         } capitalize`}
-                      >
-                        {" "}
-                        {item.opportunity_status}{" "}
-                      </Tag>{" "}
-                    </div>
+                    >
+                      {" "}
+                      {item.opportunity_status}{" "}
+                    </Tag>{" "}
+                  </div>
                 </Tooltip>
               )}{" "}
             </div>
@@ -4174,7 +4176,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
             return (
               <div className="text-xs space-y-1">
                 {" "}
-                
+
                 <InfoLine
                   icon={<TbTargetArrow size={13} />}
                   label="Score"
@@ -4187,10 +4189,9 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                     label="Status"
                   />{" "}
                   <Tag
-                    className={`${
-                      opportunityStatusTagColor[item.opportunity_status] ||
+                    className={`${opportunityStatusTagColor[item.opportunity_status] ||
                       opportunityStatusTagColor.default
-                    } capitalize`}
+                      } capitalize`}
                   >
                     {" "}
                     {item.opportunity_status}{" "}
@@ -4273,22 +4274,22 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
     }
     return <h6 className="text-base font-semibold">{content ?? 0}</h6>;
   };
-  
+
   const skeletonColumns: ColumnDef<OpportunityItem>[] = useMemo(() =>
     columns.map((column) => {
-        if (column.id === 'expander' || column.id === 'select') {
-            return { ...column, cell: () => null };
-        }
-        return {
-            ...column,
-            cell: () => <Skeleton height={40} className="my-2" />,
-        };
+      if (column.id === 'expander' || column.id === 'select') {
+        return { ...column, cell: () => null };
+      }
+      return {
+        ...column,
+        cell: () => <Skeleton height={40} className="my-2" />,
+      };
     }),
-  [columns]);
+    [columns]);
 
   const skeletonData = useMemo(() =>
     Array.from({ length: currentTableData.pageSize as number }, (_, i) => ({ id: `skeleton-${i}` }) as any),
-  [currentTableData.pageSize]);
+    [currentTableData.pageSize]);
 
   return (
     <>
@@ -4403,19 +4404,19 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
           )}
           <div className="flex-grow overflow-auto">
             {initialLoading ? (
-               <DataTableComponent
-                  columns={skeletonColumns}
-                  data={skeletonData}
-                  selectable={false}
-                  pagingData={{
-                      total: currentTableData.pageSize as number,
-                      pageIndex: 1,
-                      pageSize: currentTableData.pageSize as number,
-                  }}
-                  onPaginationChange={() => {}}
-                  onSelectChange={() => {}}
-                  onSort={() => {}}
-               />
+              <DataTableComponent
+                columns={skeletonColumns}
+                data={skeletonData}
+                selectable={false}
+                pagingData={{
+                  total: currentTableData.pageSize as number,
+                  pageIndex: 1,
+                  pageSize: currentTableData.pageSize as number,
+                }}
+                onPaginationChange={() => { }}
+                onSelectChange={() => { }}
+                onSort={() => { }}
+              />
             ) : (
               <DataTableComponent
                 selectable={!isDashboard}
