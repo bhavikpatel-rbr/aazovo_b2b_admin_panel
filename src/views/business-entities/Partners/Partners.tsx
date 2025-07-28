@@ -1,16 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import classNames from "classnames";
 import React, {
-  createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
-  useState,
+  useState
 } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -27,15 +26,14 @@ import {
   DatePicker,
   Drawer,
   Dropdown,
-  Input,
-  Select,
-  Form as UiForm,
-  FormItem as UiFormItem,
-  Select as UiSelect,
-  Tag,
-  Spinner,
   Form,
   FormItem,
+  Input,
+  Spinner,
+  Tag,
+  Form as UiForm,
+  FormItem as UiFormItem,
+  Select as UiSelect
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
@@ -71,18 +69,13 @@ import {
   TbPencil,
   TbPencilPlus,
   TbPlus,
-  TbReceipt,
   TbReload,
   TbSearch,
   TbTagStarred,
   TbTrash,
   TbUser,
-  TbUserCancel,
-  TbUserCheck,
   TbUserCircle,
-  TbUserMinus,
-  TbUsersGroup,
-  TbX,
+  TbX
 } from "react-icons/tb";
 
 // Types & Redux
@@ -100,27 +93,29 @@ import {
   addScheduleAction,
   addTaskAction,
   deleteAllpartnerAction,
-  deletePartnerAction, // Assuming a single delete action exists, or using deleteAll for one
+  getAlertsAction, // Assuming a single delete action exists, or using deleteAll for one
   getAllUsersAction,
-  getAlertsAction,
   getContinentsAction,
   getCountriesAction,
   getpartnerAction,
-  submitExportReasonAction,
+  submitExportReasonAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import dayjs from "dayjs";
-import { useSelector } from "react-redux";
-import { config } from "localforage";
 import { encryptStorage } from "@/utils/secureLocalStorage";
+import dayjs from "dayjs";
+import { config } from "localforage";
+import { useSelector } from "react-redux";
 
 
-// --- PartnerItem Type (Data Structure) ---
+// --- MODIFIED: PartnerItem Type (Data Structure) ---
 export type PartnerItem = {
   id: string;
   partner_name: string;
+  company_name?: string; // --- ADDED ---
+  industrial_expertise?: string; // --- ADDED ---
+  join_us_as?: string; // --- ADDED ---
   owner_name: string;
-  ownership_type: string;
+  // ownership_type: string; // --- REMOVED ---
   partner_code?: string;
   primary_contact_number: string;
   primary_contact_number_code: string;
@@ -154,10 +149,10 @@ export type PartnerItem = {
 };
 export type SelectOption = { value: any; label: string; };
 
-// --- Zod Schemas ---
+// --- MODIFIED: Zod Schemas ---
 const partnerFilterFormSchema = z.object({
   filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-  filterOwnershipType: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterIndustryExpertise: z.array(z.object({ value: z.string(), label: z.string() })).optional(), // --- ADDED ---
   filterContinent: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterCountry: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterState: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
@@ -225,7 +220,7 @@ const taskPriorityOptions: SelectOption[] = [
 ];
 
 // --- CSV Exporter Utility ---
-const PARTNER_CSV_HEADERS = ["ID", "Name", "Partner Code", "Ownership Type", "Status", "Country", "State", "City", "KYC Verified", "Created Date", "Owner", "Contact Number", "Email", "Website", "GST", "PAN"];
+const PARTNER_CSV_HEADERS = ["ID", "Name", "Partner Code", "Company Name", "Industry Expertise", "Joined As", "Status", "Country", "State", "City", "KYC Verified", "Created Date", "Owner", "Contact Number", "Email", "Website", "GST", "PAN"];
 
 function exportToCsv(filename: string, rows: PartnerItem[]) {
   if (!rows || !rows.length) {
@@ -236,7 +231,9 @@ function exportToCsv(filename: string, rows: PartnerItem[]) {
     id: String(row.id) || "N/A",
     name: row.partner_name || "N/A",
     partner_code: row.partner_code || "N/A",
-    ownership_type: row.ownership_type || "N/A",
+    company_name: row.company_name || "N/A",
+    industrial_expertise: row.industrial_expertise || "N/A",
+    join_us_as: row.join_us_as || "N/A",
     status: row.status || "N/A",
     country: row.country?.name || "N/A",
     state: row.state || "N/A",
@@ -252,8 +249,9 @@ function exportToCsv(filename: string, rows: PartnerItem[]) {
   }));
 
   const headerToKeyMap: Record<string, keyof typeof transformedRows[0]> = {
-    "ID": 'id', "Name": 'name', "Partner Code": 'partner_code', "Ownership Type": 'ownership_type',
-    "Status": 'status', "Country": 'country', "State": 'state', "City": 'city', "KYC Verified": 'kyc_verified',
+    "ID": 'id', "Name": 'name', "Partner Code": 'partner_code', "Company Name": 'company_name',
+    "Industry Expertise": 'industrial_expertise', "Joined As": 'join_us_as', "Status": 'status',
+    "Country": 'country', "State": 'state', "City": 'city', "KYC Verified": 'kyc_verified',
     "Created Date": 'created_at', "Owner": 'owner_name', "Contact Number": 'primary_contact_number',
     "Email": 'primary_email_id', "Website": 'partner_website', "GST": 'gst_number', "PAN": 'pan_number'
   };
@@ -374,7 +372,9 @@ const ViewPartnerDetailDialog: React.FC<{ partner: PartnerItem; onClose: () => v
           <h5 className="mb-2">Basic Information</h5>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
             {renderDetailItem("Partner Code", partner.partner_code)}
-            {renderDetailItem("Ownership Type", partner.ownership_type)}
+            {renderDetailItem("Company Name", partner.company_name)}
+            {renderDetailItem("Industry Expertise", partner.industrial_expertise)}
+            {renderDetailItem("Joined As", partner.join_us_as)}
             {renderDetailItem("Owner Name", partner.owner_name)}
             <div className="mb-3">
               <span className="font-semibold text-gray-700 dark:text-gray-200">Status: </span>
@@ -949,7 +949,6 @@ const PartnerActionColumn = ({ rowData, onEdit, onOpenModal, onDelete }: {
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Edit"><div className="text-xl cursor-pointer hover:text-emerald-600" role="button" onClick={() => onEdit(rowData.id)}><TbPencil /></div></Tooltip>
       <Tooltip title="View"><div className="text-xl cursor-pointer hover:text-blue-600" role="button" onClick={() => navigate(`/business-entities/partner-view/${rowData.id}`)}><TbEye /></div></Tooltip>
-      {/* --- MODIFIED: Added Delete Button --- */}
       <Tooltip title="Delete">
         <div
           className={`text-xl p-1.5 cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
@@ -959,7 +958,6 @@ const PartnerActionColumn = ({ rowData, onEdit, onOpenModal, onDelete }: {
           <TbTrash />
         </div>
       </Tooltip>
-      {/* --- END MODIFICATION --- */}
       <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('email', rowData))} className="flex items-center gap-2"><TbMail /> Send Email</Dropdown.Item>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('whatsapp', rowData))} className="flex items-center gap-2"><TbBrandWhatsapp /> Send WhatsApp</Dropdown.Item>
@@ -982,7 +980,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
   onClearAll: () => void;
 }) => {
   const filterKeyToLabelMap: Record<string, string> = {
-    filterStatus: 'Status', filterOwnershipType: 'Type', filterContinent: 'Continent',
+    filterStatus: 'Status', filterIndustryExpertise: 'Expertise', filterContinent: 'Continent',
     filterCountry: 'Country', filterState: 'State', filterCity: 'City',
     filterKycVerified: 'KYC',
   };
@@ -1048,11 +1046,9 @@ const PartnerListTable = () => {
   const [tableData, setTableData] = useState<TableQueries>(initialState.tableData);
   const [filterCriteria, setFilterCriteria] = useState<PartnerFilterFormData>(initialState.filterCriteria);
 
-  // --- MODIFIED: State for single item deletion ---
   const [isDeleting, setIsDeleting] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<PartnerItem | null>(null);
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
-  // --- END MODIFICATION ---
 
   useEffect(() => {
     try {
@@ -1074,7 +1070,6 @@ const PartnerListTable = () => {
   const handleOpenModal = (type: ModalType, partnerData: PartnerItem) => setModalState({ isOpen: true, type, data: partnerData });
   const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
 
-  // --- MODIFIED: Handlers for single item deletion ---
   const handleDeleteClick = useCallback((item: PartnerItem) => {
     setItemToDelete(item);
     setSingleDeleteConfirmOpen(true);
@@ -1096,7 +1091,6 @@ const PartnerListTable = () => {
       setItemToDelete(null);
     }
   }, [dispatch, itemToDelete, setSelectedPartners]);
-  // --- END MODIFICATION ---
 
 
   // --- START: Filter Drawer Handlers ---
@@ -1115,8 +1109,9 @@ const PartnerListTable = () => {
     closeFilterDrawer();
   };
 
+  // --- MODIFIED: onClearFilters ---
   const onClearFilters = () => {
-    const defaultFilters: PartnerFilterFormData = { filterCreatedDate: [null, null], filterStatus: [], filterOwnershipType: [], filterContinent: [], filterCountry: [], filterState: [], filterCity: [], filterKycVerified: [] };
+    const defaultFilters: PartnerFilterFormData = { filterCreatedDate: [null, null], filterStatus: [], filterIndustryExpertise: [], filterContinent: [], filterCountry: [], filterState: [], filterCity: [], filterKycVerified: [] };
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1, query: "", sort: { order: "", key: "" } });
     sessionStorage.removeItem(PARTNER_STATE_STORAGE_KEY);
@@ -1147,6 +1142,9 @@ const PartnerListTable = () => {
 
   const statusOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.status))).filter(Boolean).map((s) => ({ value: s, label: s })), [partnerList]);
   const kycOptions = [{ value: "Yes", label: "Yes" }, { value: "No", label: "No" }];
+  // --- ADDED: Industry Expertise Filter Options ---
+  const industryExpertiseOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.industrial_expertise))).filter(Boolean).map((t) => ({ value: t, label: t })), [partnerList]);
+
 
   const handleCardClick = (filterType: 'status' | 'kyc', value: string) => {
     onClearFilters(); // Start with a clean slate
@@ -1166,12 +1164,13 @@ const PartnerListTable = () => {
     handleSetTableData({ pageIndex: 1, query: "" });
   };
 
+  // --- MODIFIED: useMemo for filtering logic ---
   const { pageData, total, allFilteredAndSortedData, activeFilterCount } = useMemo(() => {
     let filteredData = [...partnerList];
 
     // --- Apply all active filters ---
     if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) { const selected = filterCriteria.filterStatus.map(s => s.value.toLowerCase()); filteredData = filteredData.filter(p => p.status && selected.includes(p.status.toLowerCase())); }
-    if (filterCriteria.filterOwnershipType && filterCriteria.filterOwnershipType.length > 0) { const selected = filterCriteria.filterOwnershipType.map(s => s.value); filteredData = filteredData.filter(p => selected.includes(p.ownership_type)); }
+    if (filterCriteria.filterIndustryExpertise && filterCriteria.filterIndustryExpertise.length > 0) { const selected = filterCriteria.filterIndustryExpertise.map(s => s.value); filteredData = filteredData.filter(p => p.industrial_expertise && selected.includes(p.industrial_expertise)); } // --- ADDED ---
     if (filterCriteria.filterContinent && filterCriteria.filterContinent.length > 0) { const selected = filterCriteria.filterContinent.map(s => s.value); filteredData = filteredData.filter(p => p.continent && selected.includes(p.continent.name)); }
     if (filterCriteria.filterCountry && filterCriteria.filterCountry.length > 0) { const selected = filterCriteria.filterCountry.map(s => s.value); filteredData = filteredData.filter(p => p.country && selected.includes(p.country.name)); }
     if (filterCriteria.filterState && filterCriteria.filterState.length > 0) { const selected = filterCriteria.filterState.map(s => s.value); filteredData = filteredData.filter(p => selected.includes(p.state)); }
@@ -1190,7 +1189,7 @@ const PartnerListTable = () => {
     // --- Count active filters for the badge ---
     let count = 0;
     count += (filterCriteria.filterStatus?.length ?? 0) > 0 ? 1 : 0;
-    count += (filterCriteria.filterOwnershipType?.length ?? 0) > 0 ? 1 : 0;
+    count += (filterCriteria.filterIndustryExpertise?.length ?? 0) > 0 ? 1 : 0; // --- ADDED ---
     count += (filterCriteria.filterContinent?.length ?? 0) > 0 ? 1 : 0;
     count += (filterCriteria.filterCountry?.length ?? 0) > 0 ? 1 : 0;
     count += (filterCriteria.filterState?.length ?? 0) > 0 ? 1 : 0;
@@ -1249,20 +1248,23 @@ const PartnerListTable = () => {
   const openImageViewer = (imageUrl: string | null) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
   const closeImageViewer = () => setImageViewerOpen(false);
 
+  // --- MODIFIED: columns definition for the listing view ---
   const columns: ColumnDef<PartnerItem>[] = useMemo(() => [
     {
       header: "Partner Info", accessorKey: "partner_name", id: 'partnerInfo', size: 220, cell: ({ row }) => {
-        const { partner_name, id, ownership_type, country } = row.original;
+        const { partner_name, id, company_name, industrial_expertise, join_us_as, country } = row.original;
         return (
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
               <div>
                 <h6 className="text-xs font-semibold"><em className="text-blue-600">{String(id).padStart(5, '0') || "Partner Code"}</em></h6>
                 <span className="text-xs font-semibold leading-1">{partner_name}</span>
+                {company_name && <span className="text-xs text-gray-500 block">({company_name})</span>}
               </div>
             </div>
-            <span className="text-xs mt-1"><b>Type:</b> {ownership_type || "N/A"}</span>
-            <div className="text-xs text-gray-500">{country?.name || "N/A"}</div>
+            {industrial_expertise && <span className="text-xs mt-1"><b>Expertise:</b> {industrial_expertise}</span>}
+            {join_us_as && <span className="text-xs mt-1"><b>Joined As:</b> {join_us_as}</span>}
+            <div className="text-xs text-gray-500 mt-1">{country?.name || "N/A"}</div>
           </div>
         )
       },
@@ -1300,7 +1302,6 @@ const PartnerListTable = () => {
         </div>
       )
     },
-    // --- MODIFIED: Added onDelete handler ---
     { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props) => <PartnerActionColumn rowData={props.row.original} onEdit={(id) => navigate(`/business-entities/partner-edit/${id}`)} onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} />, },
   ], [navigate, openImageViewer, handleOpenModal, handleDeleteClick]);
 
@@ -1328,7 +1329,6 @@ const PartnerListTable = () => {
     return filteredColumns.some(c => (c.id || c.accessorKey) === colId);
   };
 
-  const ownershipTypeOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.ownership_type))).filter(Boolean).map((t) => ({ value: t, label: t })), [partnerList]);
   const continentOptions = useMemo(() => ContinentsData.map((co) => ({ value: co.name, label: co.name })), [ContinentsData]);
   const countryOptions = useMemo(() => CountriesData.map((ct) => ({ value: ct.name, label: ct.name })), [CountriesData]);
   const stateOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.state))).filter(Boolean).map((st) => ({ value: st, label: st })), [partnerList]);
@@ -1363,6 +1363,7 @@ const PartnerListTable = () => {
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
       <DataTable selectable columns={filteredColumns} data={pageData} loading={isLoading} noData={pageData.length <= 0} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
 
+      {/* --- MODIFIED: Filter Drawer UI --- */}
       <Drawer
         title="Partner Filters"
         isOpen={isFilterDrawerOpen}
@@ -1379,12 +1380,12 @@ const PartnerListTable = () => {
         <UiForm id="filterPartnerForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}>
           <div className="sm:grid grid-cols-2 gap-x-4 gap-y-2">
             <UiFormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Status" options={statusOptions} {...field} />} /></UiFormItem>
-            <UiFormItem label="Ownership Type"><Controller name="filterOwnershipType" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Type" options={ownershipTypeOptions} {...field} />} /></UiFormItem>
+            <UiFormItem label="Industry Expertise"><Controller name="filterIndustryExpertise" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Expertise" options={industryExpertiseOptions} {...field} />} /></UiFormItem>
             <UiFormItem label="Continent"><Controller name="filterContinent" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Continent" options={continentOptions} {...field} />} /></UiFormItem>
             <UiFormItem label="Country"><Controller name="filterCountry" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Country" options={countryOptions} {...field} />} /></UiFormItem>
             <UiFormItem label="State"><Controller name="filterState" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select State" options={stateOptions} {...field} />} /></UiFormItem>
             <UiFormItem label="City"><Controller name="filterCity" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select City" options={cityOptions} {...field} />} /></UiFormItem>
-            <UiFormItem label="KYC Verified"><Controller name="filterKycVerified" control={filterFormMethods.control} render={({ field }) => <UiSelect placeholder="Select Status" options={kycOptions} {...field} />} /></UiFormItem>
+            <UiFormItem label="KYC Verified"><Controller name="filterKycVerified" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Status" options={kycOptions} {...field} />} /></UiFormItem>
             <UiFormItem label="Created Date" className="col-span-2"><Controller name="filterCreatedDate" control={filterFormMethods.control} render={({ field }) => <DatePickerRange placeholder="Select Date Range" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />} /></UiFormItem>
           </div>
         </UiForm>
@@ -1403,7 +1404,6 @@ const PartnerListTable = () => {
           {imageToView ? <img src={`${imageToView}`} alt="Partner Logo Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} /> : <p>No image to display.</p>}
         </div>
       </Dialog>
-      {/* --- MODIFIED: Added Confirmation Dialog for single deletion --- */}
       <ConfirmDialog
         isOpen={singleDeleteConfirmOpen}
         type="danger"
@@ -1418,7 +1418,6 @@ const PartnerListTable = () => {
           Are you sure you want to delete the partner "<strong>{itemToDelete?.partner_name}</strong>"? This action cannot be undone.
         </p>
       </ConfirmDialog>
-       {/* --- END MODIFICATION --- */}
     </>
   );
 };
