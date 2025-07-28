@@ -1,16 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import classNames from "classnames";
 import React, {
-  createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
-  useState,
+  useState
 } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -27,15 +26,14 @@ import {
   DatePicker,
   Drawer,
   Dropdown,
-  Input,
-  Select,
-  Form as UiForm,
-  FormItem as UiFormItem,
-  Select as UiSelect,
-  Tag,
-  Spinner,
   Form,
   FormItem,
+  Input,
+  Spinner,
+  Tag,
+  Form as UiForm,
+  FormItem as UiFormItem,
+  Select as UiSelect
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
@@ -49,12 +47,12 @@ import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
   TbAlarm,
   TbBell,
-  TbBellRinging, // Added for Alert Modal
+  TbBellRinging,
   TbBrandWhatsapp,
   TbBuilding,
   TbBuildingBank,
   TbCalendarEvent,
-  TbCalendarTime, // Added for Alert Modal
+  TbCalendarTime,
   TbCancel,
   TbCheck,
   TbChecks,
@@ -67,21 +65,17 @@ import {
   TbFileDescription,
   TbFilter,
   TbMail,
-  TbNotesOff, // Added for Alert Modal
+  TbNotesOff,
   TbPencil,
-  TbPencilPlus, // Added for Alert Modal
+  TbPencilPlus,
   TbPlus,
-  TbReceipt,
   TbReload,
   TbSearch,
   TbTagStarred,
+  TbTrash,
   TbUser,
-  TbUserCancel,
-  TbUserCheck,
   TbUserCircle,
-  TbUserMinus,
-  TbUsersGroup,
-  TbX,
+  TbX
 } from "react-icons/tb";
 
 // Types & Redux
@@ -94,31 +88,34 @@ import type {
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addAllActionAction,
-  addAllAlertsAction, // Added for Alert Modal
+  addAllAlertsAction,
   addNotificationAction,
   addScheduleAction,
   addTaskAction,
   deleteAllpartnerAction,
+  getAlertsAction, // Assuming a single delete action exists, or using deleteAll for one
   getAllUsersAction,
-  getAlertsAction, // Added for Alert Modal
   getContinentsAction,
   getCountriesAction,
   getpartnerAction,
-  submitExportReasonAction,
+  submitExportReasonAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import dayjs from "dayjs";
-import { useSelector } from "react-redux";
-import { config } from "localforage";
 import { encryptStorage } from "@/utils/secureLocalStorage";
+import dayjs from "dayjs";
+import { config } from "localforage";
+import { useSelector } from "react-redux";
 
 
-// --- PartnerItem Type (Data Structure) ---
+// --- MODIFIED: PartnerItem Type (Data Structure) ---
 export type PartnerItem = {
   id: string;
   partner_name: string;
+  company_name?: string; // --- ADDED ---
+  industrial_expertise?: string; // --- ADDED ---
+  join_us_as?: string; // --- ADDED ---
   owner_name: string;
-  ownership_type: string;
+  // ownership_type: string; // --- REMOVED ---
   partner_code?: string;
   primary_contact_number: string;
   primary_contact_number_code: string;
@@ -152,10 +149,10 @@ export type PartnerItem = {
 };
 export type SelectOption = { value: any; label: string; };
 
-// --- Zod Schemas ---
+// --- MODIFIED: Zod Schemas ---
 const partnerFilterFormSchema = z.object({
   filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-  filterOwnershipType: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterIndustryExpertise: z.array(z.object({ value: z.string(), label: z.string() })).optional(), // --- ADDED ---
   filterContinent: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterCountry: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterState: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
@@ -223,7 +220,7 @@ const taskPriorityOptions: SelectOption[] = [
 ];
 
 // --- CSV Exporter Utility ---
-const PARTNER_CSV_HEADERS = ["ID", "Name", "Partner Code", "Ownership Type", "Status", "Country", "State", "City", "KYC Verified", "Created Date", "Owner", "Contact Number", "Email", "Website", "GST", "PAN"];
+const PARTNER_CSV_HEADERS = ["ID", "Name", "Partner Code", "Company Name", "Industry Expertise", "Joined As", "Status", "Country", "State", "City", "KYC Verified", "Created Date", "Owner", "Contact Number", "Email", "Website", "GST", "PAN"];
 
 function exportToCsv(filename: string, rows: PartnerItem[]) {
   if (!rows || !rows.length) {
@@ -234,7 +231,9 @@ function exportToCsv(filename: string, rows: PartnerItem[]) {
     id: String(row.id) || "N/A",
     name: row.partner_name || "N/A",
     partner_code: row.partner_code || "N/A",
-    ownership_type: row.ownership_type || "N/A",
+    company_name: row.company_name || "N/A",
+    industrial_expertise: row.industrial_expertise || "N/A",
+    join_us_as: row.join_us_as || "N/A",
     status: row.status || "N/A",
     country: row.country?.name || "N/A",
     state: row.state || "N/A",
@@ -250,8 +249,9 @@ function exportToCsv(filename: string, rows: PartnerItem[]) {
   }));
 
   const headerToKeyMap: Record<string, keyof typeof transformedRows[0]> = {
-    "ID": 'id', "Name": 'name', "Partner Code": 'partner_code', "Ownership Type": 'ownership_type',
-    "Status": 'status', "Country": 'country', "State": 'state', "City": 'city', "KYC Verified": 'kyc_verified',
+    "ID": 'id', "Name": 'name', "Partner Code": 'partner_code', "Company Name": 'company_name',
+    "Industry Expertise": 'industrial_expertise', "Joined As": 'join_us_as', "Status": 'status',
+    "Country": 'country', "State": 'state', "City": 'city', "KYC Verified": 'kyc_verified',
     "Created Date": 'created_at', "Owner": 'owner_name', "Contact Number": 'primary_contact_number',
     "Email": 'primary_email_id', "Website": 'partner_website', "GST": 'gst_number', "PAN": 'pan_number'
   };
@@ -372,7 +372,9 @@ const ViewPartnerDetailDialog: React.FC<{ partner: PartnerItem; onClose: () => v
           <h5 className="mb-2">Basic Information</h5>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
             {renderDetailItem("Partner Code", partner.partner_code)}
-            {renderDetailItem("Ownership Type", partner.ownership_type)}
+            {renderDetailItem("Company Name", partner.company_name)}
+            {renderDetailItem("Industry Expertise", partner.industrial_expertise)}
+            {renderDetailItem("Joined As", partner.join_us_as)}
             {renderDetailItem("Owner Name", partner.owner_name)}
             <div className="mb-3">
               <span className="font-semibold text-gray-700 dark:text-gray-200">Status: </span>
@@ -730,173 +732,173 @@ const SendPartnerWhatsAppAction: React.FC<{ partner: PartnerItem; onClose: () =>
 };
 
 const PartnerAlertModal: React.FC<{ partner: PartnerItem; onClose: () => void }> = ({ partner, onClose }) => {
-    // --- State and Hooks ---
-    const [alerts, setAlerts] = useState<AlertNote[]>([]);
-    const [isFetching, setIsFetching] = useState(true);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const dispatch = useAppDispatch();
-    const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
-        resolver: zodResolver(alertNoteSchema),
-        defaultValues: { newNote: '' },
-        mode: 'onChange'
-    });
+  // --- State and Hooks ---
+  const [alerts, setAlerts] = useState<AlertNote[]>([]);
+  const [isFetching, setIsFetching] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const dispatch = useAppDispatch();
+  const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
+    resolver: zodResolver(alertNoteSchema),
+    defaultValues: { newNote: '' },
+    mode: 'onChange'
+  });
 
-    // --- Helper functions and API calls ---
-    const stringToColor = (str: string) => {
-        let hash = 0;
-        if (!str) return '#cccccc';
-        for (let i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        let color = '#';
-        for (let i = 0; i < 3; i++) {
-            const value = (hash >> (i * 8)) & 0xFF;
-            color += ('00' + value.toString(16)).substr(-2);
-        }
-        return color;
-    };
+  // --- Helper functions and API calls ---
+  const stringToColor = (str: string) => {
+    let hash = 0;
+    if (!str) return '#cccccc';
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    let color = '#';
+    for (let i = 0; i < 3; i++) {
+      const value = (hash >> (i * 8)) & 0xFF;
+      color += ('00' + value.toString(16)).substr(-2);
+    }
+    return color;
+  };
 
-    const fetchAlerts = useCallback(() => {
-        setIsFetching(true);
-        dispatch(getAlertsAction({ module_id: partner.id, module_name: 'Partner' }))
-            .unwrap()
-            .then((data) => setAlerts(data.data || []))
-            .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
-            .finally(() => setIsFetching(false));
-    }, [partner.id, dispatch]);
+  const fetchAlerts = useCallback(() => {
+    setIsFetching(true);
+    dispatch(getAlertsAction({ module_id: partner.id, module_name: 'Partner' }))
+      .unwrap()
+      .then((data) => setAlerts(data.data || []))
+      .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
+      .finally(() => setIsFetching(false));
+  }, [partner.id, dispatch]);
 
-    useEffect(() => {
-        fetchAlerts();
-        reset({ newNote: '' });
-    }, [fetchAlerts, reset]);
+  useEffect(() => {
+    fetchAlerts();
+    reset({ newNote: '' });
+  }, [fetchAlerts, reset]);
 
-    const onAddNote = async (data: AlertNoteFormData) => {
-        setIsSubmitting(true);
-        try {
-            await dispatch(addAllAlertsAction({ note: data.newNote, module_id: partner.id, module_name: 'Partner' })).unwrap();
-            toast.push(<Notification type="success" title="Alert Note Added" />);
-            reset({ newNote: '' });
-            fetchAlerts(); // Re-fetch alerts to show the new one
-        } catch (error: any) {
-            toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+  const onAddNote = async (data: AlertNoteFormData) => {
+    setIsSubmitting(true);
+    try {
+      await dispatch(addAllAlertsAction({ note: data.newNote, module_id: partner.id, module_name: 'Partner' })).unwrap();
+      toast.push(<Notification type="success" title="Alert Note Added" />);
+      reset({ newNote: '' });
+      fetchAlerts(); // Re-fetch alerts to show the new one
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    return (
-        <Dialog
-            isOpen={true}
-            onClose={onClose}
-            onRequestClose={onClose}
-            width={1200}
-            contentClassName="p-0 flex flex-col max-h-[90vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
-        >
-            {/* --- Header --- */}
-            <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 flex-shrink-0 rounded-t-lg">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <TbBellRinging className="text-2xl text-white" />
-                        <h5 className="mb-0 text-white font-bold text-base sm:text-xl">{partner.partner_name}</h5>
-                    </div>
-                    <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
-                        <TbX className="h-6 w-6" />
-                    </button>
-                </div>
-            </header>
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={1200}
+      contentClassName="p-0 flex flex-col max-h-[90vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
+    >
+      {/* --- Header --- */}
+      <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 flex-shrink-0 rounded-t-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <TbBellRinging className="text-2xl text-white" />
+            <h5 className="mb-0 text-white font-bold text-base sm:text-xl">{partner.partner_name}</h5>
+          </div>
+          <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
+            <TbX className="h-6 w-6" />
+          </button>
+        </div>
+      </header>
 
-            {/* --- Main Content: Grid for two columns --- */}
-            <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-hidden">
+      {/* --- Main Content: Grid for two columns --- */}
+      <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-hidden">
 
-                {/* --- Left Column: Activity Timeline (This column scrolls internally) --- */}
-                <div className="relative flex flex-col h-full overflow-hidden">
-                    <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
-                        Activity Timeline
-                    </h6>
-                    
-                    {/* The scrollable container for the timeline */}
-                    <div className="flex-grow overflow-y-auto lg:pr-4 lg:-mr-4">
-                        {isFetching ? (
-                            <div className="flex justify-center items-center h-full"><Spinner size="lg"/></div>
-                        ) : alerts.length > 0 ? (
-                            <div className="space-y-8">
-                                {alerts.map((alert, index) => {
-                                    const userName = alert?.created_by_user?.name || 'N/A';
-                                    const userInitial = userName.charAt(0).toUpperCase();
-                                    return (
-                                        <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
-                                            <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
-                                                <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>
-                                                    {userInitial}
-                                                </Avatar>
-                                                {index < alerts.length - 1 && (
-                                                    <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
-                                                )}
-                                            </div>
-                                            <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                                                <div className="p-4">
-                                                    <header className="flex justify-between items-center mb-2">
-                                                        <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
-                                                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                                            <TbCalendarTime />
-                                                            <span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span>
-                                                        </div>
-                                                    </header>
-                                                    <div
-                                                        className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300"
-                                                        dangerouslySetInnerHTML={{ __html: alert.note }}
-                                                    />
-                                                </div>
-                                            </Card>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
-                                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
-                                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">No Activity Yet</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Be the first to add a note.</p>
-                            </div>
+        {/* --- Left Column: Activity Timeline (This column scrolls internally) --- */}
+        <div className="relative flex flex-col h-full overflow-hidden">
+          <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
+            Activity Timeline
+          </h6>
+
+          {/* The scrollable container for the timeline */}
+          <div className="flex-grow overflow-y-auto lg:pr-4 lg:-mr-4">
+            {isFetching ? (
+              <div className="flex justify-center items-center h-full"><Spinner size="lg" /></div>
+            ) : alerts.length > 0 ? (
+              <div className="space-y-8">
+                {alerts.map((alert, index) => {
+                  const userName = alert?.created_by_user?.name || 'N/A';
+                  const userInitial = userName.charAt(0).toUpperCase();
+                  return (
+                    <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
+                      <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
+                        <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>
+                          {userInitial}
+                        </Avatar>
+                        {index < alerts.length - 1 && (
+                          <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
                         )}
-                    </div>
-                </div>
-
-                {/* --- Right Column: Add New Note (Stays in place) --- */}
-                <div className="flex flex-col mt-8 lg:mt-0 h-full">
-                    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
-                        <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
-                            <div className="flex items-center gap-2">
-                                <TbPencilPlus className="text-xl text-blue-600 dark:text-blue-400" />
-                                <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6>
+                      </div>
+                      <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                        <div className="p-4">
+                          <header className="flex justify-between items-center mb-2">
+                            <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                              <TbCalendarTime />
+                              <span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span>
                             </div>
-                        </header>
-                        <Form onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
-                            <FormItem invalid={!!errors.newNote} errorMessage={errors.newNote?.message} className="flex-grow flex flex-col">
-                                <Controller
-                                    name="newNote"
-                                    control={control}
-                                    render={({ field }) => (
-                                        <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
-                                            <RichTextEditor
-                                                {...field}
-                                                onChange={(val) => field.onChange(val.html)}
-                                                className="flex-grow min-h-[150px] sm:min-h-[200px]"
-                                            />
-                                        </div>
-                                    )}
-                                />
-                            </FormItem>
-                            <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
-                                <Button type="button" className="mr-3" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-                                <Button variant="solid" color="blue" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>Submit Note</Button>
-                            </footer>
-                        </Form>
-                    </Card>
-                </div>
-            </main>
-        </Dialog>
-    );
+                          </header>
+                          <div
+                            className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300"
+                            dangerouslySetInnerHTML={{ __html: alert.note }}
+                          />
+                        </div>
+                      </Card>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
+                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
+                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">No Activity Yet</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Be the first to add a note.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* --- Right Column: Add New Note (Stays in place) --- */}
+        <div className="flex flex-col mt-8 lg:mt-0 h-full">
+          <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
+            <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <TbPencilPlus className="text-xl text-blue-600 dark:text-blue-400" />
+                <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6>
+              </div>
+            </header>
+            <Form onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
+              <FormItem invalid={!!errors.newNote} errorMessage={errors.newNote?.message} className="flex-grow flex flex-col">
+                <Controller
+                  name="newNote"
+                  control={control}
+                  render={({ field }) => (
+                    <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
+                      <RichTextEditor
+                        {...field}
+                        onChange={(val) => field.onChange(val.html)}
+                        className="flex-grow min-h-[150px] sm:min-h-[200px]"
+                      />
+                    </div>
+                  )}
+                />
+              </FormItem>
+              <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
+                <Button type="button" className="mr-3" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+                <Button variant="solid" color="blue" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>Submit Note</Button>
+              </footer>
+            </Form>
+          </Card>
+        </div>
+      </main>
+    </Dialog>
+  );
 };
 
 
@@ -934,10 +936,11 @@ const PartnerListSearch: React.FC<{ onInputChange: (value: string) => void; valu
 };
 
 
-const PartnerActionColumn = ({ rowData, onEdit, onOpenModal }: {
+const PartnerActionColumn = ({ rowData, onEdit, onOpenModal, onDelete }: {
   rowData: PartnerItem;
   onEdit: (id: string) => void;
   onOpenModal: (type: ModalType, data: PartnerItem) => void;
+  onDelete: () => void;
 }) => {
   const navigate = useNavigate();
   const handleAction = (e: React.MouseEvent, action: () => void) => { e.stopPropagation(); action(); };
@@ -946,6 +949,15 @@ const PartnerActionColumn = ({ rowData, onEdit, onOpenModal }: {
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Edit"><div className="text-xl cursor-pointer hover:text-emerald-600" role="button" onClick={() => onEdit(rowData.id)}><TbPencil /></div></Tooltip>
       <Tooltip title="View"><div className="text-xl cursor-pointer hover:text-blue-600" role="button" onClick={() => navigate(`/business-entities/partner-view/${rowData.id}`)}><TbEye /></div></Tooltip>
+      <Tooltip title="Delete">
+        <div
+          className={`text-xl p-1.5 cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
+          role="button"
+          onClick={onDelete}
+        >
+          <TbTrash />
+        </div>
+      </Tooltip>
       <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('email', rowData))} className="flex items-center gap-2"><TbMail /> Send Email</Dropdown.Item>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('whatsapp', rowData))} className="flex items-center gap-2"><TbBrandWhatsapp /> Send WhatsApp</Dropdown.Item>
@@ -955,6 +967,7 @@ const PartnerActionColumn = ({ rowData, onEdit, onOpenModal }: {
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('activity', rowData))} className="flex items-center gap-2"><TbTagStarred size={18} /> Add Activity</Dropdown.Item>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('alert', rowData))} className="flex items-center gap-2"><TbAlarm /> View Alert</Dropdown.Item>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('document', rowData))} className="flex items-center gap-2"><TbDownload /> Download Document</Dropdown.Item>
+
       </Dropdown>
     </div>
   );
@@ -967,7 +980,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
   onClearAll: () => void;
 }) => {
   const filterKeyToLabelMap: Record<string, string> = {
-    filterStatus: 'Status', filterOwnershipType: 'Type', filterContinent: 'Continent',
+    filterStatus: 'Status', filterIndustryExpertise: 'Expertise', filterContinent: 'Continent',
     filterCountry: 'Country', filterState: 'State', filterCity: 'City',
     filterKycVerified: 'KYC',
   };
@@ -1033,6 +1046,10 @@ const PartnerListTable = () => {
   const [tableData, setTableData] = useState<TableQueries>(initialState.tableData);
   const [filterCriteria, setFilterCriteria] = useState<PartnerFilterFormData>(initialState.filterCriteria);
 
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<PartnerItem | null>(null);
+  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+
   useEffect(() => {
     try {
       const stateToSave = { tableData, filterCriteria };
@@ -1053,6 +1070,29 @@ const PartnerListTable = () => {
   const handleOpenModal = (type: ModalType, partnerData: PartnerItem) => setModalState({ isOpen: true, type, data: partnerData });
   const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
 
+  const handleDeleteClick = useCallback((item: PartnerItem) => {
+    setItemToDelete(item);
+    setSingleDeleteConfirmOpen(true);
+  }, []);
+
+  const onConfirmSingleDelete = useCallback(async () => {
+    if (!itemToDelete) return;
+    setIsDeleting(true);
+    setSingleDeleteConfirmOpen(false);
+    try {
+      await dispatch(deleteAllpartnerAction({ ids: itemToDelete.id })).unwrap();
+      toast.push(<Notification title="Partner Deleted" type="success" >{`Partner "${itemToDelete.partner_name}" has been deleted.`}</Notification>);
+      dispatch(getpartnerAction());
+      setSelectedPartners((prev) => prev.filter((p) => p.id !== itemToDelete.id));
+    } catch (error: any) {
+      toast.push(<Notification title="Delete Failed" type="danger">{error?.message || "Could not delete partner."}</Notification>);
+    } finally {
+      setIsDeleting(false);
+      setItemToDelete(null);
+    }
+  }, [dispatch, itemToDelete, setSelectedPartners]);
+
+
   // --- START: Filter Drawer Handlers ---
   const openFilterDrawer = () => {
     filterFormMethods.reset(filterCriteria); // Load current filters into the form
@@ -1069,8 +1109,9 @@ const PartnerListTable = () => {
     closeFilterDrawer();
   };
 
+  // --- MODIFIED: onClearFilters ---
   const onClearFilters = () => {
-    const defaultFilters: PartnerFilterFormData = { filterCreatedDate: [null, null], filterStatus: [], filterOwnershipType: [], filterContinent: [], filterCountry: [], filterState: [], filterCity: [], filterKycVerified: [] };
+    const defaultFilters: PartnerFilterFormData = { filterCreatedDate: [null, null], filterStatus: [], filterIndustryExpertise: [], filterContinent: [], filterCountry: [], filterState: [], filterCity: [], filterKycVerified: [] };
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1, query: "", sort: { order: "", key: "" } });
     sessionStorage.removeItem(PARTNER_STATE_STORAGE_KEY);
@@ -1101,6 +1142,9 @@ const PartnerListTable = () => {
 
   const statusOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.status))).filter(Boolean).map((s) => ({ value: s, label: s })), [partnerList]);
   const kycOptions = [{ value: "Yes", label: "Yes" }, { value: "No", label: "No" }];
+  // --- ADDED: Industry Expertise Filter Options ---
+  const industryExpertiseOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.industrial_expertise))).filter(Boolean).map((t) => ({ value: t, label: t })), [partnerList]);
+
 
   const handleCardClick = (filterType: 'status' | 'kyc', value: string) => {
     onClearFilters(); // Start with a clean slate
@@ -1120,12 +1164,13 @@ const PartnerListTable = () => {
     handleSetTableData({ pageIndex: 1, query: "" });
   };
 
+  // --- MODIFIED: useMemo for filtering logic ---
   const { pageData, total, allFilteredAndSortedData, activeFilterCount } = useMemo(() => {
     let filteredData = [...partnerList];
 
     // --- Apply all active filters ---
     if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) { const selected = filterCriteria.filterStatus.map(s => s.value.toLowerCase()); filteredData = filteredData.filter(p => p.status && selected.includes(p.status.toLowerCase())); }
-    if (filterCriteria.filterOwnershipType && filterCriteria.filterOwnershipType.length > 0) { const selected = filterCriteria.filterOwnershipType.map(s => s.value); filteredData = filteredData.filter(p => selected.includes(p.ownership_type)); }
+    if (filterCriteria.filterIndustryExpertise && filterCriteria.filterIndustryExpertise.length > 0) { const selected = filterCriteria.filterIndustryExpertise.map(s => s.value); filteredData = filteredData.filter(p => p.industrial_expertise && selected.includes(p.industrial_expertise)); } // --- ADDED ---
     if (filterCriteria.filterContinent && filterCriteria.filterContinent.length > 0) { const selected = filterCriteria.filterContinent.map(s => s.value); filteredData = filteredData.filter(p => p.continent && selected.includes(p.continent.name)); }
     if (filterCriteria.filterCountry && filterCriteria.filterCountry.length > 0) { const selected = filterCriteria.filterCountry.map(s => s.value); filteredData = filteredData.filter(p => p.country && selected.includes(p.country.name)); }
     if (filterCriteria.filterState && filterCriteria.filterState.length > 0) { const selected = filterCriteria.filterState.map(s => s.value); filteredData = filteredData.filter(p => selected.includes(p.state)); }
@@ -1144,7 +1189,7 @@ const PartnerListTable = () => {
     // --- Count active filters for the badge ---
     let count = 0;
     count += (filterCriteria.filterStatus?.length ?? 0) > 0 ? 1 : 0;
-    count += (filterCriteria.filterOwnershipType?.length ?? 0) > 0 ? 1 : 0;
+    count += (filterCriteria.filterIndustryExpertise?.length ?? 0) > 0 ? 1 : 0; // --- ADDED ---
     count += (filterCriteria.filterContinent?.length ?? 0) > 0 ? 1 : 0;
     count += (filterCriteria.filterCountry?.length ?? 0) > 0 ? 1 : 0;
     count += (filterCriteria.filterState?.length ?? 0) > 0 ? 1 : 0;
@@ -1203,20 +1248,23 @@ const PartnerListTable = () => {
   const openImageViewer = (imageUrl: string | null) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
   const closeImageViewer = () => setImageViewerOpen(false);
 
+  // --- MODIFIED: columns definition for the listing view ---
   const columns: ColumnDef<PartnerItem>[] = useMemo(() => [
     {
       header: "Partner Info", accessorKey: "partner_name", id: 'partnerInfo', size: 220, cell: ({ row }) => {
-        const { partner_name, id, ownership_type, country } = row.original;
+        const { partner_name, id, company_name, industrial_expertise, join_us_as, country } = row.original;
         return (
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
               <div>
                 <h6 className="text-xs font-semibold"><em className="text-blue-600">{String(id).padStart(5, '0') || "Partner Code"}</em></h6>
                 <span className="text-xs font-semibold leading-1">{partner_name}</span>
+                {company_name && <span className="text-xs text-gray-500 block">({company_name})</span>}
               </div>
             </div>
-            <span className="text-xs mt-1"><b>Type:</b> {ownership_type || "N/A"}</span>
-            <div className="text-xs text-gray-500">{country?.name || "N/A"}</div>
+            {industrial_expertise && <span className="text-xs mt-1"><b>Expertise:</b> {industrial_expertise}</span>}
+            {join_us_as && <span className="text-xs mt-1"><b>Joined As:</b> {join_us_as}</span>}
+            <div className="text-xs text-gray-500 mt-1">{country?.name || "N/A"}</div>
           </div>
         )
       },
@@ -1254,8 +1302,8 @@ const PartnerListTable = () => {
         </div>
       )
     },
-    { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props) => <PartnerActionColumn rowData={props.row.original} onEdit={(id) => navigate(`/business-entities/partner-edit/${id}`)} onOpenModal={handleOpenModal} />, },
-  ], [navigate, openImageViewer, handleOpenModal]);
+    { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props) => <PartnerActionColumn rowData={props.row.original} onEdit={(id) => navigate(`/business-entities/partner-edit/${id}`)} onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} />, },
+  ], [navigate, openImageViewer, handleOpenModal, handleDeleteClick]);
 
   const [filteredColumns, setFilteredColumns] = useState(columns);
   const toggleColumn = (checked: boolean, colId: string) => {
@@ -1281,7 +1329,6 @@ const PartnerListTable = () => {
     return filteredColumns.some(c => (c.id || c.accessorKey) === colId);
   };
 
-  const ownershipTypeOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.ownership_type))).filter(Boolean).map((t) => ({ value: t, label: t })), [partnerList]);
   const continentOptions = useMemo(() => ContinentsData.map((co) => ({ value: co.name, label: co.name })), [ContinentsData]);
   const countryOptions = useMemo(() => CountriesData.map((ct) => ({ value: ct.name, label: ct.name })), [CountriesData]);
   const stateOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.state))).filter(Boolean).map((st) => ({ value: st, label: st })), [partnerList]);
@@ -1306,7 +1353,6 @@ const PartnerListTable = () => {
             <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>{columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}</div>
           </Dropdown>
           <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onRefreshData} /></Tooltip>
-          {/* This button now correctly opens the filter drawer */}
           <Button icon={<TbFilter />} onClick={openFilterDrawer}>
             Filter
             {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}
@@ -1317,7 +1363,7 @@ const PartnerListTable = () => {
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
       <DataTable selectable columns={filteredColumns} data={pageData} loading={isLoading} noData={pageData.length <= 0} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
 
-      {/* The Drawer component with all props correctly bound */}
+      {/* --- MODIFIED: Filter Drawer UI --- */}
       <Drawer
         title="Partner Filters"
         isOpen={isFilterDrawerOpen}
@@ -1334,12 +1380,12 @@ const PartnerListTable = () => {
         <UiForm id="filterPartnerForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}>
           <div className="sm:grid grid-cols-2 gap-x-4 gap-y-2">
             <UiFormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Status" options={statusOptions} {...field} />} /></UiFormItem>
-            <UiFormItem label="Ownership Type"><Controller name="filterOwnershipType" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Type" options={ownershipTypeOptions} {...field} />} /></UiFormItem>
+            <UiFormItem label="Industry Expertise"><Controller name="filterIndustryExpertise" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Expertise" options={industryExpertiseOptions} {...field} />} /></UiFormItem>
             <UiFormItem label="Continent"><Controller name="filterContinent" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Continent" options={continentOptions} {...field} />} /></UiFormItem>
             <UiFormItem label="Country"><Controller name="filterCountry" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Country" options={countryOptions} {...field} />} /></UiFormItem>
             <UiFormItem label="State"><Controller name="filterState" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select State" options={stateOptions} {...field} />} /></UiFormItem>
             <UiFormItem label="City"><Controller name="filterCity" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select City" options={cityOptions} {...field} />} /></UiFormItem>
-            <UiFormItem label="KYC Verified"><Controller name="filterKycVerified" control={filterFormMethods.control} render={({ field }) => <UiSelect placeholder="Select Status" options={kycOptions} {...field} />} /></UiFormItem>
+            <UiFormItem label="KYC Verified"><Controller name="filterKycVerified" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Status" options={kycOptions} {...field} />} /></UiFormItem>
             <UiFormItem label="Created Date" className="col-span-2"><Controller name="filterCreatedDate" control={filterFormMethods.control} render={({ field }) => <DatePickerRange placeholder="Select Date Range" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />} /></UiFormItem>
           </div>
         </UiForm>
@@ -1358,6 +1404,20 @@ const PartnerListTable = () => {
           {imageToView ? <img src={`${imageToView}`} alt="Partner Logo Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} /> : <p>No image to display.</p>}
         </div>
       </Dialog>
+      <ConfirmDialog
+        isOpen={singleDeleteConfirmOpen}
+        type="danger"
+        title="Delete Partner"
+        onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+        onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+        onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+        onConfirm={onConfirmSingleDelete}
+        loading={isDeleting}
+      >
+        <p>
+          Are you sure you want to delete the partner "<strong>{itemToDelete?.partner_name}</strong>"? This action cannot be undone.
+        </p>
+      </ConfirmDialog>
     </>
   );
 };
