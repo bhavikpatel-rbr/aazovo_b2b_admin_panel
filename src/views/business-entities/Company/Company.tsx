@@ -3,6 +3,7 @@ import classNames from "classnames";
 import dayjs from "dayjs";
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -217,13 +218,13 @@ export type CompanyItem = {
   company_code: string | null;
   company_name: string;
   status:
-    | "Verified"
-    | "Non Verified"
-    | "Active"
-    | "Pending"
-    | "Inactive"
-    | "active"
-    | "inactive";
+  | "Verified"
+  | "Non Verified"
+  | "Active"
+  | "Pending"
+  | "Inactive"
+  | "active"
+  | "inactive";
   primary_email_id: string;
   primary_contact_number: string;
   primary_contact_number_code: string;
@@ -443,7 +444,7 @@ function exportToCsv(filename: string, rows: CompanyItem[]) {
       CSV_HEADERS.map((header) =>
         JSON.stringify(
           row[header.toLowerCase().replace(/ /g, "_") as keyof typeof row] ??
-            "",
+          "",
           (key, value) => (value === null ? "" : value)
         )
       ).join(",")
@@ -550,9 +551,8 @@ const DocumentViewer: React.FC<{
           <img
             src={document.url}
             alt={document.name}
-            className={`max-h-full max-w-full object-contain transition-opacity duration-300 ${
-              isContentLoaded ? "opacity-100" : "opacity-0"
-            }`}
+            className={`max-h-full max-w-full object-contain transition-opacity duration-300 ${isContentLoaded ? "opacity-100" : "opacity-0"
+              }`}
             onLoad={() => setIsContentLoaded(true)}
           />
         );
@@ -561,9 +561,8 @@ const DocumentViewer: React.FC<{
           <iframe
             src={document.url}
             title={document.name}
-            className={`w-full h-full border-0 transition-opacity duration-300 ${
-              isContentLoaded ? "opacity-100" : "opacity-0"
-            }`}
+            className={`w-full h-full border-0 transition-opacity duration-300 ${isContentLoaded ? "opacity-100" : "opacity-0"
+              }`}
             onLoad={() => setIsContentLoaded(true)}
           ></iframe>
         );
@@ -1910,9 +1909,8 @@ const SendEmailAction: React.FC<{
       return;
     }
     const subject = `Regarding Company: ${company.company_name}`;
-    const body = `Hello ${
-      company.owner_name || company.company_name
-    },\n\nThis is regarding your company profile (ID: ${company.id}).`;
+    const body = `Hello ${company.owner_name || company.company_name
+      },\n\nThis is regarding your company profile (ID: ${company.id}).`;
     window.open(
       `mailto:${company.primary_email_id}?subject=${encodeURIComponent(
         subject
@@ -1941,9 +1939,8 @@ const SendWhatsAppAction: React.FC<{
       return;
     }
     const fullPhoneNumber = `${countryCode}${phone}`;
-    const message = `Hello ${
-      company.owner_name || company.company_name
-    },\n\nThis is regarding your company profile with us.`;
+    const message = `Hello ${company.owner_name || company.company_name
+      },\n\nThis is regarding your company profile with us.`;
     window.open(
       `https://wa.me/${fullPhoneNumber}?text=${encodeURIComponent(message)}`,
       "_blank"
@@ -2074,14 +2071,14 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({
 // --- Child Components ---
 const CompanyListContext = createContext<
   | {
-      companyList: CompanyItem[];
-      setSelectedCompanies: React.Dispatch<React.SetStateAction<CompanyItem[]>>;
-      companyCount: any;
-      ContinentsData: any[];
-      CountriesData: any[];
-      getAllUserData: SelectOption[];
-      selectedCompanies: CompanyItem[];
-    }
+    companyList: CompanyItem[];
+    setSelectedCompanies: React.Dispatch<React.SetStateAction<CompanyItem[]>>;
+    companyCount: any;
+    ContinentsData: any[];
+    CountriesData: any[];
+    getAllUserData: SelectOption[];
+    selectedCompanies: CompanyItem[];
+  }
   | undefined
 >(undefined);
 const useCompanyList = () => {
@@ -2133,6 +2130,79 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
 };
 
 // --- EnableBillingDialog Component ---
+const DocumentPlaceholder = ({ file }: { file: File }) => (
+  <div className="w-full h-full p-2 flex flex-col items-center justify-center text-center bg-gray-100 dark:bg-gray-700/50 rounded-md">
+    <TbFileTypePdf className="text-red-500" size={32} />
+    <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 break-all line-clamp-2">
+      {file.name}
+    </p>
+  </div>
+);
+
+const ImageViewer: React.FC<{ images: { src: string; alt: string }[]; startIndex: number; onClose: () => void; }> = ({ images, startIndex, onClose }) => {
+  const [currentIndex, setCurrentIndex] = useState(startIndex);
+
+  const handleNext = useCallback(() => setCurrentIndex((prev) => (prev + 1) % images.length), [images.length]);
+  const handlePrev = useCallback(() => setCurrentIndex((prev) => (prev - 1 + images.length) % images.length), [images.length]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') handleNext();
+      if (e.key === 'ArrowLeft') handlePrev();
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleNext, handlePrev, onClose]);
+
+  const currentImage = images[currentIndex];
+
+  return (
+    <div className="fixed inset-0 bg-black/90 flex flex-col items-center z-[9999] p-4" onClick={onClose}>
+      <Button icon={<TbX />} className="absolute top-4 right-4 z-10 !p-2 !rounded-full bg-black/50 hover:bg-black/80 text-white" onClick={onClose} />
+      <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+        <div className="relative flex-grow flex items-center justify-center w-full max-w-7xl overflow-hidden">
+          {images.length > 1 && <Button icon={<TbChevronLeft />} className="absolute left-2 md:left-4 !p-3 !rounded-full bg-black/50 hover:bg-black/80 text-white" onClick={handlePrev} />}
+          <div className="flex flex-col items-center justify-center h-full">
+            <img src={currentImage.src} alt={currentImage.alt} className="max-h-[calc(100vh-10rem)] max-w-[calc(100vw-8rem)] object-contain select-none" />
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-sm px-3 py-1.5 rounded-md">{currentImage.alt} ({currentIndex + 1} / {images.length})</div>
+          </div>
+          {images.length > 1 && <Button icon={<TbChevronRight />} className="absolute right-2 md:right-4 !p-3 !rounded-full bg-black/50 hover:bg-black/80 text-white" onClick={handleNext} />}
+        </div>
+        {images.length > 1 && (
+          <div className="w-full max-w-5xl flex-shrink-0 mt-4"><div className="flex justify-center p-2"><div className="flex gap-3 overflow-x-auto pb-2">
+            {images.map((image, index) => (
+              <button key={index} onClick={() => setCurrentIndex(index)} className={classNames("w-24 h-16 flex-shrink-0 rounded-md border-2 transition-all", { 'border-white opacity-100 scale-105': currentIndex === index, 'border-transparent opacity-60 hover:opacity-100': currentIndex !== index })}>
+                <img src={image.src} alt={image.alt} className="w-full h-full object-cover rounded-sm" />
+              </button>
+            ))}
+          </div></div></div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const GenericFileViewer = ({ file, onClose }: { file: File; onClose: () => void; }) => {
+  const fileUrl = useMemo(() => URL.createObjectURL(file), [file]);
+  useEffect(() => {
+    return () => URL.revokeObjectURL(fileUrl); // Clean up when this viewer closes
+  }, [fileUrl]);
+  return (
+    <div className="fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-[9999] p-4" onClick={onClose}>
+      <Button icon={<TbX />} className="absolute top-4 right-4 z-10 !p-2 !rounded-full bg-black/50 hover:bg-black/80 text-white" onClick={onClose} />
+      <div className="w-full h-full" onClick={(e) => e.stopPropagation()}>
+        <iframe src={fileUrl} title={file.name} className="w-full h-full border-none rounded-lg bg-white" />
+      </div>
+    </div>
+  );
+};
+// =========================================================================
+// END: HELPER COMPONENTS
+// =========================================================================
+
+
+// --- Main Component ---
 const enableBillingSchema = z.object({
   enable_billing_documents: z
     .array(
@@ -2143,7 +2213,10 @@ const enableBillingSchema = z.object({
         ),
         document: z
           .any()
-          .refine((file) => file instanceof File, "File is required"),
+          .refine((file) => file instanceof File, "File is required."),
+        // Add helper fields for the UI
+        previewUrl: z.string().optional(),
+        fileType: z.enum(['image', 'pdf', 'other']).optional(),
       })
     )
     .min(1, "At least one document is required.")
@@ -2152,138 +2225,214 @@ const enableBillingSchema = z.object({
 type EnableBillingFormData = z.infer<typeof enableBillingSchema>;
 
 interface EnableBillingDialogProps {
-  company: CompanyItem;
+  company: { company_name: string };
   onClose: () => void;
   onSubmit: (data: EnableBillingFormData) => void;
   isSubmitting: boolean;
-  documentTypeOptions: SelectOption[];
+  documentTypeOptions: { value: string, label: string }[];
 }
 
 const EnableBillingDialog: React.FC<EnableBillingDialogProps> = ({
-  company,
-  onClose,
-  onSubmit,
-  isSubmitting,
-  documentTypeOptions,
+  company, onClose, onSubmit, isSubmitting, documentTypeOptions
 }) => {
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<EnableBillingFormData>({
+  // --- STATE FOR VIEWERS ---
+  const [imageViewer, setImageViewer] = useState({ isOpen: false, startIndex: 0 });
+  const [genericViewer, setGenericViewer] = useState<{ isOpen: boolean; file: File | null }>({ isOpen: false, file: null });
+
+  const formMethods = useForm<EnableBillingFormData>({
     resolver: zodResolver(enableBillingSchema),
-    defaultValues: { enable_billing_documents: [{}] },
+    defaultValues: { enable_billing_documents: [{ document: null, document_name: undefined, previewUrl: undefined }] },
+    mode: 'onTouched',
   });
+  const { control, handleSubmit, formState: { errors }, setValue, watch, getValues } = formMethods;
 
   const { fields, append, remove } = useFieldArray({
     control,
     name: "enable_billing_documents",
   });
 
-  return (
-    <Dialog isOpen={true} onClose={onClose} width={600}>
-      <h5 className="mb-4">
-        Enable Billing Documents for: {company.company_name}
-      </h5>
-      <UiForm id="enableBillingForm" onSubmit={handleSubmit(onSubmit)}>
-        <div className="max-h-[50vh] overflow-y-auto pr-4">
-          <div className="space-y-4">
-            {fields.map((field, index) => (
-              <Card
-                key={field.id}
-                className="p-4 border dark:border-gray-600 relative"
-              >
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-                  <FormItem
-                    label={`Document Type ${index + 1}`}
-                    invalid={
-                      !!errors.enable_billing_documents?.[index]?.document_name
-                    }
-                    errorMessage={
-                      errors.enable_billing_documents?.[index]?.document_name
-                        ?.message as string
-                    }
-                  >
-                    <Controller
-                      name={`enable_billing_documents.${index}.document_name`}
-                      control={control}
-                      render={({ field }) => (
-                        <UiSelect
-                          placeholder="Select type..."
-                          options={documentTypeOptions}
-                          {...field}
-                          menuPortalTarget={document.body}
-                          styles={{
-                            menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-                          }}
-                        />
-                      )}
-                    />
-                  </FormItem>
-                  <FormItem
-                    label={`Upload File ${index + 1}`}
-                    invalid={
-                      !!errors.enable_billing_documents?.[index]?.document
-                    }
-                    errorMessage={
-                      errors.enable_billing_documents?.[index]?.document
-                        ?.message as string
-                    }
-                  >
-                    <Controller
-                      name={`enable_billing_documents.${index}.document`}
-                      control={control}
-                      render={({ field: { onChange } }) => (
-                        <Input
-                          type="file"
-                          onChange={(e) => onChange(e.target.files?.[0])}
-                        />
-                      )}
-                    />
-                  </FormItem>
-                </div>
-                {fields.length > 1 && (
-                  <Button
-                    shape="circle"
-                    size="sm"
-                    variant="plain"
-                    icon={<TbTrash />}
-                    className="absolute top-2 right-2 text-red-500"
-                    onClick={() => remove(index)}
-                  />
-                )}
-              </Card>
-            ))}
-          </div>
-        </div>
+  const watchedDocuments = watch("enable_billing_documents");
 
-        {fields.length < 4 && (
+  // --- MEMORY MANAGEMENT ---
+  useEffect(() => {
+    return () => {
+      getValues("enable_billing_documents").forEach(doc => {
+        if (doc.previewUrl) URL.revokeObjectURL(doc.previewUrl);
+      });
+    };
+  }, [getValues]);
+
+
+  // --- CENTRALIZED PREVIEW LOGIC ---
+  const allImagesInForm = useMemo(() => {
+    return watchedDocuments
+      .map((doc, index) => ({ doc, index }))
+      .filter(({ doc }) => doc.fileType === 'image' && doc.previewUrl)
+      .map(({ doc }) => ({
+        src: doc.previewUrl as string,
+        alt: doc.document_name?.label || `Document ${doc.index + 1}`
+      }));
+  }, [watchedDocuments]);
+
+  const handlePreviewClick = useCallback((clickedDocIndex: number) => {
+    const doc = watchedDocuments[clickedDocIndex];
+    if (!doc || !doc.previewUrl) return;
+
+    if (doc.fileType === 'image') {
+      const imageIndex = allImagesInForm.findIndex(img => img.src === doc.previewUrl);
+      if (imageIndex !== -1) {
+        setImageViewer({ isOpen: true, startIndex: imageIndex });
+      }
+    } else if (doc.document instanceof File) {
+      setGenericViewer({ isOpen: true, file: doc.document });
+    }
+  }, [watchedDocuments, allImagesInForm]);
+
+
+  return (
+    <>
+      <Dialog isOpen={true} onClose={onClose} width={700}>
+        <h5 className="text-xl font-bold mb-4">
+          Enable Billing Documents for: {company.company_name}
+        </h5>
+        <UiForm id="enableBillingForm" onSubmit={handleSubmit(onSubmit)}>
+          <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+            <div className="space-y-4">
+              {fields.map((field, index) => {
+                const currentDoc = watchedDocuments[index];
+                return (
+                  <Card key={field.id} className="p-4 relative">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
+                      <FormItem
+                        label={`Document Type ${index + 1}`}
+                        invalid={!!errors.enable_billing_documents?.[index]?.document_name}
+                        errorMessage={errors.enable_billing_documents?.[index]?.document_name?.message as string}
+                      >
+                        <Controller
+                          name={`enable_billing_documents.${index}.document_name`}
+                          control={control}
+                          render={({ field }) => (
+                            <UiSelect
+                              placeholder="Select type..."
+                              options={documentTypeOptions}
+                              value={documentTypeOptions.find(opt => opt.value === field.value?.value)}
+                              onChange={opt => field.onChange(opt)}
+                            />
+                          )}
+                        />
+                      </FormItem>
+
+                      <div className="flex flex-col space-y-2">
+                        <FormItem
+                          label={`Upload File ${index + 1}`}
+                          invalid={!!errors.enable_billing_documents?.[index]?.document}
+                          errorMessage={errors.enable_billing_documents?.[index]?.document?.message as string}
+                        >
+                          <Controller
+                            name={`enable_billing_documents.${index}.document`}
+                            control={control}
+                            render={({ field: { onChange } }) => (
+                              <Input
+                                type="file"
+                                accept="image/png, image/jpeg, image/gif, application/pdf"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0] ?? null;
+                                  const oldUrl = getValues(`enable_billing_documents.${index}.previewUrl`);
+                                  if (oldUrl) URL.revokeObjectURL(oldUrl);
+
+                                  if (file) {
+                                    const fileType = file.type.startsWith('image/') ? 'image' : (file.type === 'application/pdf' ? 'pdf' : 'other');
+                                    setValue(`enable_billing_documents.${index}.previewUrl`, URL.createObjectURL(file));
+                                    setValue(`enable_billing_documents.${index}.fileType`, fileType);
+                                  } else {
+                                    setValue(`enable_billing_documents.${index}.previewUrl`, undefined);
+                                    setValue(`enable_billing_documents.${index}.fileType`, undefined);
+                                  }
+                                  onChange(file); // This updates the 'document' field for validation
+                                }}
+                              />
+                            )}
+                          />
+                        </FormItem>
+
+                        {currentDoc?.previewUrl && (
+                          <button
+                            type="button"
+                            onClick={() => handlePreviewClick(index)}
+                            className="w-32 h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                          >
+                            {currentDoc.fileType === 'image' ? (
+                              <img
+                                src={currentDoc.previewUrl}
+                                alt={`Preview ${index + 1}`}
+                                className="w-full h-full object-cover rounded-md"
+                              />
+                            ) : (
+                              <DocumentPlaceholder file={currentDoc.document as File} />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {fields.length > 1 && (
+                      <button
+                        type="button"
+                        aria-label="Remove document"
+                        className="absolute top-2 right-2 text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 rounded-full transition-colors"
+                        onClick={() => {
+                          const urlToRevoke = getValues(`enable_billing_documents.${index}.previewUrl`);
+                          if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+                          remove(index);
+                        }}
+                      ><TbTrash size={20} /></button>
+                    )}
+                  </Card>
+                )
+              })}
+            </div>
+            {errors.enable_billing_documents?.root && (
+              <p className="text-red-500 text-sm mt-3">{errors.enable_billing_documents.root.message}</p>
+            )}
+          </div>
+
+          {fields.length < 4 && (
+            <Button
+              type="button"
+              icon={<TbPlus />}
+              onClick={() => append({ document: null, document_name: undefined, previewUrl: undefined, fileType: undefined })}
+              size="sm"
+              className="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200"
+            > Add Document </Button>
+          )}
+        </UiForm>
+
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <Button onClick={onClose} disabled={isSubmitting} className="bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600">Cancel</Button>
           <Button
-            type="button"
-            icon={<TbPlus />}
-            onClick={() => append({ document_name: undefined, document: null })}
-            size="sm"
-            className="mt-4"
-          >
-            Add More
-          </Button>
-        )}
-      </UiForm>
-      <div className="text-right mt-6">
-        <Button className="mr-2" onClick={onClose} disabled={isSubmitting}>
-          Cancel
-        </Button>
-        <Button
-          variant="solid"
-          type="submit"
-          form="enableBillingForm"
-          loading={isSubmitting}
-          disabled={isSubmitting}
-        >
-          Submit
-        </Button>
-      </div>
-    </Dialog>
+            type="submit"
+            form="enableBillingForm"
+            loading={isSubmitting}
+            disabled={isSubmitting}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          > Submit Documents </Button>
+        </div>
+      </Dialog>
+
+      {/* --- RENDER VIEWERS --- */}
+      {imageViewer.isOpen && (
+        <ImageViewer
+          images={allImagesInForm}
+          startIndex={imageViewer.startIndex}
+          onClose={() => setImageViewer({ isOpen: false, startIndex: 0 })}
+        />
+      )}
+      {genericViewer.isOpen && genericViewer.file && (
+        <GenericFileViewer
+          file={genericViewer.file}
+          onClose={() => setGenericViewer({ isOpen: false, file: null })}
+        />
+      )}
+    </>
   );
 };
 
@@ -2380,7 +2529,7 @@ const CompanyActionColumn = ({
           onClick={() => onOpenModal("activity", rowData)}
           className="flex items-center gap-2"
         >
-          <TbTagStarred  /> Add Activity
+          <TbTagStarred /> Add Activity
         </Dropdown.Item>
         <Dropdown.Item
           onClick={() => onOpenModal("document", rowData)}
@@ -2533,9 +2682,9 @@ const CompanyListTable = () => {
   const documentTypeOptions = useMemo(() => {
     return Array.isArray(DocumentTypeData)
       ? DocumentTypeData.map((d: any) => ({
-          value: String(d.id),
-          label: d.name,
-        }))
+        value: String(d.id),
+        label: d.name,
+      }))
       : [];
   }, [DocumentTypeData]);
 
@@ -2940,7 +3089,7 @@ const CompanyListTable = () => {
       count += (filterCriteria.filterEnableBilling?.length ?? 0) > 0 ? 1 : 0;
       count +=
         filterCriteria.filterCreatedDate?.[0] &&
-        filterCriteria.filterCreatedDate?.[1]
+          filterCriteria.filterCreatedDate?.[1]
           ? 1
           : 0;
 
@@ -2973,13 +3122,13 @@ const CompanyListTable = () => {
               ? av === bv
                 ? 0
                 : av
-                ? -1
-                : 1
+                  ? -1
+                  : 1
               : av === bv
-              ? 0
-              : av
-              ? 1
-              : -1;
+                ? 0
+                : av
+                  ? 1
+                  : -1;
           return 0;
         });
       }
@@ -3224,35 +3373,35 @@ const CompanyListTable = () => {
             ? dayjs(due_after_3_months_date).format("D MMM, YYYY")
             : "N/A";
 
-            function formatDueDateInDays(dueDateString :any) {
-  // Create Date objects for the due date and today
-  const dueDate = new Date(dueDateString);
-  const today = new Date();
+          function formatDueDateInDays(dueDateString: any) {
+            // Create Date objects for the due date and today
+            const dueDate = new Date(dueDateString);
+            const today = new Date();
 
-  // To ensure we're comparing days, not times, reset the time part to midnight
-  dueDate.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
+            // To ensure we're comparing days, not times, reset the time part to midnight
+            dueDate.setHours(0, 0, 0, 0);
+            today.setHours(0, 0, 0, 0);
 
-  // Calculate the difference in milliseconds
-  const diffTime = dueDate.getTime() - today.getTime();
+            // Calculate the difference in milliseconds
+            const diffTime = dueDate.getTime() - today.getTime();
 
-  // Convert the difference from milliseconds to days
-  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+            // Convert the difference from milliseconds to days
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-  // Return a formatted string based on the difference
-  if (diffDays > 1) {
-    return `in ${diffDays} days`;
-  } else if (diffDays === 1) {
-    return `Tomorrow`;
-  } else if (diffDays === 0) {
-    return `Today`;
-  } else if (diffDays === -1) {
-    return `Yesterday (1 day overdue)`;
-  } else {
-    // The date is in the past
-    return `N/A`;
-  }
-}
+            // Return a formatted string based on the difference
+            if (diffDays > 1) {
+              return `in ${diffDays} days`;
+            } else if (diffDays === 1) {
+              return `Tomorrow`;
+            } else if (diffDays === 0) {
+              return `Today`;
+            } else if (diffDays === -1) {
+              return `Yesterday (1 day overdue)`;
+            } else {
+              // The date is in the past
+              return `N/A`;
+            }
+          }
           return (
             <div className="flex flex-col gap-1 text-xs">
               {" "}
@@ -3401,15 +3550,27 @@ const CompanyListTable = () => {
     <>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
         <h5>Company</h5>
-
         <div className="flex flex-col md:flex-row gap-3">
-          <Button
-            icon={<TbUsersGroup />}
-            onClick={handleOpenPendingRequestModal}
-            className="w-full sm:w-auto"
-          >
-            Pending Request
-          </Button>
+          <div className="relative">
+            <Button
+              icon={<TbUsersGroup />}
+              onClick={handleOpenPendingRequestModal}
+              className="w-full sm:w-auto"
+            >
+              Pending Request
+            </Button>
+            <span
+              className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 bg-red-500 text-white text-xs font-bold                  
+            rounded-full                         
+            min-w-[22px] h-[22px]                
+            flex items-center justify-center   
+            px-1                                 
+            border-2 border-white dark:border-gray-800 
+          " >
+              {PendingBillData?.data?.length || 0}
+            </span>
+          </div>
+
           <Button
             variant="solid"
             icon={<TbPlus className="text-lg" />}
@@ -3905,7 +4066,7 @@ const CompanyListTable = () => {
             </thead>
             <tbody>
               {PendingBillData?.data && PendingBillData.data.length > 0 ? (
-                PendingBillData.data.map((item: any) => (
+                PendingBillData?.data?.reverse()?.map((item: any) => (
                   <tr key={item.id} className="border-b dark:border-gray-700">
                     <td className="py-3 px-4 text-sm font-medium">
                       {item.company_name}
