@@ -553,9 +553,8 @@ const transformApiToFormSchema = (
       office_email: b.office_email,
       office_phone: b.office_phone
     })),
-    // FIX: Correctly map team member data in edit mode.
     member: apiData.partner_team_members?.map((m: any) => ({
-      id: m.id, // Ensure ID is passed for keying
+      id: m.id,
       person_name: m.person_name,
       company_name: m.company_name,
       email: m.email,
@@ -581,7 +580,6 @@ const transformApiToFormSchema = (
     billing_cycle: apiData.billing_cycle,
   };
 };
-
 // Helper to prepare payload for API submission
 const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean): FormData => {
   const apiPayload = new FormData();
@@ -1223,7 +1221,6 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
               />
             )}
           />
-          {/* FIX: Show preview for newly uploaded logo or existing logo */}
           {companyLogoBrochureValue && (
             <div className="mt-2 h-20 w-20">
               <img
@@ -1305,7 +1302,6 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
                     />
                   )}
                 />
-                {/* FIX: Show preview for new or existing certificate */}
                 {uploadCertificateValue && (
                   <div className="mt-2">
                     <a href={typeof uploadCertificateValue === 'string' ? uploadCertificateValue : URL.createObjectURL(uploadCertificateValue)} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">View Uploaded Document</a>
@@ -1536,7 +1532,11 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                   name={doc.enabledName}
                   control={control}
                   render={({ field }) => (
-                    <Checkbox checked={!!field.value} onChange={field.onChange} />
+                    <Checkbox
+                      checked={!!field.value}
+                      onChange={field.onChange}
+                      disabled={!fileValue}
+                    />
                   )}
                 />
                 {doc.label}
