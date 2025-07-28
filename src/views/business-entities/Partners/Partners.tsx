@@ -49,12 +49,12 @@ import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
   TbAlarm,
   TbBell,
-  TbBellRinging, // Added for Alert Modal
+  TbBellRinging,
   TbBrandWhatsapp,
   TbBuilding,
   TbBuildingBank,
   TbCalendarEvent,
-  TbCalendarTime, // Added for Alert Modal
+  TbCalendarTime,
   TbCancel,
   TbCheck,
   TbChecks,
@@ -67,14 +67,15 @@ import {
   TbFileDescription,
   TbFilter,
   TbMail,
-  TbNotesOff, // Added for Alert Modal
+  TbNotesOff,
   TbPencil,
-  TbPencilPlus, // Added for Alert Modal
+  TbPencilPlus,
   TbPlus,
   TbReceipt,
   TbReload,
   TbSearch,
   TbTagStarred,
+  TbTrash,
   TbUser,
   TbUserCancel,
   TbUserCheck,
@@ -94,13 +95,14 @@ import type {
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addAllActionAction,
-  addAllAlertsAction, // Added for Alert Modal
+  addAllAlertsAction,
   addNotificationAction,
   addScheduleAction,
   addTaskAction,
   deleteAllpartnerAction,
+  deletePartnerAction, // Assuming a single delete action exists, or using deleteAll for one
   getAllUsersAction,
-  getAlertsAction, // Added for Alert Modal
+  getAlertsAction,
   getContinentsAction,
   getCountriesAction,
   getpartnerAction,
@@ -730,173 +732,173 @@ const SendPartnerWhatsAppAction: React.FC<{ partner: PartnerItem; onClose: () =>
 };
 
 const PartnerAlertModal: React.FC<{ partner: PartnerItem; onClose: () => void }> = ({ partner, onClose }) => {
-    // --- State and Hooks ---
-    const [alerts, setAlerts] = useState<AlertNote[]>([]);
-    const [isFetching, setIsFetching] = useState(true);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const dispatch = useAppDispatch();
-    const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
-        resolver: zodResolver(alertNoteSchema),
-        defaultValues: { newNote: '' },
-        mode: 'onChange'
-    });
+  // --- State and Hooks ---
+  const [alerts, setAlerts] = useState<AlertNote[]>([]);
+  const [isFetching, setIsFetching] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const dispatch = useAppDispatch();
+  const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
+    resolver: zodResolver(alertNoteSchema),
+    defaultValues: { newNote: '' },
+    mode: 'onChange'
+  });
 
-    // --- Helper functions and API calls ---
-    const stringToColor = (str: string) => {
-        let hash = 0;
-        if (!str) return '#cccccc';
-        for (let i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        let color = '#';
-        for (let i = 0; i < 3; i++) {
-            const value = (hash >> (i * 8)) & 0xFF;
-            color += ('00' + value.toString(16)).substr(-2);
-        }
-        return color;
-    };
+  // --- Helper functions and API calls ---
+  const stringToColor = (str: string) => {
+    let hash = 0;
+    if (!str) return '#cccccc';
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    let color = '#';
+    for (let i = 0; i < 3; i++) {
+      const value = (hash >> (i * 8)) & 0xFF;
+      color += ('00' + value.toString(16)).substr(-2);
+    }
+    return color;
+  };
 
-    const fetchAlerts = useCallback(() => {
-        setIsFetching(true);
-        dispatch(getAlertsAction({ module_id: partner.id, module_name: 'Partner' }))
-            .unwrap()
-            .then((data) => setAlerts(data.data || []))
-            .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
-            .finally(() => setIsFetching(false));
-    }, [partner.id, dispatch]);
+  const fetchAlerts = useCallback(() => {
+    setIsFetching(true);
+    dispatch(getAlertsAction({ module_id: partner.id, module_name: 'Partner' }))
+      .unwrap()
+      .then((data) => setAlerts(data.data || []))
+      .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
+      .finally(() => setIsFetching(false));
+  }, [partner.id, dispatch]);
 
-    useEffect(() => {
-        fetchAlerts();
-        reset({ newNote: '' });
-    }, [fetchAlerts, reset]);
+  useEffect(() => {
+    fetchAlerts();
+    reset({ newNote: '' });
+  }, [fetchAlerts, reset]);
 
-    const onAddNote = async (data: AlertNoteFormData) => {
-        setIsSubmitting(true);
-        try {
-            await dispatch(addAllAlertsAction({ note: data.newNote, module_id: partner.id, module_name: 'Partner' })).unwrap();
-            toast.push(<Notification type="success" title="Alert Note Added" />);
-            reset({ newNote: '' });
-            fetchAlerts(); // Re-fetch alerts to show the new one
-        } catch (error: any) {
-            toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+  const onAddNote = async (data: AlertNoteFormData) => {
+    setIsSubmitting(true);
+    try {
+      await dispatch(addAllAlertsAction({ note: data.newNote, module_id: partner.id, module_name: 'Partner' })).unwrap();
+      toast.push(<Notification type="success" title="Alert Note Added" />);
+      reset({ newNote: '' });
+      fetchAlerts(); // Re-fetch alerts to show the new one
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    return (
-        <Dialog
-            isOpen={true}
-            onClose={onClose}
-            onRequestClose={onClose}
-            width={1200}
-            contentClassName="p-0 flex flex-col max-h-[90vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
-        >
-            {/* --- Header --- */}
-            <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 flex-shrink-0 rounded-t-lg">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <TbBellRinging className="text-2xl text-white" />
-                        <h5 className="mb-0 text-white font-bold text-base sm:text-xl">{partner.partner_name}</h5>
-                    </div>
-                    <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
-                        <TbX className="h-6 w-6" />
-                    </button>
-                </div>
-            </header>
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={1200}
+      contentClassName="p-0 flex flex-col max-h-[90vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
+    >
+      {/* --- Header --- */}
+      <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 flex-shrink-0 rounded-t-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <TbBellRinging className="text-2xl text-white" />
+            <h5 className="mb-0 text-white font-bold text-base sm:text-xl">{partner.partner_name}</h5>
+          </div>
+          <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
+            <TbX className="h-6 w-6" />
+          </button>
+        </div>
+      </header>
 
-            {/* --- Main Content: Grid for two columns --- */}
-            <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-hidden">
+      {/* --- Main Content: Grid for two columns --- */}
+      <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-hidden">
 
-                {/* --- Left Column: Activity Timeline (This column scrolls internally) --- */}
-                <div className="relative flex flex-col h-full overflow-hidden">
-                    <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
-                        Activity Timeline
-                    </h6>
-                    
-                    {/* The scrollable container for the timeline */}
-                    <div className="flex-grow overflow-y-auto lg:pr-4 lg:-mr-4">
-                        {isFetching ? (
-                            <div className="flex justify-center items-center h-full"><Spinner size="lg"/></div>
-                        ) : alerts.length > 0 ? (
-                            <div className="space-y-8">
-                                {alerts.map((alert, index) => {
-                                    const userName = alert?.created_by_user?.name || 'N/A';
-                                    const userInitial = userName.charAt(0).toUpperCase();
-                                    return (
-                                        <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
-                                            <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
-                                                <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>
-                                                    {userInitial}
-                                                </Avatar>
-                                                {index < alerts.length - 1 && (
-                                                    <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
-                                                )}
-                                            </div>
-                                            <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                                                <div className="p-4">
-                                                    <header className="flex justify-between items-center mb-2">
-                                                        <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
-                                                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                                            <TbCalendarTime />
-                                                            <span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span>
-                                                        </div>
-                                                    </header>
-                                                    <div
-                                                        className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300"
-                                                        dangerouslySetInnerHTML={{ __html: alert.note }}
-                                                    />
-                                                </div>
-                                            </Card>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
-                                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
-                                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">No Activity Yet</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Be the first to add a note.</p>
-                            </div>
+        {/* --- Left Column: Activity Timeline (This column scrolls internally) --- */}
+        <div className="relative flex flex-col h-full overflow-hidden">
+          <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
+            Activity Timeline
+          </h6>
+
+          {/* The scrollable container for the timeline */}
+          <div className="flex-grow overflow-y-auto lg:pr-4 lg:-mr-4">
+            {isFetching ? (
+              <div className="flex justify-center items-center h-full"><Spinner size="lg" /></div>
+            ) : alerts.length > 0 ? (
+              <div className="space-y-8">
+                {alerts.map((alert, index) => {
+                  const userName = alert?.created_by_user?.name || 'N/A';
+                  const userInitial = userName.charAt(0).toUpperCase();
+                  return (
+                    <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
+                      <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
+                        <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>
+                          {userInitial}
+                        </Avatar>
+                        {index < alerts.length - 1 && (
+                          <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
                         )}
-                    </div>
-                </div>
-
-                {/* --- Right Column: Add New Note (Stays in place) --- */}
-                <div className="flex flex-col mt-8 lg:mt-0 h-full">
-                    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
-                        <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
-                            <div className="flex items-center gap-2">
-                                <TbPencilPlus className="text-xl text-blue-600 dark:text-blue-400" />
-                                <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6>
+                      </div>
+                      <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                        <div className="p-4">
+                          <header className="flex justify-between items-center mb-2">
+                            <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                              <TbCalendarTime />
+                              <span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span>
                             </div>
-                        </header>
-                        <Form onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
-                            <FormItem invalid={!!errors.newNote} errorMessage={errors.newNote?.message} className="flex-grow flex flex-col">
-                                <Controller
-                                    name="newNote"
-                                    control={control}
-                                    render={({ field }) => (
-                                        <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
-                                            <RichTextEditor
-                                                {...field}
-                                                onChange={(val) => field.onChange(val.html)}
-                                                className="flex-grow min-h-[150px] sm:min-h-[200px]"
-                                            />
-                                        </div>
-                                    )}
-                                />
-                            </FormItem>
-                            <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
-                                <Button type="button" className="mr-3" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-                                <Button variant="solid" color="blue" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>Submit Note</Button>
-                            </footer>
-                        </Form>
-                    </Card>
-                </div>
-            </main>
-        </Dialog>
-    );
+                          </header>
+                          <div
+                            className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300"
+                            dangerouslySetInnerHTML={{ __html: alert.note }}
+                          />
+                        </div>
+                      </Card>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
+                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
+                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">No Activity Yet</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Be the first to add a note.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* --- Right Column: Add New Note (Stays in place) --- */}
+        <div className="flex flex-col mt-8 lg:mt-0 h-full">
+          <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
+            <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <TbPencilPlus className="text-xl text-blue-600 dark:text-blue-400" />
+                <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6>
+              </div>
+            </header>
+            <Form onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
+              <FormItem invalid={!!errors.newNote} errorMessage={errors.newNote?.message} className="flex-grow flex flex-col">
+                <Controller
+                  name="newNote"
+                  control={control}
+                  render={({ field }) => (
+                    <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
+                      <RichTextEditor
+                        {...field}
+                        onChange={(val) => field.onChange(val.html)}
+                        className="flex-grow min-h-[150px] sm:min-h-[200px]"
+                      />
+                    </div>
+                  )}
+                />
+              </FormItem>
+              <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
+                <Button type="button" className="mr-3" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+                <Button variant="solid" color="blue" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>Submit Note</Button>
+              </footer>
+            </Form>
+          </Card>
+        </div>
+      </main>
+    </Dialog>
+  );
 };
 
 
@@ -934,10 +936,11 @@ const PartnerListSearch: React.FC<{ onInputChange: (value: string) => void; valu
 };
 
 
-const PartnerActionColumn = ({ rowData, onEdit, onOpenModal }: {
+const PartnerActionColumn = ({ rowData, onEdit, onOpenModal, onDelete }: {
   rowData: PartnerItem;
   onEdit: (id: string) => void;
   onOpenModal: (type: ModalType, data: PartnerItem) => void;
+  onDelete: () => void;
 }) => {
   const navigate = useNavigate();
   const handleAction = (e: React.MouseEvent, action: () => void) => { e.stopPropagation(); action(); };
@@ -946,6 +949,17 @@ const PartnerActionColumn = ({ rowData, onEdit, onOpenModal }: {
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Edit"><div className="text-xl cursor-pointer hover:text-emerald-600" role="button" onClick={() => onEdit(rowData.id)}><TbPencil /></div></Tooltip>
       <Tooltip title="View"><div className="text-xl cursor-pointer hover:text-blue-600" role="button" onClick={() => navigate(`/business-entities/partner-view/${rowData.id}`)}><TbEye /></div></Tooltip>
+      {/* --- MODIFIED: Added Delete Button --- */}
+      <Tooltip title="Delete">
+        <div
+          className={`text-xl p-1.5 cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
+          role="button"
+          onClick={onDelete}
+        >
+          <TbTrash />
+        </div>
+      </Tooltip>
+      {/* --- END MODIFICATION --- */}
       <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('email', rowData))} className="flex items-center gap-2"><TbMail /> Send Email</Dropdown.Item>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('whatsapp', rowData))} className="flex items-center gap-2"><TbBrandWhatsapp /> Send WhatsApp</Dropdown.Item>
@@ -955,6 +969,7 @@ const PartnerActionColumn = ({ rowData, onEdit, onOpenModal }: {
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('activity', rowData))} className="flex items-center gap-2"><TbTagStarred size={18} /> Add Activity</Dropdown.Item>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('alert', rowData))} className="flex items-center gap-2"><TbAlarm /> View Alert</Dropdown.Item>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('document', rowData))} className="flex items-center gap-2"><TbDownload /> Download Document</Dropdown.Item>
+
       </Dropdown>
     </div>
   );
@@ -1033,6 +1048,12 @@ const PartnerListTable = () => {
   const [tableData, setTableData] = useState<TableQueries>(initialState.tableData);
   const [filterCriteria, setFilterCriteria] = useState<PartnerFilterFormData>(initialState.filterCriteria);
 
+  // --- MODIFIED: State for single item deletion ---
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<PartnerItem | null>(null);
+  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+  // --- END MODIFICATION ---
+
   useEffect(() => {
     try {
       const stateToSave = { tableData, filterCriteria };
@@ -1052,6 +1073,31 @@ const PartnerListTable = () => {
 
   const handleOpenModal = (type: ModalType, partnerData: PartnerItem) => setModalState({ isOpen: true, type, data: partnerData });
   const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
+
+  // --- MODIFIED: Handlers for single item deletion ---
+  const handleDeleteClick = useCallback((item: PartnerItem) => {
+    setItemToDelete(item);
+    setSingleDeleteConfirmOpen(true);
+  }, []);
+
+  const onConfirmSingleDelete = useCallback(async () => {
+    if (!itemToDelete) return;
+    setIsDeleting(true);
+    setSingleDeleteConfirmOpen(false);
+    try {
+      await dispatch(deleteAllpartnerAction({ ids: itemToDelete.id })).unwrap();
+      toast.push(<Notification title="Partner Deleted" type="success" >{`Partner "${itemToDelete.partner_name}" has been deleted.`}</Notification>);
+      dispatch(getpartnerAction());
+      setSelectedPartners((prev) => prev.filter((p) => p.id !== itemToDelete.id));
+    } catch (error: any) {
+      toast.push(<Notification title="Delete Failed" type="danger">{error?.message || "Could not delete partner."}</Notification>);
+    } finally {
+      setIsDeleting(false);
+      setItemToDelete(null);
+    }
+  }, [dispatch, itemToDelete, setSelectedPartners]);
+  // --- END MODIFICATION ---
+
 
   // --- START: Filter Drawer Handlers ---
   const openFilterDrawer = () => {
@@ -1254,8 +1300,9 @@ const PartnerListTable = () => {
         </div>
       )
     },
-    { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props) => <PartnerActionColumn rowData={props.row.original} onEdit={(id) => navigate(`/business-entities/partner-edit/${id}`)} onOpenModal={handleOpenModal} />, },
-  ], [navigate, openImageViewer, handleOpenModal]);
+    // --- MODIFIED: Added onDelete handler ---
+    { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props) => <PartnerActionColumn rowData={props.row.original} onEdit={(id) => navigate(`/business-entities/partner-edit/${id}`)} onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} />, },
+  ], [navigate, openImageViewer, handleOpenModal, handleDeleteClick]);
 
   const [filteredColumns, setFilteredColumns] = useState(columns);
   const toggleColumn = (checked: boolean, colId: string) => {
@@ -1306,7 +1353,6 @@ const PartnerListTable = () => {
             <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>{columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}</div>
           </Dropdown>
           <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onRefreshData} /></Tooltip>
-          {/* This button now correctly opens the filter drawer */}
           <Button icon={<TbFilter />} onClick={openFilterDrawer}>
             Filter
             {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}
@@ -1317,7 +1363,6 @@ const PartnerListTable = () => {
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
       <DataTable selectable columns={filteredColumns} data={pageData} loading={isLoading} noData={pageData.length <= 0} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
 
-      {/* The Drawer component with all props correctly bound */}
       <Drawer
         title="Partner Filters"
         isOpen={isFilterDrawerOpen}
@@ -1358,6 +1403,22 @@ const PartnerListTable = () => {
           {imageToView ? <img src={`${imageToView}`} alt="Partner Logo Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} /> : <p>No image to display.</p>}
         </div>
       </Dialog>
+      {/* --- MODIFIED: Added Confirmation Dialog for single deletion --- */}
+      <ConfirmDialog
+        isOpen={singleDeleteConfirmOpen}
+        type="danger"
+        title="Delete Partner"
+        onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+        onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+        onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+        onConfirm={onConfirmSingleDelete}
+        loading={isDeleting}
+      >
+        <p>
+          Are you sure you want to delete the partner "<strong>{itemToDelete?.partner_name}</strong>"? This action cannot be undone.
+        </p>
+      </ConfirmDialog>
+       {/* --- END MODIFICATION --- */}
     </>
   );
 };
