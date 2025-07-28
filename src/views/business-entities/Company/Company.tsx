@@ -3374,6 +3374,7 @@ const CompanyListTable = () => {
             : "N/A";
 
           function formatDueDateInDays(dueDateString: any) {
+
             // Create Date objects for the due date and today
             const dueDate = new Date(dueDateString);
             const today = new Date();
@@ -3387,7 +3388,6 @@ const CompanyListTable = () => {
 
             // Convert the difference from milliseconds to days
             const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
             // Return a formatted string based on the difference
             if (diffDays > 1) {
               return `in ${diffDays} days`;
@@ -3411,16 +3411,12 @@ const CompanyListTable = () => {
               <span>
                 <b>Teams:</b> {teams_count}
               </span>{" "}
-              <div className="flex gap-1 items-center">
-                <b>KYC Verified:</b>
-                <Tooltip title={`KYC: ${kyc_verified ? "Yes" : "No"}`}>
-                  {kyc_verified ? (
-                    <MdCheckCircle className="text-green-500 text-lg" />
-                  ) : (
-                    <MdCancel className="text-red-500 text-lg" />
-                  )}
-                </Tooltip>
-              </div>{" "}
+
+
+              <div className="flex items-center gap-2">
+                <b className="text-gray-700 dark:text-gray-300">KYC Status:</b>
+                {kyc_verified ? <Tag className="bg-emerald-100 text-emerald-700">Verified</Tag> : <Tag className="bg-red-100 text-red-700">Non-Verified</Tag>}
+              </div>
               <div className="flex gap-1 items-center">
                 <b>Enable Billing:</b>
                 <Tooltip title={`Billing: ${enable_billing ? "Yes" : "No"}`}>

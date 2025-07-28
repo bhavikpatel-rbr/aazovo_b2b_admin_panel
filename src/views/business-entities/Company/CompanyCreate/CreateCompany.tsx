@@ -259,6 +259,7 @@ interface ReferenceItemFE {
   person_name?: string;
   company_id?: { label: string; value: string };
   number?: string;
+  number_code?:string
   remark?: string;
 }
 interface CompanyMemberItemFE {
@@ -520,7 +521,7 @@ interface ApiSingleCompanyItem {
   company_member_management?: Array<{ member_id: string; designation: string; person_name: string; number: string; }>;
   company_team_members?: Array<{ team_name: string; designation: string; person_name: string; number: string; }>;
   company_spot_verification?: Array<{ id: number; verified_by_id?: string | number; verified_by_name?: string; verified: boolean | string; remark: string | null; photo_upload: string | null; }>;
-  company_references?: Array<{ id: number; person_name: string; company_id: string; number: string; remark: string | null; }>;
+  company_references?: Array<{ id: number; person_name: string; company_id: string; number: string; number_code: string; remark: string | null; }>;
 }
 
 // --- Helper to transform API data to CompanyFormSchema for EDIT mode ---
@@ -701,6 +702,7 @@ const transformApiToFormSchema = (
       person_name: ref.person_name || '',
       company_id: findOptionByValue(allCompaniesForRef, ref.company_id),
       number: ref.number || '',
+      number_code: ref.number_code || '',
       remark: ref.remark || '',
     })) || [],
   };
@@ -838,6 +840,7 @@ const preparePayloadForApi = (
     appendField(`company_references[${index}][person_name]`, ref.person_name);
     appendField(`company_references[${index}][company_id]`, ref.company_id?.value);
     appendField(`company_references[${index}][number]`, ref.number);
+    appendField(`company_references[${index}][number_code]`, ref.number_code);
     appendField(`company_references[${index}][remark]`, ref.remark);
   });
 
@@ -1730,7 +1733,7 @@ const ReferenceSection = ({ control, errors, formMethods, handlePreviewClick }: 
       label: `(${c.company_code}) - ${c.company_name}`,
     })), [CompanyData]);
 
-      const countryCodeOptions = CountriesData
+  const countryCodeOptions = CountriesData
     .map((c: any) => ({
       value: `+${c.phone_code}`,
       label: `${c.phone_code}`,
@@ -2073,6 +2076,7 @@ const MemberManagementSection = ({ control, errors, formMethods, handlePreviewCl
   const dispatch = useAppDispatch();
   const { MemberData } = useSelector(masterSelector);
   const { fields, append, remove } = useFieldArray({ control, name: "company_members" });
+  const { setValue } = formMethods;
 
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
 
@@ -2126,15 +2130,33 @@ const MemberManagementSection = ({ control, errors, formMethods, handlePreviewCl
                       placeholder="Select Member"
                       options={memberOptions}
                       value={field.value}
+                      // --- 2. MODIFY THE onChange HANDLER ---
                       onChange={(selectedOption) => {
+                        // First, update the member_id field itself. This is crucial.
                         field.onChange(selectedOption);
+
+                        // Find the full data object for the selected member
+                        const fullMemberDataList = MemberData?.data || MemberData || [];
+                        const selectedMemberData = Array.isArray(fullMemberDataList)
+                          ? fullMemberDataList.find(m => String(m.id) === selectedOption?.value)
+                          : null;
+
+                        // If a member is selected, populate the fields.
+                        if (selectedMemberData) {
+                          setValue(`company_members.${index}.person_name`, selectedMemberData.name || '', { shouldValidate: true });
+                          setValue(`company_members.${index}.number`, selectedMemberData.number || '', { shouldValidate: true });
+                        } else {
+                          // If the selection is cleared, clear the dependent fields.
+                          setValue(`company_members.${index}.person_name`, '', { shouldValidate: true });
+                          setValue(`company_members.${index}.number`, '', { shouldValidate: true });
+                        }
                       }}
                     />
                   )}
                 />
               </FormItem>
               <FormItem label={`Designation ${index + 1}`} invalid={!!errors.company_members?.[index]?.designation} errorMessage={errors.company_members?.[index]?.designation?.message as string}>
-                <Controller name={`company_members.${index}.designation`} control={control} render={({ field }) => (<Input placeholder="Designation in this company"  disabled {...field} value="SALES EXECUTIVE" />)} />
+                <Controller name={`company_members.${index}.designation`} control={control} render={({ field }) => (<Input placeholder="Designation in this company" disabled {...field} value="SALES EXECUTIVE" />)} />
               </FormItem>
               <FormItem label={`Person Name ${index + 1}`} invalid={!!errors.company_members?.[index]?.person_name} errorMessage={errors.company_members?.[index]?.person_name?.message as string}>
                 <Controller name={`company_members.${index}.person_name`} control={control} render={({ field }) => (<Input placeholder="Display Name" {...field} />)} />
