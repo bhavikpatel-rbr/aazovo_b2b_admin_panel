@@ -553,9 +553,8 @@ const transformApiToFormSchema = (
       office_email: b.office_email,
       office_phone: b.office_phone
     })),
-    // FIX: Correctly map team member data in edit mode.
     member: apiData.partner_team_members?.map((m: any) => ({
-      id: m.id, // Ensure ID is passed for keying
+      id: m.id,
       person_name: m.person_name,
       company_name: m.company_name,
       email: m.email,
@@ -581,7 +580,6 @@ const transformApiToFormSchema = (
     billing_cycle: apiData.billing_cycle,
   };
 };
-
 // Helper to prepare payload for API submission
 const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean): FormData => {
   const apiPayload = new FormData();
@@ -617,7 +615,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
     "general_contact_number_code", "alternate_email_id", "alternate_contact_number",
     "alternate_contact_number_code", "ownership_type", "tan_number", "trn_number",
     "establishment_year", "no_of_employees", "partner_website", "notification_email",
-    "primary_account_number","primary_benificeiry_name","secondary_benificeiry_name", "primary_bank_name", "primary_ifsc_code",
+    "primary_account_number", "primary_benificeiry_name", "secondary_benificeiry_name", "primary_bank_name", "primary_ifsc_code",
     "secondary_account_number", "secondary_bank_name", "secondary_ifsc_code",
     "billing_cycle"
   ];
@@ -1223,7 +1221,6 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
               />
             )}
           />
-          {/* FIX: Show preview for newly uploaded logo or existing logo */}
           {companyLogoBrochureValue && (
             <div className="mt-2 h-20 w-20">
               <img
@@ -1305,7 +1302,6 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
                     />
                   )}
                 />
-                {/* FIX: Show preview for new or existing certificate */}
                 {uploadCertificateValue && (
                   <div className="mt-2">
                     <a href={typeof uploadCertificateValue === 'string' ? uploadCertificateValue : URL.createObjectURL(uploadCertificateValue)} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">View Uploaded Document</a>
@@ -1536,7 +1532,11 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                   name={doc.enabledName}
                   control={control}
                   render={({ field }) => (
-                    <Checkbox checked={!!field.value} onChange={field.onChange} />
+                    <Checkbox
+                      checked={!!field.value}
+                      onChange={field.onChange}
+                      disabled={!fileValue}
+                    />
                   )}
                 />
                 {doc.label}
@@ -2062,10 +2062,10 @@ const MemberManagementSection = ({ control }: FormSectionBaseProps) => {
         <Card key={item.id} className="mb-4 border-black relative rounded-md">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 p-4 items-start">
             <FormItem label="Person Name"><Controller name={`member[${index}][person_name]`} control={control} render={({ field }) => <Input placeholder="Person Name" {...field} />} /></FormItem>
-            <FormItem label="Company Name"><Controller name={`member[${index}][company_name]`} control={control} render={({ field }) => <Input placeholder="Company Name" {...field} />} /></FormItem>
-            <FormItem label="Email ID"><Controller name={`member[${index}][email]`} control={control} render={({ field }) => <Input type="email" placeholder="Email ID" {...field} />} /></FormItem>
-            <FormItem label="Designation"><Controller name={`member[${index}][designation]`} control={control} render={({ field }) => <Input placeholder="e.g., CEO" {...field} />} /></FormItem>
             <FormItem label="Contact Number"><Controller name={`member[${index}][number]`} control={control} render={({ field }) => <Input type="tel" placeholder="Contact Number" {...field} />} /></FormItem>
+            <FormItem label="Designation"><Controller name={`member[${index}][designation]`} control={control} render={({ field }) => <Input placeholder="e.g., CEO" {...field} />} /></FormItem>
+            <FormItem label="Email ID"><Controller name={`member[${index}][email]`} control={control} render={({ field }) => <Input type="email" placeholder="Email ID" {...field} />} /></FormItem>
+            {/* <FormItem label="Company Name"><Controller name={`member[${index}][company_name]`} control={control} render={({ field }) => <Input placeholder="Company Name" {...field} />} /></FormItem> */}
             <div className="absolute right-2 top-2">
               <Button type="button" variant="plain" size="sm" icon={<TbTrash size={16} />} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10" onClick={() => remove(index)}>Remove</Button>
             </div>
