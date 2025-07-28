@@ -5001,7 +5001,9 @@ export const addEmployeesAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addEmployeeListAsync(payload);
 
-      if (response?.status === true) {
+      console.log("response?.status", response?.status);
+
+      if (response?.status == true || response?.status == 200) {
         dispatch(getEmployeesListingAction())
         return response?.data
       } else {
