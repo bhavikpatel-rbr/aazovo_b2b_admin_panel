@@ -245,10 +245,11 @@ interface OtherDocItemFE {
   document?: File | string | null;
 }
 
+// FIX: Changed reference fields to simple strings
 interface ReferenceItemFE {
   id?: string;
-  referenced_partner_id?: { label: string; value: string };
-  company_id?: { label: string; value: string };
+  person_name?: string;
+  company_name?: string;
   email?: string;
   number?: string;
   remark?: string;
@@ -431,8 +432,6 @@ interface ApiSingleCompanyItem {
 // --- Helper to transform API data to CompanyFormSchema for EDIT mode ---
 const transformApiToFormSchema = (
   apiData: ApiSingleCompanyItem,
-  partnerOptions: { label: string; value: any }[],
-  companyOptions: { label: string; value: any }[],
   documentTypeOptions: { label: string; value: any }[],
   countryOptions: { label: string; value: any }[]
 ): Partial<CompanyFormSchema> => {
@@ -566,11 +565,11 @@ const transformApiToFormSchema = (
       document_name: documentTypeOptions.find(opt => String(opt.value) === String(doc.document_name)),
       document: doc.document
     })),
-    // FIX: Correctly map reference data, ensuring company_id is an object for the Select component.
+    // FIX: Correctly map reference data from API to simple text fields
     partner_references: apiData.partner_references?.map((ref: any) => ({
       id: ref.id,
-      referenced_partner_id: partnerOptions.find(p => String(p.value) === String(ref.referenced_partner_id)),
-      company_id: companyOptions.find(c => String(c.value) === String(ref.company_id)),
+      person_name: ref.person_name,
+      company_name: ref.company_name,
       email: ref.email,
       number: ref.number,
       remark: ref.remark,
@@ -615,7 +614,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
     "general_contact_number_code", "alternate_email_id", "alternate_contact_number",
     "alternate_contact_number_code", "ownership_type", "tan_number", "trn_number",
     "establishment_year", "no_of_employees", "partner_website", "notification_email",
-    "primary_account_number", "primary_benificeiry_name", "secondary_benificeiry_name", "primary_bank_name", "primary_ifsc_code",
+    "primary_account_number","primary_benificeiry_name","secondary_benificeiry_name", "primary_bank_name", "primary_ifsc_code",
     "secondary_account_number", "secondary_bank_name", "secondary_ifsc_code",
     "billing_cycle"
   ];
@@ -670,10 +669,10 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
     append(`partner_team_members[${index}][number]`, member.number);
   });
 
+  // FIX: Prepare reference payload with simple text fields
   (data.partner_references || []).forEach((ref: any, index: number) => {
-    append(`partner_references[${index}][referenced_partner_id]`, ref.referenced_partner_id?.value);
-    append(`partner_references[${index}][person_name]`, ref.referenced_partner_id?.label);
-    append(`partner_references[${index}][company_id]`, ref.company_id?.value);
+    append(`partner_references[${index}][person_name]`, ref.person_name);
+    append(`partner_references[${index}][company_name]`, ref.company_name);
     append(`partner_references[${index}][email]`, ref.email);
     append(`partner_references[${index}][number]`, ref.number);
     append(`partner_references[${index}][remark]`, ref.remark);
@@ -1528,6 +1527,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
           return (
             <div key={doc.name}>
               <label className="flex items-center gap-2 mb-1">
+                {/* FIX: Disable checkbox if no file is uploaded */}
                 <Controller
                   name={doc.enabledName}
                   control={control}
@@ -1685,7 +1685,6 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
               />
             )}
           />
-          {/* FIX: Show preview for new or existing bank photo */}
           {primaryBankPhotoValue && (
             <div className="mt-2 h-20">
               {isImageUrl(primaryBankPhotoValue) ? (
@@ -1749,7 +1748,6 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
               />
             )}
           />
-          {/* FIX: Show preview for new or existing bank photo */}
           {secondaryBankPhotoValue && (
             <div className="mt-2 h-20">
               {isImageUrl(secondaryBankPhotoValue) ? (
@@ -1844,7 +1842,6 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
                     />
                   )}
                 />
-                {/* FIX: Show preview for new or existing bank photo */}
                 {bankPhotoValue && (
                   <div className="mt-2 h-20">
                     {isImageUrl(bankPhotoValue) ? (
@@ -1876,34 +1873,8 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
 
 
 // --- ReferenceSection ---
-const ReferenceSection = ({ control, formMethods }: FormSectionBaseProps) => {
-  const dispatch = useAppDispatch();
-  const { partnerData, CompanyData } = useSelector(masterSelector);
-  const { setValue } = formMethods;
-
-  useEffect(() => {
-    if (!partnerData?.data || partnerData.data.length === 0) {
-      dispatch(getpartnerAction());
-    }
-    if (!CompanyData?.data || CompanyData.data.length === 0) {
-      dispatch(getCompanyAction());
-    }
-  }, [partnerData, CompanyData, dispatch]);
-
-  const partnerOptions = useMemo(() => {
-    const data = partnerData?.data || [];
-    return Array.isArray(data)
-      ? data.map((p: any) => ({ value: p.id, label: p.partner_name }))
-      : [];
-  }, [partnerData]);
-
-  const companyOptions = useMemo(() => {
-    const data = CompanyData?.data || [];
-    return Array.isArray(data)
-      ? data.map((c: any) => ({ value: c.id, label: c.company_name }))
-      : [];
-  }, [CompanyData]);
-
+// FIX: Changed to use simple text inputs instead of dropdowns
+const ReferenceSection = ({ control }: FormSectionBaseProps) => {
   const { fields, append, remove } = useFieldArray({
     control,
     name: "partner_references",
@@ -1913,7 +1884,7 @@ const ReferenceSection = ({ control, formMethods }: FormSectionBaseProps) => {
     <Card id="reference">
       <div className="flex justify-between items-center mb-4">
         <h4 className="mb-0">References</h4>
-        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ referenced_partner_id: undefined, company_id: undefined, email: "", number: "", remark: "" })}>
+        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ person_name: "", company_name: "", email: "", number: "", remark: "" })}>
           Add Reference
         </Button>
       </div>
@@ -1921,36 +1892,10 @@ const ReferenceSection = ({ control, formMethods }: FormSectionBaseProps) => {
         <Card key={item.id} className="mb-4 border-black relative rounded-md">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4 p-4">
             <FormItem label="Person Name">
-              <Controller
-                name={`partner_references[${index}][referenced_partner_id]`}
-                control={control}
-                render={({ field }) => {
-                  // FIX: Ensure related fields are populated correctly when a partner is selected.
-                  const handlePartnerChange = (selectedOption: { value: any; label: string } | null) => {
-                    field.onChange(selectedOption);
-                    if (selectedOption) {
-                      const fullPartnerList = partnerData?.data || [];
-                      const selectedPartner = fullPartnerList.find((p: ApiSingleCompanyItem) => String(p.id) === String(selectedOption.value));
-                      if (selectedPartner) {
-                        // Find the company in the options list to get the full {label, value} object
-                        const companyToSet = companyOptions.find(c => c.label === selectedPartner.company_name);
-                        setValue(`partner_references[${index}][email]`, selectedPartner.primary_email_id || '');
-                        setValue(`partner_references[${index}][number]`, selectedPartner.primary_contact_number || '');
-                        // Set the full object for the react-select component
-                        setValue(`partner_references[${index}][company_id]`, companyToSet, { shouldValidate: true });
-                      }
-                    } else {
-                      setValue(`partner_references[${index}][email]`, '');
-                      setValue(`partner_references[${index}][number]`, '');
-                      setValue(`partner_references[${index}][company_id]`, undefined);
-                    }
-                  };
-                  return <Select placeholder="Select Partner" options={partnerOptions} value={field.value} onChange={handlePartnerChange} />;
-                }}
-              />
+              <Controller name={`partner_references[${index}][person_name]`} control={control} render={({ field }) => <Input placeholder="Person Name" {...field} />} />
             </FormItem>
             <FormItem label="Company Name">
-              <Controller name={`partner_references[${index}][company_id]`} control={control} render={({ field }) => <Select placeholder="Select Company" options={companyOptions} {...field} />} />
+              <Controller name={`partner_references[${index}][company_name]`} control={control} render={({ field }) => <Input placeholder="Company Name" {...field} />} />
             </FormItem>
             <FormItem label="Email"><Controller name={`partner_references[${index}][email]`} control={control} render={({ field }) => <Input type="email" placeholder="Email ID" {...field} />} /></FormItem>
             <FormItem label="Contact Number"><Controller name={`partner_references[${index}][number]`} control={control} render={({ field }) => <Input placeholder="Contact Number" {...field} />} /></FormItem>
@@ -1991,7 +1936,6 @@ const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) =>
           const documentValue = watch(`billing_documents[${index}][document]`);
           const isFileObject = documentValue instanceof File;
           return (
-            // FIX: Improved UI for the "Other Documents" section.
             <Card key={item.id} className="border-black rounded-md" bodyClass="p-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
                 <FormItem label="Document Name" className="md:col-span-1">
@@ -2013,7 +1957,6 @@ const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) =>
                       render={({ field: { onChange, ref } }) => <Input type="file" ref={ref} accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" onChange={(e) => onChange(e.target.files?.[0])} />}
                     />
                   </FormItem>
-                  {/* FIX: Show preview immediately after upload. */}
                   {documentValue && (
                     <div className="mt-2 w-32 h-24 col-span-1">
                       {isImageUrl(documentValue) || (isFileObject && documentValue.type.startsWith('image/')) ? (
@@ -2062,10 +2005,10 @@ const MemberManagementSection = ({ control }: FormSectionBaseProps) => {
         <Card key={item.id} className="mb-4 border-black relative rounded-md">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 p-4 items-start">
             <FormItem label="Person Name"><Controller name={`member[${index}][person_name]`} control={control} render={({ field }) => <Input placeholder="Person Name" {...field} />} /></FormItem>
-            <FormItem label="Contact Number"><Controller name={`member[${index}][number]`} control={control} render={({ field }) => <Input type="tel" placeholder="Contact Number" {...field} />} /></FormItem>
-            <FormItem label="Designation"><Controller name={`member[${index}][designation]`} control={control} render={({ field }) => <Input placeholder="e.g., CEO" {...field} />} /></FormItem>
+            <FormItem label="Company Name"><Controller name={`member[${index}][company_name]`} control={control} render={({ field }) => <Input placeholder="Company Name" {...field} />} /></FormItem>
             <FormItem label="Email ID"><Controller name={`member[${index}][email]`} control={control} render={({ field }) => <Input type="email" placeholder="Email ID" {...field} />} /></FormItem>
-            {/* <FormItem label="Company Name"><Controller name={`member[${index}][company_name]`} control={control} render={({ field }) => <Input placeholder="Company Name" {...field} />} /></FormItem> */}
+            <FormItem label="Designation"><Controller name={`member[${index}][designation]`} control={control} render={({ field }) => <Input placeholder="e.g., CEO" {...field} />} /></FormItem>
+            <FormItem label="Contact Number"><Controller name={`member[${index}][number]`} control={control} render={({ field }) => <Input type="tel" placeholder="Contact Number" {...field} />} /></FormItem>
             <div className="absolute right-2 top-2">
               <Button type="button" variant="plain" size="sm" icon={<TbTrash size={16} />} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10" onClick={() => remove(index)}>Remove</Button>
             </div>
@@ -2139,10 +2082,8 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   });
   const { handleSubmit, reset, formState: { errors }, control, watch, trigger } = formMethods;
 
-  // --- FIX: Add useEffect to trigger validation when country changes ---
   const watchedCountry = watch("country_id");
   useEffect(() => {
-    // Only trigger if watchedCountry is not in its initial undefined state
     if (watchedCountry !== undefined) {
       trigger([
         'gst_number',
@@ -2215,17 +2156,7 @@ const CreatePartner = () => {
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { partnerData = {}, CompanyData = {}, DocumentTypeData = [], CountriesData = [] } = useSelector(masterSelector);
-
-  const partnerOptions = useMemo(() => {
-    const data = partnerData?.data || [];
-    return Array.isArray(data) ? data.map((p: any) => ({ value: p.id, label: p.partner_name })) : [];
-  }, [partnerData]);
-
-  const companyOptions = useMemo(() => {
-    const data = CompanyData?.data || [];
-    return Array.isArray(data) ? data.map((c: any) => ({ value: c.id, label: c.company_name })) : [];
-  }, [CompanyData]);
+  const { DocumentTypeData = [], CountriesData = [] } = useSelector(masterSelector);
 
   const documentTypeOptions = useMemo(() => {
     return Array.isArray(DocumentTypeData) ? DocumentTypeData.map((d: any) => ({ value: d.id, label: d.name })) : [];
@@ -2240,8 +2171,6 @@ const CreatePartner = () => {
     dispatch(getCountriesAction());
     dispatch(getContinentsAction());
     dispatch(getDocumentTypeAction());
-    dispatch(getpartnerAction());
-    dispatch(getCompanyAction());
   }, [dispatch]);
 
   useEffect(() => {
@@ -2251,7 +2180,8 @@ const CreatePartner = () => {
         try {
           const actionResult = await dispatch(getpartnerByIdAction(id)).unwrap();
           if (actionResult) {
-            setInitialData(transformApiToFormSchema(actionResult, partnerOptions, companyOptions, documentTypeOptions, countryOptions));
+            // FIX: Remove unused partner/company options from transformer call
+            setInitialData(transformApiToFormSchema(actionResult, documentTypeOptions, countryOptions));
           } else {
             toast.push(<Notification type="danger" title="Fetch Error">Partner data not found.</Notification>);
             navigate("/business-entities/partner");
@@ -2264,14 +2194,14 @@ const CreatePartner = () => {
         }
       };
 
-      if (partnerOptions.length > 0 && companyOptions.length > 0 && documentTypeOptions.length > 0 && countryOptions.length > 0) {
+      if (documentTypeOptions.length > 0 && countryOptions.length > 0) {
         fetchPartnerData();
       }
     } else {
       setInitialData({});
       setPageLoading(false);
     }
-  }, [isEditMode, navigate, dispatch, id, partnerOptions.length, companyOptions.length, documentTypeOptions.length, countryOptions.length]);
+  }, [isEditMode, navigate, dispatch, id, documentTypeOptions.length, countryOptions.length]);
 
   const handleFormSubmit = async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
     setIsSubmitting(true);
