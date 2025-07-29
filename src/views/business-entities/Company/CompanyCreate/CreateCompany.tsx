@@ -2202,11 +2202,11 @@ const TeamManagementSection = ({ control, errors, formMethods, handlePreviewClic
         <Card key={item.id} className="mb-4 border dark:border-gray-600 relative rounded-md" bodyClass="p-4">
           <Button type="button" variant="plain" size="xs" icon={<TbTrash size={16} />} onClick={() => remove(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10">Remove</Button>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-start">
-            <FormItem label={`Team Name ${index + 1}`} invalid={!!errors.company_teams?.[index]?.team_name} errorMessage={errors.company_teams?.[index]?.team_name?.message as string}>
+            {/* <FormItem label={`Team Name ${index + 1}`} invalid={!!errors.company_teams?.[index]?.team_name} errorMessage={errors.company_teams?.[index]?.team_name?.message as string}>
               <Controller name={`company_teams.${index}.team_name`} control={control} render={({ field }) => (<Input placeholder="e.g., Sales Team" {...field} />)} />
-            </FormItem>
+            </FormItem> */}
             <FormItem label={`Designation ${index + 1}`} invalid={!!errors.company_teams?.[index]?.designation} errorMessage={errors.company_teams?.[index]?.designation?.message as string}>
-              <Controller name={`company_teams.${index}.designation`} control={control} render={({ field }) => (<Input placeholder="e.g., Manager" {...field} />)} />
+              <Controller name={`company_teams.${index}.designation`} control={control} render={({ field }) => (<Input placeholder="e.g., Manager" disabled {...field} value="SALES EXECUTIVE" />)} />
             </FormItem>
             <FormItem label={`Person Name ${index + 1}`} invalid={!!errors.company_teams?.[index]?.person_name} errorMessage={errors.company_teams?.[index]?.person_name?.message as string}>
               <Controller name={`company_teams.${index}.person_name`} control={control} render={({ field }) => (<Input placeholder="Person Name" {...field} />)} />
