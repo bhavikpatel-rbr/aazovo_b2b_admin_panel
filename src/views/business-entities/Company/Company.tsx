@@ -213,6 +213,23 @@ interface AlertNote {
 }
 // END: Alert Note Type Definition
 
+// START: Transaction Type Definitions (from reference)
+interface FilledForm {
+  id: number;
+  accountdoc_id: number;
+  created_at: string;
+  form_data?: { uploads_doc_s?: { [key: string]: string | undefined } };
+}
+interface TransactionDoc {
+  id: number;
+  company_document: string;
+  invoice_number: string;
+  status: string;
+  created_at: string;
+  filled_form?: FilledForm;
+}
+// END: Transaction Type Definitions
+
 export type CompanyItem = {
   id: number;
   company_code: string | null;
@@ -281,6 +298,7 @@ export type CompanyItem = {
   billing_documents: BillingDocument[];
   company_member_management: CompanyMemberManagement[];
   company_team_members: TeamMember[];
+  transaction_docs?: TransactionDoc[]; // ADDED FOR TRANSACTIONS
   profile_completion: number;
   "206AB_file": string | null;
   "206AB_remark": string | null;
@@ -1691,99 +1709,263 @@ const ViewCompanyMembersDialog: React.FC<{
     </div>{" "}
   </Dialog>
 );
-const ViewCompanyDataDialog: React.FC<{
-  title: string;
-  message: string;
-  onClose: () => void;
-}> = ({ title, message, onClose }) => (
-  <Dialog isOpen={true} onClose={onClose}>
-    {" "}
-    <h5 className="mb-4">{title}</h5> <p>{message}</p>{" "}
-    <div className="text-right mt-6">
-      <Button variant="solid" onClick={onClose}>
-        Close
-      </Button>
-    </div>{" "}
-  </Dialog>
+
+const NoDataMessage = ({ message }: { message: string }) => (
+  <div className="text-center py-8 text-gray-500">{message}</div>
 );
-const DownloadDocumentDialog: React.FC<{
-  company: CompanyItem;
-  onClose: () => void;
-}> = ({ company, onClose }) => {
-  const documents = useMemo(() => {
-    const allDocs: { name: string; url: string }[] = [];
-    const addDoc = (name: string, path: string | null | undefined) => {
-      if (path) {
-        allDocs.push({ name, url: path });
+
+// --- START: Document and Transaction Modal Components ---
+
+// A small card to represent a single document in a grid
+const DocumentCard: React.FC<{
+  document: DocumentRecord;
+  onPreview: () => void;
+}> = ({ document, onPreview }) => {
+  const renderPreviewIcon = () => {
+    switch (document.type) {
+      case "image":
+        return (
+          <img
+            src={document.url}
+            alt={document.name}
+            className="w-full h-full object-cover"
+          />
+        );
+      case "pdf":
+        return <TbFileTypePdf className="w-10 h-10 text-red-500" />;
+      default:
+        return <TbFile className="w-10 h-10 text-gray-500" />;
+    }
+  };
+  return (
+    <Card
+      bodyClass="p-0"
+      className="hover:shadow-lg transition-shadow flex flex-col"
+    >
+      <div
+        className="w-full h-32 bg-gray-100 dark:bg-gray-700 flex items-center justify-center cursor-pointer"
+        onClick={onPreview}
+      >
+        {renderPreviewIcon()}
+      </div>
+      <div className="p-3 flex flex-col flex-grow">
+        <p className="font-semibold truncate flex-grow text-sm" title={document.name}>
+          {document.name}
+        </p>
+        <div className="flex justify-between items-center mt-2">
+          {document.verified ? (
+            <Tag className="bg-emerald-100 text-emerald-700 text-xs">
+              <TbCheck className="mr-1" />
+              Verified
+            </Tag>
+          ) : (
+            <Tag className="bg-red-100 text-red-700 text-xs">
+              <TbX className="mr-1" />
+              Not Verified
+            </Tag>
+          )}
+          <div className="flex gap-2">
+            <Tooltip title="Preview">
+              <Button shape="circle" size="xs" icon={<TbEye />} onClick={onPreview} />
+            </Tooltip>
+            <Tooltip title="Download">
+              <a href={document.url} download target="_blank" rel="noopener noreferrer">
+                <Button shape="circle" size="xs" icon={<TbDownload />} />
+              </a>
+            </Tooltip>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+// Tab content for KYC Documents
+const KycDocumentsTab: React.FC<{ company: CompanyItem }> = ({ company }) => {
+  const [viewerState, setViewerState] = useState({ isOpen: false, index: 0 });
+
+  const kycDocs = useMemo((): DocumentRecord[] => {
+    const docs: DocumentRecord[] = [];
+    const addDoc = (name: string, url: string | null | undefined, verified?: boolean | number) => {
+      if (url) {
+        docs.push({ name, url, type: getFileType(url), verified: !!verified });
       }
     };
-    addDoc("206AB Form", company["206AB_file"]);
-    addDoc("ABCQ Form", company.ABCQ_file);
-    addDoc("Office Photo", company.office_photo_file);
-    addDoc("GST Certificate", company.gst_certificate_file);
-    addDoc("Authority Letter", company.authority_letter_file);
-    addDoc("Visiting Card", company.visiting_card_file);
-    addDoc("Cancel Cheque", company.cancel_cheque_file);
-    addDoc("Aadhar Card", company.aadhar_card_file);
-    addDoc("PAN Card", company.pan_card_file);
-    addDoc("Other Document", company.other_document_file);
-    company.company_certificate?.forEach((cert) =>
-      addDoc(
-        cert.certificate_name || `Certificate #${cert.id}`,
-        cert.upload_certificate_path
-      )
-    );
-    company.billing_documents?.forEach((doc) =>
-      addDoc(doc.document_name, doc.document)
-    );
-    company.company_bank_details?.forEach((bank, index) =>
-      addDoc(
-        `Bank Verification Photo (${bank.bank_name || index + 1})`,
-        bank.verification_photo
-      )
-    );
-    return allDocs.sort((a, b) => a.name.localeCompare(b.name));
+    addDoc("Aadhar Card", company.aadhar_card_file, company.aadhar_card_verified);
+    addDoc("PAN Card", company.pan_card_file, company.pan_card_verified);
+    addDoc("GST Certificate", company.gst_certificate_file, company.gst_certificate_verified);
+    addDoc("Office Photo", company.office_photo_file, company.office_photo_verified);
+    addDoc("Cancel Cheque", company.cancel_cheque_file, company.cancel_cheque_verified);
+    addDoc("Visiting Card", company.visiting_card_file, company.visiting_card_verified);
+    addDoc("Authority Letter", company.authority_letter_file, company.authority_letter_verified);
+    addDoc("194Q Declaration", company.ABCQ_file, company.ABCQ_verified);
+    addDoc("Other Document", company.other_document_file, company.other_document_verified);
+    company.company_certificate?.forEach((cert) => addDoc(cert.certificate_name, cert.upload_certificate_path, true));
+    return docs;
   }, [company]);
+
+  const handlePreview = (index: number) => setViewerState({ isOpen: true, index });
+  const handleCloseViewer = () => setViewerState({ isOpen: false, index: 0 });
+  const handleNext = () => setViewerState((prev) => ({ ...prev, index: Math.min(prev.index + 1, kycDocs.length - 1) }));
+  const handlePrev = () => setViewerState((prev) => ({ ...prev, index: Math.max(prev.index - 1, 0) }));
+
+  if (kycDocs.length === 0) {
+    return <NoDataMessage message="No KYC or company certificates are available." />;
+  }
+
   return (
-    <Dialog isOpen={true} onClose={onClose} width={600}>
-      {" "}
-      <h5 className="mb-4">
-        Download Documents for {company.company_name}
-      </h5>{" "}
-      <div className="max-h-96 overflow-y-auto">
-        {" "}
-        {documents.length > 0 ? (
-          <div className="space-y-2">
-            {" "}
-            {documents.map((doc, index) => (
-              <a
-                key={index}
-                href={doc.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600"
-              >
-                {" "}
-                <span className="flex items-center gap-2">
-                  <TbFileDescription className="text-lg" />
-                  {doc.name}
-                </span>{" "}
-                <TbDownload className="text-lg text-blue-500" />{" "}
-              </a>
-            ))}{" "}
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {kycDocs.map((doc, index) => (
+          <DocumentCard key={index} document={doc} onPreview={() => handlePreview(index)} />
+        ))}
+      </div>
+      <DocumentViewer
+        isOpen={viewerState.isOpen}
+        onClose={handleCloseViewer}
+        documents={kycDocs}
+        currentIndex={viewerState.index}
+        onNext={handleNext}
+        onPrev={handlePrev}
+      />
+    </>
+  );
+};
+
+// Tab content for Transaction Documents
+const TransactionsTab: React.FC<{ company: CompanyItem }> = ({ company }) => {
+  const allTransactions = useMemo(() => company.transaction_docs || [], [company]);
+  const [viewerState, setViewerState] = useState<{ isOpen: boolean; docs: DocumentRecord[]; index: number }>({ isOpen: false, docs: [], index: 0 });
+  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
+
+  const filteredTransactions = useMemo(() => {
+    const [startDate, endDate] = dateRange;
+    if (!startDate || !endDate) return allTransactions;
+    return allTransactions.filter((transaction) => {
+      const transactionDate = dayjs(transaction.created_at);
+      return transactionDate.isAfter(dayjs(startDate).startOf('day')) && transactionDate.isBefore(dayjs(endDate).endOf('day'));
+    });
+  }, [allTransactions, dateRange]);
+
+  const handleResetFilter = () => setDateRange([null, null]);
+  const formatDocTitle = (key: string) => {
+    const customTitles: Record<string, string> = { pi_upload: "PO", imei_excel_sheet_miracle: "IMEI Sheet", invoice_upload: "Purchase Invoice", e_way_bill: "E-Way Bill" };
+    return customTitles[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+  const formatTransactionId = (id: number | undefined | null): string => {
+    if (id === null || id === undefined) return "N/A";
+    return String(id).padStart(5, '0');
+  };
+
+  const handlePreview = (docs: DocumentRecord[], index: number) => setViewerState({ isOpen: true, docs, index });
+  const handleCloseViewer = () => setViewerState({ isOpen: false, docs: [], index: 0 });
+  const handleNext = () => setViewerState((prev) => ({ ...prev, index: Math.min(prev.index + 1, prev.docs.length - 1) }));
+  const handlePrev = () => setViewerState((prev) => ({ ...prev, index: Math.max(prev.index - 1, 0) }));
+
+  if (allTransactions.length === 0) {
+    return <NoDataMessage message="No transaction documents found." />;
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <label className="font-semibold">Filter by Date:</label>
+            <DatePicker.DatePickerRange value={dateRange} onChange={setDateRange} placeholder="Pick date range" />
           </div>
-        ) : (
-          <p>No documents available for download.</p>
-        )}{" "}
-      </div>{" "}
-      <div className="text-right mt-6">
-        <Button variant="solid" onClick={onClose}>
-          Close
-        </Button>
-      </div>{" "}
+          <Button onClick={handleResetFilter}>Reset</Button>
+        </div>
+      </Card>
+      {filteredTransactions.length > 0 ? (
+        filteredTransactions.map((transaction) => {
+          const uploadedDocs = transaction.filled_form?.form_data?.uploads_doc_s;
+          if (!transaction.filled_form || !uploadedDocs) return null;
+
+          const transactionDocs: DocumentRecord[] = Object.entries(uploadedDocs)
+            .filter(([, url]) => !!url)
+            .map(([docKey, docUrl]) => ({ name: formatDocTitle(docKey), url: docUrl as string, type: getFileType(docUrl), verified: true }));
+
+          if (transactionDocs.length === 0) return null;
+
+          return (
+            <Card key={transaction.id} bodyClass="p-0">
+              <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/60 p-3 rounded-t-lg">
+                <h6 className="font-semibold">Form ID: #{formatTransactionId(transaction.filled_form?.accountdoc_id)}</h6>
+                <span className="text-sm text-gray-500">{dayjs(transaction.filled_form.created_at).format("DD MMM YYYY, hh:mm A")}</span>
+              </div>
+              <div className="p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {transactionDocs.map((doc, index) => (
+                    <DocumentCard key={doc.url} document={doc} onPreview={() => handlePreview(transactionDocs, index)} />
+                  ))}
+                </div>
+              </div>
+            </Card>
+          );
+        })
+      ) : (
+        <NoDataMessage message="No transactions found for the selected date range." />
+      )}
+      <DocumentViewer isOpen={viewerState.isOpen} onClose={handleCloseViewer} documents={viewerState.docs} currentIndex={viewerState.index} onNext={handleNext} onPrev={handlePrev} />
+    </div>
+  );
+};
+
+
+// The main modal that combines KYC and Transaction tabs
+const CompanyDocumentsModal: React.FC<{
+  company: CompanyItem;
+  onClose: () => void;
+  initialTab?: 'kyc' | 'transactions';
+}> = ({ company, onClose, initialTab = 'kyc' }) => {
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const hasTransactions = (company.transaction_docs || []).length > 0;
+
+  useEffect(() => {
+    // If the initial tab is 'transactions' but there are none, default to 'kyc'
+    if (initialTab === 'transactions' && !hasTransactions) {
+      setActiveTab('kyc');
+    }
+  }, [initialTab, hasTransactions]);
+
+
+  const tabButtonClass = (tabName: string) => classNames(
+    "px-4 py-2 text-sm font-medium rounded-t-md border-b-2",
+    {
+      "border-indigo-500 text-indigo-600 dark:text-indigo-300": activeTab === tabName,
+      "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200": activeTab !== tabName,
+    }
+  );
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} width={1200} contentClassName="flex flex-col h-[90vh]">
+      <h5 className="mb-4">Documents for {company.company_name}</h5>
+      <div className="border-b border-gray-200 dark:border-gray-700">
+        <nav className="-mb-px flex space-x-4" aria-label="Tabs">
+          <button onClick={() => setActiveTab('kyc')} className={tabButtonClass('kyc')}>
+            KYC Documents
+          </button>
+          {hasTransactions && (
+            <button onClick={() => setActiveTab('transactions')} className={tabButtonClass('transactions')}>
+              Transaction Documents
+            </button>
+          )}
+        </nav>
+      </div>
+      <div className="mt-6 flex-grow overflow-y-auto pr-2">
+        {activeTab === 'kyc' && <KycDocumentsTab company={company} />}
+        {activeTab === 'transactions' && hasTransactions && <TransactionsTab company={company} />}
+      </div>
+      <div className="text-right mt-6 pt-4 border-t dark:border-gray-700">
+        <Button variant="solid" onClick={onClose}>Close</Button>
+      </div>
     </Dialog>
   );
 };
+
+// --- END: Document and Transaction Modal Components ---
+
 const activitySchema = z.object({
   item: z
     .string()
@@ -2042,7 +2224,6 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({
         <CompanyAlertModal
           company={company}
           onClose={onClose}
-          user={userData}
         />
       );
     case "activity":
@@ -2055,14 +2236,20 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({
       );
     case "transaction":
       return (
-        <ViewCompanyDataDialog
-          title={`Transactions for ${company.company_name}`}
-          message="No transactions found for this company."
+        <CompanyDocumentsModal
+          company={company}
           onClose={onClose}
+          initialTab="transactions"
         />
       );
     case "document":
-      return <DownloadDocumentDialog company={company} onClose={onClose} />;
+      return (
+        <CompanyDocumentsModal
+          company={company}
+          onClose={onClose}
+          initialTab="kyc"
+        />
+      );
     default:
       return null;
   }
@@ -2532,10 +2719,16 @@ const CompanyActionColumn = ({
           <TbTagStarred /> Add Activity
         </Dropdown.Item>
         <Dropdown.Item
+          onClick={() => onOpenModal("transaction", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbReceipt /> View Transactions
+        </Dropdown.Item>
+        <Dropdown.Item
           onClick={() => onOpenModal("document", rowData)}
           className="flex items-center gap-2"
         >
-          <TbDownload /> Download Document
+          <TbDownload /> View/Download Documents
         </Dropdown.Item>
       </Dropdown>
     </div>
@@ -3494,13 +3687,12 @@ const CompanyListTable = () => {
     }
   };
 
-  const statusOptions = useMemo(
-    () =>
-      Array.from(new Set(companyList.map((c) => c.status)))
-        .filter(Boolean)
-        .map((s) => ({ value: s, label: s })),
-    [companyList]
-  );
+   const statusOptions = [
+     { value: "Active", label: "Active" },
+     { value: "Disabled", label: "Disabled" },
+     { value: "Blocked", label: "Blocked" },
+     { value: "Inactive", label: "Inactive" },
+   ];
   const companyTypeOptions = useMemo(
     () =>
       Array.from(new Set(companyList.map((c) => c.ownership_type)))
