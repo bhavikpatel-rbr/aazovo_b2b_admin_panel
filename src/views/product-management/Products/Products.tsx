@@ -1040,19 +1040,13 @@ const productFormSchema = z.object({
     .positive("Category is required.")
     .nullable(),
   sub_category_id: z.number().positive().nullable().optional(),
-  brand_id: z
-    .number({ invalid_type_error: "Brand is required." })
-    .positive("Brand is required.")
-    .nullable(),
+  brand_id: z.number().nullable().optional(),
   name: z.string().min(1, "Product name is required.").max(255),
   slug: z.string().min(1, "Slug is required.").max(255),
   sku_code: z.string().max(50).optional().nullable(),
   hsn_code: z.string().max(50).optional().nullable(),
   supplier_product_code: z.string().max(100).optional().nullable(), // New field
-  country_id: z
-    .number({ invalid_type_error: "Country is required." })
-    .positive("Country is required.")
-    .nullable(),
+  country_id: z.number().nullable().optional(),
   unit_id: z
     .number({ invalid_type_error: "Unit is required." })
     .positive("Unit is required.")
@@ -3209,7 +3203,7 @@ const Products = () => {
                 <FormItem
                   label={
                     <div>
-                      Brand<span className="text-red-500"> * </span>
+                      Brand
                     </div>
                   }
                   invalid={!!formErrors.brand_id}
@@ -3303,7 +3297,7 @@ const Products = () => {
                   label={
                     <div>
                       Country
-                      <span className="text-red-500"> * </span>
+                      {/* <span className="text-red-500"> * </span> */}
                     </div>
                   }
                   invalid={!!formErrors.country_id}
@@ -3730,7 +3724,7 @@ const Products = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Name or SKU">
+          {/* <FormItem label="Name or SKU">
             <Controller
               name="filterNameOrSku"
               control={filterFormControl}
@@ -3738,7 +3732,7 @@ const Products = () => {
                 <Input {...field} placeholder="Enter Name or SKU" />
               )}
             />
-          </FormItem>
+          </FormItem> */}
           <FormItem label="Categories">
             <Controller
               name="filterCategoryIds"
