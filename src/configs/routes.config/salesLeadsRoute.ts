@@ -47,6 +47,37 @@ const salesLeadsRoute: Routes = [
     },
   },
   {
+    key: "salesLeads.wallListing",
+    path: `${SALES_LEADS_PREFIX_PATH}/wall-item/lead/add`,
+    component: lazy(() => import("@/views/sales-Leads/Wall-Listing/Components/AddLeadPage")),
+    authority: [ADMIN, USER],
+    meta: {
+      pageContainerType: "contained",
+    },
+  },
+  {
+    key: "salesLeads.wallListing",
+    path: `${SALES_LEADS_PREFIX_PATH}/wall-item/offers/create`,
+    component: lazy(
+      () => import("@/views/sales-Leads/Wall-Listing/Components/CreateOffer")
+    ),
+    authority: [ADMIN, USER],
+    meta: {
+      pageContainerType: "contained",
+    },
+  },
+  {
+    key: "salesLeads.wallListing",
+    path: `${SALES_LEADS_PREFIX_PATH}/wall-item/demands/create`,
+    component: lazy(
+      () => import("@/views/sales-Leads/Wall-Listing/Components/CreateDemand")
+    ),
+    authority: [ADMIN, USER],
+    meta: {
+      pageContainerType: "contained",
+    },
+  },
+  {
     key: "salesLeads.opportunities",
     path: `${SALES_LEADS_PREFIX_PATH}/opportunities`,
     component: lazy(() => import("@/views/sales-Leads/Opportunities")),

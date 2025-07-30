@@ -315,13 +315,13 @@ const OpportunityTabView = ({ wallItem }: { wallItem: WallEnquiryData }) => {
         switch (type) {
             case 'offer':
                 // Assuming first selected is enough to pre-fill
-                navigate('/sales-leads/offers/create', { state: { supplierId: selectedOps[0].member_id, productId: selectedOps[0].product_id } });
+                navigate('/sales-leads/wall-item/offers/create', { state: { supplierId: selectedOps[0].member_id, productId: selectedOps[0].product_id, ...selectedOps[0] } });
                 break;
             case 'demand':
-                navigate('/sales-leads/demands/create', { state: { buyerId: selectedOps[0].member_id, productId: selectedOps[0].product_id } });
+                navigate('/sales-leads/wall-item/demands/create', { state: { buyerId: selectedOps[0].member_id, productId: selectedOps[0].product_id, ...selectedOps[0] } });
                 break;
             case 'lead':
-                navigate('/sales-leads/lead/add', { state: { supplierId: selectedOps[0].member_id, buyerId: wallItem.customer?.id, productId: selectedOps[0].product_id } });
+                navigate('/sales-leads/wall-item/lead/add', { state: { supplierId: selectedOps[0].member_id, buyerId: wallItem.customer?.id, productId: selectedOps[0].product_id, ...selectedOps[0] } });
                 break;
 
             case 'email':
@@ -377,7 +377,8 @@ const OpportunityTabView = ({ wallItem }: { wallItem: WallEnquiryData }) => {
                 <div className="flex flex-wrap items-center justify-between gap-4 p-4 border-t border-gray-200 dark:border-gray-600">
                     <span className="font-semibold">{selected.length} selected</span>
                     <div className="flex flex-wrap gap-2">
-                        <Button size="sm" icon={<TbHandGrab />} onClick={() => handleAction(wallItem.want_to === 'Buy' ? 'offer' : 'demand')}>Create {wallItem.want_to === 'Buy' ? 'Offer' : 'Demand'}</Button>
+                        <Button size="sm" icon={<TbHandGrab />} onClick={() => handleAction('offer')}>Create Offer</Button>
+                        <Button size="sm" icon={<TbHandGrab />} onClick={() => handleAction('demand')}>Create Demand</Button>
                         <Button size="sm" icon={<TbUserPlus />} onClick={() => handleAction('lead')}>Create Lead</Button>
                         <Button size="sm" icon={<TbMailForward />} onClick={() => handleAction('email')}>Email</Button>
                         <Button size="sm" icon={<TbBrandWhatsapp />} onClick={() => handleAction('whatsapp')}>WhatsApp</Button>
