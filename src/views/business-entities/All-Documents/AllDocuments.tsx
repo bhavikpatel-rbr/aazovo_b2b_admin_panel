@@ -136,7 +136,6 @@ const UnifiedFileViewer: React.FC<{
                         <h6 className="font-semibold truncate" title={currentFile.name}>{currentFile.name}</h6>
                         <span className="text-sm text-gray-400">{currentIndex + 1} / {files.length}</span>
                     </div>
-                 
                 </header>
                 <main className="relative flex-grow flex items-center justify-center " onClick={e => e.stopPropagation()}>
                     {!isContentLoaded && <Spinner size={40} className="absolute" />}
@@ -238,61 +237,142 @@ const FileIcon = ({ type }: { type: string }) => {
 const MediaSkeleton = ({ avatarProps }: { avatarProps: any }) => ( <div style={{ display: "flex", alignItems: "center", gap: "8px" }}><div style={{ width: avatarProps.width, height: avatarProps.height, backgroundColor: "#e0e0e0", borderRadius: "50%" }}></div><div style={{ flex: 1 }}><div style={{ height: "1em", backgroundColor: "#e0e0e0", marginBottom: "4px" }}></div><div style={{ height: "0.8em", width: "60%", backgroundColor: "#e0e0e0" }}></div></div></div> );
 const TableRowSkeleton = ({ rows = 5, columns = 3 }) => ( <tbody>{[...Array(rows)].map((_, i) => ( <tr key={i}>{[...Array(columns)].map((_, j) => ( <td key={j} style={{ padding: "16px" }}>{j === 0 ? (<MediaSkeleton avatarProps={{ width: 30, height: 30 }} />) : (<div style={{ height: "1em", backgroundColor: "#e0e0e0" }}></div>)}</td>))}</tr>))}</tbody> );
 
-// --- DATA TRANSFORMATION LOGIC ---
-let fileSystemData: Record<string, { list: File[], directory: Directory[] }> = {};
+// --- DATA TRANSFORMATION LOGIC (REVISED & IMPROVED) ---
+let fileSystemData: Record<string, { list: File[]; directory: Directory[] }> = {};
 
 const transformApiData = (apiData: any) => {
+  // Reset the file system data
   fileSystemData = { "": { list: [], directory: [] } };
-  const getFileNameFromUrl = (url: string) => url.substring(url.lastIndexOf("/") + 1);
+
+  // --- HELPER FUNCTIONS ---
+  const getFileNameFromUrl = (url: string) => {
+    try {
+      // Use URL constructor for robust parsing
+      return new URL(url).pathname.split('/').pop() || "file";
+    } catch (e) {
+      // Fallback for malformed URLs
+      return url.substring(url.lastIndexOf("/") + 1);
+    }
+  };
+  
   const getFileExtension = (fileName: string) => fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+  
   const getFileTypeFromExtension = (ext: string) => {
     if (["jpg", "jpeg", "png", "gif", "bmp", "svg", "webp"].includes(ext)) return "image";
     if (["pdf"].includes(ext)) return "pdf";
     if (["doc", "docx"].includes(ext)) return "doc";
     return ext;
   };
-  const createFolder = (id: string, name: string): File => ({ id, name, fileType: "directory", size: 0, srcUrl: "", uploadDate: Date.now() / 1000 });
+  
+  const createFolder = (id: string, name: string): File => ({
+    id, name, fileType: "directory", size: 0, srcUrl: "", uploadDate: Date.now() / 1000,
+  });
+
   const createFile = (url: string, idPrefix: string): File | null => {
-    if (!url || typeof url !== "string") return null;
+    if (!url || typeof url !== "string" || !url.startsWith('http')) return null;
     const name = getFileNameFromUrl(url);
     const extension = getFileExtension(name);
-    return { id: `${idPrefix}-${name}`, name, fileType: getFileTypeFromExtension(extension), size: Math.floor(Math.random() * 5000000), srcUrl: url, uploadDate: Date.now() / 1000 };
+    return {
+      id: `${idPrefix}-${name}`, name, fileType: getFileTypeFromExtension(extension),
+      size: Math.floor(Math.random() * 5000000), srcUrl: url, uploadDate: Date.now() / 1000,
+    };
   };
+
   const addEntry = (parentId: string, entry: File, breadcrumbs: Directory[]) => {
-    if (!fileSystemData[parentId]) fileSystemData[parentId] = { list: [], directory: [] };
-    fileSystemData[parentId].list.push(entry);
-    if (entry.fileType === "directory") {
+    if (!fileSystemData[parentId]) {
+      fileSystemData[parentId] = { list: [], directory: [] };
+    }
+    // Avoid adding duplicate entries
+    if (!fileSystemData[parentId].list.some(f => f.id === entry.id)) {
+      fileSystemData[parentId].list.push(entry);
+    }
+    if (entry.fileType === "directory" && !fileSystemData[entry.id]) {
       fileSystemData[entry.id] = { list: [], directory: breadcrumbs };
     }
   };
 
+  // --- RECURSIVE PROCESSOR ---
+  const processEntry = (data: any, parentId: string, breadcrumbs: Directory[], idPrefix: string) => {
+    if (!data) return;
+
+    if (Array.isArray(data)) {
+      data.forEach((item, index) => {
+        // For arrays of objects, create a sub-folder for each item
+        if (typeof item === 'object' && item !== null) {
+          const subFolderName = item.name || item.title || item.verified_by_name || `Item ${item.id || index + 1}`;
+          const subFolderId = `${parentId}-${index}`;
+          const subFolder = createFolder(subFolderId, subFolderName);
+          const newBreadcrumbs = [...breadcrumbs, { id: subFolder.id, label: subFolder.name }];
+          addEntry(parentId, subFolder, newBreadcrumbs);
+          processEntry(item, subFolder.id, newBreadcrumbs, subFolderId);
+        } else if (typeof item === 'string') {
+          const file = createFile(item, parentId);
+          if (file) addEntry(parentId, file, breadcrumbs);
+        }
+      });
+    } else if (typeof data === 'object') {
+      Object.entries(data).forEach(([key, value]) => {
+        // Recursively process nested objects that might contain files
+        if (value && typeof value === 'object') {
+          // Create a sub-folder for the object key
+          const folderName = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          const folderId = `${parentId}-${key}`;
+          const subFolder = createFolder(folderId, folderName);
+          const newBreadcrumbs = [...breadcrumbs, { id: subFolder.id, label: subFolder.name }];
+          addEntry(parentId, subFolder, newBreadcrumbs);
+          processEntry(value, folderId, newBreadcrumbs, folderId);
+        } else if (typeof value === 'string') {
+          // Create a file for the string value
+          const file = createFile(value, parentId);
+          if (file) addEntry(parentId, file, breadcrumbs);
+        }
+      });
+    }
+  };
+
+  // --- MAIN PROCESSING LOOP ---
   Object.entries(apiData).forEach(([moduleKey, items]) => {
     if (!Array.isArray(items) || items.length === 0) return;
-    const moduleName = moduleKey.charAt(0).toUpperCase() + moduleKey.slice(1).replace(/_/g, " ");
-    const moduleFolder = createFolder(`module-${moduleKey}`, moduleName);
+
+    // Level 1: Module Folder (e.g., "Company Documents")
+    const moduleName = moduleKey.charAt(0).toUpperCase() + moduleKey.slice(1);
+    const moduleFolder = createFolder(`module-${moduleKey.replace(/\s+/g, '-')}`, moduleName);
     addEntry("", moduleFolder, [{ id: moduleFolder.id, label: moduleFolder.name }]);
 
     items.forEach((item: any) => {
-      const itemName = item.company_name || item.partner_name || item.name || `Item ${item.id}`;
-      const itemFolder = createFolder(`item-${moduleKey}-${item.id}`, itemName);
+      // Level 2: Item Folder (e.g., "MOBILE WORLD VADODARA")
+      const itemName = item.company_name || item.partner_name || item.name || item.task_title || item.title || `Item ${item.id}`;
+      const itemFolder = createFolder(`item-${moduleKey.replace(/\s+/g, '-')}-${item.id}`, itemName);
       const itemBreadcrumbs = [...(fileSystemData[moduleFolder.id]?.directory || []), { id: itemFolder.id, label: itemFolder.name }];
       addEntry(moduleFolder.id, itemFolder, itemBreadcrumbs);
       
-      const processDocs = (docObj: any, folderName: string, folderId: string) => {
-        const docFiles = Object.values(docObj).flatMap((doc: any) => (Array.isArray(doc) ? doc : [doc])).map(d => createFile(d, folderId)).filter(Boolean) as File[];
-        if (docFiles.length > 0) {
-          const docFolder = createFolder(folderId, folderName);
-          const docBreadcrumbs = [...itemBreadcrumbs, { id: docFolder.id, label: docFolder.name }];
-          addEntry(itemFolder.id, docFolder, docBreadcrumbs);
-          docFiles.forEach((file) => addEntry(docFolder.id, file, docBreadcrumbs));
+      // Find all potential document containers and direct file URLs
+      Object.entries(item).forEach(([key, value]) => {
+        // Skip identifiers and names already used for the folder title
+        if (['id', 'company_name', 'partner_name', 'name', 'task_title', 'title', 'entity_type'].includes(key)) return;
+        
+        // Process direct file URLs at the top level of the item
+        if (typeof value === 'string' && value.startsWith('http')) {
+            const file = createFile(value, itemFolder.id);
+            if (file) addEntry(itemFolder.id, file, itemBreadcrumbs);
+        } 
+        // Recursively process nested objects or arrays that contain documents
+        else if (value && (typeof value === 'object' || Array.isArray(value))) {
+            const hasFiles = JSON.stringify(value).includes("http");
+            if (hasFiles) {
+                const subFolderName = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                const subFolderId = `${itemFolder.id}-${key}`;
+                const subFolder = createFolder(subFolderId, subFolderName);
+                const newBreadcrumbs = [...itemBreadcrumbs, { id: subFolder.id, label: subFolder.name }];
+                addEntry(itemFolder.id, subFolder, newBreadcrumbs);
+                processEntry(value, subFolder.id, newBreadcrumbs, subFolderId);
+            }
         }
-      };
-
-      if (item.all_documents) processDocs(item.all_documents, "All Documents", `docs-${moduleKey}-${item.id}`);
-      if (item.attachments) processDocs({ attachments: item.attachments }, "Attachments", `attach-${moduleKey}-${item.id}`);
+      });
     });
   });
 };
+
 
 // --- SUB-COMPONENTS ---
 const FileType = ({ type }: { type: string }) => <>{type === 'directory' ? 'Folder' : type.toUpperCase()}</>;
