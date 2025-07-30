@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import classNames from "classnames";
 import cloneDeep from "lodash/cloneDeep";
 import React, {
   useCallback,
@@ -10,7 +11,6 @@ import React, {
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -22,15 +22,15 @@ import RichTextEditor from "@/components/shared/RichTextEditor";
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
   Button,
+  Card,
+  Checkbox,
   DatePicker,
   Drawer,
   Dropdown,
-  Checkbox,
+  Input,
   Form as UiForm,
   FormItem as UiFormItem,
-  Input,
   Select as UiSelect,
-  Card,
 } from "@/components/ui";
 import Dialog from "@/components/ui/Dialog";
 import Notification from "@/components/ui/Notification";
@@ -38,32 +38,31 @@ import Tag from "@/components/ui/Tag";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
 
+
 // Icons
 import {
+  TbAlarm,
+  TbArrowDown,
   TbBell,
   TbBrandWhatsapp,
   TbCalendarEvent,
   TbChecks,
+  TbCircleCheck,
+  TbCircleX,
   TbCloudUpload,
-  TbDownload,
+  TbColumns,
   TbEye,
   TbFilter,
+  TbListDetails,
   TbMail,
   TbPencil,
   TbPlus,
+  TbProgress,
   TbReload,
   TbSearch,
-  TbTagStarred,
-  TbUser,
-  TbColumns,
-  TbX,
-  TbListDetails,
-  TbProgress,
-  TbCircleCheck,
-  TbCircleX,
   TbUrgent,
-  TbAlarm,
-  TbArrowDown,
+  TbUser,
+  TbX
 } from "react-icons/tb";
 
 // Types
@@ -77,20 +76,22 @@ import type {
 // Redux imports
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addNotificationAction,
+  addScheduleAction,
+  addTaskAction,
   deleteAllInquiryAction,
+  editInquiriesAction,
+  getAllUsersAction, // MODIFIED: Added edit action
   getDepartmentsAction,
   getInquiriesAction,
   submitExportReasonAction,
-  addNotificationAction,
-  getAllUsersAction,
-  addScheduleAction,
-  addTaskAction, // ADDED
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import dayjs from "dayjs";
-import { useSelector } from "react-redux";
-import { BsThreeDotsVertical } from "react-icons/bs";
+import axiosInstance from '@/services/api/api'; // ADDED: For direct API calls
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
+import dayjs from "dayjs";
+import { BsThreeDotsVertical } from "react-icons/bs";
+import { useSelector } from "react-redux";
 
 // --- Export Reason Schema ---
 const exportReasonSchema = z.object({
@@ -113,7 +114,7 @@ const scheduleSchema = z.object({
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
-// --- Zod Schema for Task Form (ADDED) ---
+// --- Zod Schema for Task Form ---
 const taskValidationSchema = z.object({
   task_title: z.string().min(3, "Task title must be at least 3 characters."),
   assign_to: z.array(z.number()).min(1, "At least one assignee is required."),
@@ -123,13 +124,38 @@ const taskValidationSchema = z.object({
 });
 type TaskFormData = z.infer<typeof taskValidationSchema>;
 
+// --- Zod Schema for Status Update Form ---
+const statusUpdateSchema = z.object({
+  status: z.string().min(1, "Status is required."),
+});
+type StatusUpdateFormData = z.infer<typeof statusUpdateSchema>;
+
+
+// ============================================================================
+// --- HELPER FUNCTIONS ---
+// ============================================================================
+
+const formatDateForApi = (date: Date | string | null | undefined): string | null => {
+  if (!date) return null;
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return null; // Invalid date
+    const year = d.getFullYear();
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  } catch (e) {
+    return null;
+  }
+};
+
+
 // ============================================================================
 // --- MODALS SECTION ---
-// All modal components for Inquiries are defined here.
 // ============================================================================
 
 // --- Type Definitions for Modals ---
-export type InquiryModalType = "notification" | "schedule" | "task"; // MODIFIED
+export type InquiryModalType = "notification" | "schedule" | "task" | "statusUpdate"; // MODIFIED
 export interface InquiryModalState {
   isOpen: boolean;
   type: InquiryModalType | null;
@@ -458,7 +484,7 @@ const AddInquiryScheduleDialog: React.FC<{
   );
 };
 
-// --- Assign Task Dialog (ADDED) ---
+// --- Assign Task Dialog ---
 const AssignTaskDialog: React.FC<{
   inquiry: InquiryItem;
   onClose: () => void;
@@ -631,12 +657,137 @@ const AssignTaskDialog: React.FC<{
   );
 };
 
+// --- Status Update Dialog (ADDED) ---
+const StatusUpdateModal: React.FC<{
+  inquiry: InquiryItem;
+  onClose: () => void;
+  onSuccess: () => void;
+}> = ({ inquiry, onClose, onSuccess }) => {
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const statusOptions = [
+    { value: "Open", label: "Open" },
+    { value: "In Progress", label: "In Progress" },
+    { value: "Resolved", label: "Resolved" },
+    { value: "On Hold", label: "On Hold" },
+    { value: "Rejected", label: "Rejected" },
+    { value: "Closed", label: "Closed" }
+  ];
+
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<StatusUpdateFormData>({
+    resolver: zodResolver(statusUpdateSchema),
+    defaultValues: { status: inquiry.inquiry_status || '' },
+    mode: 'onChange',
+  });
+
+  const handleStatusUpdate = async (formData: StatusUpdateFormData) => {
+    setIsLoading(true);
+    try {
+      // 1. Fetch the full, most up-to-date inquiry data
+      const response = await axiosInstance.get(`/inquiry/${inquiry.id}`);
+      if (!response.data?.data) {
+        throw new Error("Failed to fetch latest inquiry data.");
+      }
+      const apiData = response.data.data;
+
+      // 2. Construct the payload as FormData, preserving all original data
+      const formDataPayload = new FormData();
+      const payloadObject: { [key: string]: any } = {
+        company_name: apiData.company_name,
+        name: apiData.name,
+        email: apiData.email,
+        mobile_no: apiData.mobile_no,
+        inquiry_type: apiData.inquiry_type,
+        inquiry_subject: apiData.inquiry_subject,
+        priority: apiData.priority || apiData.inquiry_priority,
+        inquiry_description: apiData.inquiry_description,
+        status: formData.status, // Use the new status from the form
+        assigned_to: apiData.assigned_to,
+        department_id: apiData.department_id,
+        inquiry_date: formatDateForApi(apiData.inquiry_date),
+        response_date: formatDateForApi(apiData.response_date),
+        resolution_date: formatDateForApi(apiData.resolution_date),
+        resolution_notes: apiData.resolution_notes,
+        last_follow_up_date: formatDateForApi(apiData.last_follow_up_date),
+        feedback_status: apiData.feedback_status,
+        inquiry_from: apiData.inquiry_from,
+      };
+
+      for (const key in payloadObject) {
+        if (Object.prototype.hasOwnProperty.call(payloadObject, key)) {
+          const value = payloadObject[key];
+          if (value !== undefined && value !== null) {
+            formDataPayload.append(key, String(value));
+          }
+        }
+      }
+
+      formDataPayload.append('id', String(inquiry.id));
+      formDataPayload.append('_method', 'PUT');
+
+      // 3. Dispatch the edit action
+      await dispatch(editInquiriesAction({ id: inquiry.id, data: formDataPayload })).unwrap();
+
+      toast.push(<Notification type="success" title="Status Updated">Inquiry status changed successfully.</Notification>);
+      onSuccess(); // This will trigger a data refresh in the parent component
+      onClose();
+
+    } catch (error: any) {
+      console.error("Status Update Error:", error);
+      const errorMessage = error?.payload?.message || error.message || "An unknown error occurred.";
+      toast.push(<Notification type="danger" title="Update Failed">{errorMessage}</Notification>);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Change Status for: {inquiry.inquiry_id}</h5>
+      <p className="mb-1 text-sm">Company: <span className="font-semibold">{inquiry.company_name}</span></p>
+      <p className="mb-4 text-sm">Current Status: <span className="font-semibold">{inquiry.inquiry_status}</span></p>
+
+      <UiForm onSubmit={handleSubmit(handleStatusUpdate)}>
+        <UiFormItem
+          label="New Status"
+          invalid={!!errors.status}
+          errorMessage={errors.status?.message}
+        >
+          <Controller
+            name="status"
+            control={control}
+            render={({ field }) => (
+              <UiSelect
+                placeholder="Select a new status"
+                options={statusOptions}
+                value={statusOptions.find(o => o.value === field.value)}
+                onChange={opt => field.onChange(opt?.value)}
+              />
+            )}
+          />
+        </UiFormItem>
+
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>
+            Update Status
+          </Button>
+        </div>
+      </UiForm>
+    </Dialog>
+  );
+};
+
+
 // --- Modals Wrapper Component ---
 const InquiriesModals: React.FC<{
   modalState: InquiryModalState;
   onClose: () => void;
+  onSuccess: () => void; // ADDED onSuccess to refresh data
   getAllUserDataOptions: SelectOption[];
-}> = ({ modalState, onClose, getAllUserDataOptions }) => {
+}> = ({ modalState, onClose, onSuccess, getAllUserDataOptions }) => {
   const { type, data: inquiry, isOpen } = modalState;
   if (!isOpen || !inquiry) return null;
 
@@ -651,12 +802,20 @@ const InquiriesModals: React.FC<{
       );
     case "schedule":
       return <AddInquiryScheduleDialog inquiry={inquiry} onClose={onClose} />;
-    case "task": // ADDED
+    case "task":
       return (
         <AssignTaskDialog
           inquiry={inquiry}
           onClose={onClose}
           getAllUserDataOptions={getAllUserDataOptions}
+        />
+      );
+    case "statusUpdate": // ADDED
+      return (
+        <StatusUpdateModal
+          inquiry={inquiry}
+          onClose={onClose}
+          onSuccess={onSuccess}
         />
       );
     default:
@@ -787,7 +946,7 @@ const priorityColors: Record<string, string> = {
   "N/A": "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300",
 };
 const inquiryCurrentStatusColors: Record<string, string> = {
-  New: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
+  Open: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
   "In Progress":
     "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
   Resolved:
@@ -904,9 +1063,9 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({
     () =>
       Array.isArray(getAllUserData)
         ? getAllUserData.map((u) => ({
-            value: u.id,
-            label: `(${u.employee_id}) - ${u.name || "N/A"}`,
-          }))
+          value: u.id,
+          label: `(${u.employee_id}) - ${u.name || "N/A"}`,
+        }))
         : [],
     [getAllUserData]
   );
@@ -925,8 +1084,8 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({
       const inquiryDataFromApi = Array.isArray(rawInquiries)
         ? rawInquiries
         : Array.isArray(inquiryList1)
-        ? inquiryList1
-        : [];
+          ? inquiryList1
+          : [];
       setInquiryList(
         processApiDataToInquiryItems(inquiryDataFromApi as ApiInquiryItem[])
       );
@@ -1009,6 +1168,12 @@ const InquiryActionColumn = ({
             <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
           }
         >
+          <Dropdown.Item
+            onClick={() => onOpenModal("statusUpdate", rowData)}
+            className="flex items-center gap-2"
+          >
+            <TbProgress size={18} /> <span className="text-xs">Change Status</span>
+          </Dropdown.Item>
           <Dropdown.Item
             onClick={() => onSendEmail(rowData)}
             className="flex items-center gap-2"
@@ -1171,9 +1336,8 @@ const InquiryViewModal: React.FC<InquiryViewModalProps> = ({
               <div className="flex items-center gap-2">
                 <strong>Record Status:</strong>{" "}
                 <Tag
-                  className={`${
-                    recordStatusColor[inquiry.status]
-                  } capitalize text-[10px] px-1.5 py-0.5`}
+                  className={`${recordStatusColor[inquiry.status]
+                    } capitalize text-[10px] px-1.5 py-0.5`}
                 >
                   {inquiry.status}
                 </Tag>
@@ -1211,10 +1375,9 @@ const InquiryViewModal: React.FC<InquiryViewModalProps> = ({
                 <div className="flex items-center gap-2 mb-1">
                   <strong>Priority:</strong>{" "}
                   <Tag
-                    className={`${
-                      priorityColors[inquiry.inquiry_priority] ||
+                    className={`${priorityColors[inquiry.inquiry_priority] ||
                       priorityColors["N/A"]
-                    } capitalize text-[10px] px-1.5 py-0.5`}
+                      } capitalize text-[10px] px-1.5 py-0.5`}
                   >
                     {inquiry.inquiry_priority}
                   </Tag>
@@ -1222,10 +1385,9 @@ const InquiryViewModal: React.FC<InquiryViewModalProps> = ({
                 <div className="flex items-center gap-2 mb-1">
                   <strong>Current Status:</strong>{" "}
                   <Tag
-                    className={`${
-                      inquiryCurrentStatusColors[inquiry.inquiry_status] ||
+                    className={`${inquiryCurrentStatusColors[inquiry.inquiry_status] ||
                       inquiryCurrentStatusColors["N/A"]
-                    } capitalize text-[10px] px-1.5 py-0.5`}
+                      } capitalize text-[10px] px-1.5 py-0.5`}
                   >
                     {inquiry.inquiry_status}
                   </Tag>
@@ -1436,9 +1598,15 @@ const InquiryListTable = () => {
     },
     []
   );
+
   const handleCloseModal = useCallback(() => {
     setModalState({ isOpen: false, type: null, data: null });
   }, []);
+
+  const handleUpdateSuccess = useCallback(() => {
+    dispatch(getInquiriesAction());
+  }, [dispatch]);
+
 
   const handleSendEmail = (inquiry: InquiryItem) => {
     if (
@@ -1692,14 +1860,14 @@ const InquiryListTable = () => {
             aVal && aVal !== "N/A"
               ? new Date(aVal as string).getTime()
               : order === "asc"
-              ? Infinity
-              : -Infinity;
+                ? Infinity
+                : -Infinity;
           const dateB =
             bVal && bVal !== "N/A"
               ? new Date(bVal as string).getTime()
               : order === "asc"
-              ? Infinity
-              : -Infinity;
+                ? Infinity
+                : -Infinity;
           if (isNaN(dateA)) return 1;
           if (isNaN(dateB)) return -1;
           return order === "asc" ? dateA - dateB : dateB - aVal;
@@ -1725,7 +1893,6 @@ const InquiryListTable = () => {
   }, [inquiryList, tableData, filterCriteria]);
 
   const handleViewDetails = (id: string) => {
-    // const inquiry = allFilteredAndSortedData.find(item => item.id == id);
     if (id) {
       navigate(`/business-entities/inquiry-view/${id}`);
     } else {
@@ -1766,9 +1933,8 @@ const InquiryListTable = () => {
                   {d.inquiry_type || "Inquiry Type"}
                 </Tag>
                 <Tag
-                  className={`${
-                    recordStatusColor[d.status]
-                  } capitalize text-[10px] px-1.5 py-0.5`}
+                  className={`${recordStatusColor[d.status]
+                    } capitalize text-[10px] px-1.5 py-0.5`}
                 >
                   {d.status}
                 </Tag>
@@ -1815,17 +1981,15 @@ const InquiryListTable = () => {
             <div className="flex flex-col gap-1 text-xs">
               <div className="flex items-center gap-2">
                 <Tag
-                  className={`${
-                    priorityColors[d.inquiry_priority] || priorityColors["N/A"]
-                  } capitalize text-[10px] px-1.5 py-0.5`}
+                  className={`${priorityColors[d.inquiry_priority] || priorityColors["N/A"]
+                    } capitalize text-[10px] px-1.5 py-0.5`}
                 >
                   {d.inquiry_priority}{" "}
                 </Tag>
                 <Tag
-                  className={`${
-                    inquiryCurrentStatusColors[d.inquiry_status] ||
+                  className={`${inquiryCurrentStatusColors[d.inquiry_status] ||
                     inquiryCurrentStatusColors["N/A"]
-                  } capitalize text-[10px] px-1.5 py-0.5`}
+                    } capitalize text-[10px] px-1.5 py-0.5`}
                 >
                   {d.inquiry_status}
                 </Tag>
@@ -2135,7 +2299,7 @@ const InquiryListTable = () => {
   const counts = useMemo(() => {
     const total = inquiryList.length;
     const newCount = inquiryList.filter(
-      (i) => i.inquiry_status === "New"
+      (i) => i.inquiry_status === "Open"
     ).length;
     const inProgressCount = inquiryList.filter(
       (i) => i.inquiry_status === "In Progress"
@@ -2186,8 +2350,8 @@ const InquiryListTable = () => {
             </Card>
           </div>
         </Tooltip>
-        <Tooltip title="Click to show 'New' inquiries">
-          <div onClick={() => handleCardClick("status", "New")}>
+        <Tooltip title="Click to show 'Open' inquiries">
+          <div onClick={() => handleCardClick("status", "Open")}>
             <Card
               bodyClass={cardBodyClass}
               className={classNames(cardClass, "border-sky-200")}
@@ -2197,7 +2361,7 @@ const InquiryListTable = () => {
               </div>
               <div>
                 <h6 className="text-sky-500">{counts.newCount}</h6>
-                <span className="font-semibold text-[11px]">New</span>
+                <span className="font-semibold text-[11px]">Open</span>
               </div>
             </Card>
           </div>
@@ -2630,6 +2794,7 @@ const InquiryListTable = () => {
       <InquiriesModals
         modalState={modalState}
         onClose={handleCloseModal}
+        onSuccess={handleUpdateSuccess}
         getAllUserDataOptions={getAllUserDataOptions}
       />
     </>

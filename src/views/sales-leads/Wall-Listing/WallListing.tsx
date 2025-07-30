@@ -5,7 +5,8 @@ import classNames from "classnames";
 import dayjs from "dayjs";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+// --- MODIFIED ---
+import { useNavigate, Link } from "react-router-dom";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -296,7 +297,7 @@ const productApiStatusColor: Record<string, string> = {
 export const dummyCartoonTypes = [{ id: 1, name: "Master Carton" }, { id: 2, name: "Inner Carton" }];
 
 // ============================================================================
-// --- MODALS SECTION ---
+// --- MODALS SECTION (Unchanged) ---
 // ============================================================================
 export type WallModalType = "email" | "whatsapp" | "notification" | "task" | "activity" | "calendar" | "match_opportunity" | "share";
 export interface WallModalState { isOpen: boolean; type: WallModalType | null; data: WallItem | null; }
@@ -305,7 +306,6 @@ interface WallModalsProps { modalState: WallModalState; onClose: () => void; get
 const priorityOptions = [{ value: "Low", label: "Low" }, { value: "Medium", label: "Medium" }, { value: "High", label: "High" },];
 const taskPriorityOptions = priorityOptions;
 const eventTypeOptions = [
-  // Customer Engagement & Sales
   { value: 'Meeting', label: 'Meeting' },
   { value: 'Demo', label: 'Product Demo' },
   { value: 'IntroCall', label: 'Introductory Call' },
@@ -313,19 +313,13 @@ const eventTypeOptions = [
   { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
   { value: 'CheckIn', label: 'Customer Check-in' },
   { value: 'LogEmail', label: 'Log an Email' },
-
-  // Project & Task Management
   { value: 'Milestone', label: 'Project Milestone' },
   { value: 'Task', label: 'Task' },
   { value: 'FollowUp', label: 'General Follow-up' },
   { value: 'ProjectKickoff', label: 'Project Kick-off' },
-
-  // Customer Onboarding & Support
   { value: 'OnboardingSession', label: 'Onboarding Session' },
   { value: 'Training', label: 'Training Session' },
   { value: 'SupportCall', label: 'Support Call' },
-
-  // General & Administrative
   { value: 'Reminder', label: 'Reminder' },
   { value: 'Note', label: 'Add a Note' },
   { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
@@ -336,7 +330,6 @@ const eventTypeOptions = [
   { value: 'Appointment', label: 'Personal Appointment' },
   { value: 'Other', label: 'Other' },
 ];
-const dummyAlerts = [{ id: 1, severity: "warning", message: "Listing will expire in 3 days.", time: "4 days ago", }, { id: 2, severity: "info", message: "New inquiry received from John Doe.", time: "2 hours ago", },];
 
 const AddNotificationDialog: React.FC<{ wallItem: WallItem; onClose: () => void; getAllUserDataOptions: { value: any, label: string }[]; }> = ({ wallItem, onClose, getAllUserDataOptions }) => {
   const dispatch = useAppDispatch();
@@ -516,12 +509,10 @@ const AddActivityDialog: React.FC<{ wallItem: WallItem; onClose: () => void; use
     </Dialog>
   );
 };
-
-// --- NEW DIALOG COMPONENT ---
 const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
   const dispatch = useAppDispatch();
   const [data, setData] = useState<MatchingOpportunityItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // Use a local loading state
+  const [isLoading, setIsLoading] = useState(true); 
 
   useEffect(() => {
     const fetchOpportunities = async () => {
@@ -531,7 +522,6 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
       }
       setIsLoading(true);
       try {
-        // Correctly pass the payload as an object and unwrap the result
         const actionResult = await dispatch(getMatchingOpportunitiesAction(wallItem.id)).unwrap();
 
         if (actionResult?.data) {
@@ -555,12 +545,12 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
           }));
           setData(formattedData);
         } else {
-          setData([]); // Ensure data is cleared if API returns nothing
+          setData([]); 
         }
       } catch (error) {
         console.error("Failed to fetch matching opportunities:", error);
         toast.push(<Notification type="danger" title="Error">Could not load opportunities.</Notification>);
-        setData([]); // Clear data on error
+        setData([]); 
       } finally {
         setIsLoading(false);
       }
@@ -632,15 +622,12 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
       bodyOpenClassName="overflow-hidden"
     >
       <div className="flex flex-col h-full max-h-[80vh]">
-        {/* Dialog Header */}
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2">
             <TbBulb className="text-2xl text-amber-500" />
             <h5 className="mb-0">Matching Opportunities for "{wallItem.product_name}"</h5>
           </div>
         </div>
-
-        {/* Dialog Body */}
         <div className="flex-grow overflow-y-auto px-6 py-4">
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
@@ -651,12 +638,9 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
               columns={columns}
               data={data}
               noData={data.length === 0}
-
             />
           )}
         </div>
-
-        {/* Dialog Footer */}
         <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
           <Button variant="solid" onClick={onClose}>Close</Button>
         </div>
@@ -664,7 +648,6 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
     </Dialog>
   );
 };
-
 const ShareWallLinkDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
   const linkToShare = wallItem.listing_url || "No URL available for this item.";
   const handleCopy = () => { if (wallItem.listing_url) { navigator.clipboard.writeText(linkToShare).then(() => { toast.push(<Notification title="Copied to Clipboard" type="success" />); }); } };
@@ -677,7 +660,6 @@ const ShareWallLinkDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }
     </Dialog>
   );
 };
-
 const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose, getAllUserDataOptions, user }) => {
   const { type, data: wallItem, isOpen } = modalState;
   if (!isOpen || !wallItem) return null;
@@ -904,7 +886,6 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
-  // --- ADDED for Image Viewer ---
   const [imageView, setImageView] = useState('');
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
 
@@ -921,7 +902,6 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     setIsImageViewerOpen(false);
     setImageView('');
   }, []);
-
 
   const mapApiToWallItem = useCallback(
     (apiItem: ApiWallItemFromSource): WallItem => ({
@@ -1022,7 +1002,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
       if (!initialLoading) {
         dispatch(getWallListingAction(apiParams));
       }
-    }, 500);
+    }, 300); // Reduced delay for faster response
     return () => {
       clearTimeout(timerId);
     };
@@ -1073,19 +1053,40 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
       setSelectedItems([]); dispatch(getWallListingAction(apiParams));
     } catch (error: any) { toast.push(<Notification title="Error" type="danger">{error.message || "Bulk delete failed."}</Notification>); }
   }, [dispatch, selectedItems, apiParams]);
+  
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(prev => ({ ...prev, ...data, quickFilters: null })); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
-  const onClearFilters = useCallback(() => { const defaults = filterFormSchema.parse({}); filterFormMethods.reset(defaults); setFilterCriteria(defaults); handleSetTableData({ query: "", pageIndex: 1 }); }, [filterFormMethods, handleSetTableData]);
+  
+  const onClearFilters = useCallback(() => {
+    const defaults = filterFormSchema.parse({});
+    filterFormMethods.reset(defaults);
+    setFilterCriteria(defaults);
+    handleSetTableData({ query: "", pageIndex: 1 });
+  }, [filterFormMethods, handleSetTableData]);
 
-  const handleCardClick = (type: string, value: string) => {
-    onClearFilters();
-    if (type === 'status') {
-      const statusOption = recordStatusOptions.find(opt => opt.value.toLowerCase() === value.toLowerCase());
-      if (statusOption) setFilterCriteria({ ...initialFilterState, filterRecordStatuses: [statusOption] });
+  // --- MODIFIED --- Filter click handler fixed
+  const handleCardClick = (type: 'status' | 'intent', value: string) => {
+    const newFilters = filterFormSchema.parse({}); // Start with a clean, default filter object
+  
+    if (type === 'status' && value === 'today') {
+      const todayStart = dayjs().startOf('day').toDate();
+      const todayEnd = dayjs().endOf('day').toDate();
+      newFilters.dateRange = [todayStart, todayEnd];
+    } else if (type === 'status') {
+      const statusOption = recordStatusOptions.find(opt => opt.value === value);
+      if (statusOption) {
+        newFilters.filterRecordStatuses = [statusOption];
+      }
     } else if (type === 'intent') {
-      const intentOption = intentOptions.find(opt => opt.value.toLowerCase() === value.toLowerCase());
-      if (intentOption) setFilterCriteria({ ...initialFilterState, filterIntents: [intentOption] });
+      const intentOption = intentOptions.find(opt => opt.value === value);
+      if (intentOption) {
+        newFilters.filterIntents = [intentOption];
+      }
     }
+    
+    setFilterCriteria(newFilters);
+    handleSetTableData({ query: "", pageIndex: 1 });
   };
+  
 
   const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: any) => {
     setFilterCriteria(prev => {
@@ -1094,7 +1095,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
       if (Array.isArray(currentValues)) {
         (newFilters as any)[key] = currentValues.filter(item => item.value !== value.value);
       } else {
-        (newFilters as any)[key] = null; // for quickFilters
+        (newFilters as any)[key] = null; 
       }
       return newFilters;
     });
@@ -1135,19 +1136,24 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     if (event.target) event.target.value = "";
   }, []);
 
-  // --- Columns Definition ---
+  // --- MODIFIED --- Columns Definition updated
   const columns: ColumnDef<WallItem>[] = useMemo(
     () => {
       const baseColumns: ColumnDef<WallItem>[] = [
         {
           header: "Overview", accessorKey: "product_name", size: 280, cell: ({ row }) => {
-            const { product_images, product_name, id, want_to, recordStatus } = row?.original || {}; const intent = want_to as WallIntent;
+            const { product_name, productId, want_to, recordStatus } = row.original;
+            const intent = want_to as WallIntent;
             return (
               <div className="flex flex-col">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="font-semibold leading-normal text-xs text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">{product_name}</div>
+                  <Link
+                    to={`/product/view/${productId}`}
+                    className="font-semibold leading-normal text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
+                  >
+                    {product_name}
+                  </Link>
                 </div>
-                {/* <span className="text-xs mt-2"><span className="font-semibold">ID :</span> {id || "N/A"}</span> */}
                 <div className="flex flex-col gap-1 text-xs">
                   {recordStatus && (
                     <div className="flex items-center gap-2">
@@ -1162,40 +1168,55 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
                     </div>
                   )}
                 </div>
-                {/* <span className="text-xs"></span> */}
               </div>
             );
           },
         },
         {
-          header: "Member", accessorKey: "member", size: 260, cell: ({ row }) => {
+          header: "Member", accessorKey: "member", size: 240, cell: ({ row }) => {
             const { name, member_code, email, number, number_code } = row.original?.member || {};
             return (
               <div className="flex flex-col gap-0.5 text-xs">
-                <div className="mt-1 pt-1 dark:border-gray-700 w-full">
-                  {member_code && (<span className="font-semibold text-gray-500 dark:text-gray-400">{member_code} </span>)}<br></br>
+                  {member_code && (<span className="font-semibold text-gray-500 dark:text-gray-400 mb-1">{member_code}</span>)}
                   {name && (<span className="font-semibold text-gray-800 dark:text-gray-100">{name}</span>)}
-                  {email && (<a href={`mailto:${email}`} className="block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300">{email}</a>)}
+                  {email && (<a href={`mailto:${email}`} className="block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300 truncate">{email}</a>)}
                   {number && (<span className="block text-gray-600 dark:text-gray-300">{number_code} {number}</span>)}
-                </div>
               </div>
             );
           },
         },
         {
-          header: "Details", accessorKey: "product_category", size: 280, cell: ({ row }) => {
-            const { product_category, product_subcategory, product_specs, product_status, cartoonTypeId, created_from, deviceCondition, quantity } = row?.original || {};
+          header: "Created At",
+          accessorKey: "created_date",
+          size: 160,
+          cell: ({ row }) => {
+              const { created_date } = row.original;
+              return (
+                  <div className="flex flex-col text-xs">
+                      <span className="font-semibold text-gray-800 dark:text-gray-100">
+                          {dayjs(created_date).format('DD MMM YYYY, h:mm A')}
+                      </span>
+                     
+                  </div>
+              );
+          },
+        },
+        {
+          header: "Details", accessorKey: "details", size: 220, cell: ({ row }) => {
+            const { product_specs, product_status, cartoonTypeId, created_from, deviceCondition, quantity } = row?.original || {};
             const currentProductApiStatus = product_status?.toLowerCase() || "default";
             const cartoonTypeName = dummyCartoonTypes.find((ct) => ct.id === cartoonTypeId)?.name;
             return (
-              <div className="flex flex-col gap-0.5 text-xs">
-                <div className="flex items-center"><TbStack2 className="text-base text-blue-500 dark:text-blue-400 ml-2" /><span className="text-gray-700 dark:text-gray-300" style={{ minWidth: 35 }}>Qty: {quantity ?? "N/A"}</span></div>
-                <span>{product_category || "N/A"}{product_subcategory ? ` / ${product_subcategory}` : ""}</span>
-                {product_specs && (<Tooltip title={product_specs}><span className="truncate max-w-[250px]">{product_specs.length > 30 ? product_specs.substring(0, 30) + "..." : product_specs}</span></Tooltip>)}
-                {created_from && (<span><b>Created from:</b> {created_from}</span>)}
+              <div className="flex flex-col gap-1 text-xs">
+                <div className="flex items-center gap-2">
+                  <TbStack2 className="text-base text-gray-500" />
+                  <span className="text-gray-700 dark:text-gray-300">
+                    Qty: <strong className="text-blue-600 dark:text-blue-400 font-bold">{quantity ?? "N/A"}</strong>
+                  </span>
+                </div>
                 {product_status && (<span><Tag className={`capitalize text-xs px-1 py-0.5 ${productApiStatusColor[currentProductApiStatus] || productApiStatusColor.default}`}>{product_status}</Tag></span>)}
-                {cartoonTypeName && (<span>{cartoonTypeName}</span>)}
-                {deviceCondition && (<span>{deviceCondition}</span>)}
+                {deviceCondition && (<Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{deviceCondition}</Tag>)}
+                {product_specs && (<Tooltip title={product_specs}><span className="truncate max-w-[200px]">{product_specs}</span></Tooltip>)}
               </div>
             );
           },
@@ -1220,7 +1241,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
 
       return baseColumns;
     },
-    [isDashboard, openViewDrawer, openEditDrawer, handleOpenModal, handleSendEmail, handleSendWhatsapp, openImageViewer]
+    [isDashboard, openViewDrawer, openEditDrawer, handleOpenModal, handleSendEmail, handleSendWhatsapp]
   );
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<WallItem>[]>([]);
@@ -1343,7 +1364,6 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               <FormItem label="Brands"><Controller name="brands" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Brands..." options={BrandData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               <FormItem label="Availability Status"><Controller name="productStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Availability..." options={Object.keys(productApiStatusColor).filter((k) => k !== "default").map((s) => ({ label: s.charAt(0).toUpperCase() + s.slice(1), value: s }))} {...field} />)} /></FormItem>
               <FormItem label="Created Date Range"><Controller name="dateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date | null, Date | null] | null} onChange={field.onChange} placeholder="Select date range" />)} /></FormItem>
-              {/* <FormItem label="Source (Example)"><Controller name="source" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Source..." options={[{ label: "Web", value: "web" }, { label: "App", value: "app" }]} {...field} />)} /></FormItem> */}
               <FormItem label="Product Spec (Example)"><Controller name="productSpec" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Product Spec..." options={ProductSpecificationsData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               <FormItem label="Member Type (Example)"><Controller name="memberType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Member Type..." options={MemberTypeData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               <FormItem label="Created By (Example)"><Controller name="createdBy" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Employee..." options={Employees?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
@@ -1365,7 +1385,6 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           </FormItem>
         </Form>
       </ConfirmDialog>
-      {/* --- ADDED Image Viewer Dialog --- */}
       <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} width={600}>
         <div className="flex justify-center items-center p-4">{imageView ? <img src={imageView} alt="User" className="max-w-full max-h-[80vh]" /> : <p>No image.</p>}</div>
       </Dialog>
