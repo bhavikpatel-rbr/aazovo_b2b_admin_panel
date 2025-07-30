@@ -44,10 +44,10 @@ import { masterSelector } from '@/reduxtool/master/masterSlice';
 
 // --- Type Definitions ---
 interface User { id: number; name: string; profile_pic_path?: string; email: string; employee_id?: string; }
-interface ProductCategory { id: number; name:string; }
+interface ProductCategory { id: number; name: string; }
 interface ProductSubCategory { id: number; name: string; }
 interface ProductBrand { id: number; name: string; }
-interface ProductInfo { id: number; name: string; description: string | null; status: string; category?: ProductCategory; sub_category?: ProductSubCategory; brand?: ProductBrand; sku_code?:string; thumb_image_full_path?: string; }
+interface ProductInfo { id: number; name: string; description: string | null; status: string; category?: ProductCategory; sub_category?: ProductSubCategory; brand?: ProductBrand; sku_code?: string; thumb_image_full_path?: string; }
 interface CustomerInfo { id: number; name: string; customer_code: string; interested_in: string; number: string; email: string; company_temp: string; company_actual: string; company_code: string; business_type: string; status: string; state: string; city: string; address: string | null; website: string | null; wall_listing_permission: string | null; trade_inquiry_permission: string | null; }
 interface LeadInfo { id: number; lead_intent: string; enquiry_type: string; lead_status: string; qty: number; created_at: string; created_by_user?: User; }
 interface WallEnquiryData { id: number; want_to: "Sell" | "Buy"; qty: string; price: string | null; status: string; product_status: string; device_condition: string | null; color: string | null; location: string | null; warranty: string | null; payment_term: string | null; shipping_options: string | null; dispatch_mode: string | null; delivery_details: string | null; internal_remarks: string | null; created_at: string; updated_at: string; created_by_user: User; updated_by_user: User; product: ProductInfo; customer: CustomerInfo | null; company: any | null; get_leads: LeadInfo | LeadInfo[] | null; }
@@ -57,64 +57,64 @@ type TaskFormData = z.infer<typeof taskValidationSchema>;
 
 // --- Reusable Helper Components ---
 const getStatusClass = (status?: string) => {
-  const s = status?.toLowerCase() || '';
-  switch (s) { case 'active': case 'approved': case 'verified': case 'buy': return 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100'; case 'inactive': case 'new': return 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100'; case 'blocked': case 'rejected': case 'sell': return 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100'; case 'pending': return 'bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-100'; default: return 'bg-gray-100 text-gray-500'; }
+    const s = status?.toLowerCase() || '';
+    switch (s) { case 'active': case 'approved': case 'verified': case 'buy': return 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100'; case 'inactive': case 'new': return 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100'; case 'blocked': case 'rejected': case 'sell': return 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100'; case 'pending': return 'bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-100'; default: return 'bg-gray-100 text-gray-500'; }
 };
 const DetailSection = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode; }) => (
-  <div className="pb-6 border-b border-gray-200 dark:border-gray-600 last:pb-0 last:border-b-0">
-    <div className="flex items-center gap-2 mb-4">
-      {React.cloneElement(icon as React.ReactElement, { size: 22 })}
-      <h5 className="mb-0">{title}</h5>
+    <div className="pb-6 border-b border-gray-200 dark:border-gray-600 last:pb-0 last:border-b-0">
+        <div className="flex items-center gap-2 mb-4">
+            {React.cloneElement(icon as React.ReactElement, { size: 22 })}
+            <h5 className="mb-0">{title}</h5>
+        </div>
+        <div>{children}</div>
     </div>
-    <div>{children}</div>
-  </div>
 );
 const InfoPair = ({ label, value }: { label: string; value?: React.ReactNode; }) => (
-  <div className="grid grid-cols-2 py-1.5">
-    <span className="font-semibold text-gray-700 dark:text-gray-300">{label}</span>
-    <span className="break-words">{value || <span className="text-gray-400">N/A</span>}</span>
-  </div>
+    <div className="grid grid-cols-2 py-1.5">
+        <span className="font-semibold text-gray-700 dark:text-gray-300">{label}</span>
+        <span className="break-words">{value || <span className="text-gray-400">N/A</span>}</span>
+    </div>
 );
 const NoDataMessage = ({ message }: { message: string }) => <div className="text-center py-8 text-gray-500">{message}</div>;
 
 // --- HEADER & NAVIGATION ---
 const WallEnquiryHeader = ({ enquiry, onAssignTask, onCopyLink }: { enquiry: WallEnquiryData, onAssignTask: () => void; onCopyLink: () => void; }) => {
-  const navigate = useNavigate();
-  return (
-    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-      <div>
-        <h4 className="font-bold">{enquiry.product?.name || 'Wall Listing'}</h4>
-        <div className="mt-2 flex items-center gap-2">
-            <Tag className={`${getStatusClass(enquiry.want_to)} font-bold`}>{enquiry.want_to}</Tag>
-            <Tag className={`${getStatusClass(enquiry.status)} capitalize`}>{enquiry.status}</Tag>
-            <span className="text-sm text-gray-500">Qty: <strong>{enquiry.qty}</strong></span>
+    const navigate = useNavigate();
+    return (
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+                <h4 className="font-bold">{enquiry.product?.name || 'Wall Listing'}</h4>
+                <div className="mt-2 flex items-center gap-2">
+                    <Tag className={`${getStatusClass(enquiry.want_to)} font-bold`}>{enquiry.want_to}</Tag>
+                    <Tag className={`${getStatusClass(enquiry.status)} capitalize`}>{enquiry.status}</Tag>
+                    <span className="text-sm text-gray-500">Qty: <strong>{enquiry.qty}</strong></span>
+                </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+                <Button icon={<TbArrowLeft />} onClick={() => navigate('/sales-leads/wall-listing')}>Back</Button>
+                <Button variant="solid" icon={<TbPencil />} onClick={() => navigate("/sales-leads/wall-item/add", { state: enquiry.id })}>Edit</Button>
+                <Button variant="twoTone" icon={<TbCopy />} onClick={onCopyLink}>Copy Link</Button>
+                <Dropdown renderTitle={<Button variant="twoTone" icon={<TbDotsVertical />} />} placement="bottom-end">
+                    <Dropdown.Item onSelect={onAssignTask} eventKey="assignTask" className="flex items-center gap-2"><TbUserCheck size={18} /><span>Assign Task</span></Dropdown.Item>
+                </Dropdown>
+            </div>
         </div>
-      </div>
-      <div className="flex items-center gap-2 flex-wrap">
-        <Button icon={<TbArrowLeft />} onClick={() => navigate('/sales-leads/wall-listing')}>Back</Button>
-        <Button variant="solid" icon={<TbPencil />} onClick={() => navigate("/sales-leads/wall-item/add", { state: enquiry.id })}>Edit</Button>
-        <Button variant="twoTone" icon={<TbCopy />} onClick={onCopyLink}>Copy Link</Button>
-        <Dropdown renderTitle={<Button variant="twoTone" icon={<TbDotsVertical />} />} placement="bottom-end">
-            <Dropdown.Item onSelect={onAssignTask} eventKey="assignTask" className="flex items-center gap-2"><TbUserCheck size={18} /><span>Assign Task</span></Dropdown.Item>
-        </Dropdown>
-      </div>
-    </div>
-  );
+    );
 };
 
 const wallEnquiryNavigationList = [
-  { label: "Listing Details", link: "listing", icon: <TbListDetails /> },
-  { label: "Member Details", link: "member", icon: <TbUserCircle /> },
-  { label: "Opportunity", link: "opportunity", icon: <TbBulb /> },
-  { label: "Leads", link: "leads", icon: <TbUserSearch /> },
+    { label: "Listing Details", link: "listing", icon: <TbListDetails /> },
+    { label: "Member Details", link: "member", icon: <TbUserCircle /> },
+    { label: "Opportunity", link: "opportunity", icon: <TbBulb /> },
+    { label: "Leads", link: "leads", icon: <TbUserSearch /> },
 ];
 
 const WallEnquiryNavigator = ({ activeSection, onNavigate }: { activeSection: string; onNavigate: (s: string) => void; }) => (
     <div className="flex flex-row items-center justify-between gap-x-1 md:gap-x-2 py-2 flex-nowrap overflow-x-auto">
         {wallEnquiryNavigationList.map((nav) => (
-        <button type="button" key={nav.link} className={classNames("cursor-pointer px-2 md:px-3 py-2 rounded-md group text-center transition-colors duration-150 flex-1 basis-0 min-w-max flex items-center justify-center gap-2", "hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none", activeSection === nav.link ? "bg-indigo-50 dark:bg-indigo-700/60 text-indigo-600 dark:text-indigo-200 font-semibold" : "bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200")} onClick={() => onNavigate(nav.link)} title={nav.label}>
-            {nav.icon}<span className="font-medium text-xs sm:text-sm truncate">{nav.label}</span>
-        </button>
+            <button type="button" key={nav.link} className={classNames("cursor-pointer px-2 md:px-3 py-2 rounded-md group text-center transition-colors duration-150 flex-1 basis-0 min-w-max flex items-center justify-center gap-2", "hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none", activeSection === nav.link ? "bg-indigo-50 dark:bg-indigo-700/60 text-indigo-600 dark:text-indigo-200 font-semibold" : "bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200")} onClick={() => onNavigate(nav.link)} title={nav.label}>
+                {nav.icon}<span className="font-medium text-xs sm:text-sm truncate">{nav.label}</span>
+            </button>
         ))}
     </div>
 );
@@ -122,82 +122,82 @@ const WallEnquiryNavigator = ({ activeSection, onNavigate }: { activeSection: st
 // --- TAB VIEW COMPONENTS ---
 const ListingDetailsView = ({ enquiry }: { enquiry: WallEnquiryData }) => (
     <div className="space-y-6">
-      <DetailSection title="Listing Details" icon={<TbListDetails />}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2">
-          <InfoPair label="Want to" value={<Tag className={`${getStatusClass(enquiry.want_to)} font-bold`}>{enquiry.want_to}</Tag>} />
-          <InfoPair label="Quantity" value={<strong className="text-lg">{enquiry.qty}</strong>} />
-          <InfoPair label="Price" value={enquiry.price ? `$${enquiry.price}` : 'Not Specified'} />
-          <InfoPair label="Listing Status" value={<Tag className={`${getStatusClass(enquiry.status)} capitalize`}>{enquiry.status}</Tag>} />
-          <InfoPair label="Product Status" value={enquiry.product_status} />
-          <InfoPair label="Device Condition" value={enquiry.device_condition} />
-          <InfoPair label="Color" value={enquiry.color} />
-          <InfoPair label="Warranty" value={enquiry.warranty} />
-          <InfoPair label="Location" value={enquiry.location} />
-        </div>
-      </DetailSection>
-      <DetailSection title="Product Information" icon={<TbBox />}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2">
-          <InfoPair label="Product Name" value={enquiry.product?.name} />
-          <InfoPair label="Brand" value={enquiry.product?.brand?.name} />
-          <InfoPair label="Category" value={enquiry.product?.category?.name} />
-          <InfoPair label="Sub-Category" value={enquiry.product?.sub_category?.name} />
-          <InfoPair label="SKU Code" value={enquiry.product?.sku_code} />
-        </div>
-      </DetailSection>
-      <DetailSection title="Record Information" icon={<TbCalendar />}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
-          <InfoPair label="Created By" value={
-              <div className="flex items-center gap-2">
-                  <Avatar size={24} src={enquiry.created_by_user.profile_pic_path} shape="circle" />
-                  <span className="font-semibold">{enquiry.created_by_user.name}</span>
-              </div>
-          }/>
-          <InfoPair label="Created At" value={dayjs(enquiry.created_at).format('DD MMM YYYY, h:mm A')} />
-          <InfoPair label="Last Updated By" value={
-              <div className="flex items-center gap-2">
-                  <Avatar size={24} src={enquiry.updated_by_user.profile_pic_path} shape="circle" />
-                  <span className="font-semibold">{enquiry.updated_by_user.name}</span>
-              </div>
-          }/>
-          <InfoPair label="Last Updated At" value={dayjs(enquiry.updated_at).format('DD MMM YYYY, h:mm A')} />
-        </div>
-      </DetailSection>
+        <DetailSection title="Listing Details" icon={<TbListDetails />}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2">
+                <InfoPair label="Want to" value={<Tag className={`${getStatusClass(enquiry.want_to)} font-bold`}>{enquiry.want_to}</Tag>} />
+                <InfoPair label="Quantity" value={<strong className="text-lg">{enquiry.qty}</strong>} />
+                <InfoPair label="Price" value={enquiry.price ? `$${enquiry.price}` : 'Not Specified'} />
+                <InfoPair label="Listing Status" value={<Tag className={`${getStatusClass(enquiry.status)} capitalize`}>{enquiry.status}</Tag>} />
+                <InfoPair label="Product Status" value={enquiry.product_status} />
+                <InfoPair label="Device Condition" value={enquiry.device_condition} />
+                <InfoPair label="Color" value={enquiry.color} />
+                <InfoPair label="Warranty" value={enquiry.warranty} />
+                <InfoPair label="Location" value={enquiry.location} />
+            </div>
+        </DetailSection>
+        <DetailSection title="Product Information" icon={<TbBox />}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2">
+                <InfoPair label="Product Name" value={enquiry.product?.name} />
+                <InfoPair label="Brand" value={enquiry.product?.brand?.name} />
+                <InfoPair label="Category" value={enquiry.product?.category?.name} />
+                <InfoPair label="Sub-Category" value={enquiry.product?.sub_category?.name} />
+                <InfoPair label="SKU Code" value={enquiry.product?.sku_code} />
+            </div>
+        </DetailSection>
+        <DetailSection title="Record Information" icon={<TbCalendar />}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                <InfoPair label="Created By" value={
+                    <div className="flex items-center gap-2">
+                        <Avatar size={24} src={enquiry.created_by_user.profile_pic_path} shape="circle" />
+                        <span className="font-semibold">{enquiry.created_by_user.name}</span>
+                    </div>
+                } />
+                <InfoPair label="Created At" value={dayjs(enquiry.created_at).format('DD MMM YYYY, h:mm A')} />
+                <InfoPair label="Last Updated By" value={
+                    <div className="flex items-center gap-2">
+                        <Avatar size={24} src={enquiry.updated_by_user.profile_pic_path} shape="circle" />
+                        <span className="font-semibold">{enquiry.updated_by_user.name}</span>
+                    </div>
+                } />
+                <InfoPair label="Last Updated At" value={dayjs(enquiry.updated_at).format('DD MMM YYYY, h:mm A')} />
+            </div>
+        </DetailSection>
     </div>
 );
 
 const MemberDetailsView = ({ customer }: { customer: CustomerInfo | null }) => {
     if (!customer) { return <NoDataMessage message="No member details available for this listing." />; }
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card bodyClass="flex flex-col gap-4" className="lg:col-span-2">
-            <div className="flex items-start justify-between">
-                <div>
-                    <h5 className="font-bold">{customer.name}</h5>
-                    <p className="text-gray-500">{customer.customer_code}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card bodyClass="flex flex-col gap-4" className="lg:col-span-2">
+                <div className="flex items-start justify-between">
+                    <div>
+                        <h5 className="font-bold">{customer.name}</h5>
+                        <p className="text-gray-500">{customer.customer_code}</p>
+                    </div>
+                    <Tag className={`${getStatusClass(customer.status)} capitalize`}>{customer.status}</Tag>
                 </div>
-                <Tag className={`${getStatusClass(customer.status)} capitalize`}>{customer.status}</Tag>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                <InfoPair label="Company Name" value={customer.company_actual || customer.company_temp} />
-                <InfoPair label="Business Type" value={customer.business_type} />
-                <InfoPair label="Email" value={<a href={`mailto:${customer.email}`} className="text-blue-500 hover:underline">{customer.email}</a>} />
-                <InfoPair label="Phone" value={customer.number} />
-                <InfoPair label="Website" value={customer.website ? <a href={customer.website} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{customer.website}</a> : 'N/A'} />
-            </div>
-        </Card>
-        <div className="space-y-6">
-            <Card>
-                <h6 className="font-semibold mb-2">Location</h6>
-                <p>{customer.address || 'No address specified'}</p>
-                <p>{customer.city}{customer.city && customer.state ? ', ' : ''}{customer.state}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                    <InfoPair label="Company Name" value={customer.company_actual || customer.company_temp} />
+                    <InfoPair label="Business Type" value={customer.business_type} />
+                    <InfoPair label="Email" value={<a href={`mailto:${customer.email}`} className="text-blue-500 hover:underline">{customer.email}</a>} />
+                    <InfoPair label="Phone" value={customer.number} />
+                    <InfoPair label="Website" value={customer.website ? <a href={customer.website} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{customer.website}</a> : 'N/A'} />
+                </div>
             </Card>
-            <Card>
-                <h6 className="font-semibold mb-2">Platform Permissions</h6>
-                <InfoPair label="Wall Listing" value={customer.wall_listing_permission || 'Not Set'} />
-                <InfoPair label="Trade Inquiry" value={customer.trade_inquiry_permission || 'Not Set'} />
-            </Card>
+            <div className="space-y-6">
+                <Card>
+                    <h6 className="font-semibold mb-2">Location</h6>
+                    <p>{customer.address || 'No address specified'}</p>
+                    <p>{customer.city}{customer.city && customer.state ? ', ' : ''}{customer.state}</p>
+                </Card>
+                <Card>
+                    <h6 className="font-semibold mb-2">Platform Permissions</h6>
+                    <InfoPair label="Wall Listing" value={customer.wall_listing_permission || 'Not Set'} />
+                    <InfoPair label="Trade Inquiry" value={customer.trade_inquiry_permission || 'Not Set'} />
+                </Card>
+            </div>
         </div>
-      </div>
     );
 };
 
@@ -304,7 +304,7 @@ const OpportunityTabView = ({ wallItem }: { wallItem: WallEnquiryData }) => {
     const handleSelectAll = (checked: boolean) => {
         setSelected(checked ? opportunities.map(op => op.id) : []);
     };
-    
+
     const handleAction = (type: 'offer' | 'demand' | 'lead' | 'email' | 'whatsapp') => {
         const selectedOps = opportunities.filter(op => selected.includes(op.id));
         if (selectedOps.length === 0) {
@@ -312,20 +312,22 @@ const OpportunityTabView = ({ wallItem }: { wallItem: WallEnquiryData }) => {
             return;
         }
 
-        switch(type) {
+        switch (type) {
             case 'offer':
                 // Assuming first selected is enough to pre-fill
-                navigate('/offers/add', { state: { supplierId: selectedOps[0].member_id, productId: selectedOps[0].product_id }});
+                navigate('/sales-leads/offers/create', { state: { supplierId: selectedOps[0].member_id, productId: selectedOps[0].product_id } });
                 break;
             case 'demand':
-                navigate('/demands/add', { state: { buyerId: selectedOps[0].member_id, productId: selectedOps[0].product_id }});
+                navigate('/sales-leads/demands/create', { state: { buyerId: selectedOps[0].member_id, productId: selectedOps[0].product_id } });
                 break;
             case 'lead':
-                navigate('/leads/add', { state: { supplierId: selectedOps[0].member_id, buyerId: wallItem.customer?.id, productId: selectedOps[0].product_id }});
+                navigate('/sales-leads/lead/add', { state: { supplierId: selectedOps[0].member_id, buyerId: wallItem.customer?.id, productId: selectedOps[0].product_id } });
                 break;
+
             case 'email':
                 const emails = selectedOps.map(op => op.member_email).join(',');
-                window.location.href = `mailto:${emails}?subject=Regarding ${wallItem.product.name}`;
+                window.open(`mailto:${emails}?subject=Regarding ${wallItem.product.name}`, '_blank');
+
                 break;
             case 'whatsapp':
                 // Note: This only opens the first number in a new tab
@@ -337,7 +339,7 @@ const OpportunityTabView = ({ wallItem }: { wallItem: WallEnquiryData }) => {
 
     if (loading) return <div className="flex justify-center items-center py-10"><Spinner size={40} /></div>;
     if (opportunities.length === 0) return <NoDataMessage message="No matching opportunities found from the last 3 days." />;
-    
+
     return (
         <Card>
             <Table>
@@ -392,7 +394,7 @@ const AssignTaskDialog = ({ isOpen, onClose, wallItem }: { isOpen: boolean, onCl
     const dispatch = useAppDispatch();
     const { Employees } = useSelector(masterSelector);
     const [isLoading, setIsLoading] = useState(false);
-    
+
     const employeeOptions = useMemo(() => Employees?.map((e: any) => ({ value: e.id, label: e.name })) || [], [Employees]);
     const priorityOptions = [{ value: "Low", label: "Low" }, { value: "Medium", label: "Medium" }, { value: "High", label: "High" }];
 
@@ -421,7 +423,7 @@ const AssignTaskDialog = ({ isOpen, onClose, wallItem }: { isOpen: boolean, onCl
             setIsLoading(false);
         }
     };
-    
+
     return (
         <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose}>
             <h5 className="mb-4">Assign Task for "{wallItem.product.name}"</h5>
@@ -461,7 +463,7 @@ const WallEnquiryView = () => {
             try {
                 const response = await dispatch(getWallItemById(id)).unwrap();
                 console.log(response, 'response');
-                
+
                 setEnquiry(response);
             } catch (error: any) {
                 toast.push(<Notification type="danger" title="Fetch Error">{error?.message || 'Failed to load enquiry data.'}</Notification>);

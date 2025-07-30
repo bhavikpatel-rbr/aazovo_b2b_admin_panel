@@ -5,7 +5,6 @@ import classNames from "classnames";
 import dayjs from "dayjs";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-// --- MODIFIED ---
 import { useNavigate, Link } from "react-router-dom";
 
 // UI Components
@@ -39,69 +38,26 @@ import Tooltip from "@/components/ui/Tooltip";
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  TbBell,
-  TbBookmark,
-  TbBox,
-  TbBoxOff,
-  TbBrandWhatsapp,
-  TbBulb,
-  TbCalendar,
-  TbCalendarEvent,
-  TbCancel,
-  TbCheck,
-  TbChecks,
-  TbCircleCheck,
-  TbCloudDownload,
-  TbCloudUpload,
-  TbColumns,
-  TbCopy,
-  TbEye,
-  TbFilter,
-  TbListDetails,
-  TbMail,
-  TbPackageExport,
-  TbPencil,
-  TbPlus,
-  TbProgress,
-  TbReload,
-  TbSearch,
-  TbShare,
-  TbStack2,
-  TbTagStarred,
-  TbUser,
-  TbX
+  TbBell, TbBookmark, TbBox, TbBoxOff, TbBrandWhatsapp, TbBulb, TbCalendar,
+  TbCalendarEvent, TbCancel, TbCheck, TbChecks, TbCircleCheck, TbCloudDownload,
+  TbCloudUpload, TbColumns, TbCopy, TbEye, TbFilter, TbListDetails, TbMail,
+  TbPackageExport, TbPencil, TbPlus, TbProgress, TbReload, TbSearch, TbShare,
+  TbStack2, TbTagStarred, TbUser, TbX, TbUserPlus, TbHandGrab, TbMailForward
 } from "react-icons/tb";
 
 // Types
 import type { TableQueries } from "@/@types/common";
-import type {
-  CellContext,
-  ColumnDef,
-  OnSortParam,
-  Row,
-} from "@/components/shared/DataTable";
+import type { CellContext, ColumnDef, OnSortParam, Row, } from "@/components/shared/DataTable";
 
 // Redux
 import { authSelector } from "@/reduxtool/auth/authSlice";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-  addAllActionAction,
-  addNotificationAction,
-  addScheduleAction,
-  addTaskAction,
-  deleteAllWallAction,
-  getAllCompany,
-  getAllUsersAction,
-  getBrandAction,
-  getEmployeesAction,
-  getMatchingOpportunitiesAction,
-  getMemberTypeAction,
-  getParentCategoriesAction,
-  getProductsDataAsync,
-  getProductSpecificationsAction,
-  getSubcategoriesByCategoryIdAction,
-  getWallListingAction,
-  submitExportReasonAction,
+  addAllActionAction, addNotificationAction, addScheduleAction, addTaskAction,
+  deleteAllWallAction, getAllCompany, getAllUsersAction, getBrandAction,
+  getEmployeesAction, getMatchingOpportunitiesAction, getMemberTypeAction,
+  getParentCategoriesAction, getProductsDataAsync, getProductSpecificationsAction,
+  getSubcategoriesByCategoryIdAction, getWallListingAction, submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { encryptStorage } from "@/utils/secureLocalStorage";
@@ -111,193 +67,49 @@ import { z } from "zod";
 
 // --- Type Definitions ---
 export type ApiWallItemFromSource = any;
-
-export type WallRecordStatus =
-  | "Pending"
-  | "Approved"
-  | "Rejected"
-  | "Expired"
-  | "Fulfilled"
-  | "Active"
-  | string;
+export type WallRecordStatus = | "Pending" | "Approved" | "Rejected" | "Expired" | "Fulfilled" | "Active" | string;
 export type WallIntent = "Buy" | "Sell" | "Exchange";
 export type WallProductCondition = "New" | "Used" | "Refurbished" | string;
+export type WallItem = { id: number; product_name: string; company_name: string; companyId?: string; member_name: string; memberId?: string; member_email: string; member_phone: string; product_category: string; productCategoryId?: number; product_subcategory: string; subCategoryId?: number; product_description: string; product_specs: string; product_status: string; quantity: number; price: number; want_to: WallIntent | string; listing_type: string; shipping_options: string; payment_method: string; warranty: string; return_policy: string; listing_url: string; brand: string; brandId?: number; product_images: string[]; created_date: Date; updated_at: Date; visibility: string; priority: string; assigned_to: string; interaction_type: string; action: string; created_from: string; recordStatus?: WallRecordStatus; cartoonTypeId?: number | null; deviceCondition?: WallProductCondition | null; inquiry_count: number; share_count: number; is_bookmarked: boolean; updated_by_user?: { name: string; profile_pic_path?: string | null; roles: { display_name: string }[]; } | null; productId?: number; productSpecId?: number; memberTypeId?: number; createdById?: number; member?: any; };
 
-export type WallItem = {
-  id: number;
-  product_name: string;
-  company_name: string;
-  companyId?: string;
-  member_name: string;
-  memberId?: string;
-  member_email: string;
-  member_phone: string;
-  product_category: string;
-  productCategoryId?: number;
-  product_subcategory: string;
-  subCategoryId?: number;
-  product_description: string;
-  product_specs: string;
-  product_status: string;
-  quantity: number;
-  price: number;
-  want_to: WallIntent | string;
-  listing_type: string;
-  shipping_options: string;
-  payment_method: string;
-  warranty: string;
-  return_policy: string;
-  listing_url: string;
-  brand: string;
-  brandId?: number;
-  product_images: string[];
-  created_date: Date;
-  updated_at: Date;
-  visibility: string;
-  priority: string;
-  assigned_to: string;
-  interaction_type: string;
-  action: string;
-  created_from: string;
-  recordStatus?: WallRecordStatus;
-  cartoonTypeId?: number | null;
-  deviceCondition?: WallProductCondition | null;
-  inquiry_count: number;
-  share_count: number;
-  is_bookmarked: boolean;
-  updated_by_user?: {
-    name: string;
-    profile_pic_path?: string | null;
-    roles: { display_name: string }[];
-  } | null;
-  productId?: number;
-  productSpecId?: number;
-  memberTypeId?: number;
-  createdById?: number;
-  member?: any;
-};
-
-// --- NEW Type Definition for Matching Opportunity ---
 type MatchingOpportunityItem = {
   id: number;
-  want_to: 'Buy' | 'Sell' | string;
-  product_name: string;
-  brand_name: string;
+  member_id: number;
+  product_id: number;
+  want_to: 'Buy' | 'Sell';
   qty: string;
   price: number | null;
   device_condition: string;
   color: string;
   member_name: string;
-  member_code: string;
-  country_name: string;
-  number_code: string;
-  number: string;
-  name: string;
-  leads_count: number;
+  member_email: string;
+  member_phone: string;
 };
 
 // --- Zod Schemas ---
 const selectOptionSchema = z.object({ value: z.any(), label: z.string() });
-const filterFormSchema = z.object({
-  filterRecordStatuses: z.array(selectOptionSchema).optional().default([]),
-  filterProductIds: z.array(selectOptionSchema).optional().default([]),
-  filterCompanyIds: z.array(selectOptionSchema).optional().default([]),
-  filterIntents: z.array(selectOptionSchema).optional().default([]),
-  dateRange: z.array(z.date().nullable()).length(2).nullable().optional(),
-  categories: z.array(selectOptionSchema).optional().default([]),
-  subcategories: z.array(selectOptionSchema).optional().default([]),
-  brands: z.array(selectOptionSchema).optional().default([]),
-  productStatus: z.array(selectOptionSchema).optional().default([]),
-  source: z.array(selectOptionSchema).optional().default([]),
-  productSpec: z.array(selectOptionSchema).optional().default([]),
-  memberType: z.array(selectOptionSchema).optional().default([]),
-  createdBy: z.array(selectOptionSchema).optional().default([]),
-  quickFilters: z.object({ type: z.string(), value: z.string() }).nullable().optional(),
-});
+const filterFormSchema = z.object({ filterRecordStatuses: z.array(selectOptionSchema).optional().default([]), filterProductIds: z.array(selectOptionSchema).optional().default([]), filterCompanyIds: z.array(selectOptionSchema).optional().default([]), filterIntents: z.array(selectOptionSchema).optional().default([]), dateRange: z.array(z.date().nullable()).length(2).nullable().optional(), categories: z.array(selectOptionSchema).optional().default([]), subcategories: z.array(selectOptionSchema).optional().default([]), brands: z.array(selectOptionSchema).optional().default([]), productStatus: z.array(selectOptionSchema).optional().default([]), source: z.array(selectOptionSchema).optional().default([]), productSpec: z.array(selectOptionSchema).optional().default([]), memberType: z.array(selectOptionSchema).optional().default([]), createdBy: z.array(selectOptionSchema).optional().default([]), quickFilters: z.object({ type: z.string(), value: z.string() }).nullable().optional(), });
 type FilterFormData = z.infer<typeof filterFormSchema>;
-
-const exportReasonSchema = z.object({
-  reason: z
-    .string()
-    .min(10, "Reason for export is required minimum 10 characters.")
-    .max(255, "Reason cannot exceed 255 characters."),
-});
+const exportReasonSchema = z.object({ reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters."), });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
-
-// Zod Schema for Schedule Form
-const scheduleSchema = z.object({
-  event_title: z.string().min(3, "Title must be at least 3 characters."),
-  event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
-  date_time: z.date({ required_error: "Event date & time is required." }),
-  remind_from: z.date().nullable().optional(),
-  notes: z.string().optional(),
-});
+const scheduleSchema = z.object({ event_title: z.string().min(3, "Title must be at least 3 characters."), event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."), date_time: z.date({ required_error: "Event date & time is required." }), remind_from: z.date().nullable().optional(), notes: z.string().optional(), });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
-
-// Zod Schema for Task Form
-const taskValidationSchema = z.object({
-  task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
-  assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'),
-  priority: z.string().min(1, 'Please select a priority.'),
-  due_date: z.date().nullable().optional(),
-  description: z.string().optional(),
-});
+const taskValidationSchema = z.object({ task_title: z.string().min(3, 'Task title must be at least 3 characters.'), assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'), priority: z.string().min(1, 'Please select a priority.'), due_date: z.date().nullable().optional(), description: z.string().optional(), });
 type TaskFormData = z.infer<typeof taskValidationSchema>;
-
-// Zod Schema for Activity Form
-const activitySchema = z.object({
-  item: z.string().min(3, "Activity item is required and must be at least 3 characters."),
-  notes: z.string().optional(),
-});
+const activitySchema = z.object({ item: z.string().min(3, "Activity item is required and must be at least 3 characters."), notes: z.string().optional(), });
 type ActivityFormData = z.infer<typeof activitySchema>;
 
 
 // --- Status Colors and Options ---
-const recordStatusColor: Record<WallRecordStatus, string> = {
-  Pending:
-    "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100",
-  Approved:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
-  Rejected: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
-  Expired: "bg-gray-100 text-gray-700 dark:bg-gray-600/20 dark:text-gray-100",
-  Fulfilled: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100",
-  Active:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
-};
-const recordStatusOptions = Object.keys(recordStatusColor).map((s) => ({
-  value: s,
-  label: s,
-}));
-
-const intentTagColor: Record<WallIntent, string> = {
-  Sell: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
-  Buy: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100",
-  Exchange:
-    "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100",
-};
-const intentOptions: { value: WallIntent; label: string }[] = [
-  { value: "Buy", label: "Buy" },
-  { value: "Sell", label: "Sell" },
-  { value: "Exchange", label: "Exchange" },
-];
-
-const productApiStatusColor: Record<string, string> = {
-  available:
-    "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-100",
-  "low stock":
-    "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100",
-  "out of stock":
-    "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
-  discontinued: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
-  "non-active":
-    "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100",
-  default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100",
-};
-
+const recordStatusColor: Record<WallRecordStatus, string> = { Pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100", Approved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100", Rejected: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100", Expired: "bg-gray-100 text-gray-700 dark:bg-gray-600/20 dark:text-gray-100", Fulfilled: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100", Active: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100", };
+const recordStatusOptions = Object.keys(recordStatusColor).map((s) => ({ value: s, label: s, }));
+const intentTagColor: Record<WallIntent, string> = { Sell: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100", Buy: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100", Exchange: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100", };
+const intentOptions: { value: WallIntent; label: string }[] = [{ value: "Buy", label: "Buy" }, { value: "Sell", label: "Sell" }, { value: "Exchange", label: "Exchange" },];
+const productApiStatusColor: Record<string, string> = { available: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-100", "low stock": "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100", "out of stock": "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100", discontinued: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100", "non-active": "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100", default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100", };
 export const dummyCartoonTypes = [{ id: 1, name: "Master Carton" }, { id: 2, name: "Inner Carton" }];
 
 // ============================================================================
-// --- MODALS SECTION (Unchanged) ---
+// --- MODALS SECTION ---
 // ============================================================================
 export type WallModalType = "email" | "whatsapp" | "notification" | "task" | "activity" | "calendar" | "match_opportunity" | "share";
 export interface WallModalState { isOpen: boolean; type: WallModalType | null; data: WallItem | null; }
@@ -305,31 +117,7 @@ interface WallModalsProps { modalState: WallModalState; onClose: () => void; get
 
 const priorityOptions = [{ value: "Low", label: "Low" }, { value: "Medium", label: "Medium" }, { value: "High", label: "High" },];
 const taskPriorityOptions = priorityOptions;
-const eventTypeOptions = [
-  { value: 'Meeting', label: 'Meeting' },
-  { value: 'Demo', label: 'Product Demo' },
-  { value: 'IntroCall', label: 'Introductory Call' },
-  { value: 'FollowUpCall', label: 'Follow-up Call' },
-  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
-  { value: 'CheckIn', label: 'Customer Check-in' },
-  { value: 'LogEmail', label: 'Log an Email' },
-  { value: 'Milestone', label: 'Project Milestone' },
-  { value: 'Task', label: 'Task' },
-  { value: 'FollowUp', label: 'General Follow-up' },
-  { value: 'ProjectKickoff', label: 'Project Kick-off' },
-  { value: 'OnboardingSession', label: 'Onboarding Session' },
-  { value: 'Training', label: 'Training Session' },
-  { value: 'SupportCall', label: 'Support Call' },
-  { value: 'Reminder', label: 'Reminder' },
-  { value: 'Note', label: 'Add a Note' },
-  { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
-  { value: 'StrategySession', label: 'Strategy Session' },
-  { value: 'TeamMeeting', label: 'Team Meeting' },
-  { value: 'PerformanceReview', label: 'Performance Review' },
-  { value: 'Lunch', label: 'Lunch / Break' },
-  { value: 'Appointment', label: 'Personal Appointment' },
-  { value: 'Other', label: 'Other' },
-];
+const eventTypeOptions = [{ value: 'Meeting', label: 'Meeting' }, { value: 'Demo', label: 'Product Demo' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'LogEmail', label: 'Log an Email' }, { value: 'Milestone', label: 'Project Milestone' }, { value: 'Task', label: 'Task' }, { value: 'FollowUp', label: 'General Follow-up' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'OnboardingSession', label: 'Onboarding Session' }, { value: 'Training', label: 'Training Session' }, { value: 'SupportCall', label: 'Support Call' }, { value: 'Reminder', label: 'Reminder' }, { value: 'Note', label: 'Add a Note' }, { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' }, { value: 'StrategySession', label: 'Strategy Session' }, { value: 'TeamMeeting', label: 'Team Meeting' }, { value: 'PerformanceReview', label: 'Performance Review' }, { value: 'Lunch', label: 'Lunch / Break' }, { value: 'Appointment', label: 'Personal Appointment' }, { value: 'Other', label: 'Other' },];
 
 const AddNotificationDialog: React.FC<{ wallItem: WallItem; onClose: () => void; getAllUserDataOptions: { value: any, label: string }[]; }> = ({ wallItem, onClose, getAllUserDataOptions }) => {
   const dispatch = useAppDispatch();
@@ -457,209 +245,191 @@ const AddScheduleDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> 
 const AddActivityDialog: React.FC<{ wallItem: WallItem; onClose: () => void; user: any; }> = ({ wallItem, onClose, user }) => {
   const dispatch = useAppDispatch();
   const [userData, setUserData] = useState<any>(null);
-
-  useEffect(() => {
-    const { useEncryptApplicationStorage } = config;
-    try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); }
-    catch (error) { console.error("Error getting UserData:", error); }
-  }, []);
+  useEffect(() => { const { useEncryptApplicationStorage } = config; try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); } catch (error) { console.error("Error getting UserData:", error); } }, []);
   const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ActivityFormData>({
-    resolver: zodResolver(activitySchema),
-    defaultValues: { item: `Follow up on ${wallItem.product_name}`, notes: '' },
-    mode: 'onChange',
-  });
-
-
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ActivityFormData>({ resolver: zodResolver(activitySchema), defaultValues: { item: `Follow up on ${wallItem.product_name}`, notes: '' }, mode: 'onChange', });
   const onAddActivity = async (data: ActivityFormData) => {
     setIsLoading(true);
-    const payload = {
-      item: data.item,
-      notes: data.notes || '',
-      module_id: String(wallItem.id),
-      module_name: 'WallListing',
-      user_id: userData.id,
-    };
+    const payload = { item: data.item, notes: data.notes || '', module_id: String(wallItem.id), module_name: 'WallListing', user_id: userData.id, };
     try {
       await dispatch(addAllActionAction(payload)).unwrap();
       toast.push(<Notification type="success" title="Activity Added" />);
       onClose();
-    } catch (error: any) {
-      toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsLoading(false); }
   };
-
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Activity Log for "{wallItem.product_name}"</h5>
       <Form onSubmit={handleSubmit(onAddActivity)}>
-        <FormItem label="Activity" invalid={!!errors.item} errorMessage={errors.item?.message}>
-          <Controller name="item" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Followed up with member" />} />
-        </FormItem>
-        <FormItem label="Notes (Optional)" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
-          <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} placeholder="Add relevant details..." />} />
-        </FormItem>
-        <div className="text-right mt-6">
-          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading} icon={<TbCheck />}>Save Activity</Button>
-        </div>
+        <FormItem label="Activity" invalid={!!errors.item} errorMessage={errors.item?.message}><Controller name="item" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Followed up with member" />} /></FormItem>
+        <FormItem label="Notes (Optional)" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} placeholder="Add relevant details..." />} /></FormItem>
+        <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading} icon={<TbCheck />}>Save Activity</Button></div>
       </Form>
     </Dialog>
   );
 };
+
 const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const [data, setData] = useState<MatchingOpportunityItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true); 
+  const [isLoading, setIsLoading] = useState(true);
+  const [selected, setSelected] = useState<number[]>([]);
 
   useEffect(() => {
     const fetchOpportunities = async () => {
-      if (!wallItem.id) {
-        setIsLoading(false);
-        return;
-      }
+      if (!wallItem.id) { setIsLoading(false); return; }
       setIsLoading(true);
       try {
         const actionResult = await dispatch(getMatchingOpportunitiesAction(wallItem.id)).unwrap();
-
         if (actionResult?.data) {
           const formattedData = actionResult.data.map((item: any) => ({
             id: item.id,
+            member_id: item.member.id,
+            product_id: item.product_id,
             want_to: item.want_to,
-            product_name: item.product_name,
-            brand_name: item.brand_name,
             qty: item.qty,
             price: item.price,
             device_condition: item.device_condition,
             color: item.color,
-            member_name: item.member_name,
-            member_code: item.member.member_code,
-            country_name: item.country_name,
-            leads_count: item.leads_count,
-            number_code: item.member.number_code,
-            number: item.member.number,
-            name: item.member.name,
-
+            member_name: item.member.name,
+            member_email: item.member.email,
+            member_phone: item.member.number
           }));
           setData(formattedData);
-        } else {
-          setData([]); 
-        }
+        } else { setData([]); }
       } catch (error) {
-        console.error("Failed to fetch matching opportunities:", error);
         toast.push(<Notification type="danger" title="Error">Could not load opportunities.</Notification>);
-        setData([]); 
-      } finally {
-        setIsLoading(false);
-      }
+        setData([]);
+      } finally { setIsLoading(false); }
     };
-
     fetchOpportunities();
   }, [dispatch, wallItem.id]);
 
-  const columns: ColumnDef<MatchingOpportunityItem>[] = useMemo(() => [
+  const handleSelect = (id: number, checked: boolean) => {
+    setSelected(prev => checked ? [...prev, id] : prev.filter(i => i !== id));
+  };
+  const handleSelectAll = (checked: boolean) => {
+    setSelected(checked ? data.map(op => op.id) : []);
+  };
+
+  const handleAction = (type: 'offer_demand' | 'lead' | 'email' | 'whatsapp' | 'copy') => {
+    const selectedOps = data.filter(op => selected.includes(op.id));
+    if (selectedOps.length === 0) {
+      toast.push(<Notification title="No Selection" type="warning">Please select at least one opportunity.</Notification>);
+      return;
+    }
+    const firstOp = selectedOps[0];
+
+    switch (type) {
+      case 'offer_demand':
+        if (wallItem.want_to === 'Buy') { // Original is buying, so create an offer from supplier
+          navigate('/sales-leads/offers/create', { state: { supplierId: firstOp.member_id, productId: firstOp.product_id } });
+        } else { // Original is selling, so create a demand from buyer
+          navigate('/sales-leads/demands/create', { state: { buyerId: firstOp.member_id, productId: firstOp.product_id } });
+        }
+        break;
+      case 'lead':
+        navigate('/sales-leads/lead/add', { state: { buyerId: wallItem.memberId, supplierId: firstOp.member_id, productId: firstOp.product_id } });
+        break;
+      case 'email':
+        const emails = selectedOps.map(op => op.member_email).filter(Boolean).join(',');
+        toast.push(<Notification type="info" title="Opening Email..." />);
+        window.open(`mailto:${emails}?subject=Regarding ${wallItem.product_name}`, '_blank');
+        setSelected([]);
+        onClose();
+        break;
+
+      case 'whatsapp':
+        const phone = firstOp.member_phone?.replace(/\D/g, '') || '';
+        toast.push(<Notification type="info" title="Opening WhatsApp..." />);
+        window.open(`https://wa.me/${phone}?text=Hi, I'm interested in your listing for ${wallItem.product_name}`, '_blank');
+        setSelected([]);
+        onClose();
+        break;
+
+      case 'copy':
+        const textToCopy = selectedOps.map(op =>
+          `Member: ${op.member_name}\nQuantity: ${op.qty}\nPrice: ${op.price || 'N/A'}\nCondition: ${op.device_condition}, ${op.color}\nContact: ${op.member_email}, ${op.member_phone}`
+        ).join('\n\n---\n\n');
+        navigator.clipboard.writeText(textToCopy).then(() => toast.push(<Notification title="Copied!" type="success" />));
+        break;
+    }
+  };
+
+  const columns: ColumnDef<MatchingOpportunityItem>[] = [
+    { id: 'select', header: ({ table }) => <Checkbox checked={table.getIsAllRowsSelected()} indeterminate={table.getIsSomeRowsSelected()} onChange={e => handleSelectAll(e)} />, cell: ({ row }) => <Checkbox checked={selected.includes(row.original.id)} onChange={e => handleSelect(row.original.id, e)} />, size: 40 },
+    { header: 'Supplier/Buyer', accessorKey: 'member_name' },
     {
-      header: 'Listing',
-      accessorKey: 'product_name',
-      cell: ({ row }) => {
-        const { want_to, product_name, brand_name, color, device_condition } = row.original;
-        const intent = want_to as WallIntent;
-        return (
-          <div>
-            <p className="font-semibold text-gray-900 dark:text-gray-100">{product_name}</p>
-            <p className="text-xs text-gray-600 dark:text-gray-300">{brand_name}</p>
-            <div className="flex items-center flex-wrap gap-1 mt-2">
-              <Tag className={`capitalize text-xs font-semibold border-0 ${intentTagColor[intent] || ''}`}>{want_to}</Tag>
-              <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{device_condition}</Tag>
-              <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{color}</Tag>
-            </div>
-          </div>
-        );
-      }
+      header: 'Details', cell: ({ row }) => (
+        <div className="flex flex-col text-xs">
+          <span>Qty: <strong>{row.original.qty}</strong></span>
+          <span>Price: <strong>{row.original.price ? `$${row.original.price}` : 'N/A'}</strong></span>
+        </div>
+      )
     },
+    { header: 'Condition', cell: ({ row }) => <div className="text-xs">{row.original.device_condition}, {row.original.color}</div> },
     {
-      header: 'Member',
-      accessorKey: 'member',
-      cell: ({ row }) => {
-        const { name, member_code, number_code, number } = row.original;
-        return (
-          <div>
-            <p className="font-semibold">{name}</p>
-            <p className="text-xs text-gray-500">{member_code}</p>
-            <p className="text-xs text-gray-500">{number_code} {number}</p>
-          </div>
-        );
-      }
+      header: 'Contact', cell: ({ row }) => (
+        <div className="flex flex-col text-xs">
+          <a href={`mailto:${row.original.member_email}`} className="text-blue-500 hover:underline">{row.original.member_email}</a>
+          <span>{row.original.member_phone}</span>
+        </div>
+      )
     },
-    {
-      header: 'Details',
-      accessorKey: 'qty',
-      cell: ({ row }) => {
-        const { qty, price } = row.original;
-        return (
-          <div>
-            <p>Qty: <span className="font-semibold">{qty}</span></p>
-            <p>Price: <span className="font-semibold">{price ? `$${price}` : 'N/A'}</span></p>
-          </div>
-        );
-      }
-    },
-    {
-      header: 'Leads',
-      accessorKey: 'leads_count',
-      cell: ({ row }) => <span className="font-semibold">{row.original.leads_count}</span>
-    },
-  ], []);
+  ];
 
   return (
-    <Dialog
-      isOpen={true}
-      onClose={onClose}
-      onRequestClose={onClose}
-      width={1000}
-      bodyOpenClassName="overflow-hidden"
-    >
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={1000} bodyOpenClassName="overflow-hidden">
       <div className="flex flex-col h-full max-h-[80vh]">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2">
-            <TbBulb className="text-2xl text-amber-500" />
-            <h5 className="mb-0">Matching Opportunities for "{wallItem.product_name}"</h5>
-          </div>
-        </div>
+        <div className="px-6 py-4 border-b"><h5>Matching Opportunities for "{wallItem.product_name}"</h5></div>
         <div className="flex-grow overflow-y-auto px-6 py-4">
-          {isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <Spinner size={40} />
+          {isLoading ? <div className="flex justify-center items-center h-64"><Spinner size={40} /></div> : <DataTable columns={columns} data={data} noData={data.length === 0} />}
+        </div>
+        <div className="px-6 py-4 border-t">
+          {selected.length > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-semibold">{selected.length} selected</span>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" icon={<TbHandGrab />} onClick={() => handleAction('offer_demand')}>Create {wallItem.want_to === 'Buy' ? 'Offer' : 'Demand'}</Button>
+                <Button size="sm" icon={<TbUserPlus />} onClick={() => handleAction('lead')}>Create Lead</Button>
+                <Button size="sm" icon={<TbMailForward />} onClick={() => handleAction('email')}>Email</Button>
+                <Button size="sm" icon={<TbBrandWhatsapp />} onClick={() => handleAction('whatsapp')}>WhatsApp</Button>
+                <Button size="sm" icon={<TbCopy />} onClick={() => handleAction('copy')}>Copy</Button>
+              </div>
             </div>
           ) : (
-            <DataTable
-              columns={columns}
-              data={data}
-              noData={data.length === 0}
-            />
+            <div className="text-right">
+              <Button variant="solid" onClick={onClose}>Close</Button>
+            </div>
           )}
-        </div>
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
-          <Button variant="solid" onClick={onClose}>Close</Button>
         </div>
       </div>
     </Dialog>
   );
 };
+
 const ShareWallLinkDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
-  const linkToShare = wallItem.listing_url || "No URL available for this item.";
-  const handleCopy = () => { if (wallItem.listing_url) { navigator.clipboard.writeText(linkToShare).then(() => { toast.push(<Notification title="Copied to Clipboard" type="success" />); }); } };
+  const linkToShare = `${window.location.origin}/sales-leads/wall-item/${wallItem.id}`;
+  const handleCopy = () => {
+    navigator.clipboard.writeText(linkToShare).then(() => {
+      toast.push(<Notification title="Copied to Clipboard" type="success" />);
+      onClose();
+    });
+  };
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Share Link for "{wallItem.product_name}"</h5>
       <p className="mb-2 text-sm">Use the link below to share this listing:</p>
-      <div className="flex items-center gap-2"><Input readOnly value={linkToShare} /><Tooltip title="Copy Link"><Button shape="circle" icon={<TbCopy />} onClick={handleCopy} disabled={!wallItem.listing_url} /></Tooltip></div>
+      <div className="flex items-center gap-2">
+        <Input readOnly value={linkToShare} />
+        <Tooltip title="Copy Link"><Button shape="circle" icon={<TbCopy />} onClick={handleCopy} /></Tooltip>
+      </div>
       <div className="text-right mt-6"><Button onClick={onClose}>Close</Button></div>
     </Dialog>
   );
 };
+
 const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose, getAllUserDataOptions, user }) => {
   const { type, data: wallItem, isOpen } = modalState;
   if (!isOpen || !wallItem) return null;
@@ -708,21 +478,7 @@ function exportWallItemsToCsv(filename: string, rows: WallItem[]) {
 }
 
 // --- Child Components ---
-const StyledActionColumn = ({
-  onEdit,
-  onViewDetail,
-  onOpenModal,
-  onSendEmail,
-  onSendWhatsapp,
-  rowData,
-}: {
-  onEdit: () => void;
-  onViewDetail: () => void;
-  onOpenModal: (type: WallModalType, data: WallItem) => void;
-  onSendEmail: () => void;
-  onSendWhatsapp: () => void;
-  rowData: WallItem;
-}) => (
+const StyledActionColumn = ({ onEdit, onViewDetail, onOpenModal, onSendEmail, onSendWhatsapp, rowData }: { onEdit: () => void; onViewDetail: () => void; onOpenModal: (type: WallModalType, data: WallItem) => void; onSendEmail: () => void; onSendWhatsapp: () => void; rowData: WallItem; }) => (
   <div className="flex items-center justify-center">
     <Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 rounded-md" role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
     <Tooltip title="View"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md" role="button" onClick={onViewDetail}><TbEye /></div></Tooltip>
@@ -739,46 +495,19 @@ const StyledActionColumn = ({
   </div>
 );
 
-interface WallSearchProps { onInputChange: (value: string) => void; }
-const WallSearch = React.forwardRef<HTMLInputElement, WallSearchProps>(({ onInputChange }, ref) => (<DebouceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch />} onChange={(e) => onInputChange(e.target.value)} />));
+const WallSearch = React.forwardRef<HTMLInputElement, { onInputChange: (value: string) => void; }>(({ onInputChange }, ref) => (<DebouceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch />} onChange={(e) => onInputChange(e.target.value)} />));
 WallSearch.displayName = "WallSearch";
 
-const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDashboard }: {
-  onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onImport: () => void; onClearFilters: () => void;
-  columns: ColumnDef<WallItem>[];
-  filteredColumns: ColumnDef<WallItem>[];
-  setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<WallItem>[]>>;
-  isDashboard: boolean;
-  activeFilterCount: number;
-}) => {
+const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDashboard }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onImport: () => void; onClearFilters: () => void; columns: ColumnDef<WallItem>[]; filteredColumns: ColumnDef<WallItem>[]; setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<WallItem>[]>>; isDashboard: boolean; activeFilterCount: number; }) => {
   const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
-  const toggleColumn = (checked: boolean, colId: string) => {
-    if (checked) {
-      const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
-      if (originalColumn) {
-        setFilteredColumns(prev => {
-          const newCols = [...prev, originalColumn];
-          newCols.sort((a, b) => {
-            const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
-            const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
-            return indexA - indexB;
-          });
-          return newCols;
-        });
-      }
-    } else {
-      setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
-    }
-  };
+  const toggleColumn = (checked: boolean, colId: string) => { if (checked) { const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId); if (originalColumn) { setFilteredColumns(prev => { const newCols = [...prev, originalColumn]; newCols.sort((a, b) => { const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey)); const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey)); return indexA - indexB; }); return newCols; }); } } else { setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId)); } };
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-      <div className="flex-grow">
-        <WallSearch onInputChange={onSearchChange} />
-      </div>
+      <div className="flex-grow"><WallSearch onInputChange={onSearchChange} /></div>
       {!isDashboard && <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
         <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
           <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-            {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}
+            {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(e) => toggleColumn(e, id)}>{col.header as string}</Checkbox></div>) })}
           </div>
         </Dropdown>
         <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
@@ -790,15 +519,10 @@ const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearF
   )
 };
 
-const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
-  filterData: FilterFormData,
-  onRemoveFilter: (key: keyof FilterFormData, value: any) => void;
-  onClearAll: () => void;
-}) => {
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filterData: FilterFormData, onRemoveFilter: (key: keyof FilterFormData, value: any) => void; onClearAll: () => void; }) => {
   const { filterRecordStatuses, filterIntents, quickFilters } = filterData;
   const hasFilters = filterRecordStatuses?.length || filterIntents?.length || quickFilters;
   if (!hasFilters) return null;
-
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
       <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
@@ -809,14 +533,10 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
     </div>
   );
 };
-interface WallTableProps {
-  columns: ColumnDef<WallItem>[]; data: WallItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: WallItem[];
-  onPaginationChange: (page: number) => void; onSelectChange: (size: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: WallItem) => void; onAllRowSelect: (checked: boolean, rows: Row<WallItem>[]) => void;
-  selectable?: boolean;
-}
-const WallTable = (props: WallTableProps) => (<DataTable selectable={props.selectable} columns={props.columns} data={props.data} loading={props.loading} pagingData={props.pagingData} checkboxChecked={(row) => props.selectedItems.some((s) => s.id === row.id)} onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange} onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect} noData={!props.loading && props.data.length === 0} />);
-interface WallSelectedFooterProps { selectedItems: WallItem[]; deleteConfirmOpen: boolean; setDeleteConfirmOpen: (open: boolean) => void; onConfirmDelete: () => void; isDeleting: boolean; }
-const WallSelectedFooter = ({ selectedItems, deleteConfirmOpen, setDeleteConfirmOpen, onConfirmDelete, isDeleting }: WallSelectedFooterProps) => {
+
+const WallTable = (props: { columns: ColumnDef<WallItem>[]; data: WallItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: WallItem[]; onPaginationChange: (page: number) => void; onSelectChange: (size: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: WallItem) => void; onAllRowSelect: (checked: boolean, rows: Row<WallItem>[]) => void; selectable?: boolean; }) => (<DataTable selectable={props.selectable} columns={props.columns} data={props.data} loading={props.loading} pagingData={props.pagingData} checkboxChecked={(row) => props.selectedItems.some((s) => s.id === row.id)} onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange} onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect} noData={!props.loading && props.data.length === 0} />);
+
+const WallSelectedFooter = ({ selectedItems, deleteConfirmOpen, setDeleteConfirmOpen, onConfirmDelete, isDeleting }: { selectedItems: WallItem[]; deleteConfirmOpen: boolean; setDeleteConfirmOpen: (open: boolean) => void; onConfirmDelete: () => void; isDeleting: boolean; }) => {
   if (selectedItems.length === 0) return null;
   return (
     <>
@@ -830,19 +550,7 @@ const WallSelectedFooter = ({ selectedItems, deleteConfirmOpen, setDeleteConfirm
   );
 };
 
-const BookmarkButton = React.memo(({ is_bookmarked }: { is_bookmarked: boolean }) => (
-  <Tooltip title={is_bookmarked ? "Bookmarked" : "Not Bookmarked"}>
-    <button
-      onClick={(e) => e.stopPropagation()}
-      className="p-0 m-0 bg-transparent border-none cursor-pointer"
-    >
-      <TbBookmark
-        size={14}
-        className={is_bookmarked ? "text-amber-500 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"}
-      />
-    </button>
-  </Tooltip>
-));
+const BookmarkButton = React.memo(({ is_bookmarked }: { is_bookmarked: boolean }) => (<Tooltip title={is_bookmarked ? "Bookmarked" : "Not Bookmarked"}><button onClick={(e) => e.stopPropagation()} className="p-0 m-0 bg-transparent border-none cursor-pointer"><TbBookmark size={14} className={is_bookmarked ? "text-amber-500 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"} /></button></Tooltip>));
 BookmarkButton.displayName = 'BookmarkButton';
 
 
@@ -850,27 +558,8 @@ BookmarkButton.displayName = 'BookmarkButton';
 const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const initialFilterState = useMemo(() => ({
-    statuses: [],
-    assignedTo: [],
-    memberTypes: [],
-    continents: [],
-    countries: [],
-    states: '',
-    cities: '',
-    pincodes: '',
-    kycVerified: null as 'yes' | 'no' | null,
-    categories: [],
-    subCategories: [],
-    brands: [],
-    products: [],
-    productStatuses: [],
-    productSpecs: [],
-    wantTo: [],
-  }), []);
-
   const { user } = useSelector(authSelector);
-  const { wallListing, AllProductsData = [], ParentCategories, subCategoriesForSelectedCategoryData, BrandData, MemberTypeData, ProductSpecificationsData, Employees, AllCompanyData, getAllUserData, status: masterLoadingStatus } = useSelector(masterSelector, shallowEqual);
+  const { wallListing, AllProductsData, ParentCategories, subCategoriesForSelectedCategoryData, BrandData, MemberTypeData, ProductSpecificationsData, Employees, AllCompanyData, getAllUserData, status: masterLoadingStatus } = useSelector(masterSelector, shallowEqual);
   const [initialLoading, setInitialLoading] = useState(true);
   const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
@@ -886,127 +575,11 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
-  const [imageView, setImageView] = useState('');
-  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const mapApiToWallItem = useCallback((apiItem: ApiWallItemFromSource): WallItem => ({ id: apiItem.id as number, productId: apiItem.product_id, product_name: apiItem.product?.name || 'N/A', company_name: apiItem.company_name || "", companyId: apiItem.company_id || undefined, member_name: apiItem.member?.name || 'N/A', memberId: String(apiItem.member?.id || ""), memberTypeId: apiItem.member_type_id, member_email: apiItem.member?.email || "", member_phone: apiItem.member?.number || "", product_category: apiItem.product?.category?.name || "", productCategoryId: apiItem.product?.category_id, product_subcategory: apiItem.product?.sub_category?.name || "", subCategoryId: apiItem.product?.sub_category_id, product_description: apiItem.product?.description || "", product_specs: apiItem.product_spec?.name || "", productSpecId: apiItem.product_spec_id, product_status: apiItem.product_status, quantity: Number(apiItem.qty) || 0, price: Number(apiItem.price) || 0, want_to: apiItem.want_to as WallIntent | string, listing_type: apiItem.listing_type || "", shipping_options: apiItem.shipping_options || "", payment_method: apiItem.payment_method || "", warranty: apiItem.warranty_info || "", return_policy: apiItem.return_policy || "", listing_url: apiItem.product_url || "", brand: apiItem.product?.brand?.name || "", brandId: apiItem.product?.brand_id, product_images: apiItem.product?.product_images_array || [], created_date: new Date(apiItem.created_at), updated_at: new Date(apiItem.updated_at), visibility: apiItem.visibility || "", priority: apiItem.priority || "", assigned_to: apiItem.assigned_to_name || "", interaction_type: apiItem.interaction_type || "", action: apiItem.action || "", recordStatus: apiItem.status as WallRecordStatus, cartoonTypeId: apiItem.cartoon_type_id, created_from: apiItem.created_from || "", deviceCondition: (apiItem.device_condition as WallProductCondition | null) || null, inquiry_count: Number(apiItem.inquiries) || 0, share_count: Number(apiItem.share) || 0, is_bookmarked: apiItem.bookmark === 1, updated_by_user: apiItem.updated_by_user || null, createdById: apiItem.created_by, member: apiItem?.member || null, }), []);
+  const apiParams = useMemo(() => { const formatMultiSelect = (items: { value: any }[] | undefined) => { if (!items || items.length === 0) return undefined; return items.map((item) => item.value).join(","); }; const params: any = { page: tableData.pageIndex, per_page: tableData.pageSize, search: tableData.query || undefined, sort_by: tableData.sort?.key || undefined, sort_order: tableData.sort?.order || undefined, status: formatMultiSelect(filterCriteria.filterRecordStatuses), company_ids: formatMultiSelect(filterCriteria.filterCompanyIds), want_to: formatMultiSelect(filterCriteria.filterIntents), product_ids: formatMultiSelect(filterCriteria.filterProductIds), category_ids: formatMultiSelect(filterCriteria.categories), subcategory_ids: formatMultiSelect(filterCriteria.subcategories), brand_ids: formatMultiSelect(filterCriteria.brands), product_status: formatMultiSelect(filterCriteria.productStatus), member_type_ids: formatMultiSelect(filterCriteria.memberType), created_by_ids: formatMultiSelect(filterCriteria.createdBy), product_spec_ids: formatMultiSelect(filterCriteria.productSpec), source: formatMultiSelect(filterCriteria.source) }; if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) { params.start_date = filterCriteria.dateRange[0] ? dayjs(filterCriteria.dateRange[0]).format("YYYY-MM-DD") : undefined; params.end_date = filterCriteria.dateRange[1] ? dayjs(filterCriteria.dateRange[1]).format("YYYY-MM-DD") : undefined; } if (filterCriteria.quickFilters) { if (filterCriteria.quickFilters.type === 'intent') params.want_to = filterCriteria.quickFilters.value; if (filterCriteria.quickFilters.type === 'status') params.status = filterCriteria.quickFilters.value; } Object.keys(params).forEach((key) => { if (params[key] === undefined || params[key] === null) { delete params[key]; } }); return params; }, [tableData, filterCriteria]);
 
-  const openImageViewer = useCallback((path: string | null | undefined) => {
-    if (path) {
-      setImageView(path);
-      setIsImageViewerOpen(true);
-    } else {
-      toast.push(<Notification title="No Image" type="info">User has no profile picture.</Notification>);
-    }
-  }, []);
-
-  const closeImageViewer = useCallback(() => {
-    setIsImageViewerOpen(false);
-    setImageView('');
-  }, []);
-
-  const mapApiToWallItem = useCallback(
-    (apiItem: ApiWallItemFromSource): WallItem => ({
-      id: apiItem.id as number,
-      productId: apiItem.product_id,
-      product_name: apiItem.product?.name || 'N/A',
-      company_name: apiItem.company_name || "",
-      companyId: apiItem.company_id || undefined,
-      member_name: apiItem.member?.name || 'N/A',
-      memberId: String(apiItem.member?.id || ""),
-      memberTypeId: apiItem.member_type_id,
-      member_email: apiItem.member?.email || "",
-      member_phone: apiItem.member?.number || "",
-      product_category: apiItem.product?.category?.name || "",
-      productCategoryId: apiItem.product?.category_id,
-      product_subcategory: apiItem.product?.sub_category?.name || "",
-      subCategoryId: apiItem.product?.sub_category_id,
-      product_description: apiItem.product?.description || "",
-      product_specs: apiItem.product_spec?.name || "",
-      productSpecId: apiItem.product_spec_id,
-      product_status: apiItem.product_status,
-      quantity: Number(apiItem.qty) || 0,
-      price: Number(apiItem.price) || 0,
-      want_to: apiItem.want_to as WallIntent | string,
-      listing_type: apiItem.listing_type || "",
-      shipping_options: apiItem.shipping_options || "",
-      payment_method: apiItem.payment_method || "",
-      warranty: apiItem.warranty_info || "",
-      return_policy: apiItem.return_policy || "",
-      listing_url: apiItem.product_url || "",
-      brand: apiItem.product?.brand?.name || "",
-      brandId: apiItem.product?.brand_id,
-      product_images: apiItem.product?.product_images_array || [],
-      created_date: new Date(apiItem.created_at),
-      updated_at: new Date(apiItem.updated_at),
-      visibility: apiItem.visibility || "",
-      priority: apiItem.priority || "",
-      assigned_to: apiItem.assigned_to_name || "",
-      interaction_type: apiItem.interaction_type || "",
-      action: apiItem.action || "",
-      recordStatus: apiItem.status as WallRecordStatus,
-      cartoonTypeId: apiItem.cartoon_type_id,
-      created_from: apiItem.created_from || "",
-      deviceCondition: (apiItem.device_condition as WallProductCondition | null) || null,
-      inquiry_count: Number(apiItem.inquiries) || 0,
-      share_count: Number(apiItem.share) || 0,
-      is_bookmarked: apiItem.bookmark === 1,
-      updated_by_user: apiItem.updated_by_user || null,
-      createdById: apiItem.created_by,
-      member: apiItem?.member || null,
-    }),
-    []
-  );
-
-  const apiParams = useMemo(() => {
-    const formatMultiSelect = (items: { value: any }[] | undefined) => { if (!items || items.length === 0) return undefined; return items.map((item) => item.value).join(","); };
-    const params: any = { page: tableData.pageIndex, per_page: tableData.pageSize, search: tableData.query || undefined, sort_by: tableData.sort?.key || undefined, sort_order: tableData.sort?.order || undefined, status: formatMultiSelect(filterCriteria.filterRecordStatuses), company_ids: formatMultiSelect(filterCriteria.filterCompanyIds), want_to: formatMultiSelect(filterCriteria.filterIntents), product_ids: formatMultiSelect(filterCriteria.filterProductIds), category_ids: formatMultiSelect(filterCriteria.categories), subcategory_ids: formatMultiSelect(filterCriteria.subcategories), brand_ids: formatMultiSelect(filterCriteria.brands), product_status: formatMultiSelect(filterCriteria.productStatus), member_type_ids: formatMultiSelect(filterCriteria.memberType), created_by_ids: formatMultiSelect(filterCriteria.createdBy), product_spec_ids: formatMultiSelect(filterCriteria.productSpec), source: formatMultiSelect(filterCriteria.source) };
-    if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) {
-      params.start_date = filterCriteria.dateRange[0] ? dayjs(filterCriteria.dateRange[0]).format("YYYY-MM-DD") : undefined;
-      params.end_date = filterCriteria.dateRange[1] ? dayjs(filterCriteria.dateRange[1]).format("YYYY-MM-DD") : undefined;
-    }
-    if (filterCriteria.quickFilters) {
-      if (filterCriteria.quickFilters.type === 'intent') params.want_to = filterCriteria.quickFilters.value;
-      if (filterCriteria.quickFilters.type === 'status') params.status = filterCriteria.quickFilters.value;
-    }
-    Object.keys(params).forEach((key) => { if (params[key] === undefined || params[key] === null) { delete params[key]; } });
-    return params;
-  }, [tableData, filterCriteria]);
-
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      setInitialLoading(true);
-      try {
-        await Promise.all([
-          dispatch(getWallListingAction(apiParams)),
-          dispatch(getProductsDataAsync()),
-          dispatch(getParentCategoriesAction()),
-          dispatch(getSubcategoriesByCategoryIdAction(0)),
-          dispatch(getBrandAction()),
-          dispatch(getMemberTypeAction()),
-          dispatch(getProductSpecificationsAction()),
-          dispatch(getEmployeesAction()),
-          dispatch(getAllCompany()),
-          dispatch(getAllUsersAction())
-        ]);
-      } catch (error) {
-        console.error("Failed to fetch initial data", error);
-        toast.push(<Notification type="danger" title="Error">Could not load initial data.</Notification>);
-      } finally {
-        setInitialLoading(false);
-      }
-    };
-    fetchInitialData();
-  }, [dispatch]);
-
-  useEffect(() => {
-    const timerId = setTimeout(() => {
-      if (!initialLoading) {
-        dispatch(getWallListingAction(apiParams));
-      }
-    }, 300); // Reduced delay for faster response
-    return () => {
-      clearTimeout(timerId);
-    };
-  }, [dispatch, apiParams, initialLoading]);
+  useEffect(() => { const fetchInitialData = async () => { setInitialLoading(true); try { await Promise.all([dispatch(getWallListingAction(apiParams)), dispatch(getProductsDataAsync()), dispatch(getParentCategoriesAction()), dispatch(getSubcategoriesByCategoryIdAction(0)), dispatch(getBrandAction()), dispatch(getMemberTypeAction()), dispatch(getProductSpecificationsAction()), dispatch(getEmployeesAction()), dispatch(getAllCompany()), dispatch(getAllUsersAction())]); } catch (error) { console.error("Failed to fetch initial data", error); toast.push(<Notification type="danger" title="Error">Could not load initial data.</Notification>); } finally { setInitialLoading(false); } }; fetchInitialData(); }, [dispatch]);
+  useEffect(() => { const timerId = setTimeout(() => { if (!initialLoading) { dispatch(getWallListingAction(apiParams)); } }, 300); return () => { clearTimeout(timerId); }; }, [dispatch, apiParams, initialLoading]);
 
   const pageData = useMemo(() => { return Array.isArray(wallListing?.data?.data) ? wallListing.data.data.map(mapApiToWallItem) : []; }, [wallListing, mapApiToWallItem]);
   const total = wallListing?.data?.total || 0;
@@ -1018,268 +591,36 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const closeViewDrawer = useCallback(() => { setIsViewDrawerOpen(false); setEditingItem(null); }, []);
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-  const handleOpenModal = useCallback((type: WallModalType, wallItem: WallItem) => {
-    setModalState({ isOpen: true, type, data: wallItem });
-  }, []);
+  const handleOpenModal = useCallback((type: WallModalType, wallItem: WallItem) => { setModalState({ isOpen: true, type, data: wallItem }); }, []);
   const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
-
-  const handleSendEmail = useCallback((item: WallItem) => {
-    if (!item.member_email) {
-      toast.push(<Notification type="warning" title="No Email Address" children="This member does not have a valid email address." />);
-      return;
-    }
-    const subject = `Regarding your wall listing: ${item.product_name}`;
-    const body = `Dear ${item.member_name},\n\nI am interested in your listing for "${item.product_name}".\n\nKind regards,`;
-    window.open(`mailto:${item.member_email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
-  }, []);
-
-  const handleSendWhatsapp = useCallback((item: WallItem) => {
-    const phone = item.member_phone?.replace(/\D/g, '');
-    if (!phone) {
-      toast.push(<Notification type="warning" title="No Mobile Number" children="This member does not have a valid phone number." />);
-      return;
-    }
-    const message = `Hi ${item.member_name}, I'm interested in your listing for "${item.product_name}".`;
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
-  }, []);
-
-  const onConfirmDeleteSelectedItems = useCallback(async () => {
-    if (selectedItems.length === 0) { toast.push(<Notification title="No items selected" type="info">Please select items to delete.</Notification>); return; }
-    setDeleteSelectedConfirmOpen(false);
-    const ids = selectedItems.map((item) => item.id).join(",");
-    try {
-      await dispatch(deleteAllWallAction({ ids })).unwrap();
-      toast.push(<Notification title="Success" type="success">{selectedItems.length} item(s) deleted.</Notification>);
-      setSelectedItems([]); dispatch(getWallListingAction(apiParams));
-    } catch (error: any) { toast.push(<Notification title="Error" type="danger">{error.message || "Bulk delete failed."}</Notification>); }
-  }, [dispatch, selectedItems, apiParams]);
-  
+  const handleSendEmail = useCallback((item: WallItem) => { if (!item.member_email) { toast.push(<Notification type="warning" title="No Email Address" children="This member does not have a valid email address." />); return; } const subject = `Regarding your wall listing: ${item.product_name}`; const body = `Dear ${item.member_name},\n\nI am interested in your listing for "${item.product_name}".\n\nKind regards,`; window.open(`mailto:${item.member_email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`); }, []);
+  const handleSendWhatsapp = useCallback((item: WallItem) => { const phone = item.member_phone?.replace(/\D/g, ''); if (!phone) { toast.push(<Notification type="warning" title="No Mobile Number" children="This member does not have a valid phone number." />); return; } const message = `Hi ${item.member_name}, I'm interested in your listing for "${item.product_name}".`; window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank'); }, []);
+  const onConfirmDeleteSelectedItems = useCallback(async () => { if (selectedItems.length === 0) { toast.push(<Notification title="No items selected" type="info">Please select items to delete.</Notification>); return; } setDeleteSelectedConfirmOpen(false); const ids = selectedItems.map((item) => item.id).join(","); try { await dispatch(deleteAllWallAction({ ids })).unwrap(); toast.push(<Notification title="Success" type="success">{selectedItems.length} item(s) deleted.</Notification>); setSelectedItems([]); dispatch(getWallListingAction(apiParams)); } catch (error: any) { toast.push(<Notification title="Error" type="danger">{error.message || "Bulk delete failed."}</Notification>); } }, [dispatch, selectedItems, apiParams]);
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(prev => ({ ...prev, ...data, quickFilters: null })); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
-  
-  const onClearFilters = useCallback(() => {
-    const defaults = filterFormSchema.parse({});
-    filterFormMethods.reset(defaults);
-    setFilterCriteria(defaults);
-    handleSetTableData({ query: "", pageIndex: 1 });
-  }, [filterFormMethods, handleSetTableData]);
-
-  // --- MODIFIED --- Filter click handler fixed
-  const handleCardClick = (type: 'status' | 'intent', value: string) => {
-    const newFilters = filterFormSchema.parse({}); // Start with a clean, default filter object
-  
-    if (type === 'status' && value === 'today') {
-      const todayStart = dayjs().startOf('day').toDate();
-      const todayEnd = dayjs().endOf('day').toDate();
-      newFilters.dateRange = [todayStart, todayEnd];
-    } else if (type === 'status') {
-      const statusOption = recordStatusOptions.find(opt => opt.value === value);
-      if (statusOption) {
-        newFilters.filterRecordStatuses = [statusOption];
-      }
-    } else if (type === 'intent') {
-      const intentOption = intentOptions.find(opt => opt.value === value);
-      if (intentOption) {
-        newFilters.filterIntents = [intentOption];
-      }
-    }
-    
-    setFilterCriteria(newFilters);
-    handleSetTableData({ query: "", pageIndex: 1 });
-  };
-  
-
-  const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: any) => {
-    setFilterCriteria(prev => {
-      const newFilters = { ...prev };
-      const currentValues = prev[key] as { value: any }[] | undefined;
-      if (Array.isArray(currentValues)) {
-        (newFilters as any)[key] = currentValues.filter(item => item.value !== value.value);
-      } else {
-        (newFilters as any)[key] = null; 
-      }
-      return newFilters;
-    });
-  }, []);
-
-  const handleOpenExportReasonModal = useCallback(() => {
-    if (total === 0) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; }
-    exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true);
-  }, [total, exportReasonFormMethods]);
-  const handleConfirmExportWithReason = useCallback(async (data: ExportReasonFormData) => {
-    setIsSubmittingExportReason(true);
-    const moduleName = "WallListing"; const timestamp = dayjs().format("YYYY-MM-DD"); const fileName = `wall_listing_export_${timestamp}.csv`;
-    try {
-      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName, })).unwrap();
-      toast.push(<Notification title="Reason Submitted" type="info" duration={2000} message="Now fetching data for export..." />);
-      const exportParams = { ...apiParams, per_page: 0, page: 1 };
-      const exportDataResponse = await dispatch(getWallListingAction(exportParams)).unwrap();
-      if (!exportDataResponse?.status) { throw new Error(exportDataResponse?.message || "Failed to fetch data for export."); }
-      const allFilteredData = (exportDataResponse?.data?.data || []).map(mapApiToWallItem);
-      const success = exportWallItemsToCsv(fileName, allFilteredData);
-      if (success) { setIsExportReasonModalOpen(false); }
-    } catch (error: any) { toast.push(<Notification title="Failed to Export" type="danger" message={error.message || "An unknown error occurred"} />); } finally { setIsSubmittingExportReason(false); }
-  }, [apiParams, dispatch, mapApiToWallItem]);
-
+  const onClearFilters = useCallback(() => { const defaults = filterFormSchema.parse({}); filterFormMethods.reset(defaults); setFilterCriteria(defaults); handleSetTableData({ query: "", pageIndex: 1 }); }, [filterFormMethods, handleSetTableData]);
+  const handleCardClick = (type: 'status' | 'intent', value: string) => { const newFilters = filterFormSchema.parse({}); if (type === 'status' && value === 'today') { const todayStart = dayjs().startOf('day').toDate(); const todayEnd = dayjs().endOf('day').toDate(); newFilters.dateRange = [todayStart, todayEnd]; } else if (type === 'status') { const statusOption = recordStatusOptions.find(opt => opt.value === value); if (statusOption) { newFilters.filterRecordStatuses = [statusOption]; } } else if (type === 'intent') { const intentOption = intentOptions.find(opt => opt.value === value); if (intentOption) { newFilters.filterIntents = [intentOption]; } } setFilterCriteria(newFilters); handleSetTableData({ query: "", pageIndex: 1 }); };
+  const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: any) => { setFilterCriteria(prev => { const newFilters = { ...prev }; const currentValues = prev[key] as { value: any }[] | undefined; if (Array.isArray(currentValues)) { (newFilters as any)[key] = currentValues.filter(item => item.value !== value.value); } else { (newFilters as any)[key] = null; } return newFilters; }); }, []);
+  const handleOpenExportReasonModal = useCallback(() => { if (total === 0) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true); }, [total, exportReasonFormMethods]);
+  const handleConfirmExportWithReason = useCallback(async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const moduleName = "WallListing"; const timestamp = dayjs().format("YYYY-MM-DD"); const fileName = `wall_listing_export_${timestamp}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName, })).unwrap(); toast.push(<Notification title="Reason Submitted" type="info" duration={2000} message="Now fetching data for export..." />); const exportParams = { ...apiParams, per_page: 0, page: 1 }; const exportDataResponse = await dispatch(getWallListingAction(exportParams)).unwrap(); if (!exportDataResponse?.status) { throw new Error(exportDataResponse?.message || "Failed to fetch data for export."); } const allFilteredData = (exportDataResponse?.data?.data || []).map(mapApiToWallItem); const success = exportWallItemsToCsv(fileName, allFilteredData); if (success) { setIsExportReasonModalOpen(false); } } catch (error: any) { toast.push(<Notification title="Failed to Export" type="danger" message={error.message || "An unknown error occurred"} />); } finally { setIsSubmittingExportReason(false); } }, [apiParams, dispatch, mapApiToWallItem]);
   const handlePaginationChange = (page: number) => handleSetTableData({ pageIndex: page });
   const handlePageSizeChange = (value: number) => { handleSetTableData({ pageSize: value, pageIndex: 1 }); setSelectedItems([]); };
   const handleSort = (sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 });
   const handleSearchChange = (query: string) => handleSetTableData({ query, pageIndex: 1 });
   const handleRowSelect = (checked: boolean, row: WallItem) => setSelectedItems((prev) => checked ? [...prev, row] : prev.filter((item) => item.id !== row.id));
-  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<WallItem>[]) => {
-    const originals = currentRows.map((r) => r.original);
-    if (checked) { setSelectedItems((prev) => { const oldIds = new Set(prev.map((i) => i.id)); return [...prev, ...originals.filter((o) => !oldIds.has(o.id))]; }); } else { const currentIds = new Set(originals.map((o) => o.id)); setSelectedItems((prev) => prev.filter((i) => !currentIds.has(i.id))); }
-  }, []);
+  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<WallItem>[]) => { const originals = currentRows.map((r) => r.original); if (checked) { setSelectedItems((prev) => { const oldIds = new Set(prev.map((i) => i.id)); return [...prev, ...originals.filter((o) => !oldIds.has(o.id))]; }); } else { const currentIds = new Set(originals.map((o) => o.id)); setSelectedItems((prev) => prev.filter((i) => !currentIds.has(i.id))); } }, []);
   const handleImportData = useCallback(() => setImportDialogOpen(true), []);
-  const handleImportFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) { toast.push(<Notification title="Import Started" type="info">File processing initiated. (Dummy)</Notification>); setImportDialogOpen(false); }
-    if (event.target) event.target.value = "";
-  }, []);
+  const handleImportFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (file) { toast.push(<Notification title="Import Started" type="info">File processing initiated. (Dummy)</Notification>); setImportDialogOpen(false); } if (event.target) event.target.value = ""; }, []);
 
-  // --- MODIFIED --- Columns Definition updated
-  const columns: ColumnDef<WallItem>[] = useMemo(
-    () => {
-      const baseColumns: ColumnDef<WallItem>[] = [
-        {
-          header: "Overview", accessorKey: "product_name", size: 280, cell: ({ row }) => {
-            const { product_name, productId, want_to, recordStatus } = row.original;
-            const intent = want_to as WallIntent;
-            return (
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2 mb-2">
-                  <Link
-                    to={`/product/view/${productId}`}
-                    className="font-semibold leading-normal text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
-                  >
-                    {product_name}
-                  </Link>
-                </div>
-                <div className="flex flex-col gap-1 text-xs">
-                  {recordStatus && (
-                    <div className="flex items-center gap-2">
-                      <Tag className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize`}>
-                        {recordStatus}
-                      </Tag>
-                      {want_to && (
-                        <Tag className={`capitalize text-xs px-1 py-0.5 ${intentTagColor[intent] || productApiStatusColor.default}`}>
-                          {want_to}
-                        </Tag>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          },
-        },
-        {
-          header: "Member", accessorKey: "member", size: 240, cell: ({ row }) => {
-            const { name, member_code, email, number, number_code } = row.original?.member || {};
-            return (
-              <div className="flex flex-col gap-0.5 text-xs">
-                  {member_code && (<span className="font-semibold text-gray-500 dark:text-gray-400 mb-1">{member_code}</span>)}
-                  {name && (<span className="font-semibold text-gray-800 dark:text-gray-100">{name}</span>)}
-                  {email && (<a href={`mailto:${email}`} className="block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300 truncate">{email}</a>)}
-                  {number && (<span className="block text-gray-600 dark:text-gray-300">{number_code} {number}</span>)}
-              </div>
-            );
-          },
-        },
-        {
-          header: "Created At",
-          accessorKey: "created_date",
-          size: 160,
-          cell: ({ row }) => {
-              const { created_date } = row.original;
-              return (
-                  <div className="flex flex-col text-xs">
-                      <span className="font-semibold text-gray-800 dark:text-gray-100">
-                          {dayjs(created_date).format('DD MMM YYYY, h:mm A')}
-                      </span>
-                     
-                  </div>
-              );
-          },
-        },
-        {
-          header: "Details", accessorKey: "details", size: 220, cell: ({ row }) => {
-            const { product_specs, product_status, cartoonTypeId, created_from, deviceCondition, quantity } = row?.original || {};
-            const currentProductApiStatus = product_status?.toLowerCase() || "default";
-            const cartoonTypeName = dummyCartoonTypes.find((ct) => ct.id === cartoonTypeId)?.name;
-            return (
-              <div className="flex flex-col gap-1 text-xs">
-                <div className="flex items-center gap-2">
-                  <TbStack2 className="text-base text-gray-500" />
-                  <span className="text-gray-700 dark:text-gray-300">
-                    Qty: <strong className="text-blue-600 dark:text-blue-400 font-bold">{quantity ?? "N/A"}</strong>
-                  </span>
-                </div>
-                {product_status && (<span><Tag className={`capitalize text-xs px-1 py-0.5 ${productApiStatusColor[currentProductApiStatus] || productApiStatusColor.default}`}>{product_status}</Tag></span>)}
-                {deviceCondition && (<Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{deviceCondition}</Tag>)}
-                {product_specs && (<Tooltip title={product_specs}><span className="truncate max-w-[200px]">{product_specs}</span></Tooltip>)}
-              </div>
-            );
-          },
-        },
-      ];
-
-      if (!isDashboard) {
-        baseColumns.push({
-          header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center" },
-          cell: (props: CellContext<WallItem, any>) => (
-            <StyledActionColumn
-              onViewDetail={() => openViewDrawer(props.row.original)}
-              onEdit={() => openEditDrawer(props.row.original)}
-              onOpenModal={handleOpenModal}
-              onSendEmail={() => handleSendEmail(props.row.original)}
-              onSendWhatsapp={() => handleSendWhatsapp(props.row.original)}
-              rowData={props.row.original}
-            />
-          ),
-        });
-      }
-
-      return baseColumns;
-    },
-    [isDashboard, openViewDrawer, openEditDrawer, handleOpenModal, handleSendEmail, handleSendWhatsapp]
-  );
+  const columns: ColumnDef<WallItem>[] = useMemo(() => { const baseColumns: ColumnDef<WallItem>[] = [{ header: "Overview", accessorKey: "product_name", size: 280, cell: ({ row }) => { const { product_name, productId, want_to, recordStatus } = row.original; const intent = want_to as WallIntent; return (<div className="flex flex-col"> <div className="flex items-center gap-2 mb-2"> <Link to={`/sales-leads/wall-item/${row.original.id}`} className="font-semibold leading-normal text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer" > {product_name} </Link> </div> <div className="flex flex-col gap-1 text-xs"> {recordStatus && (<div className="flex items-center gap-2"> <Tag className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize`}> {recordStatus} </Tag> {want_to && (<Tag className={`capitalize text-xs px-1 py-0.5 ${intentTagColor[intent] || productApiStatusColor.default}`}> {want_to} </Tag>)} </div>)} </div> </div>); }, }, { header: "Member", accessorKey: "member", size: 240, cell: ({ row }) => { const { name, member_code, email, number, number_code } = row.original?.member || {}; return (<div className="flex flex-col gap-0.5 text-xs"> {member_code && (<span className="font-semibold text-gray-500 dark:text-gray-400 mb-1">{member_code}</span>)} {name && (<span className="font-semibold text-gray-800 dark:text-gray-100">{name}</span>)} {email && (<a href={`mailto:${email}`} className="block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300 truncate">{email}</a>)} {number && (<span className="block text-gray-600 dark:text-gray-300">{number_code} {number}</span>)} </div>); }, }, { header: "Created At", accessorKey: "created_date", size: 160, cell: ({ row }) => { const { created_date } = row.original; return (<div className="flex flex-col text-xs"> <span className="font-semibold text-gray-800 dark:text-gray-100"> {dayjs(created_date).format('DD MMM YYYY, h:mm A')} </span> </div>); }, }, { header: "Details", accessorKey: "details", size: 220, cell: ({ row }) => { const { product_specs, product_status, cartoonTypeId, created_from, deviceCondition, quantity } = row?.original || {}; const currentProductApiStatus = product_status?.toLowerCase() || "default"; return (<div className="flex flex-col gap-1 text-xs"> <div className="flex items-center gap-2"> <TbStack2 className="text-base text-gray-500" /> <span className="text-gray-700 dark:text-gray-300"> Qty: <strong className="text-blue-600 dark:text-blue-400 font-bold">{quantity ?? "N/A"}</strong> </span> </div> {product_status && (<span><Tag className={`capitalize text-xs px-1 py-0.5 ${productApiStatusColor[currentProductApiStatus] || productApiStatusColor.default}`}>{product_status}</Tag></span>)} {deviceCondition && (<Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{deviceCondition}</Tag>)} {product_specs && (<Tooltip title={product_specs}><span className="truncate max-w-[200px]">{product_specs}</span></Tooltip>)} </div>); }, },]; if (!isDashboard) { baseColumns.push({ header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<WallItem, any>) => (<StyledActionColumn onViewDetail={() => openViewDrawer(props.row.original)} onEdit={() => openEditDrawer(props.row.original)} onOpenModal={handleOpenModal} onSendEmail={() => handleSendEmail(props.row.original)} onSendWhatsapp={() => handleSendWhatsapp(props.row.original)} rowData={props.row.original} />), }); } return baseColumns; }, [isDashboard, openViewDrawer, openEditDrawer, handleOpenModal, handleSendEmail, handleSendWhatsapp]);
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<WallItem>[]>([]);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
-
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (filterCriteria.filterRecordStatuses?.length) count++;
-    if (filterCriteria.filterIntents?.length) count++;
-    if (filterCriteria.filterProductIds?.length) count++;
-    if (filterCriteria.filterCompanyIds?.length) count++;
-    if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) count++;
-    if (filterCriteria.quickFilters) count++;
-    return count;
-  }, [filterCriteria]);
-
+  const activeFilterCount = useMemo(() => { let count = 0; if (filterCriteria.filterRecordStatuses?.length) count++; if (filterCriteria.filterIntents?.length) count++; if (filterCriteria.filterProductIds?.length) count++; if (filterCriteria.filterCompanyIds?.length) count++; if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) count++; if (filterCriteria.quickFilters) count++; return count; }, [filterCriteria]);
   const counts = wallListing?.counts || { active: 0, buy: 0, non_active: 0, pending: 0, rejected: 0, sell: 0, today: 0, total: 0 };
   const cardClass = "rounded-sm border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
-
-  const renderCardContent = (content: number | undefined, colorClass: string) => {
-    if (initialLoading) {
-      return <Skeleton width={40} height={20} />;
-    }
-    return <b className={colorClass}>{content ?? 0}</b>;
-  };
-
-  const skeletonColumns: ColumnDef<WallItem>[] = useMemo(() =>
-    columns.map((column) => ({
-      ...column,
-      cell: () => <Skeleton height={40} className="my-2" />,
-    })),
-    [columns]
-  );
-
-  const skeletonData = useMemo(() =>
-    Array.from({ length: tableData.pageSize }, (_, i) => ({ id: `skeleton-${i}` } as any)),
-    [tableData.pageSize]
-  );
+  const renderCardContent = (content: number | undefined, colorClass: string) => { if (initialLoading) { return <Skeleton width={40} height={20} />; } return <b className={colorClass}>{content ?? 0}</b>; };
+  const skeletonColumns: ColumnDef<WallItem>[] = useMemo(() => columns.map((column) => ({ ...column, cell: () => <Skeleton height={40} className="my-2" />, })), [columns]);
+  const skeletonData = useMemo(() => Array.from({ length: tableData.pageSize }, (_, i) => ({ id: `skeleton-${i}` } as any)), [tableData.pageSize]);
 
   return (
     <>
@@ -1358,7 +699,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               <FormItem label="Workflow Status"><Controller name="filterRecordStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status..." options={recordStatusOptions} {...field} />)} /></FormItem>
               <FormItem label="Companies"><Controller name="filterCompanyIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select companies..." options={AllCompanyData?.map((p: any) => ({ value: p.id, label: p.company_name }))} {...field} />)} /></FormItem>
               <FormItem label="Intent (Want to)"><Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select intents..." options={intentOptions} {...field} />)} /></FormItem>
-              <FormItem label="Products"><Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select products..." options={AllProductsData?.map((p: any) => ({ value: p.id, label: p.name })) || []} {...field} />)} /></FormItem>
+              <FormItem label="Products"><Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select products..." options={AllProductsData?.data?.map((p: any) => ({ value: p.id, label: p.name })) || []} {...field} />)} /></FormItem>
               <FormItem label="Categories"><Controller name="categories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Categories..." options={ParentCategories.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               <FormItem label="Sub Categories"><Controller name="subcategories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Sub Cate..." options={subCategoriesForSelectedCategoryData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               <FormItem label="Brands"><Controller name="brands" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Brands..." options={BrandData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
@@ -1385,9 +726,6 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           </FormItem>
         </Form>
       </ConfirmDialog>
-      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} width={600}>
-        <div className="flex justify-center items-center p-4">{imageView ? <img src={imageView} alt="User" className="max-w-full max-h-[80vh]" /> : <p>No image.</p>}</div>
-      </Dialog>
     </>
   );
 };
