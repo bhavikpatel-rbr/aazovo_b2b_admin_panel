@@ -313,7 +313,7 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
     setSelected(checked ? data.map(op => op.id) : []);
   };
 
-  const handleAction = (type: 'offer_demand' | 'lead' | 'email' | 'whatsapp' | 'copy') => {
+  const handleAction = (type: 'offer' | 'demand' | 'lead' | 'email' | 'whatsapp' | 'copy') => {
     const selectedOps = data.filter(op => selected.includes(op.id));
     if (selectedOps.length === 0) {
       toast.push(<Notification title="No Selection" type="warning">Please select at least one opportunity.</Notification>);
@@ -322,15 +322,14 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
     const firstOp = selectedOps[0];
 
     switch (type) {
-      case 'offer_demand':
-        if (wallItem.want_to === 'Buy') { // Original is buying, so create an offer from supplier
-          navigate('/sales-leads/offers/create', { state: { supplierId: firstOp.member_id, productId: firstOp.product_id } });
-        } else { // Original is selling, so create a demand from buyer
-          navigate('/sales-leads/demands/create', { state: { buyerId: firstOp.member_id, productId: firstOp.product_id } });
-        }
+      case 'offer':
+        navigate('/sales-leads/wall-item/offers/create', { state: { supplierId: firstOp.member_id, productId: firstOp.product_id,...firstOp } });
+        break;
+      case 'demand':
+        navigate('/sales-leads/wall-item/demands/create', { state: { buyerId: firstOp.member_id, productId: firstOp.product_id,...firstOp } });
         break;
       case 'lead':
-        navigate('/sales-leads/lead/add', { state: { buyerId: wallItem.memberId, supplierId: firstOp.member_id, productId: firstOp.product_id } });
+        navigate('/sales-leads/wall-item/lead/add', { state: { buyerId: wallItem.memberId, supplierId: firstOp.member_id, productId: firstOp.product_id, ...firstOp } });
         break;
       case 'email':
         const emails = selectedOps.map(op => op.member_email).filter(Boolean).join(',');
@@ -391,7 +390,9 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-semibold">{selected.length} selected</span>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" icon={<TbHandGrab />} onClick={() => handleAction('offer_demand')}>Create {wallItem.want_to === 'Buy' ? 'Offer' : 'Demand'}</Button>
+                <Button size="sm" icon={<TbHandGrab />} onClick={() => handleAction('offer')}>Create Offer</Button>
+                <Button size="sm" icon={<TbHandGrab />} onClick={() => handleAction('demand')}>Create Demand</Button>
+
                 <Button size="sm" icon={<TbUserPlus />} onClick={() => handleAction('lead')}>Create Lead</Button>
                 <Button size="sm" icon={<TbMailForward />} onClick={() => handleAction('email')}>Email</Button>
                 <Button size="sm" icon={<TbBrandWhatsapp />} onClick={() => handleAction('whatsapp')}>WhatsApp</Button>
