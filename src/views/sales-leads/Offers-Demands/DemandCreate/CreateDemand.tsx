@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 // UI Components
-import { Button, Input, Radio, Select as UiSelect } from "@/components/ui";
+import { Button, Input, Select as UiSelect } from "@/components/ui"; // Removed Radio import
 import Card from "@/components/ui/Card";
 import { Form, FormItem } from "@/components/ui/Form";
 import Notification from "@/components/ui/Notification";
@@ -35,7 +35,7 @@ import { useSelector } from "react-redux";
 const priceListItemSchema = z.object({
   color: z.string(),
   qty: z.number().optional(),
-  price: z.number().optional(), // Price is now populated programmatically and editable
+  price: z.number().optional(),
 });
 
 const productDataSchema = z.object({
@@ -92,14 +92,11 @@ const CreateDemand = () => {
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector);
 
-  console.log("memberData",memberData);
-  
-
   // Memoized Select Options
   const userOptions: OptionType[] = useMemo(() => Array.isArray(usersData) ? usersData.map((u: any) => ({ value: u.id, label: `(${u.employee_id}) - ${u.name || 'N/A'}` })) : [], [usersData]);
   const productOptions: OptionType[] = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map((p: any) => ({ value: p.id, label: p.name })) : [], [productsMasterData]);
   const memberOptions: OptionType[] = useMemo(() => Array.isArray(memberData) ? memberData.map((m: any) => ({ value: m.id, label: `(${m.customer_code}) - ${m.name || 'N/A'}` })) : [], [memberData]);
-  const statusOptions: OptionType[] = [{ value: "active", label: "active" }, { value: "non-active", label: "Non active" }];
+  const statusOptions: OptionType[] = [{ value: "active", label: "Active" }, { value: "non-active", label: "Non-Active" }];
   const productSpecOptions: OptionType[] = useMemo(() => Array.isArray(ProductSpecificationsData) ? ProductSpecificationsData.map((spec: any) => ({ value: spec.id, label: spec.name })) : [], [ProductSpecificationsData]);
 
   // Form Initialization
@@ -221,7 +218,7 @@ const CreateDemand = () => {
         const productName = productOptions.find(p => p.value === group.product_id)?.label || "Unknown Product";
         const selectedSpec = productSpecOptions.find(s => s.value === group.spec_id);
         const specLabel = selectedSpec ? selectedSpec.label : '';
-        const productStatus = group.product_status === 'active' ? 'active' : 'non-active';
+        const productStatus = group.product_status === 'active' ? 'Active' : 'Non-Active';
 
         const itemsWithQty = group.items.filter(item => item.qty && item.qty > 0);
 
@@ -319,13 +316,13 @@ const CreateDemand = () => {
         ) : (
           <>
             <h4 className="mb-6">{isEdit ? 'Edit Demand' : 'Create Demand'}</h4>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-1 gap-4">
               <FormItem label="Demand Name" invalid={!!errors.name} errorMessage={errors.name?.message}>
                 <Controller name="name" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Q4 Gadget Demand" />} />
               </FormItem>
-              <FormItem label="Assign To User" invalid={!!errors.assign_user} errorMessage={errors.assign_user?.message}>
+              {/* <FormItem label="Assign To User" invalid={!!errors.assign_user} errorMessage={errors.assign_user?.message}>
                 <Controller name="assign_user" control={control} render={({ field }) => <UiSelect placeholder="Select Employee" options={userOptions} value={userOptions.find(opt => opt.value === field.value)} onChange={(option) => field.onChange(option ? option.value : null)} isClearable />} />
-              </FormItem>
+              </FormItem> */}
             </div>
           </>
         )}
@@ -373,7 +370,17 @@ const CreateDemand = () => {
                 <>
                     <div className="grid lg:grid-cols-2 gap-4 mb-4">
                         <FormItem label="Product Status">
-                            <Controller name={`product_data.${index}.product_status`} control={control} render={({ field }) => <Radio.Group value={field.value} onChange={field.onChange}>{statusOptions.map(option => <Radio key={String(option.value)} value={option.value}>{option.label}</Radio>)}</Radio.Group>} />
+                            <Controller
+                                name={`product_data.${index}.product_status`}
+                                control={control}
+                                render={({ field }) => (
+                                    <UiSelect
+                                        options={statusOptions}
+                                        value={statusOptions.find(opt => opt.value === field.value)}
+                                        onChange={(option) => field.onChange(option ? option.value : null)}
+                                    />
+                                )}
+                            />
                         </FormItem>
                         <FormItem label="Product Spec Options">
                             <Controller name={`product_data.${index}.spec_id`} control={control} render={({ field }) => <UiSelect placeholder="Select a Spec" options={productSpecOptions} value={productSpecOptions.find(o => o.value === field.value)} onChange={(option) => field.onChange(option ? option.value : null)} />} />
@@ -384,7 +391,6 @@ const CreateDemand = () => {
                             <thead className="bg-gray-50 dark:bg-gray-700">
                                 <tr>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
-                                    {/* MODIFICATION: Give Price and Qty columns a fixed width */}
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">Price</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Qty</th>
                                 </tr>
@@ -393,7 +399,6 @@ const CreateDemand = () => {
                                 {watchedProductGroups[index].items.map((item, itemIndex) => (
                                 <tr key={`${field.id}-item-${itemIndex}`}>
                                     <td className="px-4 py-3 whitespace-nowrap font-semibold">{item.color || '-'}</td>
-                                    {/* MODIFICATION: Make price an editable input field */}
                                     <td className="px-2 py-1 whitespace-nowrap">
                                       <Controller
                                         name={`product_data.${index}.items.${itemIndex}.price`}
@@ -406,7 +411,7 @@ const CreateDemand = () => {
                                             type="number"
                                             size="sm"
                                             placeholder="0.00"
-                                            step="0.01" // Allow decimal input for currency
+                                            step="0.01"
                                           />
                                         )}
                                       />

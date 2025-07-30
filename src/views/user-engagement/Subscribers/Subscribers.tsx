@@ -103,7 +103,7 @@ export type ApiSubscriberItem = {
   status: string;
   subscription_types?: string[] | null;
   source?: string | null;
-  remarks?: string | null; // CORRECTED
+  remarks?: string | null;
   reason?: string | null;
   updated_by_user?: {
     name: string;
@@ -133,6 +133,125 @@ export interface ModalState {
   type: ModalType | null;
   data: SubscriberItem | null;
 }
+
+const WhatsAppDialog = ({
+  isOpen,
+  onClose,
+  subscribers,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  subscribers: SubscriberItem[];
+}) => {
+  const [message, setMessage] = useState(
+    "Hello! This is a message regarding your subscription."
+  );
+
+  const phoneNumbers = useMemo(
+    () => subscribers.map((s) => s.mobile_no).filter(Boolean),
+    [subscribers]
+  );
+
+  const handleCopyNumbers = () => {
+    navigator.clipboard.writeText(phoneNumbers.join(", ")).then(
+      () => {
+        toast.push(
+          <Notification title="Numbers Copied" type="success" duration={2000} />
+        );
+      },
+      () => {
+        toast.push(
+          <Notification title="Copy Failed" type="danger" duration={2000} />
+        );
+      }
+    );
+  };
+
+  const handleCopyMessage = () => {
+    navigator.clipboard.writeText(message).then(
+      () => {
+        toast.push(
+          <Notification title="Message Copied" type="success" duration={2000} />
+        );
+      },
+      () => {
+        toast.push(
+          <Notification title="Copy Failed" type="danger" duration={2000} />
+        );
+      }
+    );
+  };
+
+  const handleOpenWhatsApp = () => {
+    window.open("https://web.whatsapp.com", "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Send Bulk WhatsApp Message</h5>
+      <p className="mb-4 text-sm">
+        WhatsApp does not allow sending to multiple numbers via a link. Follow
+        these steps:
+      </p>
+      <ol className="list-decimal list-inside text-sm space-y-2 mb-4 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-md">
+        <li>
+          Click <strong>Copy Numbers</strong> to copy all phone numbers.
+        </li>
+        <li>
+          Click <strong>Open WhatsApp</strong> and create a New Group or New
+          Broadcast List.
+        </li>
+        <li>Paste the numbers into the recipient field.</li>
+        <li>Return here, edit the message if needed, and copy it.</li>
+        <li>Paste the message into WhatsApp and send.</li>
+      </ol>
+
+      <div className="mb-4">
+        <h6 className="mb-2">Selected Recipients ({phoneNumbers.length})</h6>
+        <div className="max-h-32 overflow-y-auto p-2 border rounded-md dark:border-gray-600">
+          {subscribers.map((s) => (
+            <div
+              key={s.id}
+              className="text-sm flex justify-between items-center"
+            >
+              <span>{s.name || s.email}</span>
+              <span className="text-gray-500">{s.mobile_no}</span>
+            </div>
+          ))}
+        </div>
+        <div className="text-right mt-1">
+          <Button size="xs" onClick={handleCopyNumbers}>
+            Copy Numbers
+          </Button>
+        </div>
+      </div>
+
+      <FormItem label="Message Template">
+        <Input
+          textArea
+          rows={4}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+        />
+        <div className="text-right mt-1">
+          <Button size="xs" onClick={handleCopyMessage}>
+            Copy Message
+          </Button>
+        </div>
+      </FormItem>
+
+      <div className="text-right mt-6">
+        <Button className="mr-2" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="solid" icon={<TbBrandWhatsapp />} onClick={handleOpenWhatsApp}>
+          Open WhatsApp
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+
 
 // --- Zod Schemas ---
 const filterFormSchema = z.object({
@@ -454,7 +573,7 @@ const SubscribersListing = () => {
   const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
   const [imageView, setImageView] = useState("");
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [selectedRows, setSelectedRows] = useState<(string | number)[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const isDataReady = !initialLoading;
@@ -506,7 +625,7 @@ const SubscribersListing = () => {
       return {
         id: apiItem.id, email: apiItem.email, name: apiItem.name || "", mobile_no: apiItem.mobile || "",
         subscribedDate: new Date(apiItem.created_at), subscriptionTypes: apiItem.subscription_types || [],
-        source: apiItem.source || "", status: apiItem.status, remarks: apiItem.remarks || "", // CORRECTED
+        source: apiItem.source || "", status: apiItem.status, remarks: apiItem.remarks || "",
         raw_created_at: apiItem.created_at, raw_updated_at: apiItem.updated_at,
         updated_by_user: apiItem.updated_by_user,
       };
@@ -533,7 +652,7 @@ const SubscribersListing = () => {
     let apiPayload = {
       email: data.email, name: data.name || null, mobile: data.mobile_no || null,
       subscription_types: data.subscriptionTypes, source: data.source || null,
-      status: data.status, remarks: data.remarks || null, // CORRECTED
+      status: data.status, remarks: data.remarks || null,
     };
     try {
       if (editingItem) {
@@ -576,7 +695,7 @@ const SubscribersListing = () => {
     const defaultFilters = filterFormSchema.parse({});
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
-    setRowSelection({});
+    setSelectedRows([]);
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
   }, [filterFormMethods]);
 
@@ -646,9 +765,37 @@ const SubscribersListing = () => {
       toast.push(<Notification title="Operation Failed" type="danger">{(error as Error).message || "Could not complete export."}</Notification>);
     } finally { setIsSubmittingExportReason(false); }
   }, [dispatch, allFilteredAndSortedData]);
+ const selectedSubscribers = useMemo(() => {
+    if (selectedRows.length === 0) return [];
+    const selectedIds = new Set(selectedRows);
+    return allFilteredAndSortedData.filter((sub) => selectedIds.has(sub.id));
+  }, [selectedRows, allFilteredAndSortedData]);
+const handleBulkEmail = useCallback(() => {
+    if (selectedSubscribers.length === 0) {
+      toast.push(<Notification title="No Selection" type="info">Please select subscribers to email.</Notification>);
+      return;
+    }
 
-  const handleBulkEmail = () => { toast.push(<Notification title="Action Triggered" type="info">Sending email to {Object.keys(rowSelection).length} selected subscribers...</Notification>); };
-  const handleBulkWhatsApp = () => { toast.push(<Notification title="Action Triggered" type="info">Sending WhatsApp to {Object.keys(rowSelection).length} selected subscribers...</Notification>); };
+    const emails = selectedSubscribers.map((sub) => sub.email).filter(Boolean);
+
+    if (emails.length === 0) {
+      toast.push(<Notification title="No Email Addresses" type="info">None of the selected subscribers have an email address.</Notification>);
+      return;
+    }
+
+    window.location.href = `mailto:${emails.join(',')}`;
+  }, [selectedSubscribers]);
+ const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
+  const handleBulkWhatsApp = useCallback(() => {
+    const subscribersWithMobile = selectedSubscribers.filter((sub) => sub.mobile_no);
+
+    if (subscribersWithMobile.length === 0) {
+        toast.push(<Notification title="No Mobile Numbers" type="info">None of the selected subscribers have a mobile number.</Notification>);
+        return;
+    }
+
+    setIsWhatsAppModalOpen(true);
+  }, [selectedSubscribers]);
   const handleFileImport = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       console.log("Selected file:", e.target.files[0]);
@@ -663,50 +810,80 @@ const SubscribersListing = () => {
   const handleSearchChange = useCallback((query: string) => handleSetTableData({ query, pageIndex: 1 }), [handleSetTableData]);
   const handleViewClick = useCallback((item: SubscriberItem) => { navigate(`/app/crm/subscriber-details/${item.id}`); }, [navigate]);
 
-  const columns: ColumnDef<SubscriberItem>[] = useMemo(() => [
-    {
-        id: "select",
-        header: ({ table }) => (<Checkbox checked={table.getIsAllRowsSelected()} indeterminate={table.getIsSomeRowsSelected()} onChange={table.getToggleAllRowsSelectedHandler()} />),
-        cell: ({ row }) => (<Checkbox checked={row.getIsSelected()} disabled={!row.getCanSelect()} onChange={row.getToggleSelectedHandler()} />),
-    },
-    {
-        header: "Subscriber Info", accessorKey: "email", id: "subscriberInfo",
-        cell: (props) => { const rowData = props.row.original; return (<div className="flex items-center gap-2"><Avatar size="sm" shape="circle" className="mr-1">{rowData.email?.[0]?.toUpperCase()}</Avatar><div className="flex flex-col gap-0.5"><span className="font-semibold">{rowData.email}</span><div className="text-xs text-gray-500">{rowData.name || "No name provided"}</div></div></div>); },
-    },
-    {
-        header: "Type", accessorKey: "subscriptionTypes", id: "subscriptionTypes", enableSorting: false,
-        cell: (props) => { const types = props.getValue() as string[]; if (!types || types.length === 0) return "N/A"; return (<div className="flex flex-wrap gap-1 max-w-[200px]">{types.map((type) => (<Tag key={type} className="capitalize whitespace-nowrap">{type}</Tag>))}</div>); },
-    },
-    {
-        header: "Status", accessorKey: "status", id: "status",
-        cell: (props) => { const statusVal = props.getValue() as string; return (<Tag className={`capitalize whitespace-nowrap text-center ${statusColors[statusVal] || statusColors.default}`}>{statusVal || "N/A"}</Tag>); },
-    },
-    {
-        header: "Subscription Date", accessorKey: "subscribedDate", id: "subscribedDate", enableSorting: true, size: 180,
-        cell: (props) => { const date = props.row.original.subscribedDate; return !isNaN(date.getTime()) ? (<span className="text-xs">{dayjs(date).format("MMM DD, YYYY hh:mm A")}</span>) : "Invalid Date"; },
-    },
-    {
-        header: "Updated Info", accessorKey: "raw_updated_at", enableSorting: true, size: 220,
-        cell: (props: CellContext<SubscriberItem, unknown>) => {
-            const { raw_updated_at, updated_by_user } = props.row.original;
-            return (
-                <div className="flex items-center gap-2">
-                    <Tooltip title="View Profile Picture"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /></Tooltip>
-                    <div><span className="font-semibold">{updated_by_user?.name || "N/A"}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ""}</div><div className="text-xs text-gray-500">{formatCustomDateTime(raw_updated_at)}</div></div>
-                </div>
-            );
-        },
-    },
-    {
-        header: "Action", id: "action", size: 120,
-        cell: (props: CellContext<SubscriberItem, unknown>) => (
-            <div className="flex gap-2 items-center justify-center">
-                <Tooltip title="Edit Subscriber"><div className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600" onClick={() => openEditDrawer(props.row.original)} role="button"><TbPencil /></div></Tooltip>
-                <Tooltip title="Delete"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600" role="button" onClick={() => handleDeleteClick(props.row.original)}><TbTrash size={18} /></div></Tooltip>
-            </div>
-        ),
-    },
-  ], [openEditDrawer, handleViewClick, handleDeleteClick, openImageViewer]);
+  const handleSelectAll = useCallback((checked: boolean) => {
+      if (checked) {
+          setSelectedRows(allFilteredAndSortedData.map(row => row.id));
+      } else {
+          setSelectedRows([]);
+      }
+  }, [allFilteredAndSortedData]);
+
+  const handleSelectRow = useCallback((checked: boolean, rowId: string | number) => {
+      setSelectedRows((prev) =>
+          checked ? [...prev, rowId] : prev.filter((id) => id !== rowId)
+      );
+  }, []);
+
+  const columns: ColumnDef<SubscriberItem>[] = useMemo(() => {
+    const isAllFilteredSelected = allFilteredAndSortedData.length > 0 && selectedRows.length === allFilteredAndSortedData.length;
+    const isSomeFilteredSelected = selectedRows.length > 0 && !isAllFilteredSelected;
+
+    return [
+      {
+          id: "select",
+          header: () => (
+            <Checkbox
+                checked={isAllFilteredSelected}
+                indeterminate={isSomeFilteredSelected}
+                onChange={(checked) => handleSelectAll(checked)}
+            />
+          ),
+          cell: ({ row }) => (
+              <Checkbox
+                  checked={selectedRows.includes(row.original.id)}
+                  onChange={(checked) => handleSelectRow(checked, row.original.id)}
+              />
+          ),
+      },
+      {
+          header: "Subscriber Info", accessorKey: "email", id: "subscriberInfo",
+          cell: (props) => { const rowData = props.row.original; return (<div className="flex items-center gap-2"><Avatar size="sm" shape="circle" className="mr-1">{rowData.email?.[0]?.toUpperCase()}</Avatar><div className="flex flex-col gap-0.5"><span className="font-semibold">{rowData.email}</span><div className="text-xs text-gray-500">{rowData.name || "No name provided"}</div></div></div>); },
+      },
+      {
+          header: "Type", accessorKey: "subscriptionTypes", id: "subscriptionTypes", enableSorting: false,
+          cell: (props) => { const types = props.getValue() as string[]; if (!types || types.length === 0) return "N/A"; return (<div className="flex flex-wrap gap-1 max-w-[200px]">{types.map((type) => (<Tag key={type} className="capitalize whitespace-nowrap">{type}</Tag>))}</div>); },
+      },
+      {
+          header: "Status", accessorKey: "status", id: "status",
+          cell: (props) => { const statusVal = props.getValue() as string; return (<Tag className={`capitalize whitespace-nowrap text-center ${statusColors[statusVal] || statusColors.default}`}>{statusVal || "N/A"}</Tag>); },
+      },
+      {
+          header: "Subscription Date", accessorKey: "subscribedDate", id: "subscribedDate", enableSorting: true, size: 180,
+          cell: (props) => { const date = props.row.original.subscribedDate; return !isNaN(date.getTime()) ? (<span className="text-xs">{dayjs(date).format("MMM DD, YYYY hh:mm A")}</span>) : "Invalid Date"; },
+      },
+      {
+          header: "Updated Info", accessorKey: "raw_updated_at", enableSorting: true, size: 220,
+          cell: (props: CellContext<SubscriberItem, unknown>) => {
+              const { raw_updated_at, updated_by_user } = props.row.original;
+              return (
+                  <div className="flex items-center gap-2">
+                      <Tooltip title="View Profile Picture"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /></Tooltip>
+                      <div><span className="font-semibold">{updated_by_user?.name || "N/A"}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ""}</div><div className="text-xs text-gray-500">{formatCustomDateTime(raw_updated_at)}</div></div>
+                  </div>
+              );
+          },
+      },
+      {
+          header: "Action", id: "action", size: 120,
+          cell: (props: CellContext<SubscriberItem, unknown>) => (
+              <div className="flex gap-2 items-center justify-center">
+                  <Tooltip title="Edit Subscriber"><div className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600" onClick={() => openEditDrawer(props.row.original)} role="button"><TbPencil /></div></Tooltip>
+                  <Tooltip title="Delete"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600" role="button" onClick={() => handleDeleteClick(props.row.original)}><TbTrash size={18} /></div></Tooltip>
+              </div>
+          ),
+      },
+    ]
+  }, [selectedRows, allFilteredAndSortedData, handleSelectAll, handleSelectRow, openEditDrawer, handleViewClick, handleDeleteClick, openImageViewer]);
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<SubscriberItem>[]>(columns);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
@@ -715,7 +892,7 @@ const SubscribersListing = () => {
   const counts = rawApiSubscribers?.counts || {};
   const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-2";
-  const selectedRowCount = Object.keys(rowSelection).length;
+  const selectedRowCount = selectedRows.length;
 
   const renderCardContent = (content: number | undefined) => {
     if (initialLoading) {
@@ -751,7 +928,7 @@ const SubscribersListing = () => {
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
 
           <div className="mt-4 flex-grow overflow-auto">
-            <DataTable columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onRowSelectionChange={setRowSelection} rowSelection={rowSelection} enableRowSelection noData={!tableLoading && pageData.length === 0} />
+            <DataTable columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} noData={!tableLoading && pageData.length === 0} />
           </div>
         </AdaptiveCard>
       </Container>
@@ -1118,7 +1295,11 @@ const SubscribersListing = () => {
           </FormItem>
         </Form>
       </ConfirmDialog>
-
+ <WhatsAppDialog
+        isOpen={isWhatsAppModalOpen}
+        onClose={() => setIsWhatsAppModalOpen(false)}
+        subscribers={selectedSubscribers.filter((s) => s.mobile_no)}
+      />
       <SubscriberModals
         modalState={modalState}
         onClose={handleCloseModal}
