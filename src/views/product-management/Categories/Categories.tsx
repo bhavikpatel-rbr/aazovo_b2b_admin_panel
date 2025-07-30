@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -65,6 +65,11 @@ import {
   TbBlocks,
   TbColumns,
   TbX,
+  TbSitemap,
+  TbSettings,
+  TbSeo,
+  TbClock,
+  TbClockEdit,
 } from "react-icons/tb";
 
 // Types for Categories
@@ -508,29 +513,171 @@ const CategorySelectedFooter = ({
   );
 };
 
-interface DialogDetailRowProps {
-  label: string; value: string | React.ReactNode; isLink?: boolean;
-  preWrap?: boolean; breakAll?: boolean; labelClassName?: string;
-  valueClassName?: string; className?: string;
-}
-const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
-  label, value, isLink, preWrap, breakAll,
-  labelClassName = "text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider",
-  valueClassName = "text-sm text-slate-700 dark:text-slate-100 mt-0.5",
-  className = "",
+
+// --- [NEW] Improved View Detail Dialog ---
+const DetailItem = ({ icon, label, children, isLink = false, href = "#" }: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+  isLink?: boolean;
+  href?: string;
 }) => (
-  <div className={`py-1.5 ${className}`}>
-    <p className={`${labelClassName}`}>{label}</p>
-    {isLink ? (
-      <a href={typeof value === 'string' && (value.startsWith('http') ? value : `/${value}`) || '#'}
-        target="_blank" rel="noopener noreferrer"
-        className={`${valueClassName} hover:underline text-blue-600 dark:text-blue-400 ${breakAll ? 'break-all' : ''} ${preWrap ? 'whitespace-pre-wrap' : ''}`}
-      >{value}</a>
-    ) : (
-      <div className={`${valueClassName} ${breakAll ? 'break-all' : ''} ${preWrap ? 'whitespace-pre-wrap' : ''}`}>{value}</div>
-    )}
+  <div className="flex items-start">
+    <div className="text-lg text-gray-500 dark:text-gray-400 mr-3 mt-1">{icon}</div>
+    <div className="flex-1">
+      <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider">{label}</p>
+      <div className="text-sm text-gray-800 dark:text-gray-100 font-medium">
+        {isLink ?
+          <a href={href} target="_blank" rel="noopener noreferrer" className="hover:underline text-blue-600 dark:text-blue-400 break-all">
+            {children}
+          </a> :
+          <div className="break-words">{children}</div>
+        }
+      </div>
+    </div>
   </div>
 );
+
+const CategoryDetailView = ({
+  category,
+  onImageClick,
+}: {
+  category: CategoryItem | null;
+  onImageClick: (url: string | null) => void;
+}) => {
+  if (!category) {
+    return (
+      <div className="p-8 text-center flex flex-col items-center justify-center min-h-[400px]">
+        <TbInfoCircle size={48} className="text-gray-400 dark:text-gray-500 mb-3" />
+        <h6 className="font-semibold text-gray-700 dark:text-gray-200">No Category Information</h6>
+        <p className="text-sm text-gray-500 mt-1">Details for this category could not be loaded.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-1 max-h-[90vh] overflow-y-auto">
+      <div className="relative h-48 bg-gray-100 dark:bg-gray-700/60 rounded-t-lg">
+        {category.bannerIconFullPath && (
+          <img
+            src={category.bannerIconFullPath}
+            alt={`${category.name} banner`}
+            className="w-full h-full object-contain cursor-pointer"
+            onClick={() => onImageClick(category.bannerIconFullPath)}
+          />
+        )}
+        <div className="absolute bottom-0 left-0 p-4 w-full bg-gradient-to-t from-black/50 to-transparent">
+          <h4 className="font-bold text-xl text-white shadow-black [text-shadow:1px_1px_2px_var(--tw-shadow-color)]">{category.name}</h4>
+          <p className="text-xs text-gray-200 font-medium">ID: {String(category.id).padStart(6, '0')}</p>
+        </div>
+      </div>
+
+      <div className="p-4 grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Left Column */}
+        <div className="lg:col-span-1 space-y-5">
+          <Card>
+            <div className="p-4 flex flex-col items-center justify-center">
+              <Avatar
+                size={100}
+                shape="rounded"
+                src={category.webIconFullPath || undefined}
+                icon={<TbCategory />}
+                className="mb-3 border-2 border-white dark:border-gray-600 shadow-md cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                onClick={() => onImageClick(category.webIconFullPath)}
+              />
+              <Tag className={`${categoryStatusColor[category.status]} capitalize font-semibold text-sm`}>{category.status}</Tag>
+            </div>
+          </Card>
+           {category.mobileIconFullPath &&
+                <Card>
+                    <div className="p-4 flex flex-col items-center justify-center">
+                        <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Mobile Icon</p>
+                        <Avatar
+                            size={100}
+                            shape="rounded"
+                            src={category.mobileIconFullPath}
+                            icon={<TbPhoto />}
+                            className="border-2 border-white dark:border-gray-600 shadow-md cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                            onClick={() => onImageClick(category.mobileIconFullPath)}
+                        />
+                    </div>
+                </Card>
+            }
+        </div>
+
+        {/* Right Column */}
+        <div className="lg:col-span-2 space-y-5">
+          <Card>
+            <div className="p-4">
+              <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                <TbSitemap/> General Information
+              </h6>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-5 gap-x-4">
+                <DetailItem icon={<TbCategory2 />} label="Parent Category">
+                  {category.parentCategoryName || <span className="text-gray-400 dark:text-gray-500">—</span>}
+                </DetailItem>
+                <DetailItem icon={<TbLink />} label="Slug / URL" isLink href={`/${category.slug}`}>
+                  /{category.slug}
+                </DetailItem>
+                <DetailItem icon={<TbClock />} label="Created At">
+                  {new Date(category.createdAt).toLocaleString()}
+                </DetailItem>
+                <DetailItem icon={<TbClockEdit />} label="Last Updated">
+                  {new Date(category.updatedAt).toLocaleString()}
+                </DetailItem>
+              </div>
+            </div>
+          </Card>
+
+          <Card>
+            <div className="p-4">
+               <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                <TbSettings/> Settings
+              </h6>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-y-5 gap-x-4">
+                <DetailItem icon={<TbLayoutDashboard />} label="Show on Home">
+                  {category.showHomePage === 1 ? 'Yes' : 'No'}
+                </DetailItem>
+                <DetailItem icon={<TbWorldWww />} label="Show in Header">
+                  {category.showHeader === 1 ? 'Yes' : 'No'}
+                </DetailItem>
+                 <DetailItem icon={<TbCalendarEvent />} label="Coming Soon">
+                  {category.comingSoon === 1 ? 'Yes' : 'No'}
+                </DetailItem>
+                {category.showPageName &&
+                    <DetailItem icon={<TbFileText/>} label="Display Page">
+                        {category.showPageName}
+                    </DetailItem>
+                }
+               </div>
+            </div>
+          </Card>
+
+          {(category.metaTitle || category.metaDescription || category.metaKeyword) && (
+            <Card>
+                <div className="p-4">
+                    <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                        <TbSeo /> SEO & Meta
+                    </h6>
+                    <div className="space-y-4">
+                        <DetailItem icon={<TbTypography/>} label="Meta Title">
+                            {category.metaTitle || <span className="text-gray-400 dark:text-gray-500">—</span>}
+                        </DetailItem>
+                         <DetailItem icon={<TbFileText/>} label="Meta Description">
+                            {category.metaDescription || <span className="text-gray-400 dark:text-gray-500">—</span>}
+                        </DetailItem>
+                         <DetailItem icon={<TbTags/>} label="Meta Keywords">
+                            {category.metaKeyword || <span className="text-gray-400 dark:text-gray-500">—</span>}
+                        </DetailItem>
+                    </div>
+                </div>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 
 // --- Main Component (Categories) ---
@@ -1410,113 +1557,18 @@ const Categories = () => {
         confirmButtonColor="red-600" onConfirm={onConfirmSingleDeleteCategory} loading={isProcessing}
       ><p>Are you sure you want to delete the category "<strong>{categoryToDelete?.name}</strong>"? This action cannot be undone.</p></ConfirmDialog>
 
+      {/* [IMPROVED] View Details Dialog */}
       <Dialog
         isOpen={isViewDetailModalOpen}
         onClose={closeViewDetailModal}
         onRequestClose={closeViewDetailModal}
-        width={600}
-        contentClassName="!p-0 bg-slate-50 dark:bg-gray-800 rounded-xl shadow-2xl"
+        width={800}
+        contentClassName="!p-0 bg-gray-50 dark:bg-gray-800 rounded-lg shadow-2xl"
       >
-        {categoryToView ? (
-          <div className="flex flex-col max-h-[90vh]">
-            <div className="p-4 space-y-4 overflow-y-auto">
-              <div className="p-4 bg-white dark:bg-slate-700/60 rounded-lg shadow-sm">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-4">
-                    {categoryToView.webIconFullPath && (
-                      <Avatar
-                        size={48}
-                        shape="rounded"
-                        src={categoryToView.webIconFullPath}
-                        icon={<TbCategory />}
-                        className="border dark:border-slate-600 cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
-                        onClick={() => openImageViewer(categoryToView.webIconFullPath)}
-                      />
-                    )}
-                    <div>
-                      <h5 className="font-bold text-lg text-slate-800 dark:text-slate-100">
-                        {categoryToView.name}
-                      </h5>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        ID: {String(categoryToView.id).padStart(6, '0')}
-                      </p>
-                    </div>
-                      <Tag className={`${categoryStatusColor[categoryToView.status]} capitalize font-semibold border-0 text-[11px] px-2.5 py-1 rounded-full`}>
-                        {categoryToView.status}
-                      </Tag>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-200 dark:border-slate-600">
-                  {categoryToView.mobileIconFullPath && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Mobile Icon</p>
-                      <div className="flex justify-center items-center p-2 bg-slate-100 dark:bg-slate-800/50 rounded-md">
-                        <Avatar
-                          size={80}
-                          shape="rounded"
-                          src={categoryToView.mobileIconFullPath}
-                          icon={<TbPhoto />}
-                          className="border dark:border-slate-300 dark:border-slate-600 cursor-pointer"
-                          onClick={() => openImageViewer(categoryToView.mobileIconFullPath)}
-                        />
-                      </div>
-                    </div>
-                  )}
-                  {categoryToView.bannerIconFullPath && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Banner Preview</p>
-                      <div className="flex justify-center items-center p-2 bg-slate-100 dark:bg-slate-800/50 rounded-md">
-                        <img
-                          src={categoryToView.bannerIconFullPath}
-                          alt="Category Banner"
-                          className="w-auto h-20 object-contain cursor-pointer"
-                          onClick={() => openImageViewer(categoryToView.bannerIconFullPath)}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="p-4 bg-white dark:bg-slate-700/60 rounded-lg shadow-sm">
-                <h6 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">Settings</h6>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <DialogDetailRow label="Show in Header" value={categoryToView.showHeader === 1 ? 'Yes' : 'No'} />
-                  <DialogDetailRow label="Show on Home" value={categoryToView.showHomePage === 1 ? 'Yes' : 'No'} />
-                  <DialogDetailRow label="Coming Soon" value={categoryToView.comingSoon === 1 ? 'Yes' : 'No'} />
-                  {categoryToView.showPageName && <DialogDetailRow label="Display Page" value={categoryToView.showPageName} />}
-                </div>
-              </div>
-
-              <div className="p-4 bg-white dark:bg-slate-700/60 rounded-lg shadow-sm">
-                <h6 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">Details</h6>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DialogDetailRow label="Parent Category" value={categoryToView.parentCategoryName || '—'} />
-                  <DialogDetailRow label="Slug / URL" value={categoryToView.slug} isLink />
-                  <DialogDetailRow label="Created" value={new Date(categoryToView.createdAt).toLocaleString()} />
-                  <DialogDetailRow label="Last Updated" value={new Date(categoryToView.updatedAt).toLocaleString()} />
-                </div>
-              </div>
-
-              {(categoryToView.metaTitle || categoryToView.metaDescription || categoryToView.metaKeyword) && (
-                <div className="p-4 bg-white dark:bg-slate-700/60 rounded-lg shadow-sm">
-                  <h6 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">SEO & Meta</h6>
-                  <div className="space-y-3">
-                    <DialogDetailRow label="Meta Title" value={categoryToView.metaTitle || '—'} />
-                    <DialogDetailRow label="Meta Description" value={categoryToView.metaDescription || '—'} />
-                    <DialogDetailRow label="Meta Keywords" value={categoryToView.metaKeyword || '—'} />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="p-8 text-center flex flex-col items-center justify-center min-h-[200px]">
-            <TbInfoCircle size={42} className="text-slate-400 dark:text-slate-500 mb-2" />
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">No Category Information</p>
-            <p className="text-xs text-slate-500 mt-1">Details for this category could not be loaded.</p>
-          </div>
-        )}
+        <CategoryDetailView
+          category={categoryToView}
+          onImageClick={openImageViewer}
+        />
       </Dialog>
 
       <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} title="Category Image" width={600}>
