@@ -454,19 +454,36 @@ const CreateInquiry = () => {
             <div className="flex justify-center items-center py-10"> <Spinner size="lg" /></div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2 mt-6">
-              <FormItem label={<>Inquiry Date <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_date} errorMessage={errors.inquiry_date?.message as string} >
-                <Controller name="inquiry_date" control={control} render={({ field }) => (<DatePicker {...field} value={field.value} onChange={field.onChange} placeholder="Select Inquiry Date" />)} />
+              
+              {/* --- Row 1: Contact Information --- */}
+              <FormItem label={<>Company Name <span className="text-red-500">*</span></>} invalid={!!errors.company_name} errorMessage={errors.company_name?.message} >
+                <Controller name="company_name" control={control} render={({ field }) => <Input {...field} placeholder="Enter Company Name" />} />
               </FormItem>
-              <FormItem label={<>Status <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_status} errorMessage={errors.inquiry_status?.message} >
-                <Controller name="inquiry_status" control={control} render={({ field }) => (<Select placeholder="Select Status" options={statusOptions} value={statusOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
+              <FormItem label={<>Contact Person Name <span className="text-red-500">*</span></>} invalid={!!errors.name} errorMessage={errors.name?.message} >
+                <Controller name="name" control={control} render={({ field }) => <Input {...field} placeholder="Enter Full Name" />} />
               </FormItem>
-              <FormItem label="Inquiry From" invalid={!!errors.inquiry_from} errorMessage={errors.inquiry_from?.message} >
-                <Controller name="inquiry_from" control={control} render={({ field }) => (<Select placeholder="Select Inquiry Source" options={inquiryFromOptions} value={inquiryFromOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} />
+              <FormItem label={<>Contact Person Email <span className="text-red-500">*</span></>} invalid={!!errors.email} errorMessage={errors.email?.message} >
+                <Controller name="email" control={control} render={({ field }) => <Input {...field} type="email" placeholder="Enter Email Address" />} />
               </FormItem>
+              <FormItem label={<>Contact Person Mobile <span className="text-red-500">*</span></>} invalid={!!errors.mobile_no} errorMessage={errors.mobile_no?.message} >
+                <Controller name="mobile_no" control={control} render={({ field }) => <Input {...field} placeholder="Enter Phone Number (e.g. +1...)" />} />
+              </FormItem>
+
+              {/* --- Row 2: Core Inquiry Details --- */}
+              <FormItem label={<>Inquiry Subject <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_subject} errorMessage={errors.inquiry_subject?.message} className="md:col-span-2 lg:col-span-4" >
+                <Controller name="inquiry_subject" control={control} render={({ field }) => <Input {...field} placeholder="Enter Subject of Inquiry" />} />
+              </FormItem>
+              <FormItem label="Inquiry Description" invalid={!!errors.inquiry_description} errorMessage={errors.inquiry_description?.message} className="md:col-span-2 lg:col-span-4" >
+                <Controller name="inquiry_description" control={control} render={({ field }) => <Input textArea rows={4} {...field} value={field.value || ''} placeholder="Detailed Description of the Inquiry" />} />
+              </FormItem>
+
+              {/* --- Row 3: Classification and Assignment --- */}
               <FormItem label={<>Inquiry Type <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_type} errorMessage={errors.inquiry_type?.message} >
                 <Controller name="inquiry_type" control={control} render={({ field }) => (<Select placeholder="Select Inquiry Type" options={inquiryTypeOptions} value={inquiryTypeOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
               </FormItem>
-
+              <FormItem label={<>Priority <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_priority} errorMessage={errors.inquiry_priority?.message} >
+                <Controller name="inquiry_priority" control={control} render={({ field }) => (<Select placeholder="Select Priority" options={priorityOptions} value={priorityOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
+              </FormItem>
               <FormItem label="Department" invalid={!!errors.department} errorMessage={errors.department?.message as string} >
                 <Controller
                   name="department"
@@ -504,34 +521,22 @@ const CreateInquiry = () => {
                   />
                 )} />
               </FormItem>
-              <FormItem label={<>Priority <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_priority} errorMessage={errors.inquiry_priority?.message} >
-                <Controller name="inquiry_priority" control={control} render={({ field }) => (<Select placeholder="Select Priority" options={priorityOptions} value={priorityOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
+              
+              {/* --- Row 4: Status and Dates --- */}
+              <FormItem label={<>Inquiry Date <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_date} errorMessage={errors.inquiry_date?.message as string} >
+                <Controller name="inquiry_date" control={control} render={({ field }) => (<DatePicker {...field} value={field.value} onChange={field.onChange} placeholder="Select Inquiry Date" />)} />
+              </FormItem>
+              <FormItem label={<>Status <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_status} errorMessage={errors.inquiry_status?.message} >
+                <Controller name="inquiry_status" control={control} render={({ field }) => (<Select placeholder="Select Status" options={statusOptions} value={statusOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
+              </FormItem>
+              <FormItem label="Inquiry From" invalid={!!errors.inquiry_from} errorMessage={errors.inquiry_from?.message} >
+                <Controller name="inquiry_from" control={control} render={({ field }) => (<Select placeholder="Select Inquiry Source" options={inquiryFromOptions} value={inquiryFromOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} />
               </FormItem>
               <FormItem label="Response Date" invalid={!!errors.response_date} errorMessage={errors.response_date?.message as string} >
                 <Controller name="response_date" control={control} render={({ field }) => (<DatePicker {...field} value={field.value} onChange={field.onChange} placeholder="Select Response Date" />)} />
               </FormItem>
 
-              <FormItem label={<>Company Name <span className="text-red-500">*</span></>} invalid={!!errors.company_name} errorMessage={errors.company_name?.message} >
-                <Controller name="company_name" control={control} render={({ field }) => <Input {...field} placeholder="Enter Company Name" />} />
-              </FormItem>
-              <FormItem label={<>Contact Person Name <span className="text-red-500">*</span></>} invalid={!!errors.name} errorMessage={errors.name?.message} >
-                <Controller name="name" control={control} render={({ field }) => <Input {...field} placeholder="Enter Full Name" />} />
-              </FormItem>
-              <FormItem label={<>Contact Person Email <span className="text-red-500">*</span></>} invalid={!!errors.email} errorMessage={errors.email?.message} >
-                <Controller name="email" control={control} render={({ field }) => <Input {...field} type="email" placeholder="Enter Email Address" />} />
-              </FormItem>
-              <FormItem label={<>Contact Person Mobile <span className="text-red-500">*</span></>} invalid={!!errors.mobile_no} errorMessage={errors.mobile_no?.message} >
-                <Controller name="mobile_no" control={control} render={({ field }) => <Input {...field} placeholder="Enter Phone Number (e.g. +1...)" />} />
-              </FormItem>
-              
-              <FormItem label={<>Inquiry Subject <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_subject} errorMessage={errors.inquiry_subject?.message} className="lg:col-span-4" >
-                <Controller name="inquiry_subject" control={control} render={({ field }) => <Input {...field} placeholder="Enter Subject of Inquiry" />} />
-              </FormItem>
-
-              <FormItem label="Resolution (Notes)" invalid={!!errors.inquiry_resolution} errorMessage={errors.inquiry_resolution?.message} className="md:col-span-2 lg:col-span-4" >
-                <Controller name="inquiry_resolution" control={control} render={({ field }) => <Input textArea rows={4} {...field} value={field.value || ''} placeholder="Enter Resolution Notes" />} />
-              </FormItem>
-
+              {/* --- Row 5: Attachments --- */}
               <FormItem label="Attachments" className="md:col-span-2 lg:col-span-4">
                 <div className="flex flex-col gap-3">
                   {existingAttachments.length > 0 && (
@@ -611,11 +616,13 @@ const CreateInquiry = () => {
                   )}
                 />
               </FormItem>
-
-              <FormItem label="Inquiry Description" invalid={!!errors.inquiry_description} errorMessage={errors.inquiry_description?.message} className="lg:col-span-4" >
-                <Controller name="inquiry_description" control={control} render={({ field }) => <Input textArea rows={4} {...field} value={field.value || ''} placeholder="Detailed Description of the Inquiry" />} />
+              
+              {/* --- Row 6: Resolution Details --- */}
+              <FormItem label="Resolution (Notes)" invalid={!!errors.inquiry_resolution} errorMessage={errors.inquiry_resolution?.message} className="md:col-span-2 lg:col-span-4" >
+                <Controller name="inquiry_resolution" control={control} render={({ field }) => <Input textArea rows={4} {...field} value={field.value || ''} placeholder="Enter Resolution Notes" />} />
               </FormItem>
 
+              {/* --- Action Buttons --- */}
               <div className="lg:col-span-4 flex justify-end gap-2 mt-4">
                 <Button size="sm" className="mr-2" onClick={handleCancel} disabled={isSubmitting}>
                   Cancel

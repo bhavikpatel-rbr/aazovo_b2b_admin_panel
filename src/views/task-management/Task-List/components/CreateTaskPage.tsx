@@ -114,10 +114,57 @@ const taskStatusLabelsDisplay = ["Not Started", "Pending", "In Progress", "On Ho
 type TaskStatusDisplay = typeof taskStatusLabelsDisplay[number];
 // --- END NEW STATUS DEFINITIONS ---
 
+// --- MODULE NAME OPTIONS ---
+const moduleNameOptions = [
+    { label: "Company", value: "company" },
+    { label: "Member", value: "member" },
+    { label: "Partner", value: "partner" },
+    { label: "Inquiry", value: "inquiry" },
+    { label: "Brand", value: "brand" },
+    { label: "Category", value: "category" },
+    { label: "Product", value: "product" },
+    { label: "Wall Listing", value: "wall listing" },
+    { label: "Opportunities", value: "opportunities" },
+    { label: "Offer", value: "offer" },
+    { label: "Demand", value: "demand" },
+    { label: "Leads", value: "leads" },
+    { label: "Account Document", value: "account document" },
+    { label: "Subscribers", value: "Subscribers" },
+    { label: "Requests & Feedbacks", value: "Requests & Feedbacks" },
+    { label: "Automation Email", value: "Automation Email" },
+    { label: "Email Campaigns", value: "Email Campaigns" },
+    { label: "Auto Email Templates", value: "Auto Email Templates" },
+    { label: "Email Templates", value: "Email Templates" },
+    { label: "Employees", value: "Employees" },
+    { label: "Designations", value: "Designations" },
+    { label: "Departments", value: "Departments" },
+    { label: "Job Applications", value: "Job Applications" },
+    { label: "Job Posts", value: "Job Posts" },
+    { label: "Raw Data", value: "Raw Data" },
+    { label: "Form Builder", value: "Form Builder" },
+    { label: "Bug Reports", value: "Bug Reports" },
+    { label: "Numbering System", value: "Numbering System" },
+    { label: "Trending Images", value: "Trending Images" },
+    { label: "Trending Carousel", value: "Trending Carousel" },
+    { label: "Sliders", value: "Sliders" },
+    { label: "Blogs", value: "Blogs" },
+    { label: "Page Types", value: "Page Types" },
+    { label: "Document Types", value: "Document Types" },
+    { label: "Member Types", value: "Member Types" },
+    { label: "Payment Terms", value: "Payment Terms" },
+    { label: "Product Spec", value: "Product Spec" },
+    { label: "Currencies", value: "Currencies" },
+    { label: "Units", value: "Units" },
+    { label: "Continents", value: "Continents" },
+    { label: "Countries", value: "Countries" },
+    { label: "Price List", value: "Price List" },
+    { label: "Documents", value: "Documents" },
+];
+
 // --- Zod Schema ---
 const createTaskSchema = z.object({
   task_title: z.string().min(1, "Task title is required.").max(255),
-  module_name: z.string().optional().nullable(),
+  module_name: z.string().min(1, "Module name is required."),
   module_id: z.string().optional(),
   assignedToIds: z.array(z.string()).optional().nullable(),
   status: z.enum(taskStatusLabelsApi, { required_error: "Status is required." }), // Updated validation
@@ -494,7 +541,19 @@ const CreateTaskPage = () => {
             <div className="flex items-center">
               <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">Module Name: <span className="text-red-500">*</span></label>
               <div className="w-full">
-                <Controller name="module_name" control={control} render={({ field }) => <Input {...field} placeholder="E.g., Company, Lead" />} />
+                <Controller
+                  name="module_name"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      options={moduleNameOptions}
+                      value={moduleNameOptions.find(opt => opt.value === field.value) || null}
+                      onChange={opt => field.onChange(opt?.value)}
+                      placeholder="Select a module..."
+                    />
+                  )}
+                />
                 {errors.module_name && <p className="text-red-500 text-xs mt-1">{errors.module_name.message}</p>}
               </div>
             </div>
