@@ -26,7 +26,6 @@ import {
   Select as UiSelect,
   Tag,
   Dialog,
-  Select,
   Checkbox,
   Dropdown,
 } from "@/components/ui";
