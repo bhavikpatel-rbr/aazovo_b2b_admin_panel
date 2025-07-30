@@ -91,7 +91,6 @@ import {
   addScheduleAction,
   addTaskAction,
   getDepartmentsAction,
-  getParentCategoriesAction, // IMPORTED
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
@@ -104,9 +103,8 @@ export type RequestFeedbackType = "Request" | "Feedback";
 
 export type RequestFeedbackStatus =
   | "Pending"
-  | "In progress"
+  
   | "Resolved"
-  | "Rejected";
 
 export type RequestFeedbackItem = {
   id: string | number;
@@ -119,17 +117,38 @@ export type RequestFeedbackItem = {
   attachment?: string | null;
   icon_full_path?: string | null;
   type: RequestFeedbackType;
-  category_id: string | number | null; // MODIFIED
+  category_id: string | null; // MODIFIED: Can be a string name now
   department_id: string | number;
   status: RequestFeedbackStatus;
   rating?: number | string | null;
   created_at: string;
   updated_at: string;
   department?: { id: number; name: string };
-  category?: { id: number; name: string }; // MODIFIED
+  category?: { id: number; name: string; } | null; // Can be null
   // UI Display helpers
   categoryName?: string;
 };
+
+// --- NEW CONDITIONAL CATEGORY OPTIONS ---
+const REQUEST_CATEGORY_OPTIONS: SelectOption[] = [
+    { value: "New Product Request", label: "New Product Request" },
+    { value: "Account Statement Request", label: "Account Statement Request" },
+    { value: "Catalogue Request", label: "Catalogue Request" },
+    { value: "Account Documents request", label: "Account Documents request" },
+    { value: "Others", label: "Others" },
+];
+
+const FEEDBACK_CATEGORY_OPTIONS: SelectOption[] = [
+    { value: "Feature feedback", label: "Feature feedback" },
+    { value: "Website feedback", label: "Website feedback" },
+    { value: "Testimonial", label: "Testimonial" },
+    { value: "Service feedback", label: "Service feedback" },
+    { value: "Transactional feedback", label: "Transactional feedback" },
+    { value: "Others", label: "Others" },
+];
+
+const ALL_STATIC_CATEGORIES = [...REQUEST_CATEGORY_OPTIONS, ...FEEDBACK_CATEGORY_OPTIONS];
+
 
 const TYPE_OPTIONS: SelectOption[] = [
   { value: "Request", label: "Request" },
@@ -138,9 +157,7 @@ const TYPE_OPTIONS: SelectOption[] = [
 
 const STATUS_OPTIONS: { value: RequestFeedbackStatus; label: string }[] = [
   { value: "Pending", label: "Pending" },
-  { value: "In progress", label: "In progress" },
   { value: "Resolved", label: "Resolved" },
-  { value: "Rejected", label: "Rejected" },
 ];
 
 const RATING_OPTIONS: SelectOption[] = [
@@ -170,13 +187,13 @@ const requestFeedbackFormSchema = z.object({
     .min(1, "Email is required."),
   mobile_no: z.string().min(1, "Mobile number is required.").max(20),
   company_name: z.string().max(150).optional().or(z.literal("")).nullable(),
-  type: z.enum(["Request", "Feedback"]).optional().nullable(),
+  type: z.enum(["Request", "Feedback"], { required_error: 'Type is required.'}),
   category_id: z.string().optional().nullable(),
   department_id: z.string().optional().nullable(),
   feedback_details: z
     .string()
    .optional().nullable(),
-  status: z.enum(["Pending", "In progress", "Resolved", "Rejected"], {
+  status: z.enum(["Pending", "Resolved"], {
     errorMap: () => ({ message: "Please select a status." }),
   }),
   rating: z.string().optional().nullable(),
@@ -512,7 +529,6 @@ const RequestAndFeedbackListing = () => {
   const {
     requestFeedbacksData = { data: [], counts: {} },
     departmentsData = [],
-    ParentCategories: CategoriesData = [], // ADDED
   } = useSelector(masterSelector, shallowEqual);
 
   const [initialLoading, setInitialLoading] = useState(true);
@@ -549,18 +565,6 @@ const RequestAndFeedbackListing = () => {
   const isDataReady = !initialLoading;
   const tableLoading = initialLoading || isSubmitting || isDeleting;
 
-  // ADDED: Memoized category options from API
-  const categoryOptions = useMemo(
-    () =>
-      Array.isArray(CategoriesData)
-        ? CategoriesData?.map((c: ApiLookupItem) => ({
-            value: String(c.id),
-            label: c.name,
-          }))
-        : [],
-    [CategoriesData]
-  );
-
   useEffect(() => {
     const fetchData = async () => {
       setInitialLoading(true);
@@ -569,7 +573,6 @@ const RequestAndFeedbackListing = () => {
           dispatch(getRequestFeedbacksAction()),
           dispatch(getAllUsersAction()),
           dispatch(getDepartmentsAction()),
-          dispatch(getParentCategoriesAction()), // ADDED
         ]);
       } catch (error) {
         console.error("Failed to load initial data", error);
@@ -604,8 +607,13 @@ const RequestAndFeedbackListing = () => {
     control,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isValid },
   } = formMethods;
+
+  const watchedType = watch('type');
+
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
     defaultValues: filterCriteria,
@@ -618,7 +626,7 @@ const RequestAndFeedbackListing = () => {
       mobile_no: "",
       company_name: "",
       type: "Request",
-      category_id: "", // MODIFIED
+      category_id: null,
       department_id: "",
       feedback_details: "",
       status: "Pending",
@@ -635,13 +643,14 @@ const RequestAndFeedbackListing = () => {
     setEditingItem(null);
     setIsAddDrawerOpen(true);
   }, [reset, defaultFormValues]);
+
   const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
+
   const openEditDrawer = useCallback(
     (item: RequestFeedbackItem) => {
       setEditingItem(item);
       setSelectedFile(null);
       setRemoveExistingAttachment(false);
-      console.log("item.category_id",item);
       
       reset({
         name: item.name,
@@ -649,7 +658,7 @@ const RequestAndFeedbackListing = () => {
         mobile_no: item.mobile_no,
         company_name: item.company_name || "",
         type: item.type,
-        category_id: item.category_id != null ? String(item.category_id) : '', // MODIFIED
+        category_id: item.category_id,
         department_id: String(item.department_id),
         feedback_details: item.feedback_details,
         status: item.status,
@@ -660,6 +669,7 @@ const RequestAndFeedbackListing = () => {
     },
     [reset]
   );
+
   const closeEditDrawer = useCallback(() => {
     setEditingItem(null);
     setIsEditDrawerOpen(false);
@@ -679,14 +689,11 @@ const RequestAndFeedbackListing = () => {
       if (value !== null && value !== undefined && value !== "")
         formData.append(key, String(value));
     });
-    console.log("editingItem",editingItem);
     
     if (editingItem) {
       formData.append("_method", "PUT");
-     console.log("editingItem.category_id",editingItem.category_id);
-     console.log("editingItem.category_id",editingItem.category_id == null);
-      formData.append('department_id', editingItem.department_id == null ? '' : editingItem.department_id);
-    formData.append('category_id', editingItem.category_id == null ? '' : editingItem.category_id);
+      formData.append('department_id', editingItem.department_id == null ? '' : String(editingItem.department_id));
+      formData.append('category_id', data.category_id == null ? '' : String(data.category_id));
      
       if (selectedFile instanceof File)
         formData.append("attachment", selectedFile);
@@ -851,8 +858,7 @@ const RequestAndFeedbackListing = () => {
       ...item,
       categoryName:
         item.category?.name ||
-        categoryOptions.find((c) => c.value === String(item.category_id))
-          ?.label ||
+        item.category_id ||
         "N/A",
     }));
 
@@ -895,7 +901,7 @@ const RequestAndFeedbackListing = () => {
       pageData: processedData.slice(startIndex, startIndex + pageSize),
       total: currentTotal,
     };
-  }, [requestFeedbacksData?.data, tableData, filterCriteria, categoryOptions]);
+  }, [requestFeedbacksData?.data, tableData, filterCriteria]);
 
   const activeFilterCount = useMemo(
     () =>
@@ -941,7 +947,7 @@ const RequestAndFeedbackListing = () => {
       },
       {
         header: "Category",
-        accessorKey: "category_id", // MODIFIED
+        accessorKey: "category_id",
         size: 180,
         cell: (props) => (
           <div className="truncate w-44" title={props.row.original.categoryName}>
@@ -1002,6 +1008,12 @@ const RequestAndFeedbackListing = () => {
     useState<ColumnDef<RequestFeedbackItem>[]>(columns);
 
   const DrawerFormContent = () => {
+    const conditionalCategoryOptions = useMemo(() => {
+        if (watchedType === 'Request') return REQUEST_CATEGORY_OPTIONS;
+        if (watchedType === 'Feedback') return FEEDBACK_CATEGORY_OPTIONS;
+        return [];
+    }, [watchedType]);
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
         <FormItem
@@ -1033,15 +1045,19 @@ const RequestAndFeedbackListing = () => {
           invalid={!!errors.type}
           errorMessage={errors.type?.message}
         >
-          <Controller name="type" control={control} render={({ field }) => <Select placeholder="Select Type" options={TYPE_OPTIONS} value={TYPE_OPTIONS.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbMessageDots />} />} />
+          <Controller name="type" control={control} render={({ field }) => <Select placeholder="Select Type" options={TYPE_OPTIONS} value={TYPE_OPTIONS.find((o) => o.value === field.value)} 
+          onChange={(opt) => {
+              field.onChange(opt?.value);
+              setValue('category_id', null, {shouldValidate: true});
+          }}
+          prefix={<TbMessageDots />} />} />
         </FormItem>
-        {/* MODIFIED: Using dynamic categoryOptions */}
         <FormItem
           label={<div>Category</div>}
           invalid={!!errors.category_id}
           errorMessage={errors.category_id?.message}
         >
-          <Controller name="category_id" control={control} render={({ field }) => <Select placeholder="Select Category" options={categoryOptions} value={categoryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbCategory />} />} />
+          <Controller name="category_id" control={control} render={({ field }) => <Select placeholder="Select Category" options={conditionalCategoryOptions} value={conditionalCategoryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbCategory />} isClearable />} />
         </FormItem>
         <FormItem
           label={<div>Department</div>}
@@ -1059,14 +1075,16 @@ const RequestAndFeedbackListing = () => {
         >
           <Controller name="feedback_details" control={control} render={({ field }) => <Input textArea {...field} rows={5} placeholder="Describe your feedback or request in detail..." />} />
         </FormItem>
-        <FormItem
-          label="Rating"
-          className="md:col-span-2"
-          invalid={!!errors.rating}
-          errorMessage={errors.rating?.message}
-        >
-          <Controller name="rating" control={control} render={({ field }) => <Select placeholder="Select Rating (Optional)" options={RATING_OPTIONS} value={RATING_OPTIONS.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbStar />} />} />
-        </FormItem>
+        {watchedType === 'Feedback' && (
+            <FormItem
+            label="Rating"
+            className="md:col-span-2"
+            invalid={!!errors.rating}
+            errorMessage={errors.rating?.message}
+            >
+            <Controller name="rating" control={control} render={({ field }) => <Select placeholder="Select Rating (Optional)" options={RATING_OPTIONS} value={RATING_OPTIONS.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbStar />} />} />
+            </FormItem>
+        )}
         <FormItem label="Attachment (Optional)" className="md:col-span-2">
           <Controller name="attachment" control={control} render={({ field: { onChange, name, ref, onBlur } }) => (<Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e) => { const file = e.target.files?.[0]; onChange(file); setSelectedFile(file || null); if (file) setRemoveExistingAttachment(false); }} prefix={<TbPaperclip />} />)} />
           {editingItem?.attachment && !selectedFile && !removeExistingAttachment && (
