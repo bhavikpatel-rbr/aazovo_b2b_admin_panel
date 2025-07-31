@@ -5,7 +5,7 @@ import isBetween from "dayjs/plugin/isBetween";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import cloneDeep from "lodash/cloneDeep";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -339,9 +339,10 @@ const eventTypeOptions = [
   { value: "ProjectKickoff", label: "Project Kick-off" },
 ];
 
-const accountDocumentStatusColor: Record<AccountDocumentStatus, string> = {
+const accountDocumentStatusColor: Record<AccountDocumentStatus | "verified", string> = {
   approved:
     "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
+  verified: "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-100",
   pending:
     "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100",
   rejected: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
@@ -350,7 +351,7 @@ const accountDocumentStatusColor: Record<AccountDocumentStatus, string> = {
   not_uploaded:
     "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-100",
   completed:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
+    "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-200",
   active: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-100",
   force_completed:
     "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-100",
@@ -1882,9 +1883,6 @@ const AccountDocumentAlertModal = ({ document, onClose }: { document: any, onClo
 
 const DownloadDocumentsDialog = ({ document, onClose }: { document: any, onClose: () => void }) => {
     const documents = useMemo(() => {
-        // This is a hypothetical structure. You need to adjust this based on the actual
-        // API response from `getbyIDaccountdocAction`.
-        // Let's assume the full document object has an array `document_files`.
         const allDocs: { name: string; url: string }[] = [];
         if (Array.isArray(document.document_files)) {
             document.document_files.forEach((file: any) => {
@@ -1893,7 +1891,6 @@ const DownloadDocumentsDialog = ({ document, onClose }: { document: any, onClose
                 }
             });
         }
-        // Add other potential single file fields if they exist
         if(document.file_path) {
             allDocs.push({name: "Primary Document", url: document.file_path});
         }
@@ -1992,6 +1989,7 @@ const AccountDocumentTableTools = ({
   filteredColumns,
   setFilteredColumns,
   activeFilterCount,
+  searchInputRef,
 }: any) => {
   const isColumnVisible = (colId: string) =>
     filteredColumns.some((c: any) => (c.id || c.accessorKey) === colId);
@@ -2025,6 +2023,7 @@ const AccountDocumentTableTools = ({
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
       <div className="flex-grow">
         <AccountDocumentSearch
+          ref={searchInputRef}
           onChange={onSearchChange}
           placeholder="Quick Search..."
         />
@@ -2176,6 +2175,8 @@ const AccountDocument = () => {
   const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] =
     useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  
+  const searchInputRef = useRef<any>(null);
 
   const filterForm = useForm<FilterFormData>();
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false);
@@ -2202,6 +2203,7 @@ const AccountDocument = () => {
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
   const [userData, setUserData] = useState<any>(null);
+  const [activeShortcut, setActiveShortcut] = useState('Total');
 
   const exportReasonFormMethods = useForm<ExportReasonFormData>({
     resolver: zodResolver(exportReasonSchema),
@@ -2219,6 +2221,27 @@ const AccountDocument = () => {
       console.error("Error getting UserData:", error);
     }
   }, [dispatch]);
+  
+  const handleSetTableData = useCallback(
+    (data: Partial<TableQueries>) =>
+      setTableData((prev) => ({ ...prev, ...data })),
+    []
+  );
+
+  const handleShortcutClick = (shortcut: string) => {
+    setActiveShortcut(shortcut);
+    // Clear other filters when a shortcut is used
+    setFilterCriteria({});
+    filterForm.reset({});
+    if (searchInputRef.current) {
+        searchInputRef.current.value = '';
+    }
+    handleSetTableData({ query: '', pageIndex: 1 });
+  };
+  
+  const onClearFilters = () => {
+    handleShortcutClick('Total');
+  };
 
   const getAllUserDataOptions = useMemo(
     () =>
@@ -2343,39 +2366,75 @@ const AccountDocument = () => {
 
     let processedData: AccountDocumentListItem[] = cloneDeep(mappedData);
 
-    if (tableData.query) {
-      const query = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter((item) =>
-        Object.values(item).some((val) =>
-          String(val).toLowerCase().includes(query)
-        )
-      );
+    // Determine which filter system to use (exclusive logic)
+    // An active shortcut (other than 'Total') takes precedence.
+    if (activeShortcut && activeShortcut !== 'Total') {
+        switch (activeShortcut) {
+            case 'Today':
+                processedData = processedData.filter((item) => dayjs(item.createdAt).isSame(dayjs(), 'day'));
+                break;
+            case 'Active':
+                processedData = processedData.filter((item) => item.status === 'active');
+                break;
+            case 'Purchase':
+                processedData = processedData.filter((item) => item.enquiryType === 'purchase');
+                break;
+            case 'Sales':
+                processedData = processedData.filter((item) => item.enquiryType === 'sales');
+                break;
+            case 'Completed':
+                processedData = processedData.filter((item) => item.status === 'completed');
+                break;
+            case 'Verified':
+                processedData = processedData.filter((item) => item.status === 'approved');
+                break;
+            case 'Pending':
+                processedData = processedData.filter((item) => item.status === 'pending');
+                break;
+            case 'Aazovo Docs':
+                processedData = processedData.filter((item) => item.companyDocumentType === 'Aazovo');
+                break;
+            case 'OMC Docs':
+                processedData = processedData.filter((item) => item.companyDocumentType === 'OMC');
+                break;
+        }
+    } else {
+        // Otherwise, use search and advanced filters
+        if (tableData.query) {
+          const query = tableData.query.toLowerCase().trim();
+          processedData = processedData.filter((item) =>
+            Object.values(item).some((val) =>
+              String(val).toLowerCase().includes(query)
+            )
+          );
+        }
+
+        if (filterCriteria.filterStatus?.length) {
+          const selectedStatuses = new Set(
+            filterCriteria.filterStatus.map((s: SelectOption) => s.value)
+          );
+          processedData = processedData.filter((item) =>
+            selectedStatuses.has(item.status)
+          );
+        }
+        if (filterCriteria.comp_doc?.length) {
+          const selectedCompDocs = new Set(
+            filterCriteria.comp_doc.map((s: SelectOption) => s.value)
+          );
+          processedData = processedData.filter((item) =>
+            selectedCompDocs.has(item.companyDocumentType)
+          );
+        }
+        if (filterCriteria.doc_type?.length) {
+          const selectedDocTypes = new Set(
+            filterCriteria.doc_type.map((s: SelectOption) => s.value)
+          );
+          processedData = processedData.filter((item) =>
+            selectedDocTypes.has(item.formType)
+          );
+        }
     }
 
-    if (filterCriteria.filterStatus?.length) {
-      const selectedStatuses = new Set(
-        filterCriteria.filterStatus.map((s: SelectOption) => s.value)
-      );
-      processedData = processedData.filter((item) =>
-        selectedStatuses.has(item.status)
-      );
-    }
-    if (filterCriteria.comp_doc?.length) {
-      const selectedCompDocs = new Set(
-        filterCriteria.comp_doc.map((s: SelectOption) => s.value)
-      );
-      processedData = processedData.filter((item) =>
-        selectedCompDocs.has(item.companyDocumentType)
-      );
-    }
-    if (filterCriteria.doc_type?.length) {
-      const selectedDocTypes = new Set(
-        filterCriteria.doc_type.map((s: SelectOption) => s.value)
-      );
-      processedData = processedData.filter((item) =>
-        selectedDocTypes.has(item.formType)
-      );
-    }
 
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
@@ -2405,7 +2464,7 @@ const AccountDocument = () => {
       total: currentTotal,
       allFilteredAndSortedData: processedData,
     };
-  }, [getaccountdoc, tableData, filterCriteria]);
+  }, [getaccountdoc, tableData, filterCriteria, activeShortcut]);
 
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
@@ -2453,11 +2512,7 @@ const AccountDocument = () => {
     }
   };
 
-  const handleSetTableData = useCallback(
-    (data: Partial<TableQueries>) =>
-      setTableData((prev) => ({ ...prev, ...data })),
-    []
-  );
+
   const handleDeleteClick = useCallback((item: AccountDocumentListItem) => {
     setItemToDelete(item);
     setSingleDeleteConfirmOpen(true);
@@ -2477,11 +2532,13 @@ const AccountDocument = () => {
     (sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }),
     [handleSetTableData]
   );
-  const handleSearchChange = useCallback(
-    (query: string) =>
-      handleSetTableData({ query: query.target.value, pageIndex: 1 }),
-    [handleSetTableData]
-  );
+  
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const query = e.target.value;
+        setActiveShortcut(''); // Deactivate shortcuts when user types in search
+        handleSetTableData({ query: query, pageIndex: 1 });
+    }, [handleSetTableData]);
+
   const handleRowSelect = useCallback(
     (checked: boolean, row: AccountDocumentListItem) =>
       setSelectedItems((prev) =>
@@ -2512,6 +2569,7 @@ const AccountDocument = () => {
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
 
   const onApplyFilters = (data: FilterFormData) => {
+    setActiveShortcut(''); // Deactivate shortcuts when using advanced filters
     const newCriteria = Object.entries(data).reduce((acc, [key, value]) => {
       if (value && (!Array.isArray(value) || value.length > 0)) {
         acc[key as keyof FilterFormData] = value;
@@ -2524,24 +2582,6 @@ const AccountDocument = () => {
     closeFilterDrawer();
   };
 
-  const onClearFilters = () => {
-    setFilterCriteria({});
-    filterForm.reset({});
-    handleSetTableData({ pageIndex: 1, query: "" });
-  };
-
-  const handleCardClick = (status: AccountDocumentStatus) => {
-    const statusOption: SelectOption[] = [
-      {
-        value: status,
-        label: status.charAt(0).toUpperCase() + status.slice(1),
-      },
-    ];
-    const newCriteria: FilterFormData = { filterStatus: statusOption };
-    setFilterCriteria(newCriteria);
-    filterForm.reset(newCriteria);
-    handleSetTableData({ pageIndex: 1, query: "" });
-  };
 
   const handleRemoveFilter = (
     key: keyof FilterFormData,
@@ -2689,6 +2729,19 @@ const AccountDocument = () => {
       omc: apiCounts.omc_docs || 0,
     };
   }, [getaccountdoc]);
+  
+  const shortcutButtons = [
+    { label: 'Total', key: 'Total'},
+    { label: 'Today', key: 'Today'},
+    { label: 'Active', key: 'Active'},
+    { label: 'Purchase', key: 'Purchase'},
+    { label: 'Sales', key: 'Sales'},
+    { label: 'Completed', key: 'Completed'},
+    { label: 'Verified', key: 'Verified'},
+    { label: 'Pending', key: 'Pending'},
+    { label: 'Aazovo Docs', key: 'Aazovo Docs'},
+    { label: 'OMC Docs', key: 'OMC Docs'},
+  ];
 
   const cardClass =
     "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
@@ -2711,7 +2764,7 @@ const AccountDocument = () => {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
             <Tooltip title="Click to show all documents">
-              <div onClick={onClearFilters}>
+              <div onClick={() => handleShortcutClick('Total')}>
                 <Card
                   bodyClass={cardBodyClass}
                   className={classNames(
@@ -2732,7 +2785,7 @@ const AccountDocument = () => {
               </div>
             </Tooltip>
             <Tooltip title="Click to show pending documents">
-              <div onClick={() => handleCardClick("pending")}>
+              <div onClick={() => handleShortcutClick("Pending")}>
                 <Card
                   bodyClass={cardBodyClass}
                   className={classNames(cardClass, "border-orange-200")}
@@ -2748,7 +2801,7 @@ const AccountDocument = () => {
               </div>
             </Tooltip>
             <Tooltip title="Click to show completed documents">
-              <div onClick={() => handleCardClick("completed")}>
+              <div onClick={() => handleShortcutClick("Completed")}>
                 <Card
                   bodyClass={cardBodyClass}
                   className={classNames(cardClass, "border-green-300")}
@@ -2764,7 +2817,7 @@ const AccountDocument = () => {
               </div>
             </Tooltip>
             <Tooltip title="Click to show active documents">
-              <div onClick={() => handleCardClick("active")}>
+              <div onClick={() => handleShortcutClick("Active")}>
                 <Card
                   bodyClass={cardBodyClass}
                   className={classNames(cardClass, "border-blue-200")}
@@ -2779,8 +2832,7 @@ const AccountDocument = () => {
                 </Card>
               </div>
             </Tooltip>
-            {/* <Tooltip title="Total Aazovo documents"> */}
-              <div className="cursor-default">
+             <div className="cursor-default">
                 <Card
                   bodyClass={cardBodyClass}
                   className={classNames(cardClass, "border-violet-300")}
@@ -2794,9 +2846,7 @@ const AccountDocument = () => {
                   </div>
                 </Card>
               </div>
-            {/* </Tooltip> */}
-            {/* <Tooltip title="Total OMC documents"> */}
-              <div className="cursor-default">
+            <div className="cursor-default">
                 <Card
                   bodyClass={cardBodyClass}
                   className={classNames(cardClass, "border-pink-200")}
@@ -2810,9 +2860,25 @@ const AccountDocument = () => {
                   </div>
                 </Card>
               </div>
-            {/* </Tooltip> */}
           </div>
+          
+           {/* --- START: Header Filter Shortcuts --- */}
+           <div className="flex flex-wrap items-center gap-2 mb-4">
+              {shortcutButtons.map(s => (
+                <Button 
+                    key={s.key} 
+                    size="sm"
+                    variant={activeShortcut === s.key ? 'solid' : 'default'}
+                    onClick={() => handleShortcutClick(s.key)}
+                >
+                    {s.label}
+                </Button>
+              ))}
+           </div>
+           {/* --- END: Header Filter Shortcuts --- */}
+
           <AccountDocumentTableTools
+            searchInputRef={searchInputRef}
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
             onExport={handleOpenExportReasonModal}
