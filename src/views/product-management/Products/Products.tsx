@@ -115,7 +115,7 @@ import {
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
 
@@ -2751,7 +2751,9 @@ const Products = () => {
               }
             ></Avatar>
             <Tooltip title={props.row.original.name}>
-              <div className="truncate">
+              <Link 
+              to={`/product-management/product/${props.row.original.id}`}
+              className="truncate">
                 <span
                   className="font-semibold hover:text-blue-600 cursor-pointer"
                   onClick={() => openViewDetailModal(props.row.original)}
@@ -2761,7 +2763,7 @@ const Products = () => {
                 <div className="text-xs text-gray-500">
                   SKU: {props.row.original.skuCode || "-"}
                 </div>
-              </div>
+              </Link>
             </Tooltip>
           </div>
         ),
