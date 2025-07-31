@@ -159,6 +159,7 @@ const moduleNameOptions = [
     { label: "Countries", value: "Countries" },
     { label: "Price List", value: "Price List" },
     { label: "Documents", value: "Documents" },
+    { label: "Other", value: "Other" },
 ];
 
 // --- Zod Schema ---

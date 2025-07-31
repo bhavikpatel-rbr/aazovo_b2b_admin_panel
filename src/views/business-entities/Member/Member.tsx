@@ -10,6 +10,7 @@ import React, {
 import { Controller, useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
+import * as XLSX from 'xlsx'; // <-- ADD THIS IMPORT
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -74,6 +75,7 @@ import dayjs from "dayjs";
 import { useSelector } from "react-redux";
 import { isEmptyArray } from "formik";
 import { config } from "localforage";
+import { log } from "console";
 
 
 // --- START: Detailed Type Definitions (Matching API Response) ---
@@ -251,6 +253,161 @@ function exportToCsv(filename: string, rows: FormItem[]) {
   if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute("href", url); link.setAttribute("download", filename); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); toast.push(<Notification title="Export Successful" type="success">Current page exported to {filename}.</Notification>); return true; }
   toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>); return false;
 }
+
+// --- START: NEW Excel Viewer Modal ---
+interface ExcelSheet {
+  name: string;
+  data: any[][];
+}
+
+// --- START: NEW Excel Viewer Modal (UPDATED with better error handling) ---
+interface ExcelSheet {
+  name: string;
+  data: any[][];
+}
+
+// --- START: NEW Excel Viewer Modal (UPDATED - Lenient Content-Type) ---
+interface ExcelSheet {
+  name: string;
+  data: any[][];
+}
+
+const ExcelViewerModal: React.FC<{ isOpen: boolean; onClose: () => void; fileUrl: string; title: string }> = ({ isOpen, onClose, fileUrl, title }) => {
+  const [sheets, setSheets] = useState<ExcelSheet[]>([]);
+  const [activeSheetIndex, setActiveSheetIndex] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      const loadExcelFile = async () => {
+        setIsLoading(true);
+        setError(null);
+        setSheets([]);
+        setActiveSheetIndex(0);
+
+        try {
+          const response = await fetch(fileUrl);
+          
+          if (!response.ok) {
+            throw new Error(`Could not find the file at '${fileUrl}'. (HTTP Status: ${response.status}). Please ensure the file is in the 'public' directory and the dev server has been restarted.`);
+          }
+
+          // The strict content-type check has been removed.
+          // We will now rely on sheetjs to parse the binary data directly.
+
+          const arrayBuffer = await response.arrayBuffer();
+          const workbook = XLSX.read(arrayBuffer, { type: 'buffer' });
+          
+          const parsedSheets: ExcelSheet[] = workbook.SheetNames.map(sheetName => {
+            const worksheet = workbook.Sheets[sheetName];
+            // Using { defval: "" } ensures that empty cells are represented as empty strings instead of being omitted.
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+            return { name: sheetName, data: jsonData as any[][] };
+          });
+
+          if (parsedSheets.length === 0 || workbook.SheetNames.length === 0) {
+            throw new Error("The Excel file is empty or could not be parsed. Please check if the file is a valid .xlsx file.");
+          }
+
+          setSheets(parsedSheets);
+        } catch (err: any) {
+          console.error("Error loading or parsing Excel file:", err);
+          setError(err.message || "An unknown error occurred while processing the file.");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      loadExcelFile();
+    }
+  }, [isOpen, fileUrl]);
+
+  const activeSheet = sheets[activeSheetIndex];
+  const headers = activeSheet?.data[0] || [];
+  const bodyRows = activeSheet?.data.slice(1) || [];
+
+  return (
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      width="95vw"
+      height="95vh"
+      contentClassName="flex flex-col p-0"
+    >
+      <div className="flex-shrink-0 flex items-center justify-between p-4 border-b dark:border-gray-700">
+        <h5 className="mb-0">{title}</h5>
+        <Button shape="circle" variant="plain" icon={<TbX />} onClick={onClose} />
+      </div>
+
+      <div className="flex-grow flex flex-col min-h-0">
+        {isLoading && (
+          <div className="flex-grow flex items-center justify-center">
+            <Spinner size="lg" />
+            <p className="ml-4">Loading Excel data...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="flex-grow flex flex-col items-center justify-center text-center p-8">
+             <TbFileSearch className="text-6xl text-red-400 mb-4" />
+            <h6 className="text-red-500">Error Loading File</h6>
+            <p className="max-w-md text-gray-600 dark:text-gray-300">{error}</p>
+             <p className="mt-4 text-xs text-gray-400">Please verify the file <code>{fileUrl}</code> in your project's <code>public</code> folder is a valid, uncorrupted Excel file.</p>
+          </div>
+        )}
+
+        {!isLoading && !error && sheets.length > 0 && (
+          <>
+            {sheets.length > 1 && (
+              <div className="flex-shrink-0 p-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm mr-2">Sheets:</span>
+                    {sheets.map((sheet, index) => (
+                    <Button
+                        key={sheet.name}
+                        size="xs"
+                        variant={index === activeSheetIndex ? 'solid' : 'default'}
+                        onClick={() => setActiveSheetIndex(index)}
+                    >
+                        {sheet.name}
+                    </Button>
+                    ))}
+                </div>
+              </div>
+            )}
+            <div className="flex-grow overflow-auto">
+              <Table className="min-w-full">
+                <thead className="sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
+                  <Tr>
+                    {headers.map((header, index) => (
+                      <Td key={index} className="font-bold whitespace-nowrap">{header}</Td>
+                    ))}
+                  </Tr>
+                </thead>
+                <tbody>
+                  {bodyRows.length > 0 ? bodyRows.map((row, rowIndex) => (
+                    <Tr key={rowIndex} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                      {/* Using headers.length ensures we render a consistent number of cells per row, even if a row has missing data */}
+                      {Array.from({ length: headers.length }).map((_, cellIndex) => (
+                        <Td key={cellIndex} className="whitespace-nowrap">{row[cellIndex]}</Td>
+                      ))}
+                    </Tr>
+                  )) : (
+                     <Tr><Td colSpan={headers.length || 1} className="text-center py-8">No data found in this sheet.</Td></Tr>
+                  )}
+                </tbody>
+              </Table>
+            </div>
+          </>
+        )}
+      </div>
+    </Dialog>
+  );
+};
+// --- END: NEW Excel Viewer Modal ---
+// --- END: NEW Excel Viewer Modal ---
+// --- END: NEW Excel Viewer Modal ---
 
 // --- START: MODALS SECTION ---
 export type MemberModalType = "notification" | "task" | "calendar" | "viewDetail" | "alert" | "transaction" | "activity";
@@ -1117,6 +1274,7 @@ const FormListSelected = () => {
 const Member = () => {
   const navigate = useNavigate();
   const { MemberlistData: MemberData } = useSelector(masterSelector);
+  const [isExcelViewerOpen, setIsExcelViewerOpen] = useState(false); // <-- ADD THIS STATE
 
   const MEMBER_FILTER_STORAGE_KEY = 'memberFilterState';
 
@@ -1166,6 +1324,12 @@ const Member = () => {
     setAndPersistFilters(newFilters);
   }, [setAndPersistFilters]);
 
+  // MODIFIED: This function now opens the modal
+  const handleViewBitRouteClick = () => {
+    setIsExcelViewerOpen(true);
+  };
+
+
   return (
     <MemberListProvider>
       <Container>
@@ -1173,14 +1337,18 @@ const Member = () => {
           <div className="flex flex-col gap-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-0">
               <h5>Members</h5>
+              <div className="flex items-center gap-2">
               <Button variant="solid" icon={<TbPlus />} onClick={() => navigate("/business-entities/member-create")}>Add New</Button>
               <Button
                 icon={<TbEye />}
+                onClick={handleViewBitRouteClick} // <-- MODIFIED
                 clickFeedback={false}
                 color="green-600"
               >
                 View Bit Route
               </Button>
+
+              </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 mb-4 gap-3">
               <Tooltip title="Click to show all members">
@@ -1209,6 +1377,13 @@ const Member = () => {
         </AdaptiveCard>
       </Container>
       <FormListSelected />
+      {/* ADD THIS MODAL RENDER */}
+      <ExcelViewerModal
+        isOpen={isExcelViewerOpen}
+        onClose={() => setIsExcelViewerOpen(false)}
+        fileUrl="/public/bit_route_rm_wise_data.xlsx"
+        title="Bit Route Data"
+      />
     </MemberListProvider>
   );
 };
