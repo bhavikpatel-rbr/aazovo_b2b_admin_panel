@@ -148,15 +148,15 @@ const ListingDetailsView = ({ enquiry }: { enquiry: WallEnquiryData }) => (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
                 <InfoPair label="Created By" value={
                     <div className="flex items-center gap-2">
-                        <Avatar size={24} src={enquiry.created_by_user.profile_pic_path} shape="circle" />
-                        <span className="font-semibold">{enquiry.created_by_user.name}</span>
+                        <Avatar size={24} src={enquiry.created_by_user?.profile_pic_path} shape="circle" />
+                        <span className="font-semibold">{enquiry.created_by_user?.name}</span>
                     </div>
                 } />
                 <InfoPair label="Created At" value={dayjs(enquiry.created_at).format('DD MMM YYYY, h:mm A')} />
                 <InfoPair label="Last Updated By" value={
                     <div className="flex items-center gap-2">
-                        <Avatar size={24} src={enquiry.updated_by_user.profile_pic_path} shape="circle" />
-                        <span className="font-semibold">{enquiry.updated_by_user.name}</span>
+                        <Avatar size={24} src={enquiry.updated_by_user?.profile_pic_path} shape="circle" />
+                        <span className="font-semibold">{enquiry.updated_by_user?.name}</span>
                     </div>
                 } />
                 <InfoPair label="Last Updated At" value={dayjs(enquiry.updated_at).format('DD MMM YYYY, h:mm A')} />
@@ -377,8 +377,7 @@ const OpportunityTabView = ({ wallItem }: { wallItem: WallEnquiryData }) => {
                 <div className="flex flex-wrap items-center justify-between gap-4 p-4 border-t border-gray-200 dark:border-gray-600">
                     <span className="font-semibold">{selected.length} selected</span>
                     <div className="flex flex-wrap gap-2">
-                        <Button size="sm" icon={<TbHandGrab />} onClick={() => handleAction('offer')}>Create Offer</Button>
-                        <Button size="sm" icon={<TbHandGrab />} onClick={() => handleAction('demand')}>Create Demand</Button>
+                        <Button size="sm" icon={<TbHandGrab />} onClick={() => handleAction(wallItem.want_to === 'Buy' ? 'offer' : 'demand')}>Create {wallItem.want_to === 'Buy' ? 'Offer' : 'Demand'}</Button>
                         <Button size="sm" icon={<TbUserPlus />} onClick={() => handleAction('lead')}>Create Lead</Button>
                         <Button size="sm" icon={<TbMailForward />} onClick={() => handleAction('email')}>Email</Button>
                         <Button size="sm" icon={<TbBrandWhatsapp />} onClick={() => handleAction('whatsapp')}>WhatsApp</Button>

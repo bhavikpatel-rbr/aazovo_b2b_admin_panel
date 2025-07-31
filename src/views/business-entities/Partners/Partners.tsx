@@ -949,7 +949,7 @@ const PartnerActionColumn = ({ rowData, onEdit, onOpenModal, onDelete }: {
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Edit"><div className="text-xl cursor-pointer hover:text-emerald-600" role="button" onClick={() => onEdit(rowData.id)}><TbPencil /></div></Tooltip>
       <Tooltip title="View"><div className="text-xl cursor-pointer hover:text-blue-600" role="button" onClick={() => navigate(`/business-entities/partner-view/${rowData.id}`)}><TbEye /></div></Tooltip>
-      <Tooltip title="Delete">
+      {/* <Tooltip title="Delete">
         <div
           className={`text-xl p-1.5 cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
           role="button"
@@ -957,7 +957,7 @@ const PartnerActionColumn = ({ rowData, onEdit, onOpenModal, onDelete }: {
         >
           <TbTrash />
         </div>
-      </Tooltip>
+      </Tooltip> */}
       <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('email', rowData))} className="flex items-center gap-2"><TbMail /> Send Email</Dropdown.Item>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('whatsapp', rowData))} className="flex items-center gap-2"><TbBrandWhatsapp /> Send WhatsApp</Dropdown.Item>
