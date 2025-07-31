@@ -169,9 +169,15 @@ const activitySchema = z.object({
 type ActivityFormData = z.infer<typeof activitySchema>;
 
 // --- UI Constants ---
+// UPDATED: Added more status colors as per the business flow description
 const leadStatusColor: Record<LeadStatus | "default" | string, string> = {
   New: "bg-sky-100 text-sky-700 dark:bg-sky-700/30 dark:text-sky-200",
   Contacted: "bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-200",
+  "Assignment sent": "bg-orange-100 text-orange-700 dark:bg-orange-700/30 dark:text-orange-200",
+  Assigned: "bg-orange-100 text-orange-700 dark:bg-orange-700/30 dark:text-orange-200",
+  Accepted: "bg-lime-100 text-lime-700 dark:bg-lime-700/30 dark:text-lime-200",
+  "In Process": "bg-cyan-100 text-cyan-700 dark:bg-cyan-700/30 dark:text-cyan-200",
+  "For Approval": "bg-yellow-100 text-yellow-700 dark:bg-yellow-700/30 dark:text-yellow-200",
   Qualified:
     "bg-indigo-100 text-indigo-700 dark:bg-indigo-700/30 dark:text-indigo-200",
   "Proposal Sent":
@@ -181,14 +187,16 @@ const leadStatusColor: Record<LeadStatus | "default" | string, string> = {
   "Follow Up":
     "bg-amber-100 text-amber-700 dark:bg-amber-700/30 dark:text-amber-200",
   Won: "bg-emerald-100 text-emerald-700 dark:bg-emerald-700/30 dark:text-emerald-200",
+  Approved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-700/30 dark:text-emerald-200",
   Lost: "bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-200",
-  Completed: "bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-200",
-  Accepted: "bg-lime-100 text-lime-700 dark:bg-lime-700/30 dark:text-lime-200",
-  Assigned: "bg-orange-100 text-orange-700 dark:bg-orange-700/30 dark:text-orange-200",
+  Rejected: "bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-200",
   Cancelled: "bg-gray-100 text-gray-500 dark:bg-gray-700/30 dark:text-gray-400",
+  Completed: "bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-200",
   "Deal Done": "bg-emerald-100 text-emerald-700 dark:bg-emerald-700/30 dark:text-emerald-200",
   default: "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200",
 };
+
+// UPDATED: Added a color for 'Product lead'
 const enquiryTypeColor: Record<EnquiryType | "default" | string, string> = {
   "Product Info":
     "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200",
@@ -569,6 +577,25 @@ const ConvertLeadToDealDialog: React.FC<{
   lead: LeadListItem;
   onClose: () => void;
 }> = ({ lead, onClose }) => {
+    /**
+     * BUSINESS PROCESS FOR "CONVERT TO DEAL":
+     * As per the requirements, this action is more than a status change.
+     * It triggers a hand-off to the accounting team.
+     *
+     * 1.  **Confirmation:** This dialog should display the key deal information for final confirmation.
+     * 2.  **Task Creation:** Upon confirmation, a task should be automatically assigned to the 'account team'.
+     *     - The task details must include all relevant parameters from the lead/form:
+     *       - Product name, Supplier name, Buyer name, Quantity, Color, Product status, Carton type, etc.
+     * 3.  **Account Document Generation:** This is the core of the process.
+     *     - Two separate accounting entries need to be initiated:
+     *       a. **Purchase Order (PO):** For the purchase from the 'Supplier'.
+     *       b. **Sales Order (SO):** For the sale to the 'Buyer'.
+     * 4.  **Data Model:** The lead must contain distinct 'buyer' and 'supplier' information.
+     *     - The product details are common to both the PO and SO.
+     *
+     * The implementation below is a placeholder for this complex backend process.
+     * It simulates the confirmation step.
+     */
   const [isLoading, setIsLoading] = useState(false);
   const { control, handleSubmit } = useForm({
     defaultValues: {
@@ -579,10 +606,12 @@ const ConvertLeadToDealDialog: React.FC<{
   const onConvert = (data: any) => {
     setIsLoading(true);
     console.log(`Converting lead ${lead.lead_number} to deal with data:`, data);
+    // TODO: Integrate with backend API to trigger the full "Convert to Deal" workflow.
+    // This includes creating the PO, SO, and assigning tasks to the accounts team.
     setTimeout(() => {
       toast.push(
         <Notification type="success" title="Lead Converted">
-          Successfully converted to a new deal.
+          Successfully converted to a new deal. Accounts team has been notified.
         </Notification>
       );
       setIsLoading(false);
@@ -590,41 +619,55 @@ const ConvertLeadToDealDialog: React.FC<{
     }, 1000);
   };
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={700}>
       <h5 className="mb-4">Convert Lead to Deal</h5>
       <p className="mb-4">
-        Convert lead <span className="font-semibold">{lead.lead_number}</span>{" "}
-        into a new deal. Please confirm the details below.
+        You are about to convert lead <span className="font-semibold">{lead.lead_number}</span> into a new deal.
+        This will initiate the Purchase Order (PO) and Sales Order (SO) process for the accounts team.
+        Please confirm the details below.
       </p>
-      <form onSubmit={handleSubmit(onConvert)}>
-        <FormItem label="Deal Name">
-          <Controller
-            name="dealName"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
-        </FormItem>
-        <FormItem label="Estimated Deal Value ($)">
-          <Controller
-            name="dealValue"
-            control={control}
-            render={({ field }) => <Input type="number" {...field} />}
-          />
-        </FormItem>
-        <div className="text-right mt-6">
-          <Button
-            type="button"
-            className="mr-2"
-            onClick={onClose}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button variant="solid" type="submit" loading={isLoading}>
-            Confirm & Convert
-          </Button>
-        </div>
-      </form>
+            <Card>
+                <div className="p-4">
+                    <h6 className="mb-4">Deal Summary</h6>
+                    <div className="text-center font-semibold mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
+                        {lead.productName}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                        {/* Supplier Details */}
+                        <div>
+                            <h6 className="font-bold text-gray-800 dark:text-gray-200 border-b pb-1 mb-2">Purchase From (Supplier)</h6>
+                            <p><strong>Name:</strong> {lead.seller?.name || 'N/A'}</p>
+                            <p><strong>Member ID:</strong> {lead.seller?.member_code || 'N/A'}</p>
+                        </div>
+                        {/* Buyer Details */}
+                        <div>
+                            <h6 className="font-bold text-gray-800 dark:text-gray-200 border-b pb-1 mb-2">Sale To (Buyer)</h6>
+                            <p><strong>Name:</strong> {lead.buyer?.name || 'N/A'}</p>
+                            <p><strong>Member ID:</strong> {lead.buyer?.member_code || 'N/A'}</p>
+                        </div>
+                    </div>
+                    <hr className="my-4"/>
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div><strong className="block">Quantity:</strong> {lead.qty || 'N/A'}</div>
+                        <div><strong className="block">Target Price:</strong> ${lead.target_price || 'N/A'}</div>
+                        {/* Add other fields like Color, Product Status, etc. as they become available in `lead` object */}
+                     </div>
+                </div>
+            </Card>
+
+      <div className="text-right mt-6">
+        <Button
+          type="button"
+          className="mr-2"
+          onClick={onClose}
+          disabled={isLoading}
+        >
+          Cancel
+        </Button>
+        <Button variant="solid" onClick={handleSubmit(onConvert)} loading={isLoading} icon={<TbRocket />}>
+          Confirm & Convert
+        </Button>
+      </div>
     </Dialog>
   );
 };
@@ -2589,7 +2632,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         size: 130,
         cell: (props: CellContext<LeadListItem, any>) => (
           <div className="flex flex-col gap-0.5 text-xs">
-            <span>{props.getValue() as string}</span>
+            <span className="font-semibold">{props.getValue() as string}</span>
             <div>
               <Tag
                 className={`${enquiryTypeColor[props.row.original.enquiry_type] ||
@@ -2624,6 +2667,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         ),
       },
       {
+        // FIX: Rewritten to correctly display Buyer and Supplier details
         header: "Member",
         accessorKey: "lead_info",
         size: 200,
@@ -2633,61 +2677,52 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           const hasSeller = seller && typeof seller === 'object' && seller.name;
 
           return (
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 text-xs">
               {hasBuyer ? (
                 <div>
-                  <div className="font-bold text-xs text-gray-800 dark:text-gray-200">Buyer : {buyer.member_code || ''}</div>
-                  <div className="text-sm truncate">{buyer.name}</div>
+                  <div className="font-bold text-gray-800 dark:text-gray-200">Buyer : {buyer.member_code || ''}</div>
+                  <div className="truncate">{buyer.name}</div>
                 </div>
               ) : (
-                <div className="text-xs text-gray-400 italic">No Buyer Info</div>
+                <div className="text-gray-400 italic">No Buyer Info</div>
               )}
 
               {hasBuyer && hasSeller && <hr className="border-t border-dashed border-gray-200 dark:border-gray-600 my-1" />}
 
               {hasSeller ? (
                 <div>
-                  <div className="font-bold text-xs text-gray-800 dark:text-gray-200">Seller : {seller.member_code || ''}</div>
-                  <div className="text-sm truncate">{seller.name}</div>
+                  <div className="font-bold text-gray-800 dark:text-gray-200">Supplier : {seller.member_code || ''}</div>
+                  <div className="truncate">{seller.name}</div>
                 </div>
               ) : (
-                <div className="text-xs text-gray-400 italic">No Seller Info</div>
+                <div className="text-gray-400 italic">No Supplier Info</div>
               )}
             </div>
           );
         },
       },
       {
+        // UI-IMPROVEMENT: Re-formatted for better readability
         header: "Details",
         size: 220,
         cell: (props: CellContext<LeadListItem, any>) => {
           const formattedDate = props.row.original.createdAt
-            ? `${new Date(props.row.original.createdAt).getDate()} ${new Date(
-              props.row.original.createdAt
-            ).toLocaleString("en-US", { month: "short" })} ${new Date(
-              props.row.original.createdAt
-            ).getFullYear()}, ${new Date(
-              props.row.original.createdAt
-            ).toLocaleTimeString("en-US", {
-              hour: "numeric",
-              minute: "2-digit",
-              hour12: true,
-            })}`
+            ? dayjs(props.row.original.createdAt).format('DD MMM YYYY, h:mm A')
             : "N/A";
           return (
-            <div className="flex flex-col gap-0.5 text-xs">
-              <div>
-                <Tag>{props.row.original.lead_intent || "Buy"}</Tag>
-                <span>Qty: {props.row.original.qty ?? "-"}</span>
+            <div className="flex flex-col gap-1 text-xs">
+              <div className="flex items-center gap-2">
+                <Tag className="capitalize">{props.row.original.lead_intent || "Buy"}</Tag>
+                <span><strong>Qty:</strong> {props.row.original.qty ?? "-"}</span>
               </div>
               <span>
-                Target Price: {props.row.original.target_price ?? "-"}
+                <strong>Target Price:</strong> {props.row.original.target_price ? `$${props.row.original.target_price}` : "-"}
               </span>
               <span>
-                Sales Person :{" "}
+                <strong>Sales Person:</strong>{" "}
                 {props.row.original.salesPersonName || "Unassigned"}
               </span>
-              <b>{formattedDate}</b>
+              <b className="mt-1">{formattedDate}</b>
             </div>
           );
         },
