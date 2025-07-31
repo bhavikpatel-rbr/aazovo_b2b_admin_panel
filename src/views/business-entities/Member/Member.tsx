@@ -266,12 +266,12 @@ const AddNotificationDialog: React.FC<{ member: FormItem; onClose: () => void; u
 const AssignTaskDialog: React.FC<{ member: FormItem; onClose: () => void; userOptions: SelectOption[] }> = ({ member, onClose, userOptions }) => {
   const dispatch = useAppDispatch(); const [isLoading, setIsLoading] = useState(false);
   const today = new Date();
-today.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({ resolver: zodResolver(taskValidationSchema), defaultValues: { task_title: `Follow up with ${member.name}`, assign_to: [], priority: 'Medium', }, mode: 'onChange' });
   const onAssignTask = async (data: TaskFormData) => { setIsLoading(true); const payload = { ...data, due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined, module_id: String(member.id), module_name: 'Member', }; try { await dispatch(addTaskAction(payload)).unwrap(); toast.push(<Notification type="success" title="Task Assigned!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message} />); } finally { setIsLoading(false); } };
   return (<Dialog isOpen={true} onClose={onClose}> <h5 className="mb-4">Assign Task for {member.name}</h5> <UiForm onSubmit={handleSubmit(onAssignTask)}> <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></UiFormItem> </div> <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) =>
-     <DatePicker minDate={today}   placeholder="Select date" value={field.value} onChange={field.onChange} />} />
-     </UiFormItem> <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> <div className="text-right mt-6"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Assign Task</Button></div> </UiForm> </Dialog>);
+    <DatePicker minDate={today} placeholder="Select date" value={field.value} onChange={field.onChange} />} />
+  </UiFormItem> <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> <div className="text-right mt-6"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Assign Task</Button></div> </UiForm> </Dialog>);
 };
 
 const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; onSubmit: (data: ScheduleFormData) => void; isLoading: boolean; }> = ({ member, onClose, onSubmit, isLoading }) => {
@@ -774,7 +774,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   useEffect(() => { filterFormMethods.reset(filterCriteria); }, [filterCriteria, filterFormMethods]);
 
   useEffect(() => {
-     setIsLoading(true);
+    setIsLoading(true);
     const timerId = setTimeout(() => {
       const fetchMembers = () => {
         const formatFilterForApi = (data: any[] | undefined) => {
@@ -844,17 +844,17 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   const navigate = useNavigate();
 
   const columns: ColumnDef<FormItem>[] = useMemo(() => [
-    
+
     {
       header: "Member", accessorKey: "name", id: "member", size: 200, cell: ({ row }) => (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             {/* <Avatar src={row.original.full_profile_pic || undefined} shape="circle" size="sm" icon={<TbUserCircle />} /> */}
-            <Link 
-            to={
-              `/business-entities/member-view/${row.original.id}`
-            }
-            className="text-xs">
+            <Link
+              to={
+                `/business-entities/member-view/${row.original.id}`
+              }
+              className="text-xs">
               <b className="text-xs text-blue-500"><em>{row.original.customer_code}</em></b> <br />
               <b className="text-sm">{row.original.name}</b>
             </Link>
@@ -1171,9 +1171,16 @@ const Member = () => {
       <Container>
         <AdaptiveCard>
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-0">
               <h5>Members</h5>
               <Button variant="solid" icon={<TbPlus />} onClick={() => navigate("/business-entities/member-create")}>Add New</Button>
+              <Button
+                icon={<TbEye />}
+                clickFeedback={false}
+                color="green-600"
+              >
+                View Bit Route
+              </Button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 mb-4 gap-3">
               <Tooltip title="Click to show all members">
