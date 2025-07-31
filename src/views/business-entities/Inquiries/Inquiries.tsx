@@ -28,6 +28,7 @@ import {
   Drawer,
   Dropdown,
   Input,
+  Select,
   Form as UiForm,
   FormItem as UiFormItem,
   Select as UiSelect,
@@ -62,6 +63,7 @@ import {
   TbSearch,
   TbUrgent,
   TbUser,
+  TbUsers,
   TbX
 } from "react-icons/tb";
 
@@ -92,6 +94,7 @@ import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 import dayjs from "dayjs";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { useSelector } from "react-redux";
+import shallowEqual from "@/components/ui/utils/shallowEqual";
 
 // --- Export Reason Schema ---
 const exportReasonSchema = z.object({
@@ -130,6 +133,10 @@ const statusUpdateSchema = z.object({
 });
 type StatusUpdateFormData = z.infer<typeof statusUpdateSchema>;
 
+const assigntoUpdateSchema = z.object({
+  assigned_to: z.string().min(1, "Assign Person is required."),
+});
+type AssignUpdateFormData = z.infer<typeof assigntoUpdateSchema>;
 
 // ============================================================================
 // --- HELPER FUNCTIONS ---
@@ -155,7 +162,7 @@ const formatDateForApi = (date: Date | string | null | undefined): string | null
 // ============================================================================
 
 // --- Type Definitions for Modals ---
-export type InquiryModalType = "notification" | "schedule" | "task" | "statusUpdate"; // MODIFIED
+export type InquiryModalType = "notification" | "schedule" | "task" | "statusUpdate" | "assignUpdate"; // MODIFIED
 export interface InquiryModalState {
   isOpen: boolean;
   type: InquiryModalType | null;
@@ -780,6 +787,124 @@ const StatusUpdateModal: React.FC<{
   );
 };
 
+type ApiLookupItem = { id: string | number; name: string;[key: string]: any; };
+const AssignToUpdateModal: React.FC<{
+  inquiry: InquiryItem;
+  onClose: () => void;
+  onSuccess: () => void;
+}> = ({ inquiry, onClose, onSuccess }) => {
+  const dispatch = useAppDispatch();
+  const { usersData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
+
+  const [isLoading, setIsLoading] = useState(false);
+  const usersDataOptions = useMemo(() => Array.isArray(usersData) ? usersData.map((sp: ApiLookupItem) => ({ value: String(sp.id), label: `(${sp.employee_id}) - ${sp.name || 'N/A'}` })) : [], [usersData]);
+
+
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<AssignUpdateFormData>({
+    resolver: zodResolver(assigntoUpdateSchema),
+    defaultValues: { assigned_to: inquiry.assigned_to || '' },
+    mode: 'onChange',
+  });
+
+  const handleAssignToUpdate = async (formData: AssignUpdateFormData) => {
+    setIsLoading(true);
+    try {
+      // 1. Fetch the full, most up-to-date inquiry data
+      const response = await axiosInstance.get(`/inquiry/${inquiry.id}`);
+      if (!response.data?.data) {
+        throw new Error("Failed to fetch latest inquiry data.");
+      }
+      const apiData = response.data.data;
+
+      // 2. Construct the payload as FormData, preserving all original data
+      const formDataPayload = new FormData();
+      const payloadObject: { [key: string]: any } = {
+        company_name: apiData.company_name,
+        name: apiData.name,
+        email: apiData.email,
+        mobile_no: apiData.mobile_no,
+        inquiry_type: apiData.inquiry_type,
+        inquiry_subject: apiData.inquiry_subject,
+        priority: apiData.priority || apiData.inquiry_priority,
+        inquiry_description: apiData.inquiry_description,
+        status: apiData.status, // Use the new status from the form
+        assigned_to: formData.assigned_to,
+        department_id: apiData.department_id,
+        inquiry_date: formatDateForApi(apiData.inquiry_date),
+        response_date: formatDateForApi(apiData.response_date),
+        resolution_date: formatDateForApi(apiData.resolution_date),
+        resolution_notes: apiData.resolution_notes,
+        last_follow_up_date: formatDateForApi(apiData.last_follow_up_date),
+        feedback_status: apiData.feedback_status,
+        inquiry_from: apiData.inquiry_from,
+      };
+
+      for (const key in payloadObject) {
+        if (Object.prototype.hasOwnProperty.call(payloadObject, key)) {
+          const value = payloadObject[key];
+          if (value !== undefined && value !== null) {
+            formDataPayload.append(key, String(value));
+          }
+        }
+      }
+
+      formDataPayload.append('id', String(inquiry.id));
+      formDataPayload.append('_method', 'PUT');
+
+      // 3. Dispatch the edit action
+      await dispatch(editInquiriesAction({ id: inquiry.id, data: formDataPayload })).unwrap();
+
+      toast.push(<Notification type="success" title="Status Updated">Inquiry status changed successfully.</Notification>);
+      onSuccess(); // This will trigger a data refresh in the parent component
+      onClose();
+
+    } catch (error: any) {
+      console.error("Status Update Error:", error);
+      const errorMessage = error?.payload?.message || error.message || "An unknown error occurred.";
+      toast.push(<Notification type="danger" title="Update Failed">{errorMessage}</Notification>);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Assign for: {inquiry.inquiry_id}</h5>
+      <p className="mb-1 text-sm">Company: <span className="font-semibold">{inquiry.company_name}</span></p>
+      <p className="mb-4 text-sm">Inquiry Assigned to: <span className="font-semibold">{inquiry.assigned_to || 'N/A'}</span></p>
+
+      <UiForm onSubmit={handleSubmit(handleAssignToUpdate)}>
+        <UiFormItem
+          label="Assigned To"
+          invalid={!!errors.status}
+          errorMessage={errors.status?.message}
+        >
+          <Controller name="assigned_to" control={control} render={({ field }) => (
+            <Select
+              placeholder="Select Assignee"
+              options={usersDataOptions}
+              isLoading={masterLoadingStatus === "loading" && usersDataOptions.length === 0}
+              value={usersDataOptions.find(o => o.value === field.value) || null}
+              onChange={opt => field.onChange(opt ? opt.value : null)}
+              isClearable
+            />
+          )} />
+
+        </UiFormItem>
+
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>
+            Update
+          </Button>
+        </div>
+      </UiForm>
+    </Dialog>
+  );
+};
+
 
 // --- Modals Wrapper Component ---
 const InquiriesModals: React.FC<{
@@ -813,6 +938,14 @@ const InquiriesModals: React.FC<{
     case "statusUpdate": // ADDED
       return (
         <StatusUpdateModal
+          inquiry={inquiry}
+          onClose={onClose}
+          onSuccess={onSuccess}
+        />
+      );
+    case "assignUpdate":
+      return (
+        <AssignToUpdateModal
           inquiry={inquiry}
           onClose={onClose}
           onSuccess={onSuccess}
@@ -1173,6 +1306,12 @@ const InquiryActionColumn = ({
             className="flex items-center gap-2"
           >
             <TbProgress size={18} /> <span className="text-xs">Change Status</span>
+          </Dropdown.Item>
+          <Dropdown.Item
+            onClick={() => onOpenModal("assignUpdate", rowData)}
+            className="flex items-center gap-2"
+          >
+            <TbUsers size={18} /> <span className="text-xs">Assign To</span>
           </Dropdown.Item>
           <Dropdown.Item
             onClick={() => onSendEmail(rowData)}

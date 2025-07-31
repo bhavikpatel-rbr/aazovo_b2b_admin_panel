@@ -26,6 +26,7 @@ import { useAppDispatch } from "@/reduxtool/store";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addInquiriesAction,
+  addNotificationAction,
   editInquiriesAction,
   getDepartmentsAction,
   getUsersAction,
@@ -187,10 +188,10 @@ type NewAttachmentPreview = { name: string; url: string; type: string; };
 
 // --- Helper functions to identify file types ---
 const isImageFile = (fileNameOrType: string): boolean => {
-    return /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(fileNameOrType) || /^image\//.test(fileNameOrType);
+  return /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(fileNameOrType) || /^image\//.test(fileNameOrType);
 };
 const isPdfFile = (fileNameOrType: string): boolean => {
-    return /\.pdf$/i.test(fileNameOrType) || fileNameOrType === 'application/pdf';
+  return /\.pdf$/i.test(fileNameOrType) || fileNameOrType === 'application/pdf';
 };
 
 
@@ -216,7 +217,7 @@ const CreateInquiry = () => {
   const departmentOptions = useMemo(() => departmentsData?.data?.map((c: ApiLookupItem) => ({ value: String(c.id), label: c.name })) || [], [departmentsData]);
   const usersDataOptions = useMemo(() => Array.isArray(usersData) ? usersData.map((sp: ApiLookupItem) => ({ value: String(sp.id), label: `(${sp.employee_id}) - ${sp.name || 'N/A'}` })) : [], [usersData]);
 
-  const inquiryTypeOptions = [ { value: "New Product Inquiry", label: "New Product Inquiry" }, { value: "Services Inquiry", label: "Services Inquiry" }, { value: "Price Quotation", label: "Price Quotation" }, { value: "General Inquiry", label: "General Inquiry" }, { value: "Marketing Inquiry", label: "Marketing Inquiry" }, { value: "Membership Inquiry", label: "Membership Inquiry" }, { value: "Partnership Inquiry", label: "Partnership Inquiry" }, { value: "Others", label: "Others" }];
+  const inquiryTypeOptions = [{ value: "New Product Inquiry", label: "New Product Inquiry" }, { value: "Services Inquiry", label: "Services Inquiry" }, { value: "Price Quotation", label: "Price Quotation" }, { value: "General Inquiry", label: "General Inquiry" }, { value: "Marketing Inquiry", label: "Marketing Inquiry" }, { value: "Membership Inquiry", label: "Membership Inquiry" }, { value: "Partnership Inquiry", label: "Partnership Inquiry" }, { value: "Others", label: "Others" }];
   const priorityOptions = [{ value: "Low", label: "Low" }, { value: "Medium", label: "Medium" }, { value: "High", label: "High" }];
   const statusOptions = [{ value: "Open", label: "Open" }, { value: "In Progress", label: "In Progress" }, { value: "Resolved", label: "Resolved" }, { value: "On Hold", label: "On Hold" }, { value: "Rejected", label: "Rejected" }, { value: "Closed", label: "Closed" }];
   const feedbackStatusOptions = [{ value: "Received", label: "Received" }, { value: "Pending", label: "Pending" }, { value: "Positive", label: "Positive" }, { value: "Neutral", label: "Neutral" }, { value: "Negative", label: "Negative" }];
@@ -308,10 +309,10 @@ const CreateInquiry = () => {
 
   const handlePreviewClick = (url: string, fileIdentifier: string) => {
     if (isImageFile(fileIdentifier)) {
-        setSelectedImageUrl(url);
-        setIsImageModalOpen(true);
+      setSelectedImageUrl(url);
+      setIsImageModalOpen(true);
     } else if (isPdfFile(fileIdentifier)) {
-        window.open(url, '_blank', 'noopener,noreferrer');
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -366,7 +367,7 @@ const CreateInquiry = () => {
       priority: data.inquiry_priority,
       inquiry_description: data.inquiry_description?.trim() || null,
       status: data.inquiry_status,
-      assigned_to: data.assigned_to ? Number(data.assigned_to) : null,
+      assigned_to: data.assigned_to ? Number(data.assigned_to) : '',
       inquiry_date: formatDateForApi(data.inquiry_date),
       response_date: formatDateForApi(data.response_date),
       resolution_date: formatDateForApi(data.resolution_date),
@@ -388,7 +389,7 @@ const CreateInquiry = () => {
     }
 
     if (Array.isArray(data.department) && data.department.length > 0) {
-        formDataPayload.append('department_id', data.department.join(','));
+      formDataPayload.append('department_id', data.department.join(','));
     }
 
     if (Array.isArray(data.inquiry_attachments) && data.inquiry_attachments.length > 0) {
@@ -405,14 +406,25 @@ const CreateInquiry = () => {
       });
     }
 
+
+    const payloadnotification = {
+      send_users: [data.assigned_to],
+      notification_title: 'Inquiry Notification',
+      message: `Inquiry is assigned to you. Please check the details.`,
+      module_id: 0,
+      module_name: "Inquiry",
+    };
+
     try {
       if (isEditMode && data.id) {
         formDataPayload.append('id', String(data.id));
         formDataPayload.append('_method', 'PUT');
-        await dispatch(editInquiriesAction({ id: data.id, data: formDataPayload })).unwrap();
+        const response = await dispatch(editInquiriesAction({ id: data.id, data: formDataPayload })).unwrap();
+        if(data.assigned_to)await dispatch(addNotificationAction({ ...payloadnotification, module_id: String(response?.id) })).unwrap();
         toast.push(<Notification type="success" title="Inquiry Updated" duration={3000}>Inquiry updated successfully.</Notification>);
       } else {
-        await dispatch(addInquiriesAction(formDataPayload)).unwrap();
+        const response = await dispatch(addInquiriesAction(formDataPayload)).unwrap();
+         if(data.assigned_to)await dispatch(addNotificationAction({ ...payloadnotification, module_id: String(response?.id) })).unwrap();
         toast.push(<Notification type="success" title="Inquiry Created" duration={3000}>New Inquiry created successfully.</Notification>);
       }
       resetStatesAndNavigate();
@@ -454,7 +466,7 @@ const CreateInquiry = () => {
             <div className="flex justify-center items-center py-10"> <Spinner size="lg" /></div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2 mt-6">
-              
+
               {/* --- Row 1: Contact Information --- */}
               <FormItem label={<>Company Name <span className="text-red-500">*</span></>} invalid={!!errors.company_name} errorMessage={errors.company_name?.message} >
                 <Controller name="company_name" control={control} render={({ field }) => <Input {...field} placeholder="Enter Company Name" />} />
@@ -521,7 +533,7 @@ const CreateInquiry = () => {
                   />
                 )} />
               </FormItem>
-              
+
               {/* --- Row 4: Status and Dates --- */}
               <FormItem label={<>Inquiry Date <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_date} errorMessage={errors.inquiry_date?.message as string} >
                 <Controller name="inquiry_date" control={control} render={({ field }) => (<DatePicker {...field} value={field.value} onChange={field.onChange} placeholder="Select Inquiry Date" />)} />
@@ -616,7 +628,7 @@ const CreateInquiry = () => {
                   )}
                 />
               </FormItem>
-              
+
               {/* --- Row 6: Resolution Details --- */}
               <FormItem label="Resolution (Notes)" invalid={!!errors.inquiry_resolution} errorMessage={errors.inquiry_resolution?.message} className="md:col-span-2 lg:col-span-4" >
                 <Controller name="inquiry_resolution" control={control} render={({ field }) => <Input textArea rows={4} {...field} value={field.value || ''} placeholder="Enter Resolution Notes" />} />
