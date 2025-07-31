@@ -8,7 +8,7 @@ import React, {
   useState
 } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 // UI Components
@@ -1256,11 +1256,16 @@ const PartnerListTable = () => {
         return (
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <div>
+              <Link
+             
+               to={
+              `/business-entities/member-view/${id}`
+            }
+              >
                 <h6 className="text-xs font-semibold"><em className="text-blue-600">{String(id).padStart(5, '0') || "Partner Code"}</em></h6>
                 <span className="text-xs font-semibold leading-1">{partner_name}</span>
                 {company_name && <span className="text-xs text-gray-500 block">({company_name})</span>}
-              </div>
+              </Link>
             </div>
             {industrial_expertise && <span className="text-xs mt-1"><b>Expertise:</b> {industrial_expertise}</span>}
             {join_us_as && <span className="text-xs mt-1"><b>Joined As:</b> {join_us_as}</span>}
