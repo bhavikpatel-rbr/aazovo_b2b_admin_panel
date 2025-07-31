@@ -2133,7 +2133,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       <div className="flex flex-col gap-4 pb-20">{renderActiveSection()}</div>
       <Card className="mt-auto sticky bottom-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <div className="flex justify-between items-center p-4">
-          <div>{isEditMode && onDelete && <Button type="button" variant="outline" color="red" icon={<TbTrash />} onClick={onDelete} disabled={isSubmitting}>Delete Partner</Button>}</div>
+          <div>{isEditMode && onDelete && <></>}</div>
           <div className="flex items-center gap-2">
             <Button type="button" onClick={handlePrevious} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === 0}>Previous</Button>
             <Button type="button" onClick={handleNext} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === navigationKeys.length - 1}>Next</Button>

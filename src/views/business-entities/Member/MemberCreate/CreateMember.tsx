@@ -347,7 +347,6 @@ const requestFeedbackFormSchema = z.object({
   name: z.string().min(1, "Name is required.").max(100),
   email: z
     .string()
-    .email("Invalid email address.")
     .optional().nullable(),
   mobile_no: z.string().min(1, "Mobile number is required.").max(20),
   company_name: z.string().max(150).optional().or(z.literal("")),
@@ -575,7 +574,7 @@ const preparePayloadForApi = (
 
   console.log(formData, 'formData');
 
-  
+
   const payload: any = {
     ...formData,
     id: formData.id,
@@ -1430,7 +1429,7 @@ const RequestAndFeedbackListing = () => {
             <Input
               {...field}
               type="email"
-              
+
               placeholder="example@domain.com"
             />
           )}
@@ -1966,7 +1965,7 @@ const MemberProfileComponent = ({ control, errors, formMethods }: FormSectionBas
     dispatch(clearSubcategories());
     if (selectedCat && selectedCat.length > 0) {
       dispatch(getSubcategoriesByCategoryIdAction(selectedCat ? selectedCat.map((c: any) => c.value).toString() : ""));
-    }else{
+    } else {
       dispatch(getSubcategoriesByCategoryIdAction(""));
     }
   }, [selectedCat])
@@ -2506,7 +2505,7 @@ const PersonalDetailsComponent = ({
               render={({ field }) => <input type="hidden" {...field} />}
             />
           </>
-        ) }
+        )}
 
         <FormItem
           label={<div>Country<span className="text-red-500"> * </span></div>}
@@ -2948,9 +2947,7 @@ const MemberFormComponent = (props: {
       name: z.string().trim().min(1, { message: "Name is Required!" }),
       email: z
         .string()
-        .trim()
-        .min(1, { message: "Email is Required!" })
-        .email("Invalid email format"),
+        .trim().optional().nullable(),
       password: z
         .string()
         .optional()
@@ -2984,7 +2981,7 @@ const MemberFormComponent = (props: {
         .nullable(),
       interested_category_ids: z
         .array(z.any())
-       .min(1, { message: "Interested categories are required." }),
+        .min(1, { message: "Interested categories are required." }),
     })
     .passthrough();
   const formMethods = useForm<MemberFormSchema>({
@@ -3220,9 +3217,9 @@ const MemberCreate = () => {
   // --- START: CORRECTED useEffect for fetching and transforming data ---
   useEffect(() => {
     const emptyForm = getEmptyFormValues();
-    console.log("isEditMode && id",isEditMode);
-    console.log("isEditMode && id",id);
-    
+    console.log("isEditMode && id", isEditMode);
+    console.log("isEditMode && id", id);
+
     if (isEditMode && id) {
       const fetchMemberData = async () => {
         setPageLoading(true);
@@ -3283,10 +3280,10 @@ const MemberCreate = () => {
         }
       };
 
-      
+
       // Only fetch data if master data is available, to avoid race conditions
       // if (ParentCategories.length > 0 && subCategoriesForSelectedCategoryData.length > 0 && CountriesData.length > 0 && ContinentsData.length > 0) {
-        fetchMemberData();
+      fetchMemberData();
       // }
     } else {
       setInitialData(emptyForm);
