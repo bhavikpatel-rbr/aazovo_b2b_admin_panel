@@ -2989,7 +2989,7 @@ const Products = () => {
               </div>
             </Tooltip>
           </div>
-          <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
+          {/* <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
             <nav className="-mb-px flex space-x-8" aria-label="Tabs">
               {[TABS.ALL, TABS.PENDING].map((tab) => (
                 <button
@@ -3004,7 +3004,7 @@ const Products = () => {
                 </button>
               ))}
             </nav>
-          </div>
+          </div> */}
           <div className="my-4">
             <ProductTableTools
               onSearchChange={handleSearchChange}
