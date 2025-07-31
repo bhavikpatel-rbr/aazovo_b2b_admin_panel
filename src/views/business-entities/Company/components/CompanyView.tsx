@@ -77,11 +77,11 @@ const CompanyProfileHeader = ({ company }: { company: ApiSingleCompanyItem }) =>
                 <div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">GST:</span><span>{company.gst_number || 'N/A'}</span></div>
                 <div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">PAN:</span><span>{company.pan_number || 'N/A'}</span></div>
             </div>
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-y-2 gap-x-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-y-2 gap-x-4 text-sm">
 
                 <div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">TAN:</span><span>{company.tan_number || 'N/A'}</span></div>
                 <div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">TRN:</span><span>{company.trn_number || 'N/A'}</span></div>
-             </div>
+            </div>
             <div className="flex flex-col sm:flex-row lg:flex-col gap-2">
                 <Button variant="solid" icon={<TbPencil />} onClick={() => navigate(`/business-entities/company-edit/${company.id}`)}>Edit Company</Button>
                 <Button icon={<TbArrowLeft />} onClick={() => navigate('/business-entities/company')}>Back to List</Button>
@@ -102,7 +102,7 @@ const DetailsTabView = ({ company }: { company: ApiSingleCompanyItem }) => <div>
 const BankTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
     const [viewerState, setViewerState] = useState({ isOpen: false, index: 0 });
     const getFileType = (url: string | null): 'image' | 'pdf' | 'other' => { if (!url) return 'other'; const extension = url.split('.').pop()?.toLowerCase(); if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) return 'image'; if (extension === 'pdf') return 'pdf'; return 'other'; };
-    
+
     // --- CHANGE [2]: Added benificeiry_name to the bank details construction ---
     const allBanks = useMemo(() => [
         { id: -1, type: 'Primary', benificeiry_name: company.primary_benificeiry_name, bank_account_number: company.primary_account_number, bank_name: company.primary_bank_name, ifsc_code: company.primary_ifsc_code, swift_code: company.primary_swift_code, verification_photo: company.primary_bank_verification_photo },
@@ -156,19 +156,37 @@ const AccessibilityTabView = ({ company }: { company: ApiSingleCompanyItem }) =>
     const handlePrev = () => setViewerState(prev => ({ ...prev, index: Math.max(prev.index - 1, 0) }));
 
     // --- CHANGE [3]: New function to format the due date ---
-    const formatDueDate = (dueDateString?: string | null) => {
-        if (!dueDateString) return <span className="text-gray-400">N/A</span>;
-        const dueDate = dayjs(dueDateString);
-        const today = dayjs().startOf('day');
-        const diffDays = dueDate.startOf('day').diff(today, 'day');
 
-        if (diffDays > 1) return `in ${diffDays} days`;
-        if (diffDays === 1) return `Tomorrow`;
-        if (diffDays === 0) return `Today`;
-        if (diffDays === -1) return <span className="text-red-500 font-semibold">Overdue by 1 day</span>;
-        if (diffDays < -1) return <span className="text-red-500 font-semibold">Overdue by {Math.abs(diffDays)} days</span>;
-        return dayjs(dueDateString).format("D MMM, YYYY"); // Fallback
-    };
+    function formatDueDateInDays(dueDateString: any) {
+
+        // Create Date objects for the due date and today
+        const dueDate = new Date(dueDateString);
+        const today = new Date();
+
+        // To ensure we're comparing days, not times, reset the time part to midnight
+        dueDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+
+        // Calculate the difference in milliseconds
+        const diffTime = dueDate.getTime() - today.getTime();
+
+        // Convert the difference from milliseconds to days
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+        // Return a formatted string based on the difference
+        if (diffDays > 1) {
+            return `in ${diffDays} days`;
+        } else if (diffDays === 1) {
+            return `Tomorrow`;
+        } else if (diffDays === 0) {
+            return `Today`;
+        } else if (diffDays === -1) {
+            return `Yesterday (1 day overdue)`;
+        } else {
+            // The date is in the past
+            return `N/A`;
+        }
+    }
+
 
     return (
         <div className="space-y-6">
@@ -177,7 +195,7 @@ const AccessibilityTabView = ({ company }: { company: ApiSingleCompanyItem }) =>
                     <InfoPair label="KYC Verified" value={company.kyc_verified ? <Tag className="bg-emerald-100 text-emerald-700">Yes</Tag> : <Tag className="bg-red-100 text-red-700">No</Tag>} />
                     <InfoPair label="Enabled Billing" value={company.enable_billing ? <Tag className="bg-emerald-100 text-emerald-700">Yes</Tag> : <Tag className="bg-red-100 text-red-700">No</Tag>} />
                     {/* --- CHANGE [3]: Using the new formatting function --- */}
-                    <InfoPair label="Billing Due Date" value={formatDueDate(company.billing_due)} />
+                    <InfoPair label="Billing Due Date" value={formatDueDateInDays(company?.due_after_3_months_date)} />
                 </div>
             </DetailSection>
             <DetailSection title="Enable Billing Documents" icon={<TbFileDescription />}>{billingDocs.length > 0 ? (<><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">{billingDocs.map((doc, index) => (<DocumentCard key={index} document={doc} onPreview={() => handlePreview(index)} />))}</div><DocumentViewer isOpen={viewerState.isOpen} onClose={handleCloseViewer} documents={billingDocs} currentIndex={viewerState.index} onNext={handleNext} onPrev={handlePrev} /></>) : (<NoDataMessage message="No billing documents are available." />)}</DetailSection>
@@ -195,7 +213,7 @@ const VerificationTabView = ({ company }: { company: ApiSingleCompanyItem }) => 
     const [viewerState, setViewerState] = useState({ isOpen: false, index: 0 });
     const getFileType = (url: string | null): 'image' | 'pdf' | 'other' => { if (!url) return 'other'; const extension = url.split('.').pop()?.toLowerCase(); if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) return 'image'; if (extension === 'pdf') return 'pdf'; return 'other'; };
     const verifications = useMemo(() => company.company_spot_verification || [], [company]);
-    
+
     const verificationDocs = useMemo((): DocumentRecord[] => {
         return verifications
             .filter(v => !!v.photo_upload)
@@ -206,7 +224,7 @@ const VerificationTabView = ({ company }: { company: ApiSingleCompanyItem }) => 
                 verified: v.verified
             }));
     }, [verifications]);
-    
+
     const handlePreview = (url: string) => {
         const docIndex = verificationDocs.findIndex(doc => doc.url === url);
         if (docIndex !== -1) { setViewerState({ isOpen: true, index: docIndex }); }
@@ -233,7 +251,7 @@ const VerificationTabView = ({ company }: { company: ApiSingleCompanyItem }) => 
                     )}
                 </Card>
             ))}
-             <DocumentViewer isOpen={viewerState.isOpen} onClose={handleCloseViewer} documents={verificationDocs} currentIndex={viewerState.index} onNext={handleNext} onPrev={handlePrev} />
+            <DocumentViewer isOpen={viewerState.isOpen} onClose={handleCloseViewer} documents={verificationDocs} currentIndex={viewerState.index} onNext={handleNext} onPrev={handlePrev} />
         </div>
     );
 };

@@ -531,8 +531,8 @@ const MemberViewPage = () => {
                      <div className="text-xs space-y-1.5 md:col-span-1">
                        
                         <p><b>Business Opportunity:</b> <ListAsTags list={memberData.business_opportunity} /></p>
-                        <p><b>Category:</b> <ListAsTags list={memberData.category?.split(',').map(s => s.trim())} /></p>
-                        <p><b>Subcategory:</b> <ListAsTags list={memberData.subcategory?.split(',').map(s => s.trim())} /></p>
+                        <p> {memberData.category?.split(',').map(s => s.trim())}{memberData.subcategory ?? '/' + memberData.subcategory?.split(',').map(s => s.trim())}</p>
+
                          <span className="flex items-center gap-1 ">
                                       <Tooltip title="View Dynamic Profiles"><TbInfoCircle size={16} className="text-blue-500 cursor-pointer flex-shrink-0" onClick={() => setIsProfileDialogOpen(true)} /></Tooltip>
                                       <b>View Dynamic Profiles</b>
