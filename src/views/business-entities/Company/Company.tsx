@@ -3449,7 +3449,7 @@ const CompanyListTable = () => {
                 <div>
                   <Link
                     to={`/business-entities/company-view/${id}`}
-                    className="no-underline hover:underline"
+                    className="no-underline "
                   >
                     <h6 className="text-xs font-semibold text-blue-600">
                       {company_code || "Company Code"}

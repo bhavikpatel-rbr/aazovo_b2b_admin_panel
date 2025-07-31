@@ -93,9 +93,9 @@ import {
 // Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addaccountdocAction,
   addAllActionAction,
   addAllAlertsAction,
-  addaccountdocAction,
   addNotificationAction,
   addScheduleAction,
   addTaskAction,
@@ -105,12 +105,11 @@ import {
   getAllCompany,
   getAllUsersAction,
   getbyIDaccountdocAction,
-  getDocumentTypeAction,
+  getDocumentListAction,
   getEmployeesListingAction,
   getFormBuilderAction,
   getfromIDcompanymemberAction,
-  submitExportReasonAction,
-  getDocumentListAction,
+  submitExportReasonAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { encryptStorage } from "@/utils/secureLocalStorage";
@@ -1017,6 +1016,10 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
   const title = editingId ? "Edit Document" : "Add New Document";
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
+  const [selectedCompanyStatus, setSelectedCompanyStatus] = useState<{
+    kyc: boolean;
+    enable_billing: boolean;
+  } | null>(null);
 
   const {
     control,
@@ -1047,19 +1050,21 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
     getfromIDcompanymemberData = [],
   } = useSelector(masterSelector);
 
-  console.log("DocumentListData",DocumentListData);
-  
   const DocumentListDataOptions =
-   DocumentListData.length > 0 && DocumentListData.map((p: any) => ({
-      value: p.id,
-      label: p.name,
-    }));
+    DocumentListData.length > 0
+      ? DocumentListData.map((p: any) => ({
+          value: p.id,
+          label: p.name,
+        }))
+      : [];
 
   const tokenFormDataOptions =
-    tokenForm.length > 0 && tokenForm?.map((p: any) => ({
-      value: p.id,
-      label: p.form_title,
-    }));
+    tokenForm.length > 0
+      ? tokenForm?.map((p: any) => ({
+          value: p.id,
+          label: p.form_title,
+        }))
+      : [];
 
   const EmployyDataOptions =
     EmployeesList?.data?.map((p: any) => ({
@@ -1098,7 +1103,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
           const companyId = data?.data?.company_id;
           const formData = {
             company_document: data?.data?.company_document,
-            document_type:parseInt(data?.data?.document_type),
+            document_type: parseInt(data?.data?.document_type),
             document_number: data?.data?.document_number,
             invoice_number: data?.data?.invoice_number,
             form_id: data?.data?.form_id,
@@ -1110,6 +1115,17 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
 
           if (companyId) {
             dispatch(getfromIDcompanymemberAction(companyId));
+            const company = AllCompanyData.find(
+              (c: any) => String(c.id) === String(companyId)
+            );
+            if (company) {
+              setSelectedCompanyStatus({
+                kyc: company.kyc_verified,
+                enable_billing: company.enable_billing,
+              });
+            }
+          } else {
+            setSelectedCompanyStatus(null);
           }
         })
         .catch((err: any) => {
@@ -1136,8 +1152,9 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
         member_id: undefined,
         company_id: undefined,
       });
+      setSelectedCompanyStatus(null);
     }
-  }, [isOpen, editingId, dispatch, reset]);
+  }, [isOpen, editingId, dispatch, reset, AllCompanyData]);
 
   const onSave = async (data: AddEditDocumentFormData) => {
     setIsSubmitting(true);
@@ -1246,13 +1263,38 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
                     field.onChange(opt?.value);
                     if (opt?.value) {
                       dispatch(getfromIDcompanymemberAction(opt.value));
+                      const company = AllCompanyData.find(
+                        (c: any) => String(c.id) === opt.value
+                      );
+                      if (company) {
+                        setSelectedCompanyStatus({
+                          kyc: company.kyc_verified,
+                          enable_billing: company.enable_billing,
+                        });
+                      }
+                    } else {
+                      setSelectedCompanyStatus(null);
                     }
-                    setValue("member_id", 0 as any, { shouldValidate: true });
+                    setValue("member_id", undefined, { shouldValidate: true });
                   }}
                 />
               )}
             />
           </UiFormItem>
+
+          {selectedCompanyStatus &&
+            (!selectedCompanyStatus.kyc || !selectedCompanyStatus.enable_billing) && (
+              <Notification type="warning" className="my-4">
+                <div className="font-semibold mb-1">Company Status Alert</div>
+                {!selectedCompanyStatus.kyc && (
+                  <p className="text-sm">- Company KYC is pending.</p>
+                )}
+                {!selectedCompanyStatus.enable_billing && (
+                  <p className="text-sm">- Company is not enable billing.</p>
+                )}
+              </Notification>
+            )}
+
           <UiFormItem
             label="Document Type"
             invalid={!!errors.document_type}
@@ -1267,9 +1309,9 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
                   placeholder="Select Document Type"
                   options={DocumentListDataOptions}
                   value={DocumentListDataOptions?.find(
-                    (o) => o.label == field.value
+                    (o) => o.value === field.value
                   )}
-                  onChange={(opt: any) => field.onChange(opt?.label)}
+                  onChange={(opt: any) => field.onChange(opt?.value)}
                 />
               )}
             />
@@ -2525,7 +2567,7 @@ const AccountDocument = () => {
     });
   };
 
-  const columns: ColumnDef<AccountDocumentListItem>[] = useMemo(
+   const columns: ColumnDef<AccountDocumentListItem>[] = useMemo(
     () => [
       {
         header: "Status",
@@ -2544,44 +2586,34 @@ const AccountDocument = () => {
           </Tag>
         ),
       },
-      // {
-      //   header: "Enquiry",
-      //   accessorKey: "leadNumber",
-      //   size: 130,
-      //   cell: (props) => {
-      //     const { leadNumber, enquiryType } = props.row.original;
-      //     return (
-      //       <div className="flex flex-col gap-0.5 text-xs">
-      //         <div>
-      //           <Tag
-      //             className={`${
-      //               enquiryTypeColor[
-      //                 enquiryType as keyof typeof enquiryTypeColor
-      //               ] || enquiryTypeColor.default
-      //             } capitalize px-2 py-1 text-xs`}
-      //           >
-      //             {enquiryType}
-      //           </Tag>
-      //         </div>
-      //       </div>
-      //     );
-      //   },
-      // },
       {
-        header: "Company",
-        accessorKey: "memberName",
-        size: 220,
+        header: "Document Type",
+        accessorKey: "formType",
+        size: 180,
+        cell: (props) => {
+          const { formType } = props.row.original;
+          return (
+            <span className="text-xs font-semibold">{formType || "N/A"}</span>
+          );
+        },
+      },
+      {
+        header: "Deal Details",
+        accessorKey: "companyName",
+        size: 250,
         cell: (props: CellContext<AccountDocumentListItem, any>) => {
-          const { companyName, memberName, userName, companyDocumentType } =
+          const { leadNumber, companyId, companyName, userName } =
             props.row.original;
           return (
-            <div className="flex flex-col gap-0.5 text-xs">
-              <b>{companyName}</b>
-              <span>Member: {memberName}</span>
-              <span>Assigned To: {userName}</span>
+            <div className="flex flex-col gap-1 text-xs">
               <div>
-                <b>Company Document: </b>
-                <span>{companyDocumentType}</span>
+                <b>Lead:</b> {leadNumber}
+              </div>
+              <div>
+                <b>Firm:</b> {companyName} {companyId ? `(${companyId})` : ""}
+              </div>
+              <div>
+                <b>Sales Person:</b> {userName}
               </div>
             </div>
           );
@@ -2589,21 +2621,13 @@ const AccountDocument = () => {
       },
       {
         header: "Document Details",
+        accessorKey: "documentNumber",
         size: 220,
         cell: (props) => {
-          const {
-            documentType,
-            documentNumber,
-            invoiceNumber,
-            formType,
-            createdAt,
-          } = props.row.original;
+          const { documentNumber, invoiceNumber, formType, createdAt } =
+            props.row.original;
           return (
-            <div className="flex flex-col gap-0.5 text-xs">
-              <div>
-                <b>Doc Type ID: </b>
-                <span>{documentType}</span>
-              </div>
+            <div className="flex flex-col gap-1 text-xs">
               <div>
                 <b>Doc No: </b>
                 <span>{documentNumber}</span>
@@ -2613,10 +2637,13 @@ const AccountDocument = () => {
                 <span>{invoiceNumber}</span>
               </div>
               <div>
-                <b>Form: </b>
+                <b>Form Type: </b>
                 <span>{formType}</span>
               </div>
-              <b>{dayjs(createdAt).format("DD MMM, YYYY HH:mm")}</b>
+              <div>
+                <b>Created: </b>
+                <span>{dayjs(createdAt).format("DD MMM, YYYY")}</span>
+              </div>
             </div>
           );
         },
@@ -2630,7 +2657,7 @@ const AccountDocument = () => {
           <AccountDocumentActionColumn
             onOpenModal={handleOpenModal}
             onEdit={() => handleOpenEditDrawer(props.row.original)}
-            onView={() => handleOpenModal('view', props.row.original)}
+            onView={() => handleOpenModal("view", props.row.original)}
             rowData={props.row.original}
           />
         ),
