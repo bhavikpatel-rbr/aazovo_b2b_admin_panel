@@ -2293,7 +2293,8 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
   );
   const dispatch = useAppDispatch();
   useEffect(() => {
-    dispatch(getCompanyAction());
+        dispatch(getPendingBillAction());
+    dispatch(getCompanyAction()); 
     dispatch(getCountriesAction());
     dispatch(getContinentsAction());
     dispatch(getAllUsersAction());
@@ -2718,12 +2719,12 @@ const CompanyActionColumn = ({
         >
           <TbTagStarred /> Add Activity
         </Dropdown.Item>
-        <Dropdown.Item
+        {/* <Dropdown.Item
           onClick={() => onOpenModal("transaction", rowData)}
           className="flex items-center gap-2"
         >
           <TbReceipt /> View Transactions
-        </Dropdown.Item>
+        </Dropdown.Item> */}
         <Dropdown.Item
           onClick={() => onOpenModal("document", rowData)}
           className="flex items-center gap-2"
