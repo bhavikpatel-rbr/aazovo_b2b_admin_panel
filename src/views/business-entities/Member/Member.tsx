@@ -1338,8 +1338,7 @@ const Member = () => {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-0">
               <h5>Members</h5>
               <div className="flex items-center gap-2">
-              <Button variant="solid" icon={<TbPlus />} onClick={() => navigate("/business-entities/member-create")}>Add New</Button>
-              <Button
+                <Button
                 icon={<TbEye />}
                 onClick={handleViewBitRouteClick} // <-- MODIFIED
                 clickFeedback={false}
@@ -1347,6 +1346,8 @@ const Member = () => {
               >
                 View Bit Route
               </Button>
+              <Button variant="solid" icon={<TbPlus />} onClick={() => navigate("/business-entities/member-create")}>Add New</Button>
+              
 
               </div>
             </div>

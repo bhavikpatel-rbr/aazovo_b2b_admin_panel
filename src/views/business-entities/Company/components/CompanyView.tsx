@@ -195,7 +195,8 @@ const AccessibilityTabView = ({ company }: { company: ApiSingleCompanyItem }) =>
                     <InfoPair label="KYC Verified" value={company.kyc_verified ? <Tag className="bg-emerald-100 text-emerald-700">Yes</Tag> : <Tag className="bg-red-100 text-red-700">No</Tag>} />
                     <InfoPair label="Enabled Billing" value={company.enable_billing ? <Tag className="bg-emerald-100 text-emerald-700">Yes</Tag> : <Tag className="bg-red-100 text-red-700">No</Tag>} />
                     {/* --- CHANGE [3]: Using the new formatting function --- */}
-                    <InfoPair label="Billing Due Date" value={formatDueDateInDays(company?.due_after_3_months_date)} />
+                    <InfoPair label="Enable Billing Due 
+                    " value={formatDueDateInDays(company?.due_after_3_months_date)} />
                 </div>
             </DetailSection>
             <DetailSection title="Enable Billing Documents" icon={<TbFileDescription />}>{billingDocs.length > 0 ? (<><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">{billingDocs.map((doc, index) => (<DocumentCard key={index} document={doc} onPreview={() => handlePreview(index)} />))}</div><DocumentViewer isOpen={viewerState.isOpen} onClose={handleCloseViewer} documents={billingDocs} currentIndex={viewerState.index} onNext={handleNext} onPrev={handlePrev} /></>) : (<NoDataMessage message="No billing documents are available." />)}</DetailSection>
