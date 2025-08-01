@@ -2711,7 +2711,7 @@ const InquiryListTable = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
         >
           <div className="sm:grid grid-cols-2 gap-x-4 gap-y-2">
-            <UiFormItem label="Record Status">
+            {/* <UiFormItem label="Record Status">
               <Controller
                 name="filterRecordStatus"
                 control={filterFormMethods.control}
@@ -2725,7 +2725,7 @@ const InquiryListTable = () => {
                   />
                 )}
               />
-            </UiFormItem>
+            </UiFormItem> */}
             <UiFormItem label="Inquiry Type">
               <Controller
                 name="filterInquiryType"

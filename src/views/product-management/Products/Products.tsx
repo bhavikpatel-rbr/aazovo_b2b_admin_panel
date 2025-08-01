@@ -3298,7 +3298,7 @@ const Products = () => {
                 <FormItem
                   label={
                     <div>
-                      Country
+                      Country of Origin
                       {/* <span className="text-red-500"> * </span> */}
                     </div>
                   }

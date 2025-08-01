@@ -18,14 +18,17 @@ export type ThemeConfig = {
  * we recommend to use the configuration that generated from demo.
  */
 
+
+
 export const themeConfig: ThemeConfig = {
-    themeSchema: 'default',
-    direction: 'ltr',
-    mode: 'light',
-    panelExpand: false,
-    controlSize: 'md',
-    layout: {
-        type: 'framelessSide',
-        sideNavCollapse: false,
-    },
+    "themeSchema": "default",
+    "direction": "ltr",
+    "mode": "light",
+    "panelExpand": false,
+    "controlSize": "md",
+    "layout": {
+        "type": "collapsibleSide",
+        "sideNavCollapse": false
+    }
 }
+

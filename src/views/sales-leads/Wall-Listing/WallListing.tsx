@@ -333,9 +333,12 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
     switch (type) {
       case 'offer_demand':
         if (wallItem.want_to === 'Buy') {
-          navigate('/sales-leads/wall-item/offers/create', { state: { supplierId: firstOp.member_id, productId: firstOp.product_id, ...firstOp } });
+            navigate('/sales-leads/wall-item/demands/create', { state: { buyerId: firstOp.member_id, productId: firstOp.product_id,...firstOp } });
+          
+
+         
         } else {
-          navigate('/sales-leads/wall-item/lead/add', { state: { buyerId: wallItem.memberId, supplierId: firstOp.member_id, productId: firstOp.product_id, ...firstOp } });
+                  navigate('/sales-leads/wall-item/offers/create', { state: { supplierId: firstOp.member_id, productId: firstOp.product_id, ...firstOp } }); 
         }
         break;
       case 'lead':
@@ -400,7 +403,7 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-semibold">{selected.length} selected</span>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" icon={<TbHandGrab />} onClick={() => handleAction('offer_demand')}>Create {wallItem.want_to === 'Buy' ? 'Offer' : 'Demand'}</Button>
+                <Button size="sm" icon={<TbHandGrab />} onClick={() => handleAction('offer_demand')}>Create {wallItem.want_to === 'Buy' ? 'Demand' : 'Offer'}</Button>
 
                 <Button size="sm" icon={<TbUserPlus />} onClick={() => handleAction('lead')}>Create Lead</Button>
                 <Button size="sm" icon={<TbMailForward />} onClick={() => handleAction('email')}>Email</Button>
