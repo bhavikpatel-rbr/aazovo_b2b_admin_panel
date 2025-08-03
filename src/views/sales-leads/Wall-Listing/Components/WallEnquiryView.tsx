@@ -94,9 +94,9 @@ const WallEnquiryHeader = ({ enquiry, onAssignTask, onCopyLink }: { enquiry: Wal
                 <Button icon={<TbArrowLeft />} onClick={() => navigate('/sales-leads/wall-listing')}>Back</Button>
                 <Button variant="solid" icon={<TbPencil />} onClick={() => navigate("/sales-leads/wall-item/add", { state: enquiry.id })}>Edit</Button>
                 <Button variant="twoTone" icon={<TbCopy />} onClick={onCopyLink}>Copy Link</Button>
-                <Dropdown renderTitle={<Button variant="twoTone" icon={<TbDotsVertical />} />} placement="bottom-end">
+                {/* <Dropdown renderTitle={<Button variant="twoTone" icon={<TbDotsVertical />} />} placement="bottom-end">
                     <Dropdown.Item onSelect={onAssignTask} eventKey="assignTask" className="flex items-center gap-2"><TbUserCheck size={18} /><span>Assign Task</span></Dropdown.Item>
-                </Dropdown>
+                </Dropdown> */}
             </div>
         </div>
     );
