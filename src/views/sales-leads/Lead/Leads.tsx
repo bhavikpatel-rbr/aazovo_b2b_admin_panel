@@ -7,6 +7,7 @@ import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
+import axiosInstance from "@/services/api/api";
 import { z } from "zod";
 
 dayjs.extend(isBetween);
@@ -106,6 +107,7 @@ import {
   addScheduleAction,
   deleteAllLeadsAction,
   deleteLeadAction,
+  editLeadAction,
   getAllUsersAction,
   getLeadAction,
   getLeadOpportunitiesAction,
@@ -118,9 +120,9 @@ import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
 
 interface CommonTableQueries {
-    pageIndex?: number
-    pageSize?: number
-    query?: string
+  pageIndex?: number
+  pageSize?: number
+  query?: string
 }
 
 interface TableQueries extends OnSortParam, CommonTableQueries { }
@@ -478,6 +480,8 @@ type LeadListItem = {
   qty?: number | null;
   target_price?: number | null;
   assigned_sales_person_id?: string | number | null;
+  sales_person_id?: string | number | null;
+  assigned_saled_id?: string | number | null;
   salesPersonName?: string;
   createdAt: Date;
   updatedAt?: Date;
@@ -491,6 +495,13 @@ type LeadListItem = {
   formId: any;
 };
 
+// ADDED: Zod Schema for Assign Lead Form
+const assignLeadSchema = z.object({
+  assigned_sales_person_id: z.coerce.number({
+    required_error: "An assignee is required.",
+  }),
+});
+type AssignLeadFormData = z.infer<typeof assignLeadSchema>;
 export type SelectOption = { value: any; label: string };
 
 // ============================================================================
@@ -510,7 +521,8 @@ export type LeadModalType =
   | "viewOpportunities"
   | "viewLeadForm"
   | "viewDeal"
-  | "addAccountDocuments";
+  | "addAccountDocuments"
+  | "assignLead";
 export interface LeadModalState {
   isOpen: boolean;
   type: LeadModalType | null;
@@ -519,18 +531,29 @@ export interface LeadModalState {
 interface LeadModalsProps {
   modalState: LeadModalState;
   onClose: () => void;
+  onSuccess: () => void;
   getAllUserDataOptions: SelectOption[];
 }
 
 const LeadModals: React.FC<LeadModalsProps> = ({
   modalState,
   onClose,
+  onSuccess,
   getAllUserDataOptions,
 }) => {
   const { type, data: lead, isOpen } = modalState;
   if (!isOpen || !lead) return null;
   const renderModalContent = () => {
     switch (type) {
+      case "assignLead":
+        return (
+          <AssignLeadDialog
+            lead={lead}
+            onClose={onClose}
+            onSuccess={onSuccess}
+            getAllUserDataOptions={getAllUserDataOptions}
+          />
+        );
       case "email":
         return <SendEmailDialog lead={lead} onClose={onClose} />;
       case "whatsapp":
@@ -577,25 +600,7 @@ const ConvertLeadToDealDialog: React.FC<{
   lead: LeadListItem;
   onClose: () => void;
 }> = ({ lead, onClose }) => {
-    /**
-     * BUSINESS PROCESS FOR "CONVERT TO DEAL":
-     * As per the requirements, this action is more than a status change.
-     * It triggers a hand-off to the accounting team.
-     *
-     * 1.  **Confirmation:** This dialog should display the key deal information for final confirmation.
-     * 2.  **Task Creation:** Upon confirmation, a task should be automatically assigned to the 'account team'.
-     *     - The task details must include all relevant parameters from the lead/form:
-     *       - Product name, Supplier name, Buyer name, Quantity, Color, Product status, Carton type, etc.
-     * 3.  **Account Document Generation:** This is the core of the process.
-     *     - Two separate accounting entries need to be initiated:
-     *       a. **Purchase Order (PO):** For the purchase from the 'Supplier'.
-     *       b. **Sales Order (SO):** For the sale to the 'Buyer'.
-     * 4.  **Data Model:** The lead must contain distinct 'buyer' and 'supplier' information.
-     *     - The product details are common to both the PO and SO.
-     *
-     * The implementation below is a placeholder for this complex backend process.
-     * It simulates the confirmation step.
-     */
+
   const [isLoading, setIsLoading] = useState(false);
   const { control, handleSubmit } = useForm({
     defaultValues: {
@@ -626,34 +631,34 @@ const ConvertLeadToDealDialog: React.FC<{
         This will initiate the Purchase Order (PO) and Sales Order (SO) process for the accounts team.
         Please confirm the details below.
       </p>
-            <Card>
-                <div className="p-4">
-                    <h6 className="mb-4">Deal Summary</h6>
-                    <div className="text-center font-semibold mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
-                        {lead.productName}
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                        {/* Supplier Details */}
-                        <div>
-                            <h6 className="font-bold text-gray-800 dark:text-gray-200 border-b pb-1 mb-2">Purchase From (Supplier)</h6>
-                            <p><strong>Name:</strong> {lead.seller?.name || 'N/A'}</p>
-                            <p><strong>Member ID:</strong> {lead.seller?.member_code || 'N/A'}</p>
-                        </div>
-                        {/* Buyer Details */}
-                        <div>
-                            <h6 className="font-bold text-gray-800 dark:text-gray-200 border-b pb-1 mb-2">Sale To (Buyer)</h6>
-                            <p><strong>Name:</strong> {lead.buyer?.name || 'N/A'}</p>
-                            <p><strong>Member ID:</strong> {lead.buyer?.member_code || 'N/A'}</p>
-                        </div>
-                    </div>
-                    <hr className="my-4"/>
-                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div><strong className="block">Quantity:</strong> {lead.qty || 'N/A'}</div>
-                        <div><strong className="block">Target Price:</strong> ${lead.target_price || 'N/A'}</div>
-                        {/* Add other fields like Color, Product Status, etc. as they become available in `lead` object */}
-                     </div>
-                </div>
-            </Card>
+      <Card>
+        <div className="p-4">
+          <h6 className="mb-4">Deal Summary</h6>
+          <div className="text-center font-semibold mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
+            {lead.productName}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+            {/* Supplier Details */}
+            <div>
+              <h6 className="font-bold text-gray-800 dark:text-gray-200 border-b pb-1 mb-2">Purchase From (Supplier)</h6>
+              <p><strong>Name:</strong> {lead.seller?.name || 'N/A'}</p>
+              <p><strong>Member ID:</strong> {lead.seller?.member_code || 'N/A'}</p>
+            </div>
+            {/* Buyer Details */}
+            <div>
+              <h6 className="font-bold text-gray-800 dark:text-gray-200 border-b pb-1 mb-2">Sale To (Buyer)</h6>
+              <p><strong>Name:</strong> {lead.buyer?.name || 'N/A'}</p>
+              <p><strong>Member ID:</strong> {lead.buyer?.member_code || 'N/A'}</p>
+            </div>
+          </div>
+          <hr className="my-4" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div><strong className="block">Quantity:</strong> {lead.qty || 'N/A'}</div>
+            <div><strong className="block">Target Price:</strong> ${lead.target_price || 'N/A'}</div>
+            {/* Add other fields like Color, Product Status, etc. as they become available in `lead` object */}
+          </div>
+        </div>
+      </Card>
 
       <div className="text-right mt-6">
         <Button
@@ -1059,6 +1064,126 @@ const SendWhatsAppDialog: React.FC<{
     </Dialog>
   );
 };
+
+// ADDED: New AssignLeadDialog component
+const AssignLeadDialog: React.FC<{
+  lead: LeadListItem;
+  onClose: () => void;
+  onSuccess: () => void;
+  getAllUserDataOptions: SelectOption[];
+}> = ({ lead, onClose, onSuccess, getAllUserDataOptions }) => {
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isValid },
+  } = useForm<AssignLeadFormData>({
+    resolver: zodResolver(assignLeadSchema),
+    defaultValues: {
+      assigned_sales_person_id: lead.assigned_sales_person_id
+        ? Number(lead.assigned_sales_person_id)
+        : null,
+    },
+    mode: "onChange",
+  });
+
+  const handleAssignLead = async (formData: AssignLeadFormData) => {
+    setIsLoading(true);
+    try {
+      const response = await axiosInstance.get(`/lead/lead/${lead.id}`);
+
+      if (!response.data?.data) {
+        throw new Error("Failed to fetch latest lead data.");
+      }
+      const latestLeadData = response.data.data;
+      const payload = {
+        ...latestLeadData,
+        id: lead.id,
+        assigned_saled_id: formData.assigned_sales_person_id,
+        assigned_sales_person_id: formData.assigned_sales_person_id,
+      };
+
+      // Step 3: Dispatch the edit action.
+      await dispatch(editLeadAction(payload)).unwrap();
+
+      toast.push(
+        <Notification type="success" title="Lead Assigned">
+          Lead has been successfully assigned.
+        </Notification>
+      );
+      onSuccess(); // Refresh the table data
+      onClose(); // Close the modal
+    } catch (error: any) {
+      console.error("Assign Lead Error:", error);
+      const errorMessage =
+        error?.payload?.message || error.message || "An unknown error occurred.";
+      toast.push(
+        <Notification type="danger" title="Assignment Failed">
+          {errorMessage}
+        </Notification>
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Assign Lead: {lead.lead_number}</h5>
+      <p className="mb-4 text-sm">
+        Lead Product:{" "}
+        <span className="font-semibold">
+          {lead.productName || "N/A"}
+        </span>
+      </p>
+
+      <Form onSubmit={handleSubmit(handleAssignLead)}>
+        <FormItem
+          label="New Assignee"
+          invalid={!!errors.assigned_sales_person_id}
+          errorMessage={errors.assigned_sales_person_id?.message}
+        >
+          <Controller
+            name="assigned_sales_person_id"
+            control={control}
+            render={({ field }) => (
+              <UiSelect
+                placeholder="Select a user"
+                options={getAllUserDataOptions}
+                value={getAllUserDataOptions.find(
+                  (o) => o.value === field.value
+                )}
+                onChange={(opt) => field.onChange(opt?.value)}
+              />
+            )}
+          />
+        </FormItem>
+
+        <div className="text-right mt-6">
+          <Button
+            type="button"
+            className="mr-2"
+            onClick={onClose}
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="solid"
+            type="submit"
+            loading={isLoading}
+            disabled={!isValid || isLoading}
+          >
+            Assign
+          </Button>
+        </div>
+      </Form>
+    </Dialog>
+  );
+};
+
 const AddNotificationDialog: React.FC<{
   lead: LeadListItem;
   onClose: () => void;
@@ -1733,6 +1858,7 @@ const GenericActionDialog: React.FC<{
 // ============================================================================
 
 const LeadActionColumn = ({
+  data,
   onViewDetail,
   onEdit,
   onDelete,
@@ -1741,6 +1867,7 @@ const LeadActionColumn = ({
   onOpenModal,
   onStartProcess,
 }: {
+  data: any;
   onViewDetail: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -1752,7 +1879,7 @@ const LeadActionColumn = ({
   const iconButtonClass =
     "text-lg p-0.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
-
+  
   return (
     <div className="flex items-center justify-center">
       <Tooltip title="Edit Lead">
@@ -1787,18 +1914,20 @@ const LeadActionColumn = ({
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
+      
+
         <Dropdown.Item
           onClick={() => onOpenModal("email")}
           className="flex items-center gap-2 text-xs"
         >
           <TbMail size={18} /> Send Email
         </Dropdown.Item>
-        <Dropdown.Item
+       {data.assigned_saled_id ? <Dropdown.Item
           onClick={onStartProcess}
           className="flex items-center gap-2 text-xs"
         >
           <TbPlayerPlay size={18} /> Start Process
-        </Dropdown.Item>
+        </Dropdown.Item> : null}
         <Dropdown.Item
           onClick={() => onOpenModal("whatsapp")}
           className="flex items-center gap-2 text-xs"
@@ -1859,6 +1988,12 @@ const LeadActionColumn = ({
         >
           <TbFileInvoice size={18} /> Add Account Documents
         </Dropdown.Item>
+          {!data.assigned_saled_id ? <Dropdown.Item
+          onClick={() => onOpenModal("assignLead")}
+          className="flex items-center gap-2 text-xs"
+        >
+          <TbUserSearch size={18} /> Assign Sales Person
+        </Dropdown.Item>: null}
       </Dropdown>
     </div>
   );
@@ -2113,6 +2248,27 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
       setModalState({ isOpen: true, type, data: leadData }),
     []
   );
+  const handleUpdateSuccess = useCallback(() => {
+    dispatch(getLeadAction());
+  }, [dispatch]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setInitialLoading(true);
+      try {
+        await Promise.all([
+          dispatch(getLeadAction()),
+          dispatch(getAllUsersAction()),
+        ]);
+      } catch (error) {
+        console.error("Failed to fetch initial data:", error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+    fetchData();
+  }, [dispatch]);
+
   const handleCloseModal = () =>
     setModalState({ isOpen: false, type: null, data: null });
   const [isProcessingDelete, setIsProcessingDelete] = useState(false);
@@ -2188,6 +2344,8 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         qty: apiLead.qty,
         target_price: apiLead.target_price,
         assigned_sales_person_id: apiLead.sales_person_id,
+        sales_person_id: apiLead.sales_person_id,
+        assigned_saled_id: apiLead.assigned_saled_id,
         salesPersonName: apiLead.sales_person_name,
         createdAt: new Date(apiLead.created_at),
         updatedAt: apiLead.updated_at ? new Date(apiLead.updated_at) : undefined,
@@ -2737,6 +2895,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         size: 80,
         cell: (props: CellContext<LeadListItem, any>) => (
           <LeadActionColumn
+            data={props.row.original}
             onViewDetail={() => openViewDialog(props.row.original)}
             onEdit={() => handleOpenEditLeadPage(props.row.original)}
             onDelete={() => handleDeleteClick(props.row.original)}
@@ -3284,11 +3443,14 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           Are you sure you want to delete lead{" "}
           <strong>{itemToDelete?.lead_number}</strong>? This action cannot be
           undone.
+          3260032
         </p>
       </ConfirmDialog>
+
       <LeadModals
         modalState={modalState}
         onClose={handleCloseModal}
+        onSuccess={handleUpdateSuccess}
         getAllUserDataOptions={getAllUserDataOptions}
       />
       <ConfirmDialog
