@@ -51,8 +51,8 @@ const demandFormSchema = z.object({
   name: z.string().min(1, "Demand Name is required."),
   assign_user: z.number({ required_error: "Assigned User is required."}).nullable(),
   product_data: z.array(productDataSchema).min(1, "Add at least one product group."),
-  groupA: z.string().optional().nullable(),
-  groupB: z.string().optional().nullable(),
+groupA: z.string().min(1, "Note is required."),
+  groupB: z.string().min(1, "Note is required."),
 });
 
 // --- Type Definitions ---

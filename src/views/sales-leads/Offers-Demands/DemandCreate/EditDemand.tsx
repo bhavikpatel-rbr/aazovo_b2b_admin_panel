@@ -49,10 +49,10 @@ const productDataSchema = z.object({
 
 const demandFormSchema = z.object({
   name: z.string().min(1, "Demand Name is required."),
-  assign_user: z.number({ required_error: "Assigned User is required."}).nullable(),
+  assign_user: z.number({ required_error: "Assigned User is required." }).nullable(),
   product_data: z.array(productDataSchema).min(1, "Add at least one product group."),
-  groupA: z.string().optional().nullable(),
-  groupB: z.string().optional().nullable(),
+  groupA: z.string().min(1, "Note is required."),
+  groupB: z.string().min(1, "Note is required."),
 });
 
 type DemandFormData = z.infer<typeof demandFormSchema>;
@@ -88,8 +88,8 @@ const EditDemand = () => {
     if (id) {
       dispatch(getDemandById(id));
     } else {
-        toast.push(<Notification title="Error" type="danger">Demand ID is missing.</Notification>);
-        navigate("/sales-leads/offers-demands");
+      toast.push(<Notification title="Error" type="danger">Demand ID is missing.</Notification>);
+      navigate("/sales-leads/offers-demands");
     }
   }, [dispatch, id, navigate]);
 
@@ -127,51 +127,51 @@ const EditDemand = () => {
       groupB: "",
     },
   });
-  
+
   const { fields, append, remove } = useFieldArray({ control, name: "product_data" });
-  
+
   const watchedProductGroups = watch("product_data");
 
   // --- Populate form when editing data is loaded ---
   useEffect(() => {
     if (demandData && ProductsData.length) {
-        const sellerIds = parseJsonArray(demandData.seller_section);
-        const buyerIds = parseJsonArray(demandData.buyer_section);
+      const sellerIds = parseJsonArray(demandData.seller_section);
+      const buyerIds = parseJsonArray(demandData.buyer_section);
 
-        const itemsByProduct = (demandData.price_list_details?.items || []).reduce((acc: any, item: any) => {
-            const productId = parseInt(item.product_id);
-            if (!acc[productId]) acc[productId] = [];
-            acc[productId].push({ color: item.color, qty: item.qty, price: item.price });
-            return acc;
-        }, {});
+      const itemsByProduct = (demandData.price_list_details?.items || []).reduce((acc: any, item: any) => {
+        const productId = parseInt(item.product_id);
+        if (!acc[productId]) acc[productId] = [];
+        acc[productId].push({ color: item.color, qty: item.qty, price: item.price });
+        return acc;
+      }, {});
 
-        const reconstructedProductData = Object.keys(itemsByProduct).length > 0
-            ? Object.keys(itemsByProduct).map(productIdStr => {
-                const productId = parseInt(productIdStr);
-                return {
-                    product_id: productId,
-                    seller_ids: sellerIds,
-                    buyer_ids: buyerIds,
-                    status: demandData.price_list_details?.status || 'active',
-                    spec_id: demandData.price_list_details?.spec_id || null,
-                    items: itemsByProduct[productId],
-                };
-            })
-            : [{ product_id: null, seller_ids: [], buyer_ids: [], status: 'active', spec_id: null, items: [] }];
+      const reconstructedProductData = Object.keys(itemsByProduct).length > 0
+        ? Object.keys(itemsByProduct).map(productIdStr => {
+          const productId = parseInt(productIdStr);
+          return {
+            product_id: productId,
+            seller_ids: sellerIds,
+            buyer_ids: buyerIds,
+            status: demandData.price_list_details?.status || 'active',
+            spec_id: demandData.price_list_details?.spec_id || null,
+            items: itemsByProduct[productId],
+          };
+        })
+        : [{ product_id: null, seller_ids: [], buyer_ids: [], status: 'active', spec_id: null, items: [] }];
 
-        reset({
-            name: demandData.name || "",
-            assign_user: demandData.assign_user ? Number(demandData.assign_user) : null,
-            groupA: demandData.groupA || "",
-            groupB: demandData.groupB || "",
-            product_data: reconstructedProductData,
-        });
+      reset({
+        name: demandData.name || "",
+        assign_user: demandData.assign_user ? Number(demandData.assign_user) : null,
+        groupA: demandData.groupA || "",
+        groupB: demandData.groupB || "",
+        product_data: reconstructedProductData,
+      });
     }
   }, [demandData, ProductsData, reset]);
 
   const handleProductChange = (groupIndex: number, productId: number | null) => {
     setValue(`product_data.${groupIndex}.product_id`, productId);
-    
+
     if (!productId) {
       setValue(`product_data.${groupIndex}.items`, []);
       return;
@@ -179,7 +179,7 @@ const EditDemand = () => {
 
     const productDetails = ProductsData.find((p: any) => parseInt(p.id) === productId);
     const colors = productDetails?.color?.split(',') || [];
-    
+
     const newItems = colors.map((c: string) => c.trim()).filter(Boolean).map((color: string) => ({ color }));
 
     setValue(`product_data.${groupIndex}.items`, newItems, { shouldValidate: true });
@@ -206,24 +206,24 @@ const EditDemand = () => {
     }
     let messageA = "", messageB = "";
     relevantGroups.forEach(group => {
-        const productName = productOptions.find(p => p.value === group.product_id)?.label || "Unknown Product";
-        const selectedSpec = productSpecOptions.find(s => s.value === group.spec_id);
-        messageA += `Product: ${productName}\n`;
-        messageB += `Product: ${productName}\n`;
-        if (selectedSpec) {
-          messageA += `Specification: ${selectedSpec.label}\n`;
-          messageB += `Specification: ${selectedSpec.label}\n`;
+      const productName = productOptions.find(p => p.value === group.product_id)?.label || "Unknown Product";
+      const selectedSpec = productSpecOptions.find(s => s.value === group.spec_id);
+      messageA += `Product: ${productName}\n`;
+      messageB += `Product: ${productName}\n`;
+      if (selectedSpec) {
+        messageA += `Specification: ${selectedSpec.label}\n`;
+        messageB += `Specification: ${selectedSpec.label}\n`;
+      }
+      messageA += `Status: ${group.status.toUpperCase()}\n\n`;
+      messageB += `Status: ${group.status.toUpperCase()}\n\n`;
+      group.items.forEach(item => {
+        if (item.qty && item.qty > 0) {
+          messageA += `  - Color: ${item.color}, Qty: ${item.qty}, Price: $${(item.price || 0).toFixed(2)}\n`;
+          messageB += `  - Color: ${item.color}, Qty: ${item.qty}\n`;
         }
-        messageA += `Status: ${group.status.toUpperCase()}\n\n`;
-        messageB += `Status: ${group.status.toUpperCase()}\n\n`;
-        group.items.forEach(item => {
-            if (item.qty && item.qty > 0) {
-                messageA += `  - Color: ${item.color}, Qty: ${item.qty}, Price: $${(item.price || 0).toFixed(2)}\n`;
-                messageB += `  - Color: ${item.color}, Qty: ${item.qty}\n`;
-            }
-        });
-        messageA += "--------------------------------\n\n";
-        messageB += "--------------------------------\n\n";
+      });
+      messageA += "--------------------------------\n\n";
+      messageB += "--------------------------------\n\n";
     });
     messageA += `\nGrand Total Qty: ${totals.totalQty}\nGrand Total Price: $${totals.totalPrice.toFixed(2)}`;
     messageB += `\nTotal Qty: ${totals.totalQty}`;
@@ -242,8 +242,8 @@ const EditDemand = () => {
       groupB: data.groupB,
       assign_user: data.assign_user,
       product_data: data.product_data.filter(p => p.product_id).map(group => ({
-          ...group,
-          items: group.items.filter(item => item.qty && item.qty > 0)
+        ...group,
+        items: group.items.filter(item => item.qty && item.qty > 0)
       })),
     };
 
@@ -291,73 +291,73 @@ const EditDemand = () => {
 
         {fields.map((field, index) => (
           <Card key={field.id}>
-              <div className="flex justify-between items-center mb-4">
-                  <h5 className="mb-0">Product Group #{index + 1}</h5>
-                  <div className="flex items-center gap-2">
-                    {fields.length > 1 && <Button shape="circle" size="sm" type="button" color="red-600" icon={<TbTrash />} onClick={() => remove(index)} />}
-                    <Button size="xs" type="button" icon={<TbPlus />} onClick={() => append({ product_id: null, seller_ids: [], buyer_ids: [], status: 'active', spec_id: null, items: [] })}>Add Group</Button>
-                  </div>
+            <div className="flex justify-between items-center mb-4">
+              <h5 className="mb-0">Product Group #{index + 1}</h5>
+              <div className="flex items-center gap-2">
+                {fields.length > 1 && <Button shape="circle" size="sm" type="button" color="red-600" icon={<TbTrash />} onClick={() => remove(index)} />}
+                <Button size="xs" type="button" icon={<TbPlus />} onClick={() => append({ product_id: null, seller_ids: [], buyer_ids: [], status: 'active', spec_id: null, items: [] })}>Add Group</Button>
               </div>
-              <div className="p-4 border rounded-md dark:border-gray-600 grid lg:grid-cols-3 gap-4 items-start mb-6">
-                  <FormItem label="Product" invalid={!!errors.product_data?.[index]?.product_id} errorMessage={errors.product_data?.[index]?.product_id?.message}>
-                      <Controller name={`product_data.${index}.product_id`} control={control} render={({ field: { value }}) => 
-                          <UiSelect placeholder="Select Product..." options={productOptions} value={productOptions.find(opt => opt.value === value)} onChange={(option) => handleProductChange(index, option ? option.value as number : null)} />
-                      } />
-                  </FormItem>
-                  <FormItem label="Sellers" invalid={!!errors.product_data?.[index]?.seller_ids} errorMessage={errors.product_data?.[index]?.seller_ids?.message}>
-                      <Controller name={`product_data.${index}.seller_ids`} control={control} render={({ field: { onChange, value }}) => 
-                          <UiSelect isMulti placeholder="Select Sellers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} />
-                      } />
-                  </FormItem>
-                  <FormItem label="Buyers" invalid={!!errors.product_data?.[index]?.buyer_ids} errorMessage={errors.product_data?.[index]?.buyer_ids?.message}>
-                      <Controller name={`product_data.${index}.buyer_ids`} control={control} render={({ field: { onChange, value }}) => 
-                          <UiSelect isMulti placeholder="Select Buyers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} />
-                      } />
-                  </FormItem>
-              </div>
+            </div>
+            <div className="p-4 border rounded-md dark:border-gray-600 grid lg:grid-cols-3 gap-4 items-start mb-6">
+              <FormItem label="Product" invalid={!!errors.product_data?.[index]?.product_id} errorMessage={errors.product_data?.[index]?.product_id?.message}>
+                <Controller name={`product_data.${index}.product_id`} control={control} render={({ field: { value } }) =>
+                  <UiSelect placeholder="Select Product..." options={productOptions} value={productOptions.find(opt => opt.value === value)} onChange={(option) => handleProductChange(index, option ? option.value as number : null)} />
+                } />
+              </FormItem>
+              <FormItem label="Sellers" invalid={!!errors.product_data?.[index]?.seller_ids} errorMessage={errors.product_data?.[index]?.seller_ids?.message}>
+                <Controller name={`product_data.${index}.seller_ids`} control={control} render={({ field: { onChange, value } }) =>
+                  <UiSelect isMulti placeholder="Select Sellers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} />
+                } />
+              </FormItem>
+              <FormItem label="Buyers" invalid={!!errors.product_data?.[index]?.buyer_ids} errorMessage={errors.product_data?.[index]?.buyer_ids?.message}>
+                <Controller name={`product_data.${index}.buyer_ids`} control={control} render={({ field: { onChange, value } }) =>
+                  <UiSelect isMulti placeholder="Select Buyers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} />
+                } />
+              </FormItem>
+            </div>
 
-              {watchedProductGroups[index]?.product_id && (
-                  <>
-                      <div className="grid lg:grid-cols-2 gap-4 mb-4">
-                          <FormItem label="Status">
-                              <Controller name={`product_data.${index}.status`} control={control} render={({ field }) => <Radio.Group value={field.value} onChange={field.onChange}>{statusOptions.map(option => <Radio key={option.value} value={option.value}>{option.label}</Radio>)}</Radio.Group>} />
-                          </FormItem>
-                          <FormItem label="Product Spec Options">
-                              <Controller name={`product_data.${index}.spec_id`} control={control} render={({ field }) => <UiSelect placeholder="Select a Spec" options={productSpecOptions} value={productSpecOptions.find(o => o.value === field.value)} onChange={(option) => field.onChange(option ? option.value : null)} />} />
-                          </FormItem>
-                      </div>
-                      <div className="overflow-x-auto">
-                          <table className="min-w-full">
-                              <thead className="bg-gray-50 dark:bg-gray-700">
-                                  <tr>
-                                      <th className="px-4 py-3 text-left text-xs font-medium uppercase">Color</th>
-                                      <th className="px-4 py-3 text-left text-xs font-medium uppercase w-32">Qty</th>
-                                      <th className="px-4 py-3 text-left text-xs font-medium uppercase w-40">Price</th>
-                                  </tr>
-                              </thead>
-                              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                  {watchedProductGroups[index].items.map((item, itemIndex) => (
-                                  <tr key={`${field.id}-item-${itemIndex}`}>
-                                      <td className="px-4 py-3 font-semibold">{item.color}</td>
-                                      <td className="px-2 py-1"><Controller name={`product_data.${index}.items.${itemIndex}.qty`} control={control} render={({ field }) => <Input {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''} type="number" size="sm" placeholder="0" />} /></td>
-                                      <td className="px-2 py-1"><Controller name={`product_data.${index}.items.${itemIndex}.price`} control={control} render={({ field }) => <Input {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''} type="number" size="sm" step="0.01" prefix="$" placeholder="0.00" />} /></td>
-                                  </tr>
-                                  ))}
-                              </tbody>
-                          </table>
-                      </div>
-                  </>
-              )}
+            {watchedProductGroups[index]?.product_id && (
+              <>
+                <div className="grid lg:grid-cols-2 gap-4 mb-4">
+                  <FormItem label="Status">
+                    <Controller name={`product_data.${index}.status`} control={control} render={({ field }) => <Radio.Group value={field.value} onChange={field.onChange}>{statusOptions.map(option => <Radio key={option.value} value={option.value}>{option.label}</Radio>)}</Radio.Group>} />
+                  </FormItem>
+                  <FormItem label="Product Spec Options">
+                    <Controller name={`product_data.${index}.spec_id`} control={control} render={({ field }) => <UiSelect placeholder="Select a Spec" options={productSpecOptions} value={productSpecOptions.find(o => o.value === field.value)} onChange={(option) => field.onChange(option ? option.value : null)} />} />
+                  </FormItem>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase">Color</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase w-32">Qty</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase w-40">Price</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {watchedProductGroups[index].items.map((item, itemIndex) => (
+                        <tr key={`${field.id}-item-${itemIndex}`}>
+                          <td className="px-4 py-3 font-semibold">{item.color}</td>
+                          <td className="px-2 py-1"><Controller name={`product_data.${index}.items.${itemIndex}.qty`} control={control} render={({ field }) => <Input {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''} type="number" size="sm" placeholder="0" />} /></td>
+                          <td className="px-2 py-1"><Controller name={`product_data.${index}.items.${itemIndex}.price`} control={control} render={({ field }) => <Input {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''} type="number" size="sm" step="0.01" prefix="$" placeholder="0.00" />} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </Card>
         ))}
 
         <Card>
           <div className="flex justify-between items-center gap-4">
-              <Button type="button" variant="outline" icon={<TbFileText />} onClick={handleGenerateAndCopyNotes}>Generate & Copy Notes</Button>
-              <div className="flex items-center gap-4">
-                  <Input readOnly value={totals.totalQty} prefix="Total Qty:" className="w-48" />
-                  <Input readOnly value={`$${totals.totalPrice.toFixed(2)}`} prefix="Total Price:" className="w-56" />
-              </div>
+            <Button type="button" variant="outline" icon={<TbFileText />} onClick={handleGenerateAndCopyNotes}>Generate & Copy Notes</Button>
+            <div className="flex items-center gap-4">
+              <Input readOnly value={totals.totalQty} prefix="Total Qty:" className="w-48" />
+              <Input readOnly value={`$${totals.totalPrice.toFixed(2)}`} prefix="Total Price:" className="w-56" />
+            </div>
           </div>
         </Card>
 
