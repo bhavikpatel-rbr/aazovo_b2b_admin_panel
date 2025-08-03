@@ -173,7 +173,7 @@ const AddLeadPage = () => {
     const cartoonTypeLabel = cartoonTypeOptions.find(o => o.value === data.cartoon_type_id)?.label || null;
 
     const apiPayload = {
-      lead_intent: 'Buy', // Hardcoded as per simplified UI
+      lead_intent:  data.lead_intent,
       source_member_id: data.supplier_id,
       lead_member: data.buyer_id,
       product_id: data.product_id,
