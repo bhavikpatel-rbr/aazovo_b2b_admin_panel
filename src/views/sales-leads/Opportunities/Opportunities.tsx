@@ -3369,7 +3369,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
       try {
         await Promise.all([
           dispatch(getAllUsersAction()),
-          dispatch(getAutoMatchDataAction()),
+          // dispatch(getAutoMatchDataAction()),
           dispatch(getOpportunitieslistingAction({ page: 1, per_page: 10 }))
         ]);
       } catch (error) {
