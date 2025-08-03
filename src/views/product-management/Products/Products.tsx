@@ -3144,7 +3144,7 @@ const Products = () => {
                 <FormItem
                   label={
                     <div>
-                      Category<span className="text-red-500"> * </span>
+                      Category
                     </div>
                   }
                   invalid={!!formErrors.category_id}

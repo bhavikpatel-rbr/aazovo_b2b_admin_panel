@@ -923,7 +923,7 @@ export const addProductAction = createAsyncThunk<any, any>(
         return response?.data
       } else {
         return rejectWithValue({
-          message: response?.data?.message || 'Failed to edit company.'
+          message: response?.data?.message || 'Failed to edit Product.'
         });
       } // Uses Brand service
       // if (response?.data?.status === true) {
@@ -953,7 +953,7 @@ export const editProductAction = createAsyncThunk<
         return response?.data
       } else {
         return rejectWithValue({
-          message: response?.message || 'Failed to edit company.'
+          message: response?.message || 'Failed to edit Product.'
         });
       }
     } catch (error: unknown) {
