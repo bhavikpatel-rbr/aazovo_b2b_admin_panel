@@ -34,7 +34,7 @@ import {
   Input,
   Select as UiSelect,
   Table,
-  Skeleton, // Added Skeleton
+  Skeleton,
 } from "@/components/ui";
 import Notification from "@/components/ui/Notification";
 import Spinner from "@/components/ui/Spinner";
@@ -89,7 +89,7 @@ import {
 } from "react-icons/tb";
 
 // Types
-import type { OnSortParam, TableQueries } from "@/@types/common";
+import type { OnSortParam } from "@/@types/common";
 import { CellContext, ColumnDef, Row } from "@tanstack/react-table";
 import type { EnquiryType, LeadIntent, LeadStatus } from "./types";
 import {
@@ -109,15 +109,15 @@ import {
   deleteLeadAction,
   editLeadAction,
   getAllUsersAction,
+  getFormBuilderAction,
   getLeadAction,
   getLeadOpportunitiesAction,
-  getStartProcessAction,
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import { shallowEqual, useSelector } from "react-redux";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
+import { shallowEqual, useSelector } from "react-redux";
 
 interface CommonTableQueries {
   pageIndex?: number
@@ -170,8 +170,108 @@ const activitySchema = z.object({
 });
 type ActivityFormData = z.infer<typeof activitySchema>;
 
+// --- START: NEW SCHEMA AND MODAL FOR START PROCESS ---
+const startProcessSchema = z.object({
+  formId: z.number({ required_error: 'Please select a form to begin.' }),
+});
+type StartProcessFormData = z.infer<typeof startProcessSchema>;
+
+const StartProcessModal = ({
+    isOpen,
+    onClose,
+    lead,
+}: {
+    isOpen: boolean
+    onClose: () => void
+    lead: LeadListItem | null
+}) => {
+    const navigate = useNavigate();
+    const { formsData = [] } = useSelector(masterSelector);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const {
+        control,
+        handleSubmit,
+        reset,
+        formState: { errors, isValid },
+    } = useForm<StartProcessFormData>({
+        resolver: zodResolver(startProcessSchema),
+        mode: 'onChange',
+    });
+    
+    useEffect(() => {
+        if (!isOpen) {
+            reset(); // Reset form when modal closes
+        }
+    }, [isOpen, reset]);
+
+    const tokenFormOptions = useMemo(
+        () =>
+            (formsData || []).map((form: any) => ({
+                value: form.id,
+                label: form.form_title || 'Untitled Form',
+            })),
+        [formsData]
+    );
+
+    const onSubmit = (data: StartProcessFormData) => {
+        if (!lead) return;
+        setIsSubmitting(true);
+        navigate(`/start-process/${lead.id}/${data.formId}`);
+        onClose();
+    };
+
+    if (!isOpen || !lead) return null;
+
+    return (
+        <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Start Process for Lead: {lead.lead_number}</h5>
+            <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                Select a form to initiate a new process for this lead.
+            </p>
+            <Form id="startProcessForm" onSubmit={handleSubmit(onSubmit)}>
+                <FormItem
+                    label="Token Form"
+                    invalid={!!errors.formId}
+                    errorMessage={errors.formId?.message}
+                >
+                    <Controller
+                        name="formId"
+                        control={control}
+                        render={({ field }) => (
+                            <UiSelect
+                                placeholder="Select a form..."
+                                options={tokenFormOptions}
+                                value={tokenFormOptions.find(
+                                    (opt) => opt.value === field.value
+                                )}
+                                onChange={(opt: any) => field.onChange(opt?.value)}
+                            />
+                        )}
+                    />
+                </FormItem>
+            </Form>
+            <div className="text-right mt-6">
+                <Button className="mr-2" onClick={onClose} disabled={isSubmitting}>
+                    Cancel
+                </Button>
+                <Button
+                    variant="solid"
+                    type="submit"
+                    form="startProcessForm"
+                    loading={isSubmitting}
+                    disabled={!isValid || isSubmitting}
+                    icon={<TbPlayerPlay />}
+                >
+                    Proceed
+                </Button>
+            </div>
+        </Dialog>
+    );
+};
+// --- END: NEW SCHEMA AND MODAL ---
+
 // --- UI Constants ---
-// UPDATED: Added more status colors as per the business flow description
 const leadStatusColor: Record<LeadStatus | "default" | string, string> = {
   New: "bg-sky-100 text-sky-700 dark:bg-sky-700/30 dark:text-sky-200",
   Contacted: "bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-200",
@@ -198,7 +298,6 @@ const leadStatusColor: Record<LeadStatus | "default" | string, string> = {
   default: "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200",
 };
 
-// UPDATED: Added a color for 'Product lead'
 const enquiryTypeColor: Record<EnquiryType | "default" | string, string> = {
   "Product Info":
     "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200",
@@ -240,7 +339,6 @@ const priorityOptions = [
   { value: "high", label: "High" },
 ];
 const eventTypeOptions = [
-  // Customer Engagement & Sales
   { value: "Meeting", label: "Meeting" },
   { value: "Demo", label: "Product Demo" },
   { value: "IntroCall", label: "Introductory Call" },
@@ -248,19 +346,13 @@ const eventTypeOptions = [
   { value: "QBR", label: "Quarterly Business Review (QBR)" },
   { value: "CheckIn", label: "Customer Check-in" },
   { value: "LogEmail", label: "Log an Email" },
-
-  // Project & Task Management
   { value: "Milestone", label: "Project Milestone" },
   { value: "Task", label: "Task" },
   { value: "FollowUp", label: "General Follow-up" },
   { value: "ProjectKickoff", label: "Project Kick-off" },
-
-  // Customer Onboarding & Support
   { value: "OnboardingSession", label: "Onboarding Session" },
   { value: "Training", label: "Training Session" },
   { value: "SupportCall", label: "Support Call" },
-
-  // General & Administrative
   { value: "Reminder", label: "Reminder" },
   { value: "Note", label: "Add a Note" },
   { value: "FocusTime", label: "Focus Time (Do Not Disturb)" },
@@ -354,7 +446,6 @@ const dummyFeedback = [
   },
 ];
 
-// --- NEW Type Definition for Lead Opportunity ---
 type LeadOpportunityItem = {
   id: string;
   name: string;
@@ -387,7 +478,6 @@ const dummyDeal = {
   closeDate: "2024-07-20",
 };
 
-// --- CSV Exporter ---
 const CSV_LEAD_HEADERS = [
   "ID",
   "Lead Number",
@@ -465,7 +555,6 @@ function exportLeadsToCsv(filename: string, rows: LeadListItem[]) {
   return false;
 }
 
-// --- Internal Flattened Type for component use ---
 type LeadListItem = {
   id: string | number;
   lead_number: string;
@@ -495,7 +584,6 @@ type LeadListItem = {
   formId: any;
 };
 
-// ADDED: Zod Schema for Assign Lead Form
 const assignLeadSchema = z.object({
   assigned_sales_person_id: z.coerce.number({
     required_error: "An assignee is required.",
@@ -504,9 +592,6 @@ const assignLeadSchema = z.object({
 type AssignLeadFormData = z.infer<typeof assignLeadSchema>;
 export type SelectOption = { value: any; label: string };
 
-// ============================================================================
-// --- MODALS SECTION ---
-// ============================================================================
 export type LeadModalType =
   | "email"
   | "whatsapp"
@@ -611,8 +696,6 @@ const ConvertLeadToDealDialog: React.FC<{
   const onConvert = (data: any) => {
     setIsLoading(true);
     console.log(`Converting lead ${lead.lead_number} to deal with data:`, data);
-    // TODO: Integrate with backend API to trigger the full "Convert to Deal" workflow.
-    // This includes creating the PO, SO, and assigning tasks to the accounts team.
     setTimeout(() => {
       toast.push(
         <Notification type="success" title="Lead Converted">
@@ -638,13 +721,11 @@ const ConvertLeadToDealDialog: React.FC<{
             {lead.productName}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-            {/* Supplier Details */}
             <div>
               <h6 className="font-bold text-gray-800 dark:text-gray-200 border-b pb-1 mb-2">Purchase From (Supplier)</h6>
               <p><strong>Name:</strong> {lead.seller?.name || 'N/A'}</p>
               <p><strong>Member ID:</strong> {lead.seller?.member_code || 'N/A'}</p>
             </div>
-            {/* Buyer Details */}
             <div>
               <h6 className="font-bold text-gray-800 dark:text-gray-200 border-b pb-1 mb-2">Sale To (Buyer)</h6>
               <p><strong>Name:</strong> {lead.buyer?.name || 'N/A'}</p>
@@ -655,7 +736,6 @@ const ConvertLeadToDealDialog: React.FC<{
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div><strong className="block">Quantity:</strong> {lead.qty || 'N/A'}</div>
             <div><strong className="block">Target Price:</strong> ${lead.target_price || 'N/A'}</div>
-            {/* Add other fields like Color, Product Status, etc. as they become available in `lead` object */}
           </div>
         </div>
       </Card>
@@ -1033,7 +1113,7 @@ const SendWhatsAppDialog: React.FC<{
     },
   });
   const onSendMessage = (data: { message: string }) => {
-    const phone = lead.member_phone?.replace(/\D/g, "") || "1234567890"; // Dummy phone number
+    const phone = lead.member_phone?.replace(/\D/g, "") || "1234567890";
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(
       data.message
     )}`;
@@ -1065,7 +1145,6 @@ const SendWhatsAppDialog: React.FC<{
   );
 };
 
-// ADDED: New AssignLeadDialog component
 const AssignLeadDialog: React.FC<{
   lead: LeadListItem;
   onClose: () => void;
@@ -1105,7 +1184,6 @@ const AssignLeadDialog: React.FC<{
         assigned_sales_person_id: formData.assigned_sales_person_id,
       };
 
-      // Step 3: Dispatch the edit action.
       await dispatch(editLeadAction(payload)).unwrap();
 
       toast.push(
@@ -1113,8 +1191,8 @@ const AssignLeadDialog: React.FC<{
           Lead has been successfully assigned.
         </Notification>
       );
-      onSuccess(); // Refresh the table data
-      onClose(); // Close the modal
+      onSuccess();
+      onClose();
     } catch (error: any) {
       console.error("Assign Lead Error:", error);
       const errorMessage =
@@ -1853,10 +1931,6 @@ const GenericActionDialog: React.FC<{
   );
 };
 
-// ============================================================================
-// --- END MODALS SECTION ---
-// ============================================================================
-
 const LeadActionColumn = ({
   data,
   onViewDetail,
@@ -2243,6 +2317,12 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     type: null,
     data: null,
   });
+  
+  // --- START: NEW STATE FOR START PROCESS MODAL ---
+  const [isStartProcessModalOpen, setIsStartProcessModalOpen] = useState(false);
+  const [leadForProcess, setLeadForProcess] = useState<LeadListItem | null>(null);
+  // --- END: NEW STATE ---
+  
   const handleOpenModal = useCallback(
     (type: LeadModalType, leadData: LeadListItem) =>
       setModalState({ isOpen: true, type, data: leadData }),
@@ -2259,6 +2339,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         await Promise.all([
           dispatch(getLeadAction()),
           dispatch(getAllUsersAction()),
+          dispatch(getFormBuilderAction()), // Fetches forms for the new modal
         ]);
       } catch (error) {
         console.error("Failed to fetch initial data:", error);
@@ -2309,23 +2390,6 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         : [],
     [getAllUserData]
   );
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setInitialLoading(true);
-      try {
-        await Promise.all([
-          dispatch(getLeadAction()),
-          dispatch(getAllUsersAction()),
-        ]);
-      } catch (error) {
-        console.error("Failed to fetch initial data:", error);
-      } finally {
-        setInitialLoading(false);
-      }
-    };
-    fetchData();
-  }, [dispatch]);
 
   const mappedLeads: LeadListItem[] = useMemo(() => {
     if (!Array.isArray(LeadsData?.data?.data)) return [];
@@ -2488,32 +2552,12 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     },
     [navigate]
   );
-
-  const handleStartProcess = useCallback(
-    async (lead: LeadListItem) => {
-      try {
-        const formId = lead?.formId;
-        if (formId) {
-          navigate(`/start-process/${lead.id}/${formId}`);
-        } else {
-          toast.push(
-            <Notification title="Process Not Available" type="info">
-              There is no process form associated with this lead.
-            </Notification>
-          );
-        }
-      } catch (error: any) {
-        toast.push(
-          <Notification
-            title="Error Starting Process"
-            type="danger"
-            children={error?.message || "An unknown error occurred."}
-          />
-        );
-      }
-    },
-    [dispatch, navigate]
-  );
+  
+  // --- UPDATED: New handleStartProcess function to open the modal ---
+  const handleStartProcess = useCallback((lead: LeadListItem) => {
+    setLeadForProcess(lead);
+    setIsStartProcessModalOpen(true);
+  }, []);
 
   const handleDeleteClick = useCallback((item: LeadListItem) => {
     setItemToDelete(item);
@@ -2825,7 +2869,6 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         ),
       },
       {
-        // FIX: Rewritten to correctly display Buyer and Supplier details
         header: "Member",
         accessorKey: "lead_info",
         size: 200,
@@ -2860,7 +2903,6 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         },
       },
       {
-        // UI-IMPROVEMENT: Re-formatted for better readability
         header: "Details",
         size: 220,
         cell: (props: CellContext<LeadListItem, any>) => {
@@ -2936,7 +2978,6 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-2";
 
-  // --- SKELETON LOGIC ---
   const renderCardContent = (content: number | undefined, colorClass: string) => {
     if (initialLoading) {
       return <Skeleton width={40} height={20} />;
@@ -3136,14 +3177,14 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
                   ) {
                     displayValue = String(value.name);
                   } else {
-                    return null; // Don't display complex objects without a 'name'
+                    return null;
                   }
                 } else if (
                   typeof value === "object" &&
                   value !== null &&
                   !(value instanceof Date)
                 ) {
-                  return null; // Skip other complex objects
+                  return null;
                 } else {
                   displayValue =
                     value === null || value === undefined || value === "" ? (
@@ -3446,13 +3487,20 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           3260032
         </p>
       </ConfirmDialog>
-
+      
+      {/* --- ADDED: Render the new modals --- */}
+      <StartProcessModal
+        isOpen={isStartProcessModalOpen}
+        onClose={() => setIsStartProcessModalOpen(false)}
+        lead={leadForProcess}
+      />
       <LeadModals
         modalState={modalState}
         onClose={handleCloseModal}
         onSuccess={handleUpdateSuccess}
         getAllUserDataOptions={getAllUserDataOptions}
       />
+      
       <ConfirmDialog
         isOpen={isExportReasonModalOpen}
         type="info"
