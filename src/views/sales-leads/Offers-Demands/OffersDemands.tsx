@@ -456,7 +456,7 @@ console.log(item, 'item');
                   {item.name}
                 </h4>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  ID: {String(item?.originalApiItem?.id).padStart(6, '0')}
+                  ID: {String(item?.originalApiItem?.generate_id).padStart(6, '0')}
                 </p>
               </div>
             </div>
@@ -1121,7 +1121,7 @@ const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({
       send_users: formData.send_users,
       notification_title: formData.notification_title,
       message: formData.message,
-      module_id: String((item.originalApiItem as any).id),
+      module_id: String((item.originalApiItem as any).generate_id),
       module_name: "OfferDemand",
     };
     try {
@@ -1149,7 +1149,7 @@ const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({
         due_date: data.due_date
           ? dayjs(data.due_date).format("YYYY-MM-DD")
           : undefined,
-        module_id: String((item.originalApiItem as any).id),
+        module_id: String((item.originalApiItem as any).generate_id),
         module_name: "OfferDemand",
       };
       await dispatch(addTaskAction(payload)).unwrap();
@@ -1171,7 +1171,7 @@ const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({
     if (!item) return;
     setIsSubmittingAction(true);
     const payload = {
-      module_id: Number((item.originalApiItem as any).id),
+      module_id: Number((item.originalApiItem as any).generate_id),
       module_name: "OfferDemand",
       event_title: data.event_title,
       event_type: data.event_type,
@@ -1203,7 +1203,7 @@ const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({
     const payload = {
       item: data.item,
       notes: data.notes || "",
-      module_id: String((item.originalApiItem as any).id),
+      module_id: String((item.originalApiItem as any).generate_id),
       module_name: "OfferDemand",
       user_id: userData.id,
     };
@@ -2614,12 +2614,12 @@ const OffersDemands = () => {
     () => [
       {
         header: "ID",
-        accessorKey: "id",
+        accessorKey: "generate_id",
         enableSorting: true,
         size: 70,
         cell: (props: CellContext<OfferDemandItem, any>) => (
           <span className="font-semibold text-xs">
-            {props.row.original.originalApiItem.id}
+            {props.row.original.originalApiItem.generate_id}
           </span>
         ),
       },
@@ -2664,7 +2664,7 @@ const OffersDemands = () => {
                   group.groupName === "Group B";
                 if (isSpecialGroup && group.items?.[0]) {
                   const fullText = group.items[0];
-                  const messageToCopy = `Offer ID: ${row.original.originalApiItem.id}\nOffer Name: ${row.original.name}\n\nMessage:\n${fullText}`;
+                  const messageToCopy = `Offer ID: ${row.original.originalApiItem.generate_id}\nOffer Name: ${row.original.name}\n\nMessage:\n${fullText}`;
                   return (
                     <div
                       key={index}
