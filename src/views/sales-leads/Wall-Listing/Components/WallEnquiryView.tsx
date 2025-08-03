@@ -105,7 +105,7 @@ const WallEnquiryHeader = ({ enquiry, onAssignTask, onCopyLink }: { enquiry: Wal
 const wallEnquiryNavigationList = [
     { label: "Listing Details", link: "listing", icon: <TbListDetails /> },
     { label: "Member Details", link: "member", icon: <TbUserCircle /> },
-    { label: "Opportunity", link: "opportunity", icon: <TbBulb /> },
+    // { label: "Opportunity", link: "opportunity", icon: <TbBulb /> },
     { label: "Leads", link: "leads", icon: <TbUserSearch /> },
 ];
 
