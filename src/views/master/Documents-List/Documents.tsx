@@ -486,14 +486,14 @@ const Documents = () => {
   } = useSelector(masterSelector, shallowEqual);
 
   const isDataReady = !initialLoading && !isSubmitting && !isDeleting;
-  
+
   const documentTypeOptionsForSelect = useMemo(
     () =>
       Array.isArray(DocumentTypeData)
         ? DocumentTypeData.map((type: DocumentType) => ({
-            value: String(type.id),
-            label: type.name,
-          }))
+          value: String(type.id),
+          label: type.name,
+        }))
         : [],
     [DocumentTypeData]
   );
@@ -501,8 +501,8 @@ const Documents = () => {
     () =>
       Array.isArray(DocumentListData)
         ? [...new Set(DocumentListData.map((doc) => doc.name))]
-            .sort()
-            .map((name) => ({ value: name, label: name }))
+          .sort()
+          .map((name) => ({ value: name, label: name }))
         : [],
     [DocumentListData]
   );
@@ -510,21 +510,21 @@ const Documents = () => {
   const refreshData = useCallback(async () => {
     setInitialLoading(true);
     try {
-        await Promise.all([
-            dispatch(getDocumentListAction()),
-            dispatch(getDocumentTypeAction())
-        ]);
+      await Promise.all([
+        dispatch(getDocumentListAction()),
+        dispatch(getDocumentTypeAction())
+      ]);
     } catch (error) {
-        console.error("Failed to refresh data:", error);
-        toast.push(<Notification title="Data Refresh Failed" type="danger">Could not reload document data.</Notification>);
+      console.error("Failed to refresh data:", error);
+      toast.push(<Notification title="Data Refresh Failed" type="danger">Could not reload document data.</Notification>);
     } finally {
-        setInitialLoading(false);
+      setInitialLoading(false);
     }
-}, [dispatch]);
+  }, [dispatch]);
 
-useEffect(() => {
+  useEffect(() => {
     refreshData();
-}, [refreshData]);
+  }, [refreshData]);
 
 
   const formMethods = useForm<DocumentFormData>({
@@ -924,9 +924,8 @@ useEffect(() => {
   };
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
-    const fileName = `documents_export_${
-      new Date().toISOString().split("T")[0]
-    }.csv`;
+    const fileName = `documents_export_${new Date().toISOString().split("T")[0]
+      }.csv`;
     try {
       await dispatch(
         submitExportReasonAction({
@@ -953,7 +952,7 @@ useEffect(() => {
 
   const renderCardContent = (count: number) => {
     if (initialLoading) {
-        return <Skeleton width={40} height={20} />;
+      return <Skeleton width={40} height={20} />;
     }
     return <h6 className="text-sm">{count}</h6>;
   };
@@ -1022,7 +1021,7 @@ useEffect(() => {
                     <TbFileX size={20} />
                   </div>
                   <div>
-                  {renderCardContent(DocumentListData?.filter((d) => d.status === "Inactive").length)}
+                    {renderCardContent(DocumentListData?.filter((d) => d.status === "Inactive").length)}
                     <span className="text-xs">Inactive</span>
                   </div>
                 </Card>
@@ -1059,6 +1058,7 @@ useEffect(() => {
           )}
           <div className="flex-grow overflow-auto">
             <DataTable
+              menuName="document_list"
               columns={filteredColumns}
               data={pageData}
               noData={pageData.length <= 0}
@@ -1303,42 +1303,42 @@ useEffect(() => {
               <span>
                 {editingDocument.created_at
                   ? `${new Date(
-                      editingDocument.created_at
-                    ).getDate()} ${new Date(
-                      editingDocument.created_at
-                    ).toLocaleString("en-US", {
-                      month: "short",
-                    })} ${new Date(
-                      editingDocument.created_at
-                    ).getFullYear()}, ${new Date(
-                      editingDocument.created_at
-                    ).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}`
+                    editingDocument.created_at
+                  ).getDate()} ${new Date(
+                    editingDocument.created_at
+                  ).toLocaleString("en-US", {
+                    month: "short",
+                  })} ${new Date(
+                    editingDocument.created_at
+                  ).getFullYear()}, ${new Date(
+                    editingDocument.created_at
+                  ).toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  })}`
                   : "N/A"}
               </span>
               <br />
               <span className="font-semibold">Updated At:</span>{" "}
               <span>
-                {}
+                { }
                 {editingDocument.updated_at
                   ? `${new Date(
-                      editingDocument.updated_at
-                    ).getDate()} ${new Date(
-                      editingDocument.updated_at
-                    ).toLocaleString("en-US", {
-                      month: "short",
-                    })} ${new Date(
-                      editingDocument.updated_at
-                    ).getFullYear()}, ${new Date(
-                      editingDocument.updated_at
-                    ).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}`
+                    editingDocument.updated_at
+                  ).getDate()} ${new Date(
+                    editingDocument.updated_at
+                  ).toLocaleString("en-US", {
+                    month: "short",
+                  })} ${new Date(
+                    editingDocument.updated_at
+                  ).getFullYear()}, ${new Date(
+                    editingDocument.updated_at
+                  ).toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  })}`
                   : "N/A"}
               </span>
             </div>

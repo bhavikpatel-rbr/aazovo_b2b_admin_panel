@@ -578,11 +578,11 @@ const ActiveFiltersDisplay = ({
       ))}
       {filterSubCategoryIds?.map((item) => (
         <Tag key={`subcat-${item.value}`} prefix>
-            SubCat: {item.label}{' '}
-            <TbX
-                className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
-                onClick={() => onRemoveFilter('filterSubCategoryIds', item.value)}
-            />
+          SubCat: {item.label}{' '}
+          <TbX
+            className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
+            onClick={() => onRemoveFilter('filterSubCategoryIds', item.value)}
+          />
         </Tag>
       ))}
       {filterDepartmentIds?.map((item) => (
@@ -641,6 +641,7 @@ const EmailTemplatesTable = ({
   onAllRowSelect,
 }: EmailTemplatesTableProps) => (
   <DataTable
+    menuName="email_templates"
     columns={columns}
     data={data}
     noData={!loading && data.length === 0}
@@ -770,9 +771,9 @@ const EmailTemplatesListing = () => {
     () =>
       Array.isArray(CategoriesData)
         ? CategoriesData?.map((c: ApiLookupItem) => ({
-            value: String(c.id),
-            label: c.name,
-          }))
+          value: String(c.id),
+          label: c.name,
+        }))
         : [],
     [CategoriesData]
   );
@@ -781,9 +782,9 @@ const EmailTemplatesListing = () => {
     () =>
       Array.isArray(subCategoriesForSelectedCategoryData)
         ? subCategoriesForSelectedCategoryData?.map((sc: ApiLookupItem) => ({
-            value: String(sc.id),
-            label: sc.name,
-          }))
+          value: String(sc.id),
+          label: sc.name,
+        }))
         : [],
     [subCategoriesForSelectedCategoryData]
   );
@@ -792,9 +793,9 @@ const EmailTemplatesListing = () => {
     () =>
       Array.isArray(BrandData)
         ? BrandData.map((b: ApiLookupItem) => ({
-            value: String(b.id),
-            label: b.name,
-          }))
+          value: String(b.id),
+          label: b.name,
+        }))
         : [],
     [BrandData]
   );
@@ -802,9 +803,9 @@ const EmailTemplatesListing = () => {
     () =>
       Array.isArray(Roles)
         ? (Roles as any[]).map((r: any) => ({
-            value: String(r.id),
-            label: r.display_name,
-          }))
+          value: String(r.id),
+          label: r.display_name,
+        }))
         : [],
     [Roles]
   );
@@ -812,9 +813,9 @@ const EmailTemplatesListing = () => {
     () =>
       Array.isArray(departmentsData?.data)
         ? departmentsData?.data.map((d: ApiLookupItem) => ({
-            value: String(d.id),
-            label: d.name,
-          }))
+          value: String(d.id),
+          label: d.name,
+        }))
         : [],
     [departmentsData?.data]
   );
@@ -822,9 +823,9 @@ const EmailTemplatesListing = () => {
     () =>
       Array.isArray(designationsData?.data)
         ? designationsData?.data.map((d: ApiLookupItem) => ({
-            value: String(d.id),
-            label: d.name,
-          }))
+          value: String(d.id),
+          label: d.name,
+        }))
         : [],
     [designationsData?.data]
   );
@@ -1224,41 +1225,41 @@ const EmailTemplatesListing = () => {
       emailTemplatesData
     )
       ? emailTemplatesData.map((item) => ({
-          ...item,
-          status: item.status || "Inactive",
-          categoryName:
-            item.category?.name ||
-            categoryOptions.find((c) => c.value === String(item.category_id))
-              ?.label ||
-            String(item.category_id),
-          subCategoryName:
-            item.sub_category?.name ||
-            subCategoryOptions.find(
-              (sc) => sc.value === String(item.sub_category_id)
-            )?.label ||
-            (item.sub_category_id ? String(item.sub_category_id) : "N/A"),
-          brandName:
-            item.brand?.name ||
-            brandOptions.find((b) => b.value === String(item.brand_id))
-              ?.label ||
-            (item.brand_id ? String(item.brand_id) : "N/A"),
-          roleName:
-            item.role?.name ||
-            roleOptions.find((r) => r.value === String(item.role_id))?.label ||
-            (item.role_id ? String(item.role_id) : "N/A"),
-          departmentName:
-            item.department?.name ||
-            departmentOptions.find(
-              (d) => d.value === String(item.department_id)
-            )?.label ||
-            (item.department_id ? String(item.department_id) : "N/A"),
-          designationName:
-            item.designation?.name ||
-            designationOptions.find(
-              (d) => d.value === String(item.designation_id)
-            )?.label ||
-            (item.designation_id ? String(item.designation_id) : "N/A"),
-        }))
+        ...item,
+        status: item.status || "Inactive",
+        categoryName:
+          item.category?.name ||
+          categoryOptions.find((c) => c.value === String(item.category_id))
+            ?.label ||
+          String(item.category_id),
+        subCategoryName:
+          item.sub_category?.name ||
+          subCategoryOptions.find(
+            (sc) => sc.value === String(item.sub_category_id)
+          )?.label ||
+          (item.sub_category_id ? String(item.sub_category_id) : "N/A"),
+        brandName:
+          item.brand?.name ||
+          brandOptions.find((b) => b.value === String(item.brand_id))
+            ?.label ||
+          (item.brand_id ? String(item.brand_id) : "N/A"),
+        roleName:
+          item.role?.name ||
+          roleOptions.find((r) => r.value === String(item.role_id))?.label ||
+          (item.role_id ? String(item.role_id) : "N/A"),
+        departmentName:
+          item.department?.name ||
+          departmentOptions.find(
+            (d) => d.value === String(item.department_id)
+          )?.label ||
+          (item.department_id ? String(item.department_id) : "N/A"),
+        designationName:
+          item.designation?.name ||
+          designationOptions.find(
+            (d) => d.value === String(item.designation_id)
+          )?.label ||
+          (item.designation_id ? String(item.designation_id) : "N/A"),
+      }))
       : [];
 
     let processedData = cloneDeep(sourceDataWithDisplayNames);
@@ -1267,16 +1268,16 @@ const EmailTemplatesListing = () => {
       filterCriteria[key] && (filterCriteria[key] as any[]).length > 0;
 
     if (filterIsActive("filterStatus")) {
-        const statuses = filterCriteria.filterStatus!.map((s) => s.value);
-        processedData = processedData.filter((item) => statuses.includes(item.status));
+      const statuses = filterCriteria.filterStatus!.map((s) => s.value);
+      processedData = processedData.filter((item) => statuses.includes(item.status));
     }
     if (filterIsActive("filterCategoryIds")) {
-        const ids = new Set(filterCriteria.filterCategoryIds!.map((c) => c.value));
-        processedData = processedData.filter((item) => ids.has(String(item.category_id)));
+      const ids = new Set(filterCriteria.filterCategoryIds!.map((c) => c.value));
+      processedData = processedData.filter((item) => ids.has(String(item.category_id)));
     }
     if (filterIsActive("filterSubCategoryIds")) {
-        const ids = new Set(filterCriteria.filterSubCategoryIds!.map((sc) => sc.value));
-        processedData = processedData.filter((item) => ids.has(String(item.sub_category_id)));
+      const ids = new Set(filterCriteria.filterSubCategoryIds!.map((sc) => sc.value));
+      processedData = processedData.filter((item) => ids.has(String(item.sub_category_id)));
     }
     // ... add other filters similarly
 
@@ -1561,7 +1562,7 @@ const EmailTemplatesListing = () => {
             render={({ field }) => (
               <Input
                 {...field}
-              
+
                 placeholder="Internal Template Name"
               />
             )}
@@ -1582,7 +1583,7 @@ const EmailTemplatesListing = () => {
             render={({ field }) => (
               <Input
                 {...field}
-              
+
                 placeholder="e.g., WELCOME_EMAIL_V1"
               />
             )}
@@ -1605,7 +1606,7 @@ const EmailTemplatesListing = () => {
             render={({ field }) => (
               <Input
                 {...field}
-              
+
                 placeholder="Actual Email Title/Subject"
               />
             )}
@@ -2034,8 +2035,8 @@ const EmailTemplatesListing = () => {
                   <span>
                     {editingTemplate.created_at
                       ? dayjs(editingTemplate.created_at).format(
-                          "D MMM YYYY, h:mm A"
-                        )
+                        "D MMM YYYY, h:mm A"
+                      )
                       : "N/A"}
                   </span>
                   <br />
@@ -2043,8 +2044,8 @@ const EmailTemplatesListing = () => {
                   <span>
                     {editingTemplate.updated_at
                       ? dayjs(editingTemplate.updated_at).format(
-                          "D MMM YYYY, h:mm A"
-                        )
+                        "D MMM YYYY, h:mm A"
+                      )
                       : "N/A"}
                   </span>
                 </div>

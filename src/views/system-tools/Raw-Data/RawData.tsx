@@ -394,59 +394,59 @@ const RowDataListing = () => {
     const date = new Date(dateString);
     return `${date.getDate()} ${date.toLocaleString("en-US", { month: "short" })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
   };
-  
+
   const getApiParams = (forExport = false) => {
-      const params: any = {
-          sort_by: tableData.sort.key,
-          sort_order: tableData.sort.order,
-          search: tableData.query,
-          country_id: filterCriteria.filterCountry?.map((c) => c.value).join(','),
-          category_id: filterCriteria.filterCategory?.map((c) => c.value).join(','),
-          brand_id: filterCriteria.filterBrand?.map((b) => b.value).join(','),
-          status: filterCriteria.filterStatus?.map((s) => s.value).join(','),
-          quality: filterCriteria.filterQuality?.map((q) => q.value).join(','),
-          special_filter: filterCriteria.specialFilter,
-      };
+    const params: any = {
+      sort_by: tableData.sort.key,
+      sort_order: tableData.sort.order,
+      search: tableData.query,
+      country_id: filterCriteria.filterCountry?.map((c) => c.value).join(','),
+      category_id: filterCriteria.filterCategory?.map((c) => c.value).join(','),
+      brand_id: filterCriteria.filterBrand?.map((b) => b.value).join(','),
+      status: filterCriteria.filterStatus?.map((s) => s.value).join(','),
+      quality: filterCriteria.filterQuality?.map((q) => q.value).join(','),
+      special_filter: filterCriteria.specialFilter,
+    };
 
-      if (forExport) {
-          params.export = true;
-      } else {
-          params.page = tableData.pageIndex;
-          params.per_page = tableData.pageSize;
+    if (forExport) {
+      params.export = true;
+    } else {
+      params.page = tableData.pageIndex;
+      params.per_page = tableData.pageSize;
+    }
+
+    // Clean up empty/undefined params before returning
+    Object.keys(params).forEach((key) => {
+      const value = params[key];
+      if (value === undefined || value === null || value === '') {
+        delete params[key];
       }
-
-      // Clean up empty/undefined params before returning
-      Object.keys(params).forEach((key) => {
-          const value = params[key];
-          if (value === undefined || value === null || value === '') {
-              delete params[key];
-          }
-      });
-      return params;
+    });
+    return params;
   };
 
 
   const refreshAfterAction = () => {
-      // Re-fetch data for the current page after an add/edit/delete operation
-      dispatch(getRowDataAction(getApiParams()));
+    // Re-fetch data for the current page after an add/edit/delete operation
+    dispatch(getRowDataAction(getApiParams()));
   }
 
   // Effect for fetching one-time lookup data on mount
   useEffect(() => {
     const fetchLookups = async () => {
-        setInitialLoading(true);
-        try {
-            await Promise.all([
-                dispatch(getCountriesAction()),
-                dispatch(getParentCategoriesAction()),
-                dispatch(getBrandAction()),
-            ]);
-        } catch (error) {
-            console.error("Failed to load lookup data:", error);
-            toast.push(<Notification title="Data Load Failed" type="danger">Could not load initial lookup data.</Notification>);
-        } finally {
-            setInitialLoading(false);
-        }
+      setInitialLoading(true);
+      try {
+        await Promise.all([
+          dispatch(getCountriesAction()),
+          dispatch(getParentCategoriesAction()),
+          dispatch(getBrandAction()),
+        ]);
+      } catch (error) {
+        console.error("Failed to load lookup data:", error);
+        toast.push(<Notification title="Data Load Failed" type="danger">Could not load initial lookup data.</Notification>);
+      } finally {
+        setInitialLoading(false);
+      }
     };
     fetchLookups();
   }, [dispatch]);
@@ -456,7 +456,7 @@ const RowDataListing = () => {
     if (!isDataReady) return; // Don't fetch until lookups are ready
     dispatch(getRowDataAction(getApiParams()));
   }, [dispatch, tableData, filterCriteria, isDataReady]);
-  
+
   useEffect(() => { setCountryOptions(Array.isArray(CountriesData) ? CountriesData.map((c: CountryListItem) => ({ value: String(c.id), label: c.name })) : []) }, [CountriesData]);
   useEffect(() => { setCategoryOptions(Array.isArray(ParentCategories) ? ParentCategories.map((c: CategoryListItem) => ({ value: String(c.id), label: c.name })) : []) }, [ParentCategories]);
   useEffect(() => { setBrandOptions(Array.isArray(BrandData) ? BrandData.map((b: BrandListItem) => ({ value: String(b.id), label: b.name })) : []) }, [BrandData]);
@@ -489,7 +489,7 @@ const RowDataListing = () => {
     setTableData((prev) => ({ ...prev, pageIndex: 1 }));
     closeFilterDrawer();
   }, [closeFilterDrawer]);
-  
+
   const onClearFilters = useCallback(() => {
     const defaultFilters = {};
     filterFormMethods.reset(defaultFilters);
@@ -506,12 +506,12 @@ const RowDataListing = () => {
       } else {
         const qualityOption = QUALITY_LEVELS_UI.find(opt => opt.value === value);
         if (qualityOption) {
-            newFilters = { filterQuality: [qualityOption] };
+          newFilters = { filterQuality: [qualityOption] };
         } else {
-            const statusOption = STATUS_OPTIONS_UI.find(opt => opt.value === value);
-            if (statusOption) {
-                newFilters = { filterStatus: [statusOption] };
-            }
+          const statusOption = STATUS_OPTIONS_UI.find(opt => opt.value === value);
+          if (statusOption) {
+            newFilters = { filterStatus: [statusOption] };
+          }
         }
       }
     }
@@ -549,7 +549,7 @@ const RowDataListing = () => {
   }, [filterCriteria]);
 
   const handleOpenExportReasonModal = () => { if (!total || total === 0) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true); };
-  
+
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = "Raw Data Management";
@@ -557,27 +557,27 @@ const RowDataListing = () => {
     const fileName = `raw-data_${date}.csv`;
 
     try {
-        await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
-        toast.push(<Notification title="Export Reason Submitted" type="success" />);
-        toast.push(<Notification title="Preparing Export" type="info" duration={4000}>Fetching all matching data. This may take a moment...</Notification>);
-        
-        // Assume getRowDataAction with export params returns all matching data
-        const resultAction = await dispatch(getRowDataAction(getApiParams(true))).unwrap();
-        const allDataToExport = resultAction.data;
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
+      toast.push(<Notification title="Export Reason Submitted" type="success" />);
+      toast.push(<Notification title="Preparing Export" type="info" duration={4000}>Fetching all matching data. This may take a moment...</Notification>);
 
-        if (!allDataToExport || allDataToExport.length === 0) {
-            toast.push(<Notification title="No Data" type="info">Nothing to export for the current filters.</Notification>);
-            return;
-        }
+      // Assume getRowDataAction with export params returns all matching data
+      const resultAction = await dispatch(getRowDataAction(getApiParams(true))).unwrap();
+      const allDataToExport = resultAction.data;
 
-        exportRowDataToCsvLogic(fileName, allDataToExport, countryOptions, categoryOptions, brandOptions);
-        toast.push(<Notification title="Data Exported" type="success">Raw data exported successfully.</Notification>);
-        setIsExportReasonModalOpen(false);
+      if (!allDataToExport || allDataToExport.length === 0) {
+        toast.push(<Notification title="No Data" type="info">Nothing to export for the current filters.</Notification>);
+        return;
+      }
+
+      exportRowDataToCsvLogic(fileName, allDataToExport, countryOptions, categoryOptions, brandOptions);
+      toast.push(<Notification title="Data Exported" type="success">Raw data exported successfully.</Notification>);
+      setIsExportReasonModalOpen(false);
 
     } catch (error: any) {
-        toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />);
+      toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />);
     } finally {
-        setIsSubmittingExportReason(false);
+      setIsSubmittingExportReason(false);
     }
   };
 
@@ -588,20 +588,20 @@ const RowDataListing = () => {
   const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
   const handleRowSelect = useCallback((checked: boolean, row: RowDataItem) => { setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); }); }, []);
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<RowDataItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => r.id && !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id).filter((id) => id !== undefined)); setSelectedItems((pS) => pS.filter((i) => i.id && !cPRIds.has(i.id))); } }, []);
-  
+
   const columns: ColumnDef<RowDataItem>[] = useMemo(() => [
-    { header: "Name", accessorKey: "name", enableSorting: true, size: 160, cell: (props) => (<><span className="text-xs font-semibold">ROW-{props.row.original.id.toString().padStart(7, '0')} <br/> {props.row.original.name}</span><br/><div className="text-xs">{props.row.original.mobile_no}</div></>) },
+    { header: "Name", accessorKey: "name", enableSorting: true, size: 160, cell: (props) => (<><span className="text-xs font-semibold">ROW-{props.row.original.id.toString().padStart(7, '0')} <br /> {props.row.original.name}</span><br /><div className="text-xs">{props.row.original.mobile_no}</div></>) },
     { header: "Country", accessorKey: "country_id", enableSorting: true, size: 160, cell: (props) => props.row.original.country?.name || String(props.getValue()), },
     { header: "Category", accessorKey: "category_id", enableSorting: true, size: 170, cell: (props) => props.row.original.category?.name || String(props.getValue()), },
     { header: "Brand", accessorKey: "brand_id", enableSorting: true, size: 160, cell: (props) => props.row.original.brand?.name || String(props.getValue()), },
-    { header: "Quality", accessorKey: "quality", enableSorting: true, size: 100, cell: (props) => { const qVal = props.getValue<string>(); const qOpt = QUALITY_LEVELS_UI.find((q) => q.value === qVal); return (<Tag className={classNames("capitalize", qVal === "A" && "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-100 border border-green-300 dark:border-green-700", qVal === "B" && "bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-100 border border-orange-300 dark:border-orange-700", qVal === "C" && "bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-100 border border-yellow-300 dark:border-yellow-700" , qVal === "D" && "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700")}>Grade: {qOpt?.label.split(" ")[1] || qVal}</Tag>); }, },
+    { header: "Quality", accessorKey: "quality", enableSorting: true, size: 100, cell: (props) => { const qVal = props.getValue<string>(); const qOpt = QUALITY_LEVELS_UI.find((q) => q.value === qVal); return (<Tag className={classNames("capitalize", qVal === "A" && "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-100 border border-green-300 dark:border-green-700", qVal === "B" && "bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-100 border border-orange-300 dark:border-orange-700", qVal === "C" && "bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-100 border border-yellow-300 dark:border-yellow-700", qVal === "D" && "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700")}>Grade: {qOpt?.label.split(" ")[1] || qVal}</Tag>); }, },
     { header: "Status", accessorKey: "status", enableSorting: true, size: 110, cell: (props) => { const sVal = props.getValue<string>(); const sOpt = STATUS_OPTIONS_UI.find((s) => s.value === sVal); return (<Tag className={classNames("capitalize", statusColors[sVal])}>{sOpt?.label || sVal}</Tag>); }, },
     { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<ActionColumn item={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onViewDetail={() => openViewDialog(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onBlacklist={() => handleBlacklistClick(props.row.original)} />), },
   ], [openEditDrawer, openViewDialog, handleDeleteClick, handleBlacklistClick, countryOptions, categoryOptions, brandOptions]);
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<RowDataItem>[]>(columns);
 
-  const renderDrawerForm = () => (<div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-2"><FormItem label={<div>Contact Name<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.name} errorMessage={formMethods.formState.errors.name?.message}><Controller name="name" control={formMethods.control} render={({ field }) => (<Input {...field} placeholder="Contact Name / Lead Name" />)} /></FormItem><FormItem label={<div>Company Name<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.company_name} errorMessage={formMethods.formState.errors.company_name?.message}><Controller name="company_name" control={formMethods.control} render={({ field }) => (<Input {...field}  placeholder="ABC Corp" />)} /></FormItem><FormItem label="Country" invalid={!!formMethods.formState.errors.country_id} errorMessage={formMethods.formState.errors.country_id?.message}><Controller name="country_id" control={formMethods.control} render={({ field }) => (<Select placeholder="Select country" options={countryOptions} value={countryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></FormItem><FormItem label="Category" invalid={!!formMethods.formState.errors.category_id} errorMessage={formMethods.formState.errors.category_id?.message}><Controller name="category_id" control={formMethods.control} render={({ field }) => (<Select placeholder="Select category" options={categoryOptions} value={categoryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></FormItem><FormItem label="Brand" invalid={!!formMethods.formState.errors.brand_id} errorMessage={formMethods.formState.errors.brand_id?.message}><Controller name="brand_id" control={formMethods.control} render={({ field }) => (<Select placeholder="Select brand" options={brandOptions} value={brandOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbBuildingArch />} />)} /></FormItem><FormItem label={<div>Mobile No.<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.mobile_no} errorMessage={formMethods.formState.errors.mobile_no?.message}><Controller name="mobile_no" control={formMethods.control} render={({ field }) => (<Input {...field}  placeholder="+XX-XXXXXXXXXX" />)} /></FormItem><FormItem label="Email" invalid={!!formMethods.formState.errors.email} errorMessage={formMethods.formState.errors.email?.message}><Controller name="email" control={formMethods.control} render={({ field }) => (<Input {...field} type="email" placeholder="name@example.com" />)} /></FormItem><FormItem label="Quality" invalid={!!formMethods.formState.errors.quality} errorMessage={formMethods.formState.errors.quality?.message}><Controller name="quality" control={formMethods.control} render={({ field }) => (<Select placeholder="Select quality" options={QUALITY_LEVELS_UI} value={QUALITY_LEVELS_UI.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></FormItem><FormItem label="City" invalid={!!formMethods.formState.errors.city} errorMessage={formMethods.formState.errors.city?.message}><Controller name="city" control={formMethods.control} render={({ field }) => (<Input {...field}  placeholder="City Name" />)} /></FormItem><FormItem label="Status" invalid={!!formMethods.formState.errors.status} errorMessage={formMethods.formState.errors.status?.message}><Controller name="status" control={formMethods.control} render={({ field }) => (<Select placeholder="Select status" options={editingItem?.status === "Blacklist" ? STATUS_OPTIONS_UI : STATUS_OPTIONS_UI.filter((s) => s.value !== "Blacklist")} value={STATUS_OPTIONS_UI.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} disabled={editingItem?.status === "Blacklist"} />)} /></FormItem><FormItem label="Remarks" className="md:col-span-2 lg:col-span-2" invalid={!!formMethods.formState.errors.remarks} errorMessage={formMethods.formState.errors.remarks?.message}><Controller name="remarks" control={formMethods.control} render={({ field }) => (<Input textArea {...field} rows={3} placeholder="Add any relevant notes or comments..." />)} /></FormItem></div>);
+  const renderDrawerForm = () => (<div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-2"><FormItem label={<div>Contact Name<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.name} errorMessage={formMethods.formState.errors.name?.message}><Controller name="name" control={formMethods.control} render={({ field }) => (<Input {...field} placeholder="Contact Name / Lead Name" />)} /></FormItem><FormItem label={<div>Company Name<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.company_name} errorMessage={formMethods.formState.errors.company_name?.message}><Controller name="company_name" control={formMethods.control} render={({ field }) => (<Input {...field} placeholder="ABC Corp" />)} /></FormItem><FormItem label="Country" invalid={!!formMethods.formState.errors.country_id} errorMessage={formMethods.formState.errors.country_id?.message}><Controller name="country_id" control={formMethods.control} render={({ field }) => (<Select placeholder="Select country" options={countryOptions} value={countryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></FormItem><FormItem label="Category" invalid={!!formMethods.formState.errors.category_id} errorMessage={formMethods.formState.errors.category_id?.message}><Controller name="category_id" control={formMethods.control} render={({ field }) => (<Select placeholder="Select category" options={categoryOptions} value={categoryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></FormItem><FormItem label="Brand" invalid={!!formMethods.formState.errors.brand_id} errorMessage={formMethods.formState.errors.brand_id?.message}><Controller name="brand_id" control={formMethods.control} render={({ field }) => (<Select placeholder="Select brand" options={brandOptions} value={brandOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbBuildingArch />} />)} /></FormItem><FormItem label={<div>Mobile No.<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.mobile_no} errorMessage={formMethods.formState.errors.mobile_no?.message}><Controller name="mobile_no" control={formMethods.control} render={({ field }) => (<Input {...field} placeholder="+XX-XXXXXXXXXX" />)} /></FormItem><FormItem label="Email" invalid={!!formMethods.formState.errors.email} errorMessage={formMethods.formState.errors.email?.message}><Controller name="email" control={formMethods.control} render={({ field }) => (<Input {...field} type="email" placeholder="name@example.com" />)} /></FormItem><FormItem label="Quality" invalid={!!formMethods.formState.errors.quality} errorMessage={formMethods.formState.errors.quality?.message}><Controller name="quality" control={formMethods.control} render={({ field }) => (<Select placeholder="Select quality" options={QUALITY_LEVELS_UI} value={QUALITY_LEVELS_UI.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></FormItem><FormItem label="City" invalid={!!formMethods.formState.errors.city} errorMessage={formMethods.formState.errors.city?.message}><Controller name="city" control={formMethods.control} render={({ field }) => (<Input {...field} placeholder="City Name" />)} /></FormItem><FormItem label="Status" invalid={!!formMethods.formState.errors.status} errorMessage={formMethods.formState.errors.status?.message}><Controller name="status" control={formMethods.control} render={({ field }) => (<Select placeholder="Select status" options={editingItem?.status === "Blacklist" ? STATUS_OPTIONS_UI : STATUS_OPTIONS_UI.filter((s) => s.value !== "Blacklist")} value={STATUS_OPTIONS_UI.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} disabled={editingItem?.status === "Blacklist"} />)} /></FormItem><FormItem label="Remarks" className="md:col-span-2 lg:col-span-2" invalid={!!formMethods.formState.errors.remarks} errorMessage={formMethods.formState.errors.remarks?.message}><Controller name="remarks" control={formMethods.control} render={({ field }) => (<Input textArea {...field} rows={3} placeholder="Add any relevant notes or comments..." />)} /></FormItem></div>);
 
   const openImportModal = () => setIsImportModalOpen(true);
   const closeImportModal = () => { setIsImportModalOpen(false); setSelectedFile(null); };
@@ -665,26 +665,26 @@ const RowDataListing = () => {
             <Tooltip title="Click to filter by Grade D">
               <div onClick={() => handleCardClick('D')}>
                 <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}>
-                    <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><span className="text-xl font-bold">D</span></div>
-                      <div><div className="text-yellow-500">{renderCardContent(rowData?.counts
-                        ? rowData.counts.total - (
-                            (rowData.counts.grade_a || 0) +
-                            (rowData.counts.grade_b || 0) +
-                            (rowData.counts.grade_c || 0)
-                          )
-                        : "...")}
-                        </div><span className="font-semibold text-xs">Grade D</span>
-                      </div>
-                  </Card>
-                </div>
-              </Tooltip>
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><span className="text-xl font-bold">D</span></div>
+                  <div><div className="text-yellow-500">{renderCardContent(rowData?.counts
+                    ? rowData.counts.total - (
+                      (rowData.counts.grade_a || 0) +
+                      (rowData.counts.grade_b || 0) +
+                      (rowData.counts.grade_c || 0)
+                    )
+                    : "...")}
+                  </div><span className="font-semibold text-xs">Grade D</span>
+                  </div>
+                </Card>
+              </div>
+            </Tooltip>
           </div>
           <div className="mb-4">
-            <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onImport={openImportModal} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady}/>
+            <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onImport={openImportModal} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady} />
           </div>
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="mt-4 flex-grow overflow-auto w-full">
-            <DataTable columns={filteredColumns} data={pageData} loading={initialLoading || tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectable checkboxChecked={(row: RowDataItem) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} noData={!initialLoading && pageData.length === 0} />
+            <DataTable menuName="row_data" columns={filteredColumns} data={pageData} loading={initialLoading || tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectable checkboxChecked={(row: RowDataItem) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} noData={!initialLoading && pageData.length === 0} />
           </div>
         </AdaptiveCard>
       </Container>
@@ -706,9 +706,9 @@ const RowDataListing = () => {
             else if (key === "quality") value = QUALITY_LEVELS_UI.find((q) => q.value === value)?.label || String(value);
             else if (key === "status") value = STATUS_OPTIONS_UI.find((s) => s.value === value)?.label || String(value);
             else if ((key === "created_at" || key === "updated_at") && value) { value = formatDate(value); }
-            else if (key === "created_by" || key === "updated_by" ){ return null }
-            else if( key === "created_by_user" ) value = value?.name
-            else if( key === "updated_by_user" ) value = value?.name
+            else if (key === "created_by" || key === "updated_by") { return null }
+            else if (key === "created_by_user") value = value?.name
+            else if (key === "updated_by_user") value = value?.name
             value = value === null || value === undefined || value === "" ? (<span className="text-gray-400">-</span>) : (String(value));
             return (<div key={key} className="flex py-1 border-b border-gray-200 dark:border-gray-700 last:border-b-0"><span className="font-medium w-1/3 text-gray-700 dark:text-gray-300">{label}:</span><span className="w-2/3 text-gray-900 dark:text-gray-100">{value}</span></div>);
           })}
@@ -727,7 +727,7 @@ const RowDataListing = () => {
       <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Raw Data" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} confirmButtonColor="red-600" onConfirm={onConfirmSingleDelete} loading={isDeleting && !!itemToDelete}><p>Are you sure you want to delete entry for "<strong>{itemToDelete?.name || itemToDelete?.mobile_no}</strong>"? This cannot be undone.</p></ConfirmDialog>
       <ConfirmDialog isOpen={blacklistConfirmOpen} type="warning" title="Blacklist Raw Data" onClose={() => { setBlacklistConfirmOpen(false); setItemToBlacklist(null); }} confirmText="Yes, Blacklist" cancelText="No, Cancel" onConfirm={onConfirmBlacklist} loading={isBlacklisting} onCancel={() => { setBlacklistConfirmOpen(false); setItemToBlacklist(null); }} onRequestClose={() => { setBlacklistConfirmOpen(false); setItemToBlacklist(null); }}><p>Are you sure you want to blacklist entry for "<strong>{itemToBlacklist?.name || itemToBlacklist?.mobile_no}</strong>"? This will change status to 'Blacklist'.</p></ConfirmDialog>
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason, }}><Form id="exportRowDataReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2"><FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem></Form></ConfirmDialog>
-      <Dialog isOpen={isImportModalOpen} onClose={closeImportModal} onRequestClose={closeImportModal} width={600} title="Import Raw Data from CSV/Excel" contentClass="overflow-visible"><div className="py-4"><p className="mb-1 text-sm text-gray-600 dark:text-gray-300">Select a CSV or Excel file to import raw data.</p><p className="mb-4 text-xs text-gray-500 dark:text-gray-400">Required headers (example):{" "}<code>country_id, category_id, brand_id, mobile_no, name, ...</code></p><FormItem label="Upload File" className="mb-4"><Input type="file" name="file" accept=".csv, text/csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handleFileChange}  />{selectedFile && (<div className="mt-2 text-xs text-gray-500 dark:text-gray-400">Selected:{" "}<span className="font-semibold">{selectedFile.name}</span> ({(selectedFile.size / 1024).toFixed(2)} KB)</div>)}</FormItem><div className="mt-3 mb-4"><a href="/sample-import-template.csv" download="sample-row-data-import-template.csv" className="text-sm text-blue-600 hover:underline dark:text-blue-400 flex items-center gap-1">{" "}<TbCloudDownload /> Download Sample CSV Template{" "}</a></div><div className="text-right w-full flex justify-end gap-2"><Button variant="plain" onClick={closeImportModal} disabled={isImporting}>Cancel</Button><Button variant="solid" onClick={handleImportSubmit} loading={isImporting} disabled={!selectedFile || isImporting} icon={isImporting ? null : <TbCloudUpload />}>{isImporting ? "Importing..." : "Upload & Import"}</Button></div></div></Dialog>
+      <Dialog isOpen={isImportModalOpen} onClose={closeImportModal} onRequestClose={closeImportModal} width={600} title="Import Raw Data from CSV/Excel" contentClass="overflow-visible"><div className="py-4"><p className="mb-1 text-sm text-gray-600 dark:text-gray-300">Select a CSV or Excel file to import raw data.</p><p className="mb-4 text-xs text-gray-500 dark:text-gray-400">Required headers (example):{" "}<code>country_id, category_id, brand_id, mobile_no, name, ...</code></p><FormItem label="Upload File" className="mb-4"><Input type="file" name="file" accept=".csv, text/csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handleFileChange} />{selectedFile && (<div className="mt-2 text-xs text-gray-500 dark:text-gray-400">Selected:{" "}<span className="font-semibold">{selectedFile.name}</span> ({(selectedFile.size / 1024).toFixed(2)} KB)</div>)}</FormItem><div className="mt-3 mb-4"><a href="/sample-import-template.csv" download="sample-row-data-import-template.csv" className="text-sm text-blue-600 hover:underline dark:text-blue-400 flex items-center gap-1">{" "}<TbCloudDownload /> Download Sample CSV Template{" "}</a></div><div className="text-right w-full flex justify-end gap-2"><Button variant="plain" onClick={closeImportModal} disabled={isImporting}>Cancel</Button><Button variant="solid" onClick={handleImportSubmit} loading={isImporting} disabled={!selectedFile || isImporting} icon={isImporting ? null : <TbCloudUpload />}>{isImporting ? "Importing..." : "Upload & Import"}</Button></div></div></Dialog>
     </>
   );
 };

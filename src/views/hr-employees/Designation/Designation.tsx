@@ -946,7 +946,7 @@ const DesignationListing = () => {
           </div>
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="mt-4 flex-grow overflow-auto">
-            <DataTable columns={filteredColumns} data={pageData} loading={tableIsLoading} pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }} selectable checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} noData={!tableIsLoading && pageData.length === 0} />
+            <DataTable menuName="designation" columns={filteredColumns} data={pageData} loading={tableIsLoading} pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }} selectable checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} noData={!tableIsLoading && pageData.length === 0} />
           </div>
         </AdaptiveCard>
       </Container>

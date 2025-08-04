@@ -124,12 +124,12 @@ type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 // --- CSV Exporter Utility ---
 const CSV_HEADERS_DEPT = [
-    "ID",
-    "Department Name",
-    "Status",
-    "Updated By",
-    "Updated Role",
-    "Updated At",
+  "ID",
+  "Department Name",
+  "Status",
+  "Updated By",
+  "Updated Role",
+  "Updated At",
 ];
 type DepartmentExportItem = Omit<DepartmentItem, "created_at" | "updated_at" | "created_by_user" | "updated_by_user" | "totalemployee" | "totaljobpost" | "totalapplication"> & {
   status: "Active" | "Inactive";
@@ -250,54 +250,54 @@ const DepartmentsTableTools = ({ onSearchChange, onFilter, onExport, onClearFilt
   activeFilterCount: number;
   isDataReady: boolean;
 }) => {
-    const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
-    const toggleColumn = (checked: boolean, colId: string) => {
-      if (checked) {
-          const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
-          if (originalColumn) {
-              setFilteredColumns(prev => {
-                  const newCols = [...prev, originalColumn];
-                  newCols.sort((a, b) => {
-                      const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
-                      const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
-                      return indexA - indexB;
-                  });
-                  return newCols;
-              });
-          }
-      } else {
-          setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+  const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+  const toggleColumn = (checked: boolean, colId: string) => {
+    if (checked) {
+      const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+      if (originalColumn) {
+        setFilteredColumns(prev => {
+          const newCols = [...prev, originalColumn];
+          newCols.sort((a, b) => {
+            const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+            const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+            return indexA - indexB;
+          });
+          return newCols;
+        });
       }
-    };
-    return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-            <div className="flex-grow">
-                <DepartmentsSearch onInputChange={onSearchChange} />
-            </div>
-            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
-                    <div className="flex flex-col p-2">
-                        <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-                        {columns.map((col) => {
-                            const id = col.id || col.accessorKey as string;
-                            return col.header && (
-                                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
-                                    <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
-                                        {col.header as string}
-                                    </Checkbox>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </Dropdown>
-                <Button title="Clear Filters" icon={<TbReload />} onClick={onClearFilters} disabled={!isDataReady} />
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>
-                    Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
-                </Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
-            </div>
-        </div>
-    );
+    } else {
+      setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+    }
+  };
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+      <div className="flex-grow">
+        <DepartmentsSearch onInputChange={onSearchChange} />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+        <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+          <div className="flex flex-col p-2">
+            <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+            {columns.map((col) => {
+              const id = col.id || col.accessorKey as string;
+              return col.header && (
+                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                  <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
+                    {col.header as string}
+                  </Checkbox>
+                </div>
+              );
+            })}
+          </div>
+        </Dropdown>
+        <Button title="Clear Filters" icon={<TbReload />} onClick={onClearFilters} disabled={!isDataReady} />
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>
+          Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
+        </Button>
+        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
+      </div>
+    </div>
+  );
 };
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
@@ -305,17 +305,17 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
   onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
   onClearAll: () => void;
 }) => {
-    const { filterNames, filterStatus } = filterData;
-    if (!filterNames?.length && !filterStatus?.length) return null;
+  const { filterNames, filterStatus } = filterData;
+  if (!filterNames?.length && !filterStatus?.length) return null;
 
-    return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {filterNames?.map(item => <Tag key={`name-${item.value}`} prefix>Name: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterNames', item.value)} /></Tag>)}
-            {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatus', item.value)} /></Tag>)}
-            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-        </div>
-    );
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {filterNames?.map(item => <Tag key={`name-${item.value}`} prefix>Name: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterNames', item.value)} /></Tag>)}
+      {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatus', item.value)} /></Tag>)}
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+    </div>
+  );
 };
 
 type DepartmentsTableProps = {
@@ -337,6 +337,7 @@ const DepartmentsTable = ({
   onSort,
 }: DepartmentsTableProps) => (
   <DataTable
+    menuName="department"
     columns={columns}
     data={data}
     loading={loading}
@@ -368,8 +369,8 @@ const DepartmentListing = () => {
 
   const openImageViewer = useCallback((src?: string) => {
     if (src) {
-        setViewerImageSrc(src);
-        setIsImageViewerOpen(true);
+      setViewerImageSrc(src);
+      setIsImageViewerOpen(true);
     }
   }, []);
 
@@ -396,15 +397,15 @@ const DepartmentListing = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-        setInitialLoading(true);
-        try {
-            await dispatch(getDepartmentsAction());
-        } catch (error) {
-            console.error("Failed to fetch departments", error);
-            toast.push(<Notification title="Error" type="danger">Failed to load department data.</Notification>)
-        } finally {
-            setInitialLoading(false);
-        }
+      setInitialLoading(true);
+      try {
+        await dispatch(getDepartmentsAction());
+      } catch (error) {
+        console.error("Failed to fetch departments", error);
+        toast.push(<Notification title="Error" type="danger">Failed to load department data.</Notification>)
+      } finally {
+        setInitialLoading(false);
+      }
     }
     fetchData();
   }, [dispatch]);
@@ -540,7 +541,7 @@ const DepartmentListing = () => {
     },
     [closeFilterDrawer, handleSetTableData]
   );
-  
+
   const onClearFilters = useCallback(() => {
     const defaultFilters = { filterNames: [], filterStatus: [] };
     filterFormMethods.reset(defaultFilters);
@@ -550,24 +551,24 @@ const DepartmentListing = () => {
   }, [filterFormMethods, handleSetTableData]);
 
   const handleCardClick = (status: 'Active' | 'Inactive' | 'all') => {
-      onClearFilters();
-      if(status !== 'all') {
-          const statusOption = statusOptions.find(opt => opt.value === status);
-          if(statusOption) {
-            setFilterCriteria({ ...filterCriteria, filterStatus: [statusOption] });
-          }
+    onClearFilters();
+    if (status !== 'all') {
+      const statusOption = statusOptions.find(opt => opt.value === status);
+      if (statusOption) {
+        setFilterCriteria({ ...filterCriteria, filterStatus: [statusOption] });
       }
+    }
   };
 
   const handleRemoveFilter = (key: keyof FilterFormData, value: string) => {
     setFilterCriteria(prev => {
-        const newFilters = { ...prev };
-        const currentValues = prev[key] as { value: string; label: string }[] | undefined;
-        if (currentValues) {
-            const newValues = currentValues.filter(item => item.value !== value);
-            (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
-        }
-        return newFilters;
+      const newFilters = { ...prev };
+      const currentValues = prev[key] as { value: string; label: string }[] | undefined;
+      if (currentValues) {
+        const newValues = currentValues.filter(item => item.value !== value);
+        (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
+      }
+      return newFilters;
     });
     setTableData(prev => ({ ...prev, pageIndex: 1 }));
   };
@@ -588,8 +589,8 @@ const DepartmentListing = () => {
       ? departmentsData.data
       : [];
     const sourceData: DepartmentItem[] = sourceDataFromStore.map(item => ({
-        ...item,
-        status: item.status || "Inactive",
+      ...item,
+      status: item.status || "Inactive",
     }));
     let processedData: DepartmentItem[] = cloneDeep(sourceData);
 
@@ -630,9 +631,9 @@ const DepartmentListing = () => {
       processedData.sort((a, b) => {
         let aValue: any, bValue: any;
         if (key === "updated_at") {
-            const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-            const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-            return order === "asc" ? dateA - dateB : dateB - dateA;
+          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          return order === "asc" ? dateA - dateB : dateB - dateA;
         } else if (key === "status") {
           aValue = a.status ?? "";
           bValue = b.status ?? "";
@@ -693,18 +694,18 @@ const DepartmentListing = () => {
       const exportSuccess = exportDepartmentsToCsv(fileName, allFilteredAndSortedData);
       if (exportSuccess) {
         toast.push(
-            <Notification title="Export Successful" type="success">
-                Data exported to {fileName}.
-            </Notification>
+          <Notification title="Export Successful" type="success">
+            Data exported to {fileName}.
+          </Notification>
         );
       } else {
-         if(allFilteredAndSortedData && allFilteredAndSortedData.length > 0) { 
-            toast.push(
-                <Notification title="Export Failed" type="danger">
-                Browser does not support this feature.
-                </Notification>
-            );
-         }
+        if (allFilteredAndSortedData && allFilteredAndSortedData.length > 0) {
+          toast.push(
+            <Notification title="Export Failed" type="danger">
+              Browser does not support this feature.
+            </Notification>
+          );
+        }
       }
       setIsExportReasonModalOpen(false);
     } catch (error: any) {
@@ -777,23 +778,23 @@ const DepartmentListing = () => {
         cell: (props) => {
           const { updated_at, updated_by_user } = props.row.original;
           const formattedDate = updated_at ? formatCustomDateTime(updated_at) : "N/A";
-            
+
           return (
-              <div className="flex items-center gap-2">
-                  <Avatar 
-                      src={updated_by_user?.profile_pic_path} 
-                      shape="circle" 
-                      size="sm" 
-                      icon={<TbUserCircle />} 
-                      className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-                      onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
-                  />
-                  <div>
-                      <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
-                      <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
-                      <div className="text-xs text-gray-500">{formattedDate}</div>
-                  </div>
+            <div className="flex items-center gap-2">
+              <Avatar
+                src={updated_by_user?.profile_pic_path}
+                shape="circle"
+                size="sm"
+                icon={<TbUserCircle />}
+                className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
+              />
+              <div>
+                <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
+                <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
+                <div className="text-xs text-gray-500">{formattedDate}</div>
               </div>
+            </div>
           );
         },
       },
@@ -811,13 +812,13 @@ const DepartmentListing = () => {
     ],
     [openEditDrawer, openImageViewer]
   );
-  
+
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<DepartmentItem>[]>(columns);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
   const renderCardContent = (content: number | undefined) => {
     if (initialLoading) {
-        return <Skeleton width={40} height={20} />;
+      return <Skeleton width={40} height={20} />;
     }
     return <h6 className="font-bold">{content ?? 0}</h6>;
   };
@@ -835,43 +836,43 @@ const DepartmentListing = () => {
 
           <div className="grid grid-cols-2 lg:grid-cols-6 mb-6 gap-6">
             <Tooltip title="Click to show all departments">
-                <div onClick={() => handleCardClick('all')} className="cursor-pointer">
-                    <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-blue-200 dark:border-blue-700 hover:shadow-md">
-                        <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200">
-                            <TbBuilding size={24} />
-                        </div>
-                        <div>
-                            <div className="text-blue-500 dark:text-blue-200">{renderCardContent(departmentsData?.counts?.departments)}</div>
-                            <span className="font-semibold text-xs">Total</span>
-                        </div>
-                    </Card>
-                </div>
+              <div onClick={() => handleCardClick('all')} className="cursor-pointer">
+                <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-blue-200 dark:border-blue-700 hover:shadow-md">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200">
+                    <TbBuilding size={24} />
+                  </div>
+                  <div>
+                    <div className="text-blue-500 dark:text-blue-200">{renderCardContent(departmentsData?.counts?.departments)}</div>
+                    <span className="font-semibold text-xs">Total</span>
+                  </div>
+                </Card>
+              </div>
             </Tooltip>
             <Tooltip title="Click to show active departments">
-                <div onClick={() => handleCardClick('Active')} className="cursor-pointer">
-                    <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-emerald-200 dark:border-emerald-700 hover:shadow-md">
-                        <div className="h-12 w-12 rounded-md flex items-center justify-center bg-emerald-100 dark:bg-emerald-500/20 text-emerald-500 dark:text-emerald-200">
-                            <TbUserScan size={24} />
-                        </div>
-                        <div>
-                            <div className="text-emerald-500 dark:text-emerald-200">{renderCardContent(departmentsData?.counts?.active)}</div>
-                            <span className="font-semibold text-xs">Active</span>
-                        </div>
-                    </Card>
-                </div>
+              <div onClick={() => handleCardClick('Active')} className="cursor-pointer">
+                <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-emerald-200 dark:border-emerald-700 hover:shadow-md">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-emerald-100 dark:bg-emerald-500/20 text-emerald-500 dark:text-emerald-200">
+                    <TbUserScan size={24} />
+                  </div>
+                  <div>
+                    <div className="text-emerald-500 dark:text-emerald-200">{renderCardContent(departmentsData?.counts?.active)}</div>
+                    <span className="font-semibold text-xs">Active</span>
+                  </div>
+                </Card>
+              </div>
             </Tooltip>
             <Tooltip title="Click to show inactive departments">
-                <div onClick={() => handleCardClick('Inactive')} className="cursor-pointer">
-                    <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-red-200 dark:border-red-700 hover:shadow-md">
-                        <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-200">
-                            <TbInbox size={24} />
-                        </div>
-                        <div>
-                            <div className="text-red-500 dark:text-red-200">{renderCardContent(departmentsData?.counts?.inactive)}</div>
-                            <span className="font-semibold text-xs">Inactive</span>
-                        </div>
-                    </Card>
-                </div>
+              <div onClick={() => handleCardClick('Inactive')} className="cursor-pointer">
+                <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-red-200 dark:border-red-700 hover:shadow-md">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-200">
+                    <TbInbox size={24} />
+                  </div>
+                  <div>
+                    <div className="text-red-500 dark:text-red-200">{renderCardContent(departmentsData?.counts?.inactive)}</div>
+                    <span className="font-semibold text-xs">Inactive</span>
+                  </div>
+                </Card>
+              </div>
             </Tooltip>
             <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700 cursor-default">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200">
@@ -904,15 +905,15 @@ const DepartmentListing = () => {
 
           <div className="mb-4">
             <DepartmentsTableTools
-                onSearchChange={handleSearchChange}
-                onFilter={openFilterDrawer}
-                onExport={handleOpenExportReasonModal}
-                onClearFilters={onClearFilters}
-                columns={columns}
-                filteredColumns={filteredColumns}
-                setFilteredColumns={setFilteredColumns}
-                activeFilterCount={activeFilterCount}
-                isDataReady={isDataReady}
+              onSearchChange={handleSearchChange}
+              onFilter={openFilterDrawer}
+              onExport={handleOpenExportReasonModal}
+              onClearFilters={onClearFilters}
+              columns={columns}
+              filteredColumns={filteredColumns}
+              setFilteredColumns={setFilteredColumns}
+              activeFilterCount={activeFilterCount}
+              isDataReady={isDataReady}
             />
           </div>
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
@@ -933,7 +934,7 @@ const DepartmentListing = () => {
           </div>
         </AdaptiveCard>
       </Container>
-      
+
       <Dialog
         isOpen={isImageViewerOpen}
         onClose={closeImageViewer}
@@ -943,17 +944,17 @@ const DepartmentListing = () => {
         width={600}
         bodyOpenClassName="overflow-hidden"
       >
-          <div className="flex justify-center items-center p-4">
-              {viewerImageSrc ? (
-                  <img
-                      src={viewerImageSrc}
-                      alt="Profile View"
-                      style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
-                  />
-              ) : (
-                  <p>No image to display.</p>
-              )}
-          </div>
+        <div className="flex justify-center items-center p-4">
+          {viewerImageSrc ? (
+            <img
+              src={viewerImageSrc}
+              alt="Profile View"
+              style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
+            />
+          ) : (
+            <p>No image to display.</p>
+          )}
+        </div>
       </Dialog>
 
       {[
@@ -1058,7 +1059,7 @@ const DepartmentListing = () => {
             </FormItem>
           </Form>
           {drawerProps.isEdit && editingItem && (
-             <div className="absolute bottom-[3%] w-[90%]">
+            <div className="absolute bottom-[3%] w-[90%]">
               <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                 <div>
                   <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />

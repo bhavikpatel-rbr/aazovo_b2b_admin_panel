@@ -272,9 +272,9 @@ function exportToExcel(
   }
   const worksheetData = data.map((item) => ({
     "Product Name": item.product?.name,
-     Qty: item.qty,
+    Qty: item.qty,
     "Sales Price": item.sales_price,
-    
+
   }));
   const worksheet = XLSX.utils.json_to_sheet(worksheetData);
   const workbook = XLSX.utils.book_new();
@@ -515,24 +515,24 @@ const PriceListTableTools = forwardRef(
 
     const watchedCategoryIds = watch("categoryIds");
 
-     useEffect(() => {
-        // Only act if the filter drawer is open to avoid unnecessary API calls
-        if (!isFilterDrawerOpen) return;
+    useEffect(() => {
+      // Only act if the filter drawer is open to avoid unnecessary API calls
+      if (!isFilterDrawerOpen) return;
 
-        // If one or more categories are selected
-        if (watchedCategoryIds && watchedCategoryIds.length > 0) {
-            // Join the array of IDs into a single comma-separated string
-            const categoryIdsString = watchedCategoryIds.join(',');
-            // Dispatch the action with the combined string
-            dispatch(getSubcategoriesByCategoryIdAction(categoryIdsString));
-        } else {
-            // If no categories are selected (or all are deselected)
-            // 1. Clear any existing sub-category selections in the form
-            setValue('subCategoryIds', []);
-            // 2. Dispatch an action to clear the sub-category options in the Redux store.
-            //    Sending an empty string is a good convention for the reducer to handle.
-            dispatch(getSubcategoriesByCategoryIdAction(''));
-        }
+      // If one or more categories are selected
+      if (watchedCategoryIds && watchedCategoryIds.length > 0) {
+        // Join the array of IDs into a single comma-separated string
+        const categoryIdsString = watchedCategoryIds.join(',');
+        // Dispatch the action with the combined string
+        dispatch(getSubcategoriesByCategoryIdAction(categoryIdsString));
+      } else {
+        // If no categories are selected (or all are deselected)
+        // 1. Clear any existing sub-category selections in the form
+        setValue('subCategoryIds', []);
+        // 2. Dispatch an action to clear the sub-category options in the Redux store.
+        //    Sending an empty string is a good convention for the reducer to handle.
+        dispatch(getSubcategoriesByCategoryIdAction(''));
+      }
     }, [watchedCategoryIds, isFilterDrawerOpen, dispatch, setValue]);
     const onSubmit = (data: PriceListFilterSchema) => {
       onApplyFilters(data);
@@ -547,11 +547,11 @@ const PriceListTableTools = forwardRef(
     const toggleColumn = (checked: boolean, colHeader: string) => {
       const newCols = checked
         ? [
-            ...filteredColumns,
-            columns.find((c) => c.header === colHeader)!,
-          ].sort(
-            (a, b) => columns.indexOf(a as any) - columns.indexOf(b as any)
-          )
+          ...filteredColumns,
+          columns.find((c) => c.header === colHeader)!,
+        ].sort(
+          (a, b) => columns.indexOf(a as any) - columns.indexOf(b as any)
+        )
         : filteredColumns.filter((c) => c.header !== colHeader);
       setFilteredColumns(newCols);
     };
@@ -1047,9 +1047,9 @@ const PriceList = () => {
     () =>
       Array.isArray(productsMasterData)
         ? productsMasterData.map((p) => ({
-            value: String(p.id),
-            label: p.name,
-          }))
+          value: String(p.id),
+          label: p.name,
+        }))
         : [],
     [productsMasterData]
   );
@@ -1060,15 +1060,15 @@ const PriceList = () => {
         : [],
     [ParentCategories]
   );
-  console.log("ParentCategories",ParentCategories);
-  
+  console.log("ParentCategories", ParentCategories);
+
   const subCategoryOptions = useMemo(
     () =>
       Array.isArray(subCategoriesForSelectedCategoryData)
         ? subCategoriesForSelectedCategoryData.map((sc) => ({
-            value: sc.id,
-            label: sc.name,
-          }))
+          value: sc.id,
+          label: sc.name,
+        }))
         : [],
     [subCategoriesForSelectedCategoryData]
   );
@@ -1082,31 +1082,31 @@ const PriceList = () => {
   const getAllUserDataOptions = useMemo(
     () =>
       Array.isArray(getAllUserData)
-        ? getAllUserData.map((b) => ({ value: b.id, label:`(${b.employee_id}) - ${b.name || 'N/A'}`  }))
+        ? getAllUserData.map((b) => ({ value: b.id, label: `(${b.employee_id}) - ${b.name || 'N/A'}` }))
         : [],
     [getAllUserData]
   );
-  
+
   const refreshData = useCallback(async () => {
-      setInitialLoading(true);
-      try {
-          await Promise.all([
-              dispatch(getPriceListAction()),
-              dispatch(getAllProductAction()),
-              dispatch(getParentCategoriesAction()),
-              dispatch(getBrandAction()),
-              dispatch(getAllUsersAction()),
-          ]);
-      } catch (error) {
-          console.error("Failed to refresh data:", error);
-          toast.push(<Notification title="Data Load Failed" type="danger">Could not load initial data.</Notification>);
-      } finally {
-          setInitialLoading(false);
-      }
+    setInitialLoading(true);
+    try {
+      await Promise.all([
+        dispatch(getPriceListAction()),
+        dispatch(getAllProductAction()),
+        dispatch(getParentCategoriesAction()),
+        dispatch(getBrandAction()),
+        dispatch(getAllUsersAction()),
+      ]);
+    } catch (error) {
+      console.error("Failed to refresh data:", error);
+      toast.push(<Notification title="Data Load Failed" type="danger">Could not load initial data.</Notification>);
+    } finally {
+      setInitialLoading(false);
+    }
   }, [dispatch]);
 
   useEffect(() => {
-      refreshData();
+    refreshData();
   }, [refreshData]);
 
   const addFormMethods = useForm<PriceListFormData>({
@@ -1217,8 +1217,8 @@ const PriceList = () => {
         margin: String(item.margin),
         status: item.status,
       });
-      console.log("item",item);
-      
+      console.log("item", item);
+
       setIsEditDrawerOpen(true);
     },
     [editFormMethods]
@@ -1231,9 +1231,9 @@ const PriceList = () => {
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceData = Array.isArray(priceListData?.data)
       ? priceListData.data.map((item) => ({
-          ...item,
-          product: item.product || {},
-        }))
+        ...item,
+        product: item.product || {},
+      }))
       : [];
     let processedData: PriceListItem[] = cloneDeep(sourceData);
     if (activeFilters.productIds?.length) {
@@ -1685,9 +1685,8 @@ const PriceList = () => {
     data: ExportReasonFormData
   ) => {
     setIsSubmittingExportReason(true);
-    const fileName = `price_list_selection_export_${
-      new Date().toISOString().split("T")[0]
-    }.xlsx`;
+    const fileName = `price_list_selection_export_${new Date().toISOString().split("T")[0]
+      }.xlsx`;
     const dataWithQty = selectedItemsData.map((item) => ({
       ...item,
       qty: rowQuantities[item.id] || "N/A",
@@ -1724,9 +1723,8 @@ const PriceList = () => {
   };
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
-    const fileName = `price_list_export_${
-      new Date().toISOString().split("T")[0]
-    }.csv`;
+    const fileName = `price_list_export_${new Date().toISOString().split("T")[0]
+      }.csv`;
     try {
       await dispatch(
         submitExportReasonAction({
@@ -1759,9 +1757,8 @@ const PriceList = () => {
     data: ExportReasonFormData
   ) => {
     setIsTodaySubmittingExportReason(true);
-    const fileName = `todays_price_list_export_${
-      new Date().toISOString().split("T")[0]
-    }.xlsx`;
+    const fileName = `todays_price_list_export_${new Date().toISOString().split("T")[0]
+      }.xlsx`;
     try {
       await dispatch(
         submitExportReasonAction({
@@ -1888,7 +1885,7 @@ const PriceList = () => {
       />
     );
   };
-  
+
   const renderCardContent = (content: string | number | undefined, isFloat = false) => {
     if (initialLoading) {
       return <Skeleton width={50} height={20} />;
@@ -2065,6 +2062,7 @@ const PriceList = () => {
           )}
           <div className="flex-grow overflow-auto">
             <DataTable
+              menuName="price_list"
               columns={filteredColumns}
               data={pageData}
               noData={pageData.length <= 0}
@@ -2230,20 +2228,20 @@ const PriceList = () => {
               <span>
                 {editingPriceListItem.created_at
                   ? `${new Date(
-                      editingPriceListItem.created_at
-                    ).getDate()} ${new Date(
-                      editingPriceListItem.created_at
-                    ).toLocaleString("en-US", {
-                      month: "short",
-                    })} ${new Date(
-                      editingPriceListItem.created_at
-                    ).getFullYear()}, ${new Date(
-                      editingPriceListItem.created_at
-                    ).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}`
+                    editingPriceListItem.created_at
+                  ).getDate()} ${new Date(
+                    editingPriceListItem.created_at
+                  ).toLocaleString("en-US", {
+                    month: "short",
+                  })} ${new Date(
+                    editingPriceListItem.created_at
+                  ).getFullYear()}, ${new Date(
+                    editingPriceListItem.created_at
+                  ).toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  })}`
                   : "N/A"}
               </span>
               <br />
@@ -2251,20 +2249,20 @@ const PriceList = () => {
               <span>
                 {editingPriceListItem.updated_at
                   ? `${new Date(
-                      editingPriceListItem.updated_at
-                    ).getDate()} ${new Date(
-                      editingPriceListItem.updated_at
-                    ).toLocaleString("en-US", {
-                      month: "short",
-                    })} ${new Date(
-                      editingPriceListItem.updated_at
-                    ).getFullYear()}, ${new Date(
-                      editingPriceListItem.updated_at
-                    ).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}`
+                    editingPriceListItem.updated_at
+                  ).getDate()} ${new Date(
+                    editingPriceListItem.updated_at
+                  ).toLocaleString("en-US", {
+                    month: "short",
+                  })} ${new Date(
+                    editingPriceListItem.updated_at
+                  ).getFullYear()}, ${new Date(
+                    editingPriceListItem.updated_at
+                  ).toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  })}`
                   : "N/A"}
               </span>
             </div>
