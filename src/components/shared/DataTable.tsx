@@ -255,13 +255,13 @@ function DataTable<T>(props: DataTableProps<T>) {
         );
     };
 
-    console.log(getMenuRights(menuName)?.is_view, "getMenuRights(menuName)?.is_view", menuName, getMenuRights(menuName)?.useRights);
-    
+    console.log(getMenuRights(menuName)?.is_view, "getMenuRights(menuName)?.is_view", menuName, getMenuRights()?.useRights);
+
     return (
         <>
             {/* // <Loading loading={Boolean(loading && data.length !== 0)} type="cover"> */}
             {
-                getMenuRights(menuName)?.is_view ? (<><Table {...rest}>
+                (getMenuRights(menuName)?.is_view) ? (<><Table {...rest}>
                     <THead>
                         {table.getHeaderGroups().map((headerGroup) => (
                             <Tr key={headerGroup.id}>

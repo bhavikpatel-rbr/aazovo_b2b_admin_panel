@@ -139,7 +139,7 @@ const Currency = () => {
 
     const { CurrencyData = [], CountriesData = [] } = useSelector(masterSelector, shallowEqual);
     const isDataReady = !initialLoading;
-    
+
     const countryOptionsForSelect = useMemo(() => Array.isArray(CountriesData) ? CountriesData.map((c: Country) => ({ value: c.id, label: c.name })) : [], [CountriesData]);
     const currencyCodeOptions = useMemo(() => Array.isArray(CurrencyData) ? [...new Set(CurrencyData.map(c => c.currency_code))].sort().map(code => ({ value: code, label: code })) : [], [CurrencyData]);
     const currencySymbolOptions = useMemo(() => Array.isArray(CurrencyData) ? [...new Set(CurrencyData.map(c => c.currency_symbol))].sort().map(symbol => ({ value: symbol, label: symbol })) : [], [CurrencyData]);
@@ -186,35 +186,35 @@ const Currency = () => {
         { header: "Symbol", accessorKey: "currency_symbol", enableSorting: true, size: 80 },
         { header: "Countries", accessorKey: "countries", size: 250, cell: (props) => { const countries = props.row.original.countries || []; return (<div className="flex flex-wrap gap-1">{countries.map(country => <Tag key={country.id} className="bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 text-[11px] border-b border-emerald-300 dark:border-emerald-700">{country.name}</Tag>)}</div>) } },
         {
-        header: "Updated Info",
-        accessorKey: "updated_at",
-        enableSorting: true,
-        size: 200,
-        cell: (props) => {
-          const { updated_at, updated_by_user } = props.row.original;
-          return (
-            <div className="flex items-center gap-2">
-              <Avatar
-                src={updated_by_user?.profile_pic_path}
-                shape="circle"
-                size="sm"
-                icon={<TbUserCircle />}
-                className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-                onClick={() =>
-                  openImageViewer(updated_by_user?.profile_pic_path)
-                }
-              />
-              <div>
-                <span>{updated_by_user?.name || "N/A"}</span>
-                <div className="text-xs">
-                  <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
-                </div>
-                <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
-              </div>
-            </div>
-          );
+            header: "Updated Info",
+            accessorKey: "updated_at",
+            enableSorting: true,
+            size: 200,
+            cell: (props) => {
+                const { updated_at, updated_by_user } = props.row.original;
+                return (
+                    <div className="flex items-center gap-2">
+                        <Avatar
+                            src={updated_by_user?.profile_pic_path}
+                            shape="circle"
+                            size="sm"
+                            icon={<TbUserCircle />}
+                            className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                            onClick={() =>
+                                openImageViewer(updated_by_user?.profile_pic_path)
+                            }
+                        />
+                        <div>
+                            <span>{updated_by_user?.name || "N/A"}</span>
+                            <div className="text-xs">
+                                <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
+                            </div>
+                            <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
+                        </div>
+                    </div>
+                );
+            },
         },
-      },
         { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
         { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip></div>) },
     ], [openEditDrawer]);
@@ -229,7 +229,7 @@ const Currency = () => {
         if (activeFilters.filterSymbols?.length) { const symbols = new Set(activeFilters.filterSymbols); processedData = processedData.filter(item => symbols.has(item.currency_symbol)); }
         if (activeFilters.countryIds?.length) { const countryIds = new Set(activeFilters.countryIds.map(id => Number(id))); processedData = processedData.filter(item => (item.countries || []).some(country => countryIds.has(country.id))); }
         if (activeFilters.status?.length) { const statuses = new Set(activeFilters.status); processedData = processedData.filter(item => statuses.has(item.status)); }
-        
+
         if (tableData.query) {
             const query = tableData.query.toLowerCase().trim();
             processedData = processedData.filter(item =>
@@ -250,7 +250,7 @@ const Currency = () => {
         const startIndex = (pageIndex - 1) * pageSize;
         return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
     }, [CurrencyData, tableData, activeFilters]);
-    
+
     const activeFilterCount = useMemo(() => {
         let count = 0; if (activeFilters.filterCodes?.length) count++; if (activeFilters.filterSymbols?.length) count++; if (activeFilters.countryIds?.length) count++; if (activeFilters.status?.length) count++; return count;
     }, [activeFilters]);
@@ -271,36 +271,36 @@ const Currency = () => {
 
     const openAddDrawer = () => { formMethods.reset({ currency_code: "", currency_symbol: "", country_id: [], status: 'Active' }); setIsAddDrawerOpen(true); };
     const closeAddDrawer = () => { setIsAddDrawerOpen(false); };
-    const onAddCurrencySubmit = async (data: CurrencyFormData) => { 
-        setIsSubmitting(true); 
-        try { 
-            await dispatch(addCurrencyAction(data)).unwrap(); 
-            toast.push(<Notification title="Currency Added" type="success">{`Currency "${data.currency_code}" was successfully added.`}</Notification>); 
-            closeAddDrawer(); 
+    const onAddCurrencySubmit = async (data: CurrencyFormData) => {
+        setIsSubmitting(true);
+        try {
+            await dispatch(addCurrencyAction(data)).unwrap();
+            toast.push(<Notification title="Currency Added" type="success">{`Currency "${data.currency_code}" was successfully added.`}</Notification>);
+            closeAddDrawer();
             refreshData();
-        } catch (error: any) { 
-            toast.push(<Notification title="Failed to Add" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
-        } finally { 
-            setIsSubmitting(false); 
-        } 
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Add" type="danger">{error.message || "An unexpected error occurred."}</Notification>);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
-    
+
     const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingCurrency(null); };
-    const onEditCurrencySubmit = async (data: CurrencyFormData) => { 
-        if (!editingCurrency?.id) return; 
-        setIsSubmitting(true); 
-        try { 
-            await dispatch(editCurrencyAction({ id: editingCurrency.id, ...data })).unwrap(); 
-            toast.push(<Notification title="Currency Updated" type="success">{`"${data.currency_code}" was successfully updated.`}</Notification>); 
-            closeEditDrawer(); 
-            refreshData(); 
-        } catch (error: any) { 
-            toast.push(<Notification title="Failed to Update" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
-        } finally { 
-            setIsSubmitting(false); 
-        } 
+    const onEditCurrencySubmit = async (data: CurrencyFormData) => {
+        if (!editingCurrency?.id) return;
+        setIsSubmitting(true);
+        try {
+            await dispatch(editCurrencyAction({ id: editingCurrency.id, ...data })).unwrap();
+            toast.push(<Notification title="Currency Updated" type="success">{`"${data.currency_code}" was successfully updated.`}</Notification>);
+            closeEditDrawer();
+            refreshData();
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Update" type="danger">{error.message || "An unexpected error occurred."}</Notification>);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
-    
+
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
         setIsSubmittingExportReason(true);
@@ -342,7 +342,7 @@ const Currency = () => {
                     <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} countryOptions={countryOptionsForSelect} />
                     {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching currency(ies).</div>}
                     <div className="flex-grow overflow-auto">
-                        <DataTable columns={filteredColumns} data={pageData} noData={pageData.length <= 0} loading={initialLoading || isSubmitting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} />
+                        <DataTable menuName="currency" columns={filteredColumns} data={pageData} noData={pageData.length <= 0} loading={initialLoading || isSubmitting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} />
                     </div>
                 </AdaptiveCard>
             </Container>
@@ -356,67 +356,67 @@ const Currency = () => {
                 </Form>
                 {isEditDrawerOpen && editingCurrency && (
                     <div className=" grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-            <div>
-              <b className="mt-3 mb-3 font-semibold text-primary">
-                Latest Update:
-              </b>
-              <br />
-              <p className="text-sm font-semibold">
-                {editingCurrency.updated_by_user?.name || "N/A"}
-              </p>
-              <p>
-                {editingCurrency.updated_by_user?.roles[0]?.display_name ||
-                  "N/A"}
-              </p>
-            </div>
-            <div className="text-right">
-              <br />
-              <span className="font-semibold">Created At:</span>{" "}
-              <span>
-                {editingCurrency.created_at
-                  ? `${new Date(
-                      editingCurrency.created_at
-                    ).getDate()} ${new Date(
-                      editingCurrency.created_at
-                    ).toLocaleString("en-US", {
-                      month: "short",
-                    })} ${new Date(
-                      editingCurrency.created_at
-                    ).getFullYear()}, ${new Date(
-                      editingCurrency.created_at
-                    ).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}`
-                  : "N/A"}
-              </span>
-              <br />
-              <span className="font-semibold">Updated At:</span>{" "}
-              <span>
-                {}
-                {editingCurrency.updated_at
-                  ? `${new Date(
-                      editingCurrency.updated_at
-                    ).getDate()} ${new Date(
-                      editingCurrency.updated_at
-                    ).toLocaleString("en-US", {
-                      month: "short",
-                    })} ${new Date(
-                      editingCurrency.updated_at
-                    ).getFullYear()}, ${new Date(
-                      editingCurrency.updated_at
-                    ).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}`
-                  : "N/A"}
-              </span>
-            </div>
-          </div>)}
+                        <div>
+                            <b className="mt-3 mb-3 font-semibold text-primary">
+                                Latest Update:
+                            </b>
+                            <br />
+                            <p className="text-sm font-semibold">
+                                {editingCurrency.updated_by_user?.name || "N/A"}
+                            </p>
+                            <p>
+                                {editingCurrency.updated_by_user?.roles[0]?.display_name ||
+                                    "N/A"}
+                            </p>
+                        </div>
+                        <div className="text-right">
+                            <br />
+                            <span className="font-semibold">Created At:</span>{" "}
+                            <span>
+                                {editingCurrency.created_at
+                                    ? `${new Date(
+                                        editingCurrency.created_at
+                                    ).getDate()} ${new Date(
+                                        editingCurrency.created_at
+                                    ).toLocaleString("en-US", {
+                                        month: "short",
+                                    })} ${new Date(
+                                        editingCurrency.created_at
+                                    ).getFullYear()}, ${new Date(
+                                        editingCurrency.created_at
+                                    ).toLocaleTimeString("en-US", {
+                                        hour: "numeric",
+                                        minute: "2-digit",
+                                        hour12: true,
+                                    })}`
+                                    : "N/A"}
+                            </span>
+                            <br />
+                            <span className="font-semibold">Updated At:</span>{" "}
+                            <span>
+                                { }
+                                {editingCurrency.updated_at
+                                    ? `${new Date(
+                                        editingCurrency.updated_at
+                                    ).getDate()} ${new Date(
+                                        editingCurrency.updated_at
+                                    ).toLocaleString("en-US", {
+                                        month: "short",
+                                    })} ${new Date(
+                                        editingCurrency.updated_at
+                                    ).getFullYear()}, ${new Date(
+                                        editingCurrency.updated_at
+                                    ).toLocaleTimeString("en-US", {
+                                        hour: "numeric",
+                                        minute: "2-digit",
+                                        hour12: true,
+                                    })}`
+                                    : "N/A"}
+                            </span>
+                        </div>
+                    </div>)}
             </Drawer>
-            
+
             <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
                 <Form id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
                     <FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem>

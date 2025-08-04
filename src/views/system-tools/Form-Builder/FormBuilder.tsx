@@ -623,7 +623,7 @@ const FormBuilder = () => {
           {(activeFilterCount > 0 || tableData.query) && <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching form.</div>}
           
           <div className="mt-4">
-            <DataTable columns={filteredColumns} data={pageData} noData={!isDataReady && pageData.length === 0} loading={initialLoading || tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} selectable checkboxChecked={(row) => selectedItems.some((item) => item.id === row.id)} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
+            <DataTable menuName="form_builder" columns={filteredColumns} data={pageData} noData={!isDataReady && pageData.length === 0} loading={initialLoading || tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} selectable checkboxChecked={(row) => selectedItems.some((item) => item.id === row.id)} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
           </div>
         </AdaptiveCard>
       </Container>

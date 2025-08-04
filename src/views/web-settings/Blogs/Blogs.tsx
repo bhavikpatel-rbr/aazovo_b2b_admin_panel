@@ -382,7 +382,7 @@ const BlogsTable = ({ columns, data, loading, pagingData, selectedItems, onPagin
     onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void;
     onRowSelect: (checked: boolean, row: BlogItem) => void; onAllRowSelect: (checked: boolean, rows: Row<BlogItem>[]) => void;
 }) => {
-  return (<DataTable selectable columns={columns} data={data} noData={!loading && data.length === 0} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} />);
+  return (<DataTable menuName="blog" selectable columns={columns} data={data} noData={!loading && data.length === 0} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} />);
 };
 
 // --- BlogsSelectedFooter ---

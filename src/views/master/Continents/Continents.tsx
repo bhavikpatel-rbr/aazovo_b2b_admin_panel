@@ -166,35 +166,35 @@ const Continents = () => {
     const columns: ColumnDef<ContinentItem>[] = useMemo(() => [
         { header: "Continent Name", accessorKey: "name", enableSorting: true, size: 380 },
         {
-        header: "Updated Info",
-        accessorKey: "updated_at",
-        enableSorting: true,
-        size: 180,
-        cell: (props) => {
-          const { updated_at, updated_by_user } = props.row.original;
-          return (
-            <div className="flex items-center gap-2">
-              <Avatar
-                src={updated_by_user?.profile_pic_path}
-                shape="circle"
-                size="sm"
-                icon={<TbUserCircle />}
-                className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-                onClick={() =>
-                  openImageViewer(updated_by_user?.profile_pic_path)
-                }
-              />
-              <div>
-                <span>{updated_by_user?.name || "N/A"}</span>
-                <div className="text-xs">
-                  <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
-                </div>
-                <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
-              </div>
-            </div>
-          );
+            header: "Updated Info",
+            accessorKey: "updated_at",
+            enableSorting: true,
+            size: 180,
+            cell: (props) => {
+                const { updated_at, updated_by_user } = props.row.original;
+                return (
+                    <div className="flex items-center gap-2">
+                        <Avatar
+                            src={updated_by_user?.profile_pic_path}
+                            shape="circle"
+                            size="sm"
+                            icon={<TbUserCircle />}
+                            className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                            onClick={() =>
+                                openImageViewer(updated_by_user?.profile_pic_path)
+                            }
+                        />
+                        <div>
+                            <span>{updated_by_user?.name || "N/A"}</span>
+                            <div className="text-xs">
+                                <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
+                            </div>
+                            <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
+                        </div>
+                    </div>
+                );
+            },
         },
-      },
         { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
         { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip></div>) },
     ], [openEditDrawer]);
@@ -240,10 +240,10 @@ const Continents = () => {
         setActiveFilters(prev => { const newFilters = { ...prev }; const currentValues = prev[key] as string[] | undefined; if (!currentValues) return prev; const newValues = currentValues.filter(item => item !== value); if (newValues.length > 0) { (newFilters as any)[key] = newValues; } else { delete newFilters[key]; } return newFilters; });
         handleSetTableData({ pageIndex: 1 });
     }, [handleSetTableData]);
-    
-    const onClearFiltersAndReload = useCallback(() => { 
-        setActiveFilters({}); 
-        setTableData({ ...tableData, query: '', pageIndex: 1 }); 
+
+    const onClearFiltersAndReload = useCallback(() => {
+        setActiveFilters({});
+        setTableData({ ...tableData, query: '', pageIndex: 1 });
         refreshData();
     }, [tableData, refreshData]);
 
@@ -257,34 +257,34 @@ const Continents = () => {
 
     const openAddDrawer = () => { formMethods.reset({ name: "", status: 'Active' }); setIsAddDrawerOpen(true); };
     const closeAddDrawer = () => { setIsAddDrawerOpen(false); };
-    const onAddContinentSubmit = async (data: ContinentFormData) => { 
-        setIsSubmitting(true); 
-        try { 
-            await dispatch(addContinentAction({ name: data.name, status: data.status })).unwrap(); 
-            toast.push(<Notification title="Continent Added" type="success">{`Continent "${data.name}" was successfully added.`}</Notification>); 
-            closeAddDrawer(); 
-            refreshData(); 
-        } catch (error: any) { 
-            toast.push(<Notification title="Failed to Add Continent" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
-        } finally { 
-            setIsSubmitting(false); 
-        } 
+    const onAddContinentSubmit = async (data: ContinentFormData) => {
+        setIsSubmitting(true);
+        try {
+            await dispatch(addContinentAction({ name: data.name, status: data.status })).unwrap();
+            toast.push(<Notification title="Continent Added" type="success">{`Continent "${data.name}" was successfully added.`}</Notification>);
+            closeAddDrawer();
+            refreshData();
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Add Continent" type="danger">{error.message || "An unexpected error occurred."}</Notification>);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
-    
+
     const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingContinent(null); };
-    const onEditContinentSubmit = async (data: ContinentFormData) => { 
-        if (!editingContinent?.id) return; 
-        setIsSubmitting(true); 
-        try { 
-            await dispatch(editContinentAction({ id: editingContinent.id, name: data.name, status: data.status })).unwrap(); 
-            toast.push(<Notification title="Continent Updated" type="success">{`"${data.name}" was successfully updated.`}</Notification>); 
-            closeEditDrawer(); 
-            refreshData(); 
-        } catch (error: any) { 
-            toast.push(<Notification title="Failed to Update Continent" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
-        } finally { 
-            setIsSubmitting(false); 
-        } 
+    const onEditContinentSubmit = async (data: ContinentFormData) => {
+        if (!editingContinent?.id) return;
+        setIsSubmitting(true);
+        try {
+            await dispatch(editContinentAction({ id: editingContinent.id, name: data.name, status: data.status })).unwrap();
+            toast.push(<Notification title="Continent Updated" type="success">{`"${data.name}" was successfully updated.`}</Notification>);
+            closeEditDrawer();
+            refreshData();
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Update Continent" type="danger">{error.message || "An unexpected error occurred."}</Notification>);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
@@ -346,6 +346,7 @@ const Continents = () => {
                     {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching continent.</div>}
                     <div className="flex-grow overflow-auto">
                         <DataTable
+                            menuName="continents"
                             columns={filteredColumns}
                             data={pageData}
                             noData={pageData.length <= 0}
@@ -372,66 +373,66 @@ const Continents = () => {
                 </Form>
                 {editingContinent && (
                     <div className=" grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-            <div>
-              <b className="mt-3 mb-3 font-semibold text-primary">
-                Latest Update:
-              </b>
-              <br />
-              <p className="text-sm font-semibold">
-                {editingContinent.updated_by_user?.name || "N/A"}
-              </p>
-              <p>
-                {editingContinent.updated_by_user?.roles[0]?.display_name ||
-                  "N/A"}
-              </p>
-            </div>
-            <div className="text-right">
-              <br />
-              <span className="font-semibold">Created At:</span>{" "}
-              <span>
-                {editingContinent.created_at
-                  ? `${new Date(
-                      editingContinent.created_at
-                    ).getDate()} ${new Date(
-                      editingContinent.created_at
-                    ).toLocaleString("en-US", {
-                      month: "short",
-                    })} ${new Date(
-                      editingContinent.created_at
-                    ).getFullYear()}, ${new Date(
-                      editingContinent.created_at
-                    ).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}`
-                  : "N/A"}
-              </span>
-              <br />
-              <span className="font-semibold">Updated At:</span>{" "}
-              <span>
-                {}
-                {editingContinent.updated_at
-                  ? `${new Date(
-                      editingContinent.updated_at
-                    ).getDate()} ${new Date(
-                      editingContinent.updated_at
-                    ).toLocaleString("en-US", {
-                      month: "short",
-                    })} ${new Date(
-                      editingContinent.updated_at
-                    ).getFullYear()}, ${new Date(
-                      editingContinent.updated_at
-                    ).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}`
-                  : "N/A"}
-              </span>
-            </div>
-          </div>
-                        )}
+                        <div>
+                            <b className="mt-3 mb-3 font-semibold text-primary">
+                                Latest Update:
+                            </b>
+                            <br />
+                            <p className="text-sm font-semibold">
+                                {editingContinent.updated_by_user?.name || "N/A"}
+                            </p>
+                            <p>
+                                {editingContinent.updated_by_user?.roles[0]?.display_name ||
+                                    "N/A"}
+                            </p>
+                        </div>
+                        <div className="text-right">
+                            <br />
+                            <span className="font-semibold">Created At:</span>{" "}
+                            <span>
+                                {editingContinent.created_at
+                                    ? `${new Date(
+                                        editingContinent.created_at
+                                    ).getDate()} ${new Date(
+                                        editingContinent.created_at
+                                    ).toLocaleString("en-US", {
+                                        month: "short",
+                                    })} ${new Date(
+                                        editingContinent.created_at
+                                    ).getFullYear()}, ${new Date(
+                                        editingContinent.created_at
+                                    ).toLocaleTimeString("en-US", {
+                                        hour: "numeric",
+                                        minute: "2-digit",
+                                        hour12: true,
+                                    })}`
+                                    : "N/A"}
+                            </span>
+                            <br />
+                            <span className="font-semibold">Updated At:</span>{" "}
+                            <span>
+                                { }
+                                {editingContinent.updated_at
+                                    ? `${new Date(
+                                        editingContinent.updated_at
+                                    ).getDate()} ${new Date(
+                                        editingContinent.updated_at
+                                    ).toLocaleString("en-US", {
+                                        month: "short",
+                                    })} ${new Date(
+                                        editingContinent.updated_at
+                                    ).getFullYear()}, ${new Date(
+                                        editingContinent.updated_at
+                                    ).toLocaleTimeString("en-US", {
+                                        hour: "numeric",
+                                        minute: "2-digit",
+                                        hour12: true,
+                                    })}`
+                                    : "N/A"}
+                            </span>
+                        </div>
+                    </div>
+                )}
             </Drawer>
             <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
                 <Form id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">

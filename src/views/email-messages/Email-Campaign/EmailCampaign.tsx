@@ -492,54 +492,54 @@ const EmailCampaignTableTools = ({ onSearchChange, onFilter, onExport, onClearFi
   activeFilterCount: number;
   isDataReady: boolean;
 }) => {
-    const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
-    const toggleColumn = (checked: boolean, colId: string) => {
-      if (checked) {
-          const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
-          if (originalColumn) {
-              setFilteredColumns(prev => {
-                  const newCols = [...prev, originalColumn];
-                  newCols.sort((a, b) => {
-                      const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
-                      const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
-                      return indexA - indexB;
-                  });
-                  return newCols;
-              });
-          }
-      } else {
-          setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+  const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+  const toggleColumn = (checked: boolean, colId: string) => {
+    if (checked) {
+      const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+      if (originalColumn) {
+        setFilteredColumns(prev => {
+          const newCols = [...prev, originalColumn];
+          newCols.sort((a, b) => {
+            const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+            const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+            return indexA - indexB;
+          });
+          return newCols;
+        });
       }
-    };
-    return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-            <div className="flex-grow">
-                <ItemSearch onInputChange={onSearchChange} />
-            </div>
-            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
-                    <div className="flex flex-col p-2">
-                        <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-                        {columns.map((col) => {
-                            const id = col.id || col.accessorKey as string;
-                            return col.header && (
-                                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
-                                    <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
-                                        {col.header as string}
-                                    </Checkbox>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </Dropdown>
-                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload" disabled={!isDataReady}></Button>
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>
-                    Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
-                </Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
-            </div>
-        </div>
-    );
+    } else {
+      setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+    }
+  };
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+      <div className="flex-grow">
+        <ItemSearch onInputChange={onSearchChange} />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+        <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+          <div className="flex flex-col p-2">
+            <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+            {columns.map((col) => {
+              const id = col.id || col.accessorKey as string;
+              return col.header && (
+                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                  <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
+                    {col.header as string}
+                  </Checkbox>
+                </div>
+              );
+            })}
+          </div>
+        </Dropdown>
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload" disabled={!isDataReady}></Button>
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>
+          Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
+        </Button>
+        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
+      </div>
+    </div>
+  );
 };
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, allStatusOptions }: {
@@ -548,23 +548,23 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, allStatu
   onClearAll: () => void;
   allStatusOptions: SelectOption[];
 }) => {
-    const { status, date_range } = filterData;
-    const hasFilters = status || (date_range && (date_range[0] || date_range[1]));
-    if (!hasFilters) return null;
+  const { status, date_range } = filterData;
+  const hasFilters = status || (date_range && (date_range[0] || date_range[1]));
+  if (!hasFilters) return null;
 
-    const statusLabel = allStatusOptions.find(opt => opt.value === status)?.label || status;
-    const dateLabel = date_range && (date_range[0] || date_range[1])
-        ? `${date_range[0] ? dayjs(date_range[0]).format('DD/MM/YY') : '...'} - ${date_range[1] ? dayjs(date_range[1]).format('DD/MM/YY') : '...'}`
-        : null;
+  const statusLabel = allStatusOptions.find(opt => opt.value === status)?.label || status;
+  const dateLabel = date_range && (date_range[0] || date_range[1])
+    ? `${date_range[0] ? dayjs(date_range[0]).format('DD/MM/YY') : '...'} - ${date_range[1] ? dayjs(date_range[1]).format('DD/MM/YY') : '...'}`
+    : null;
 
-    return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {status && <Tag prefix>Status: {statusLabel} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('status')} /></Tag>}
-            {dateLabel && <Tag prefix>Date: {dateLabel} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('date_range')} /></Tag>}
-            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-        </div>
-    );
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {status && <Tag prefix>Status: {statusLabel} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('status')} /></Tag>}
+      {dateLabel && <Tag prefix>Date: {dateLabel} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('date_range')} /></Tag>}
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+    </div>
+  );
 };
 
 
@@ -587,6 +587,7 @@ const EmailCampaignsTable = ({
   onSort,
 }: EmailCampaignsTableProps) => (
   <DataTable
+    menuName="email_campaign"
     columns={columns}
     data={data}
     loading={loading}
@@ -639,8 +640,8 @@ const RecipientFilterModal = ({
     [BrandData]
   );
 
-  console.log("BrandData",BrandData);
-  
+  console.log("BrandData", BrandData);
+
   const categoryOptions = useMemo(() =>
     (CategoriesData || []).map((c: any) => ({ value: String(c.id), label: c.name })),
     [CategoriesData]
@@ -1064,24 +1065,24 @@ const EmailCampaignListing = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-        setInitialLoading(true);
-        try {
-            await Promise.all([
-                dispatch(getEmailCampaignsAction({ params: tableData })),
-                dispatch(getMailTemplatesAction()),
-                dispatch(getProductsAction()),
-                dispatch(getContinentsAction()),
-                dispatch(getCountriesAction()),
-                dispatch(getCompanyAction()),
-                dispatch(getBrandAction()),
-                dispatch(getCategoriesAction())
-            ]);
-        } catch (error) {
-            console.error("Failed to load initial data for email campaigns", error);
-            toast.push(<Notification title="Error" type="danger">Failed to load essential data.</Notification>);
-        } finally {
-            setInitialLoading(false);
-        }
+      setInitialLoading(true);
+      try {
+        await Promise.all([
+          dispatch(getEmailCampaignsAction({ params: tableData })),
+          dispatch(getMailTemplatesAction()),
+          dispatch(getProductsAction()),
+          dispatch(getContinentsAction()),
+          dispatch(getCountriesAction()),
+          dispatch(getCompanyAction()),
+          dispatch(getBrandAction()),
+          dispatch(getCategoriesAction())
+        ]);
+      } catch (error) {
+        console.error("Failed to load initial data for email campaigns", error);
+        toast.push(<Notification title="Error" type="danger">Failed to load essential data.</Notification>);
+      } finally {
+        setInitialLoading(false);
+      }
     };
     fetchData();
   }, [dispatch, tableData]);
@@ -1424,20 +1425,20 @@ const EmailCampaignListing = () => {
     handleSetTableData({ pageIndex: 1, query: "" });
     closeFilterDrawer();
   }, [filterFormMethods, handleSetTableData, closeFilterDrawer]);
-  
+
   const handleCardClick = useCallback((status?: string) => {
-      onClearFilters(); // Always clear previous filters
-      if (status) {
-          setFilterCriteria({ status });
-      }
-      // If no status is passed (for 'Total' card), filters are just cleared.
+    onClearFilters(); // Always clear previous filters
+    if (status) {
+      setFilterCriteria({ status });
+    }
+    // If no status is passed (for 'Total' card), filters are just cleared.
   }, [onClearFilters]);
 
   const handleRemoveFilter = useCallback((key: keyof CampaignFilterFormData) => {
     setFilterCriteria(prev => {
-        const newFilters = { ...prev };
-        delete newFilters[key];
-        return newFilters;
+      const newFilters = { ...prev };
+      delete newFilters[key];
+      return newFilters;
     });
     setTableData(prev => ({ ...prev, pageIndex: 1 }));
   }, []);
@@ -1689,7 +1690,7 @@ const EmailCampaignListing = () => {
     ],
     [openViewDialog, openCreateDrawer, handleDeleteClick]
   );
-  
+
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<EmailCampaignItem>[]>(columns);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
@@ -2105,7 +2106,7 @@ const EmailCampaignListing = () => {
         return <div>Unknown Step</div>;
     }
   };
-  
+
   const cardClass = "rounded-md transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-3";
 
@@ -2158,7 +2159,7 @@ const EmailCampaignListing = () => {
                 </Card>
               </div>
             </Tooltip>
-             <Tooltip title="Click to show draft campaigns">
+            <Tooltip title="Click to show draft campaigns">
               <div onClick={() => handleCardClick('draft')} className={cardClass}>
                 <Card bodyClass={cardBodyClass} className="border-violet-200 w-full">
                   <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
@@ -2213,15 +2214,15 @@ const EmailCampaignListing = () => {
           </div>
           <div className="mb-4">
             <EmailCampaignTableTools
-                onClearFilters={onClearFilters}
-                onSearchChange={handleSearchChange}
-                onFilter={openFilterDrawer}
-                onExport={handleOpenExportReasonModal}
-                columns={columns}
-                filteredColumns={filteredColumns}
-                setFilteredColumns={setFilteredColumns}
-                activeFilterCount={activeFilterCount}
-                isDataReady={isDataReady}
+              onClearFilters={onClearFilters}
+              onSearchChange={handleSearchChange}
+              onFilter={openFilterDrawer}
+              onExport={handleOpenExportReasonModal}
+              columns={columns}
+              filteredColumns={filteredColumns}
+              setFilteredColumns={setFilteredColumns}
+              activeFilterCount={activeFilterCount}
+              isDataReady={isDataReady}
             />
           </div>
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} allStatusOptions={CAMPAIGN_STATUS_OPTIONS_FILTER} />
