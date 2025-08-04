@@ -3986,6 +3986,7 @@ const CompanyListTable = () => {
         onClearAll={onClearFilters}
       />
       <DataTable
+        menuName="company"
         columns={filteredColumns}
         data={pageData}
         noData={pageData.length === 0}
