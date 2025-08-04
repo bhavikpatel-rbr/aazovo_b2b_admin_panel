@@ -1186,7 +1186,7 @@ const RequestAndFeedbackListing = () => {
           </div>
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="mt-4">
-            <DataTable columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} onPaginationChange={(p) => setTableData((prev) => ({ ...prev, pageIndex: p }))} onSelectChange={(s) => setTableData((prev) => ({ ...prev, pageSize: s, pageIndex: 1 }))} onSort={(s) => setTableData((prev) => ({ ...prev, sort: s }))} />
+            <DataTable menuName="request_feedback" columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} onPaginationChange={(p) => setTableData((prev) => ({ ...prev, pageIndex: p }))} onSelectChange={(s) => setTableData((prev) => ({ ...prev, pageSize: s, pageIndex: 1 }))} onSort={(s) => setTableData((prev) => ({ ...prev, sort: s }))} />
           </div>
         </AdaptiveCard>
       </Container>

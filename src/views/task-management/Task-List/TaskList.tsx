@@ -393,7 +393,7 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
                     {task.dueDate && (
                         <p className="text-sm flex items-center gap-1.5">
                             <TbCalendarEvent className="text-lg text-gray-500" />{' '}
-                            <strong>Due:</strong> 
+                            <strong>Due:</strong>
                             {formatCustomDateTime(task.dueDate)}
                         </p>
                     )}
@@ -401,7 +401,7 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
                         <p className="text-sm flex items-center gap-1.5">
                             <TbCalendarEvent className="text-lg text-gray-500" />{' '}
                             <strong>Last Updated:</strong>{' '}
-                             {formatCustomDateTime(task.updated_at)}
+                            {formatCustomDateTime(task.updated_at)}
                         </p>
                     )}
                 </div>
@@ -634,6 +634,7 @@ export const TaskTable = ({
 }) => {
     return (
         <DataTable
+            menuName="task_list"
             selectable
             columns={columns}
             data={data}
@@ -1370,18 +1371,18 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
     const [isSubmittingAction, setIsSubmittingAction] = useState(false);
     const [userData, setUserData] = useState<any>(null);
-    
+
     const isDataReady = !initialLoading;
     const tableLoading = initialLoading || isSubmitting || isDeleting || isUpdating;
 
 
     const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: `(${b.employee_id}) - ${b.name || 'N/A'}` })) : [], [getAllUserData]);
 
-     useEffect(() => {
-           const { useEncryptApplicationStorage } = config;
-           try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); } 
-           catch (error) { console.error("Error getting UserData:", error); }
-       }, []);
+    useEffect(() => {
+        const { useEncryptApplicationStorage } = config;
+        try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); }
+        catch (error) { console.error("Error getting UserData:", error); }
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -1398,13 +1399,13 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
         fetchData();
     }, [dispatch])
 
-     useEffect(() => {
+    useEffect(() => {
         if (AllTaskData?.length > 0) {
-             const transformed = AllTaskData.map(transformApiTaskToTaskItem)
+            const transformed = AllTaskData.map(transformApiTaskToTaskItem)
             setTasks(transformed)
         }
-           
-       
+
+
     }, [AllTaskData])
 
     const uniqueAssignees = useMemo(() => {
@@ -1662,12 +1663,12 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
     }, []);
 
     const handleSendWhatsapp = useCallback((task: TaskItem) => {
-        console.log("task",task._originalData?.assign_to_users?.[0]?.mobile_number);
-        
+        console.log("task", task._originalData?.assign_to_users?.[0]?.mobile_number);
+
         const primaryAssignee = task._originalData?.assign_to_users?.[0]?.mobile_number
-;
+            ;
         const phone = primaryAssignee?.replace(/\D/g, '');
-console.log("phone",phone);
+        console.log("phone", phone);
 
         if (!phone) {
             toast.push(<Notification type="warning" title="No Mobile Number" children="The primary assignee for this task does not have a mobile number." />);
@@ -1689,7 +1690,7 @@ console.log("phone",phone);
             module_id: modalState.data.id,
             module_name: 'Task',
             user_id: userData.id,
-            item:"Task Activity"
+            item: "Task Activity"
         };
         try {
             await dispatch(addAllActionAction(payload)).unwrap();
@@ -1855,7 +1856,7 @@ console.log("phone",phone);
                             <div className="flex flex-col gap-1 text-[12px]">
                                 {task.category && (
                                     <span className="flex items-center gap-1">
-                                        
+
                                         <Tag className="text-xs bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100">
                                             {task.category}
                                         </Tag>

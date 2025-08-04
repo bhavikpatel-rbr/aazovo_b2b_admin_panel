@@ -433,7 +433,7 @@ const ViewDetailsDialog: React.FC<{
   };
   // --- End of Mock Data ---
 
-console.log(item, 'item');
+  console.log(item, 'item');
 
   return (
     <Dialog
@@ -463,8 +463,8 @@ console.log(item, 'item');
             <div className="flex flex-col items-end gap-2">
               <span
                 className={`px-2 py-1 text-xs font-semibold rounded-full ${item.type === "Offer"
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
-                    : "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300"
+                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
+                  : "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300"
                   }`}
               >
                 {item.type}
@@ -1615,6 +1615,7 @@ const ItemTable = React.memo(
     selectable?: boolean;
   }) => (
     <DataTable
+      menuName="offer_demand"
       selectable={selectable}
       columns={columns}
       data={data}

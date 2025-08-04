@@ -928,7 +928,8 @@ const handleBulkEmail = useCallback(() => {
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
 
           <div className="mt-4 flex-grow overflow-auto">
-            <DataTable columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} noData={!tableLoading && pageData.length === 0} />
+              
+            <DataTable menuName="subscriber"  columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} noData={!tableLoading && pageData.length === 0} />
           </div>
         </AdaptiveCard>
       </Container>

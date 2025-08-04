@@ -1,3 +1,4 @@
+import axiosInstance from "@/services/api/api";
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
 import dayjs from "dayjs";
@@ -7,7 +8,6 @@ import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import axiosInstance from "@/services/api/api";
 import { z } from "zod";
 
 // --- Icons ---
@@ -35,9 +35,9 @@ import {
   Form,
   FormItem,
   Input,
-  Select as UiSelect,
-  Table,
   Skeleton,
+  Table,
+  Select as UiSelect,
 } from "@/components/ui";
 import Notification from "@/components/ui/Notification";
 import Spinner from "@/components/ui/Spinner";
@@ -60,7 +60,6 @@ import {
   TbClipboardText,
   TbCloudUpload,
   TbColumns,
-  TbDiscount,
   TbDownload,
   TbEye,
   TbFileDescription,
@@ -73,22 +72,18 @@ import {
   TbInfoCircle,
   TbListDetails,
   TbMail,
-  TbNotebook,
-  TbPennant,
   TbPencil,
-  TbPlus,
+  TbPennant,
   TbPlayerPlay,
+  TbPlus,
   TbReload,
   TbRocket,
   TbSearch,
   TbSubtask,
   TbTagStarred,
-  TbTrash,
   TbTrophy,
-  TbUser,
-  TbUserCircle,
   TbUserSearch,
-  TbX,
+  TbX
 } from "react-icons/tb";
 
 // Types
@@ -1226,6 +1221,7 @@ const ViewOpportunitiesDialog: React.FC<{
             </div>
           ) : (
             <DataTable
+              menuName={"leads"}
               columns={columns}
               data={data}
               noData={data.length === 0}
@@ -3455,6 +3451,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           <div className="flex-grow overflow-auto">
             {initialLoading ? (
               <LeadTable
+                menuName="leads"
                 columns={skeletonColumns}
                 data={skeletonData}
                 selectable={false}
@@ -3466,6 +3463,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               />
             ) : (
               <LeadTable
+                menuName="leads"
                 columns={filteredColumns}
                 data={pageData}
                 loading={tableIsLoading}

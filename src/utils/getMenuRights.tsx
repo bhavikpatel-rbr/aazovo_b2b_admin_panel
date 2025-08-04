@@ -8,5 +8,6 @@ export const getMenuRights = (menu: string) => {
         is_edit: rights.is_edit || false,
         is_export: rights.is_export || false,
         is_view: rights.is_view || false,
+        useRights: useRights
     };
 }

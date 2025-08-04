@@ -670,7 +670,7 @@ const AutoEmailListing = () => {
                         {tableLoading ? (
                             <TableSkeleton columns={columns} />
                         ) : (
-                            <DataTable columns={filteredColumns} data={pageData} selectable onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} />
+                            <DataTable menuName="automation_email" columns={filteredColumns} data={pageData} selectable onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} />
                         )}
                     </div>
                 </AdaptiveCard>
