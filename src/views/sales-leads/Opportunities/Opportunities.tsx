@@ -15,15 +15,15 @@ import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 // UI Components
+import FileNotFound from "@/assets/svg/FileNotFound";
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DebouceInput from "@/components/shared/DebouceInput";
-import FileNotFound from "@/assets/svg/FileNotFound";
+import TableRowSkeleton from "@/components/shared/loaders/TableRowSkeleton";
 import Loading from "@/components/shared/Loading";
 import RichTextEditor from "@/components/shared/RichTextEditor";
 import StickyFooter from "@/components/shared/StickyFooter";
-import TableRowSkeleton from "@/components/shared/loaders/TableRowSkeleton";
 import {
   Button,
   Card,
@@ -36,11 +36,10 @@ import {
   FormItem,
   Input,
   Pagination,
-  Progress,
   Select,
+  Skeleton,
   Spinner,
-  Table,
-  Skeleton, // Added Skeleton
+  Table
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Notification from "@/components/ui/Notification";
@@ -56,7 +55,6 @@ import {
 } from "react-icons/bs";
 import {
   TbAlarm,
-  TbAlertTriangle,
   TbBell,
   TbBellRinging,
   TbBox,
@@ -65,8 +63,8 @@ import {
   TbBuilding,
   TbBulb,
   TbCalendarEvent,
-  TbChecks,
   TbChecklist,
+  TbChecks,
   TbCircleCheck,
   TbClockHour4,
   TbCloudUpload,
@@ -74,8 +72,6 @@ import {
   TbCopy,
   TbDiscount,
   TbExchange,
-  TbEye,
-  TbFileDescription,
   TbFilter,
   TbFlag,
   TbIdBadge2,
@@ -84,7 +80,6 @@ import {
   TbMail,
   TbMinus,
   TbNotesOff,
-  TbNotebook,
   TbPencilPlus,
   TbPhone,
   TbPlus,
@@ -95,12 +90,10 @@ import {
   TbTag,
   TbTagStarred,
   TbTargetArrow,
-  TbTrash,
   TbUser,
   TbUserCheck,
-  TbUserCircle,
   TbUsers,
-  TbX,
+  TbX
 } from "react-icons/tb";
 
 // Types
@@ -125,6 +118,7 @@ import {
 import type { ChangeEvent, ReactNode } from "react";
 
 // Redux
+import { DataTable } from "@/components/shared";
 import { authSelector } from "@/reduxtool/auth/authSlice";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
@@ -141,10 +135,9 @@ import {
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import { shallowEqual, useSelector } from "react-redux";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
-import { DataTable } from "@/components/shared";
+import { shallowEqual, useSelector } from "react-redux";
 
 // --- Type Definitions ---
 export type ApiOpportunityItem = {
@@ -997,6 +990,7 @@ const ViewOpportunitiesDialog: React.FC<{
             </div>
           ) : (
             <DataTable
+              menuName="opportunity"
               columns={columns}
               data={data}
               noData={data.length === 0}
@@ -3041,7 +3035,7 @@ const SpbSummaryRow: React.FC<SpbSummaryRowProps> = ({
   onToggleSelect,
 }) => {
   console.log(item, 'item');
-  
+
   const memberName = `Member: ${item.member_code}` || `Member ID: ${item.id}`;
   const memberPhone = `Phone: ${item.mobile_no || 'N/A'}`;
   // const createDate = `Date: ${formatCustomDateTime(item.created_at)}`;
@@ -4405,6 +4399,8 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
           <div className="flex-grow overflow-auto">
             {initialLoading ? (
               <DataTableComponent
+                menuName="opportunity"
+
                 columns={skeletonColumns}
                 data={skeletonData}
                 selectable={false}
@@ -4419,6 +4415,8 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
               />
             ) : (
               <DataTableComponent
+                menuName="opportunity"
+
                 selectable={!isDashboard}
                 columns={columns}
                 data={pageData}

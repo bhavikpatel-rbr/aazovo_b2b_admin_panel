@@ -255,9 +255,8 @@ function DataTable<T>(props: DataTableProps<T>) {
         );
     };
 
-    console.log(JSON.parse(localStorage.getItem('@secure:Userpermission')), " getMenuRights(menuName)");
-
-
+    console.log(getMenuRights(menuName)?.is_view, "getMenuRights(menuName)?.is_view", menuName);
+    
     return (
         <>
             {/* // <Loading loading={Boolean(loading && data.length !== 0)} type="cover"> */}

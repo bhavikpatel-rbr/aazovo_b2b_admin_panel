@@ -1,3 +1,4 @@
+import axiosInstance from "@/services/api/api";
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
 import dayjs from "dayjs";
@@ -7,7 +8,6 @@ import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import axiosInstance from "@/services/api/api";
 import { z } from "zod";
 
 dayjs.extend(isBetween);
@@ -32,9 +32,9 @@ import {
   Form,
   FormItem,
   Input,
-  Select as UiSelect,
-  Table,
   Skeleton,
+  Table,
+  Select as UiSelect,
 } from "@/components/ui";
 import Notification from "@/components/ui/Notification";
 import Spinner from "@/components/ui/Spinner";
@@ -57,7 +57,6 @@ import {
   TbClipboardText,
   TbCloudUpload,
   TbColumns,
-  TbDiscount,
   TbDownload,
   TbEye,
   TbFileDescription,
@@ -70,22 +69,18 @@ import {
   TbInfoCircle,
   TbListDetails,
   TbMail,
-  TbNotebook,
-  TbPennant,
   TbPencil,
-  TbPlus,
+  TbPennant,
   TbPlayerPlay,
+  TbPlus,
   TbReload,
   TbRocket,
   TbSearch,
   TbSubtask,
   TbTagStarred,
-  TbTrash,
   TbTrophy,
-  TbUser,
-  TbUserCircle,
   TbUserSearch,
-  TbX,
+  TbX
 } from "react-icons/tb";
 
 // Types
@@ -121,223 +116,223 @@ import { shallowEqual, useSelector } from "react-redux";
 
 
 // --- START: NEW COMPONENT FOR PENDING LEAD DETAILS VIEW MODAL ---
-const PendingLeadViewModal = ({ 
-    isOpen, 
-    onClose, 
-    leadData 
-}: { 
-    isOpen: boolean; 
-    onClose: () => void; 
-    leadData: any | null; 
+const PendingLeadViewModal = ({
+  isOpen,
+  onClose,
+  leadData
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  leadData: any | null;
 }) => {
-    if (!isOpen || !leadData || !leadData.lead) return null;
+  if (!isOpen || !leadData || !leadData.lead) return null;
 
-    const lead = leadData.lead;
-    const salesForm = leadData.sales_form;
+  const lead = leadData.lead;
+  const salesForm = leadData.sales_form;
 
-    const renderDetail = (label: string, value: React.ReactNode) => (
-        <div className="flex flex-col sm:flex-row py-2 border-b border-gray-200 dark:border-gray-700">
-            <dt className="sm:w-1/3 font-semibold text-gray-600 dark:text-gray-300">{label}</dt>
-            <dd className="sm:w-2/3 mt-1 sm:mt-0 text-gray-800 dark:text-gray-100 break-words">{value ?? 'N/A'}</dd>
+  const renderDetail = (label: string, value: React.ReactNode) => (
+    <div className="flex flex-col sm:flex-row py-2 border-b border-gray-200 dark:border-gray-700">
+      <dt className="sm:w-1/3 font-semibold text-gray-600 dark:text-gray-300">{label}</dt>
+      <dd className="sm:w-2/3 mt-1 sm:mt-0 text-gray-800 dark:text-gray-100 break-words">{value ?? 'N/A'}</dd>
+    </div>
+  );
+
+  const renderSalesFormDetails = (formData: any) => {
+    if (!formData || Object.keys(formData).length === 0) return <p className="text-sm text-gray-500">No form data available.</p>;
+
+    return Object.entries(formData).map(([sectionKey, sectionValue]: [string, any]) => (
+      <div key={sectionKey} className="mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md">
+        <h6 className="font-semibold capitalize border-b pb-1 mb-2">{sectionKey.replace(/_/g, ' ')}</h6>
+        {Object.entries(sectionValue).map(([fieldKey, fieldValue]) => (
+          <div key={fieldKey} className="text-sm py-1">
+            <span className="font-medium capitalize">{fieldKey.replace(/_/g, ' ')}:</span>
+            <span className="ml-2 text-gray-700 dark:text-gray-200">
+              {Array.isArray(fieldValue) ? fieldValue.join(', ') : String(fieldValue)}
+            </span>
+          </div>
+        ))}
+      </div>
+    ));
+  };
+
+  return (
+    <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width={800} bodyOpenClassName="overflow-hidden">
+      <div className="flex flex-col h-full max-h-[85vh]">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h5 className="mb-0">Lead Details: {lead.lead_number || `LD-${lead.id}`}</h5>
         </div>
-    );
-    
-    const renderSalesFormDetails = (formData: any) => {
-        if (!formData || Object.keys(formData).length === 0) return <p className="text-sm text-gray-500">No form data available.</p>;
+        <div className="flex-grow overflow-y-auto px-6 py-4 custom-scrollbar">
+          <Card bodyClass="p-4">
+            <h6 className="mb-2 text-base font-semibold">Lead Information</h6>
+            <dl>
+              {renderDetail('Lead Number', lead.lead_number || `LD-${lead.id}`)}
+              {renderDetail('Product', lead.product?.name)}
+              {renderDetail('Quantity', lead.qty)}
+              {renderDetail('Target Price', lead.target_price ? `$${lead.target_price}` : 'N/A')}
+              {renderDetail('Status', <Tag className={`${leadStatusColor[lead.status] || leadStatusColor.default} capitalize`}>{lead.status}</Tag>)}
+              {renderDetail('Intent', <Tag className="capitalize">{lead.lead_intent}</Tag>)}
+              {renderDetail('Created At', dayjs(lead.created_at).format('DD MMM YYYY, h:mm A'))}
+            </dl>
+          </Card>
 
-        return Object.entries(formData).map(([sectionKey, sectionValue]: [string, any]) => (
-            <div key={sectionKey} className="mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md">
-                <h6 className="font-semibold capitalize border-b pb-1 mb-2">{sectionKey.replace(/_/g, ' ')}</h6>
-                {Object.entries(sectionValue).map(([fieldKey, fieldValue]) => (
-                     <div key={fieldKey} className="text-sm py-1">
-                        <span className="font-medium capitalize">{fieldKey.replace(/_/g, ' ')}:</span> 
-                        <span className="ml-2 text-gray-700 dark:text-gray-200">
-                            {Array.isArray(fieldValue) ? fieldValue.join(', ') : String(fieldValue)}
-                        </span>
-                     </div>
-                ))}
-            </div>
-        ));
-    };
+          <Card bodyClass="p-4" className="mt-4">
+            <h6 className="mb-2 text-base font-semibold">Member Information</h6>
+            <dl>
+              {renderDetail('Buyer', <span>{lead.lead_info?.buyer?.name} <span className="text-gray-500">({lead.lead_info?.buyer?.member_code})</span></span>)}
+              {renderDetail('Supplier', <span>{lead.lead_info?.seller?.name} <span className="text-gray-500">({lead.lead_info?.seller?.member_code})</span></span>)}
+            </dl>
+          </Card>
 
-    return (
-        <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width={800} bodyOpenClassName="overflow-hidden">
-            <div className="flex flex-col h-full max-h-[85vh]">
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                  <h5 className="mb-0">Lead Details: {lead.lead_number || `LD-${lead.id}`}</h5>
-                </div>
-                <div className="flex-grow overflow-y-auto px-6 py-4 custom-scrollbar">
-                    <Card bodyClass="p-4">
-                        <h6 className="mb-2 text-base font-semibold">Lead Information</h6>
-                        <dl>
-                            {renderDetail('Lead Number', lead.lead_number || `LD-${lead.id}`)}
-                            {renderDetail('Product', lead.product?.name)}
-                            {renderDetail('Quantity', lead.qty)}
-                            {renderDetail('Target Price', lead.target_price ? `$${lead.target_price}` : 'N/A')}
-                            {renderDetail('Status', <Tag className={`${leadStatusColor[lead.status] || leadStatusColor.default} capitalize`}>{lead.status}</Tag>)}
-                            {renderDetail('Intent', <Tag className="capitalize">{lead.lead_intent}</Tag>)}
-                            {renderDetail('Created At', dayjs(lead.created_at).format('DD MMM YYYY, h:mm A'))}
-                        </dl>
-                    </Card>
-
-                    <Card bodyClass="p-4" className="mt-4">
-                        <h6 className="mb-2 text-base font-semibold">Member Information</h6>
-                        <dl>
-                             {renderDetail('Buyer', <span>{lead.lead_info?.buyer?.name} <span className="text-gray-500">({lead.lead_info?.buyer?.member_code})</span></span>)}
-                             {renderDetail('Supplier', <span>{lead.lead_info?.seller?.name} <span className="text-gray-500">({lead.lead_info?.seller?.member_code})</span></span>)}
-                        </dl>
-                    </Card>
-
-                     <Card bodyClass="p-4" className="mt-4">
-                        <h6 className="mb-2 text-base font-semibold">Form Submission Details</h6>
-                        {renderSalesFormDetails(salesForm)}
-                    </Card>
-                </div>
-                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
-                    <Button variant="solid" onClick={onClose}>Close</Button>
-                </div>
-            </div>
-        </Dialog>
-    );
+          <Card bodyClass="p-4" className="mt-4">
+            <h6 className="mb-2 text-base font-semibold">Form Submission Details</h6>
+            {renderSalesFormDetails(salesForm)}
+          </Card>
+        </div>
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
+          <Button variant="solid" onClick={onClose}>Close</Button>
+        </div>
+      </div>
+    </Dialog>
+  );
 };
 // --- END: NEW COMPONENT ---
 
 // --- START: NEW COMPONENT FOR PENDING LEADS MODAL ---
-const PendingLeadsModal = ({ 
-    isOpen, 
-    onClose, 
-    onActionSuccess 
-}: { 
-    isOpen: boolean; 
-    onClose: () => void; 
-    onActionSuccess: () => void; 
+const PendingLeadsModal = ({
+  isOpen,
+  onClose,
+  onActionSuccess
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onActionSuccess: () => void;
 }) => {
-    const [pendingLeads, setPendingLeads] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [actionLoading, setActionLoading] = useState<{ id: string | number | null, type: 'approve' | 'reject' | null }>({ id: null, type: null });
-    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-    const [selectedLead, setSelectedLead] = useState<any | null>(null);
+  const [pendingLeads, setPendingLeads] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<{ id: string | number | null, type: 'approve' | 'reject' | null }>({ id: null, type: null });
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<any | null>(null);
 
-    const fetchPendingLeads = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const response = await axiosInstance.get('/sales-form?per_page=99999&Status=Pending');
-            setPendingLeads(response.data?.data?.data || []);
-        } catch (error) {
-            toast.push(<Notification type="danger" title="Error">Failed to fetch pending leads.</Notification>);
-            console.error(error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []); 
+  const fetchPendingLeads = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await axiosInstance.get('/sales-form?per_page=99999&Status=Pending');
+      setPendingLeads(response.data?.data?.data || []);
+    } catch (error) {
+      toast.push(<Notification type="danger" title="Error">Failed to fetch pending leads.</Notification>);
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-    useEffect(() => {
-        if (isOpen) {
-            fetchPendingLeads();
-        }
-    }, [isOpen, fetchPendingLeads]);
+  useEffect(() => {
+    if (isOpen) {
+      fetchPendingLeads();
+    }
+  }, [isOpen, fetchPendingLeads]);
 
-    const handleAction = async (salesFormId: string | number, status: 'Approved' | 'Rejected') => {
-        setActionLoading({ id: salesFormId, type: status === 'Approved' ? 'approve' : 'reject' });
-        try {
-            await axiosInstance.post(`/sales-form/status/${salesFormId}`, { status });
-            toast.push(<Notification type="success" title={`Lead ${status}`}>{`Lead has been successfully ${status.toLowerCase()}.`}</Notification>);
-            fetchPendingLeads(); // Refresh list in modal
-            onActionSuccess(); // Refresh main table
-        } catch (error: any) {
-            toast.push(<Notification type="danger" title="Action Failed">{error.response?.data?.message || `Could not ${status.toLowerCase()} the lead.`}</Notification>);
-            console.error(error);
-        } finally {
-            setActionLoading({ id: null, type: null });
-        }
-    };
-    
-    const handleViewClick = (leadData: any) => {
-        setSelectedLead(leadData);
-        setIsViewModalOpen(true);
-    };
-    
-    return (
-        <>
-            <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width={1000} bodyOpenClassName="overflow-hidden">
-                 <div className="flex flex-col h-full max-h-[80vh]">
-                    <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                      <h5 className="mb-0">Pending Leads for Verification</h5>
-                    </div>
-                    <div className="flex-grow overflow-y-auto px-6 py-4">
-                        {isLoading ? (
-                             <div className="flex justify-center items-center h-64"><Spinner size={40} /></div>
-                        ) : pendingLeads.length > 0 ? (
-                            <Table>
-                                <Table.THead>
-                                    <Table.Tr>
-                                        <Table.Th>Lead Info</Table.Th>
-                                        <Table.Th>Product</Table.Th>
-                                        <Table.Th>Members (Buyer/Seller)</Table.Th>
-                                        <Table.Th>Details</Table.Th>
-                                        <Table.Th>Actions</Table.Th>
-                                    </Table.Tr>
-                                </Table.THead>
-                                <Table.TBody>
-                                    {pendingLeads.map((item) => (
-                                        <Table.Tr key={item.id}>
-                                            <Table.Td>{item.lead?.lead_number || `LD-${item.lead?.id}`}</Table.Td>
-                                            <Table.Td>{item.lead?.product?.name || 'N/A'}</Table.Td>
-                                            <Table.Td>
-                                                <div className="text-xs">
-                                                  <p><strong>B:</strong> {item.lead?.lead_info?.buyer?.name || 'N/A'}</p>
-                                                  <p><strong>S:</strong> {item.lead?.lead_info?.seller?.name || 'N/A'}</p>
-                                                </div>
-                                            </Table.Td>
-                                            <Table.Td>Qty: {item.lead?.qty || '-'} | Price: ${item.lead?.target_price || '-'}</Table.Td>
-                                            <Table.Td>
-                                                <div className="flex items-center gap-2">
-                                                    <Tooltip title="View Details">
-                                                      <Button shape="circle" size="xs" icon={<TbEye />} onClick={() => handleViewClick(item)} />
-                                                    </Tooltip>
-                                                    <Button 
-                                                        size="xs" 
-                                                        variant="solid" 
-                                                        color="emerald-600" 
-                                                        onClick={() => handleAction(item.id, 'Approved')} 
-                                                        loading={actionLoading.id === item.id && actionLoading.type === 'approve'}
-                                                    >
-                                                        Approve
-                                                    </Button>
-                                                    <Button 
-                                                        size="xs" 
-                                                        variant="solid" 
-                                                        color="red-600" 
-                                                        onClick={() => handleAction(item.id, 'Rejected')} 
-                                                        loading={actionLoading.id === item.id && actionLoading.type === 'reject'}
-                                                    >
-                                                        Reject
-                                                    </Button>
-                                                </div>
-                                            </Table.Td>
-                                        </Table.Tr>
-                                    ))}
-                                </Table.TBody>
-                            </Table>
-                        ) : (
-                            <div className="text-center p-10 text-gray-500">
-                                <p>No pending leads found.</p>
-                            </div>
-                        )}
-                    </div>
-                    <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
-                        <Button variant="solid" onClick={onClose}>Close</Button>
-                    </div>
-                </div>
-            </Dialog>
+  const handleAction = async (salesFormId: string | number, status: 'Approved' | 'Rejected') => {
+    setActionLoading({ id: salesFormId, type: status === 'Approved' ? 'approve' : 'reject' });
+    try {
+      await axiosInstance.post(`/sales-form/status/${salesFormId}`, { status });
+      toast.push(<Notification type="success" title={`Lead ${status}`}>{`Lead has been successfully ${status.toLowerCase()}.`}</Notification>);
+      fetchPendingLeads(); // Refresh list in modal
+      onActionSuccess(); // Refresh main table
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Action Failed">{error.response?.data?.message || `Could not ${status.toLowerCase()} the lead.`}</Notification>);
+      console.error(error);
+    } finally {
+      setActionLoading({ id: null, type: null });
+    }
+  };
 
-            <PendingLeadViewModal 
-                isOpen={isViewModalOpen}
-                onClose={() => setIsViewModalOpen(false)}
-                leadData={selectedLead}
-            />
-        </>
-    );
+  const handleViewClick = (leadData: any) => {
+    setSelectedLead(leadData);
+    setIsViewModalOpen(true);
+  };
+
+  return (
+    <>
+      <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width={1000} bodyOpenClassName="overflow-hidden">
+        <div className="flex flex-col h-full max-h-[80vh]">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h5 className="mb-0">Pending Leads for Verification</h5>
+          </div>
+          <div className="flex-grow overflow-y-auto px-6 py-4">
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64"><Spinner size={40} /></div>
+            ) : pendingLeads.length > 0 ? (
+              <Table>
+                <Table.THead>
+                  <Table.Tr>
+                    <Table.Th>Lead Info</Table.Th>
+                    <Table.Th>Product</Table.Th>
+                    <Table.Th>Members (Buyer/Seller)</Table.Th>
+                    <Table.Th>Details</Table.Th>
+                    <Table.Th>Actions</Table.Th>
+                  </Table.Tr>
+                </Table.THead>
+                <Table.TBody>
+                  {pendingLeads.map((item) => (
+                    <Table.Tr key={item.id}>
+                      <Table.Td>{item.lead?.lead_number || `LD-${item.lead?.id}`}</Table.Td>
+                      <Table.Td>{item.lead?.product?.name || 'N/A'}</Table.Td>
+                      <Table.Td>
+                        <div className="text-xs">
+                          <p><strong>B:</strong> {item.lead?.lead_info?.buyer?.name || 'N/A'}</p>
+                          <p><strong>S:</strong> {item.lead?.lead_info?.seller?.name || 'N/A'}</p>
+                        </div>
+                      </Table.Td>
+                      <Table.Td>Qty: {item.lead?.qty || '-'} | Price: ${item.lead?.target_price || '-'}</Table.Td>
+                      <Table.Td>
+                        <div className="flex items-center gap-2">
+                          <Tooltip title="View Details">
+                            <Button shape="circle" size="xs" icon={<TbEye />} onClick={() => handleViewClick(item)} />
+                          </Tooltip>
+                          <Button
+                            size="xs"
+                            variant="solid"
+                            color="emerald-600"
+                            onClick={() => handleAction(item.id, 'Approved')}
+                            loading={actionLoading.id === item.id && actionLoading.type === 'approve'}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="solid"
+                            color="red-600"
+                            onClick={() => handleAction(item.id, 'Rejected')}
+                            loading={actionLoading.id === item.id && actionLoading.type === 'reject'}
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.TBody>
+              </Table>
+            ) : (
+              <div className="text-center p-10 text-gray-500">
+                <p>No pending leads found.</p>
+              </div>
+            )}
+          </div>
+          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
+            <Button variant="solid" onClick={onClose}>Close</Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <PendingLeadViewModal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        leadData={selectedLead}
+      />
+    </>
+  );
 };
 // --- END: NEW COMPONENT ---
 
@@ -400,97 +395,97 @@ const startProcessSchema = z.object({
 type StartProcessFormData = z.infer<typeof startProcessSchema>;
 
 const StartProcessModal = ({
-    isOpen,
-    onClose,
-    lead,
+  isOpen,
+  onClose,
+  lead,
 }: {
-    isOpen: boolean
-    onClose: () => void
-    lead: LeadListItem | null
+  isOpen: boolean
+  onClose: () => void
+  lead: LeadListItem | null
 }) => {
-    const navigate = useNavigate();
-    const { formsData = [] } = useSelector(masterSelector);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+  const { formsData = [] } = useSelector(masterSelector);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const {
-        control,
-        handleSubmit,
-        reset,
-        formState: { errors, isValid },
-    } = useForm<StartProcessFormData>({
-        resolver: zodResolver(startProcessSchema),
-        mode: 'onChange',
-    });
-    
-    useEffect(() => {
-        if (!isOpen) {
-            reset(); // Reset form when modal closes
-        }
-    }, [isOpen, reset]);
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors, isValid },
+  } = useForm<StartProcessFormData>({
+    resolver: zodResolver(startProcessSchema),
+    mode: 'onChange',
+  });
 
-    const tokenFormOptions = useMemo(
-        () =>
-            (formsData || []).map((form: any) => ({
-                value: form.id,
-                label: form.form_title || 'Untitled Form',
-            })),
-        [formsData]
-    );
+  useEffect(() => {
+    if (!isOpen) {
+      reset(); // Reset form when modal closes
+    }
+  }, [isOpen, reset]);
 
-    const onSubmit = (data: StartProcessFormData) => {
-        if (!lead) return;
-        setIsSubmitting(true);
-        navigate(`/start-process/${lead.id}/${data.formId}`);
-        onClose();
-    };
+  const tokenFormOptions = useMemo(
+    () =>
+      (formsData || []).map((form: any) => ({
+        value: form.id,
+        label: form.form_title || 'Untitled Form',
+      })),
+    [formsData]
+  );
 
-    if (!isOpen || !lead) return null;
+  const onSubmit = (data: StartProcessFormData) => {
+    if (!lead) return;
+    setIsSubmitting(true);
+    navigate(`/start-process/${lead.id}/${data.formId}`);
+    onClose();
+  };
 
-    return (
-        <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose}>
-            <h5 className="mb-4">Start Process for Lead: {lead.lead_number}</h5>
-            <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                Select a form to initiate a new process for this lead.
-            </p>
-            <Form id="startProcessForm" onSubmit={handleSubmit(onSubmit)}>
-                <FormItem
-                    label="Token Form"
-                    invalid={!!errors.formId}
-                    errorMessage={errors.formId?.message}
-                >
-                    <Controller
-                        name="formId"
-                        control={control}
-                        render={({ field }) => (
-                            <UiSelect
-                                placeholder="Select a form..."
-                                options={tokenFormOptions}
-                                value={tokenFormOptions.find(
-                                    (opt) => opt.value === field.value
-                                )}
-                                onChange={(opt: any) => field.onChange(opt?.value)}
-                            />
-                        )}
-                    />
-                </FormItem>
-            </Form>
-            <div className="text-right mt-6">
-                <Button className="mr-2" onClick={onClose} disabled={isSubmitting}>
-                    Cancel
-                </Button>
-                <Button
-                    variant="solid"
-                    type="submit"
-                    form="startProcessForm"
-                    loading={isSubmitting}
-                    disabled={!isValid || isSubmitting}
-                    icon={<TbPlayerPlay />}
-                >
-                    Proceed
-                </Button>
-            </div>
-        </Dialog>
-    );
+  if (!isOpen || !lead) return null;
+
+  return (
+    <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Start Process for Lead: {lead.lead_number}</h5>
+      <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+        Select a form to initiate a new process for this lead.
+      </p>
+      <Form id="startProcessForm" onSubmit={handleSubmit(onSubmit)}>
+        <FormItem
+          label="Token Form"
+          invalid={!!errors.formId}
+          errorMessage={errors.formId?.message}
+        >
+          <Controller
+            name="formId"
+            control={control}
+            render={({ field }) => (
+              <UiSelect
+                placeholder="Select a form..."
+                options={tokenFormOptions}
+                value={tokenFormOptions.find(
+                  (opt) => opt.value === field.value
+                )}
+                onChange={(opt: any) => field.onChange(opt?.value)}
+              />
+            )}
+          />
+        </FormItem>
+      </Form>
+      <div className="text-right mt-6">
+        <Button className="mr-2" onClick={onClose} disabled={isSubmitting}>
+          Cancel
+        </Button>
+        <Button
+          variant="solid"
+          type="submit"
+          form="startProcessForm"
+          loading={isSubmitting}
+          disabled={!isValid || isSubmitting}
+          icon={<TbPlayerPlay />}
+        >
+          Proceed
+        </Button>
+      </div>
+    </Dialog>
+  );
 };
 // --- END: NEW SCHEMA AND MODAL ---
 
@@ -1113,6 +1108,7 @@ const ViewOpportunitiesDialog: React.FC<{
             </div>
           ) : (
             <DataTable
+              menuName={"leads"}
               columns={columns}
               data={data}
               noData={data.length === 0}
@@ -2176,7 +2172,7 @@ const LeadActionColumn = ({
   const iconButtonClass =
     "text-lg p-0.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
-  
+
   return (
     <div className="flex items-center justify-center">
       <Tooltip title="Edit Lead">
@@ -2211,7 +2207,7 @@ const LeadActionColumn = ({
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
-      
+
 
         <Dropdown.Item
           onClick={() => onOpenModal("email")}
@@ -2219,7 +2215,7 @@ const LeadActionColumn = ({
         >
           <TbMail size={18} /> Send Email
         </Dropdown.Item>
-       {data.assigned_saled_id ? <Dropdown.Item
+        {data.assigned_saled_id ? <Dropdown.Item
           onClick={onStartProcess}
           className="flex items-center gap-2 text-xs"
         >
@@ -2285,12 +2281,12 @@ const LeadActionColumn = ({
         >
           <TbFileInvoice size={18} /> Add Account Documents
         </Dropdown.Item>
-          {!data.assigned_saled_id ? <Dropdown.Item
+        {!data.assigned_saled_id ? <Dropdown.Item
           onClick={() => onOpenModal("assignLead")}
           className="flex items-center gap-2 text-xs"
         >
           <TbUserSearch size={18} /> Assign Sales Person
-        </Dropdown.Item>: null}
+        </Dropdown.Item> : null}
       </Dropdown>
     </div>
   );
@@ -2540,12 +2536,12 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     type: null,
     data: null,
   });
-  
+
   // --- START: NEW STATE FOR START PROCESS MODAL ---
   const [isStartProcessModalOpen, setIsStartProcessModalOpen] = useState(false);
   const [leadForProcess, setLeadForProcess] = useState<LeadListItem | null>(null);
   // --- END: NEW STATE ---
-  
+
   // --- START: NEW STATE FOR PENDING LEADS ---
   const [isPendingLeadsModalOpen, setIsPendingLeadsModalOpen] = useState(false);
   // --- END: NEW STATE ---
@@ -2779,7 +2775,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     },
     [navigate]
   );
-  
+
   // --- UPDATED: New handleStartProcess function to open the modal ---
   const handleStartProcess = useCallback((lead: LeadListItem) => {
     setLeadForProcess(lead);
@@ -3230,22 +3226,22 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
               <h5 className="mb-2 sm:mb-0">Leads Listing</h5>
               <div className="flex items-center gap-2">
-                  <Button
-                      variant="solid"
-                      color="blue-600"
-                      onClick={() => setIsPendingLeadsModalOpen(true)}
-                      disabled={initialLoading}
-                  >
-                      Pending Leads
-                  </Button>
-                  <Button
-                      variant="solid"
-                      icon={<TbPlus />}
-                      onClick={handleOpenAddLeadPage}
-                      disabled={initialLoading}
-                  >
-                      Add New
-                  </Button>
+                <Button
+                  variant="solid"
+                  color="blue-600"
+                  onClick={() => setIsPendingLeadsModalOpen(true)}
+                  disabled={initialLoading}
+                >
+                  Pending Leads
+                </Button>
+                <Button
+                  variant="solid"
+                  icon={<TbPlus />}
+                  onClick={handleOpenAddLeadPage}
+                  disabled={initialLoading}
+                >
+                  Add New
+                </Button>
               </div>
             </div>
           )}
@@ -3338,6 +3334,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           <div className="flex-grow overflow-auto">
             {initialLoading ? (
               <LeadTable
+                menuName="leads"
                 columns={skeletonColumns}
                 data={skeletonData}
                 selectable={false}
@@ -3349,6 +3346,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               />
             ) : (
               <LeadTable
+                menuName="leads"
                 columns={filteredColumns}
                 data={pageData}
                 loading={tableIsLoading}
@@ -3724,7 +3722,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           3260032
         </p>
       </ConfirmDialog>
-      
+
       {/* --- ADDED: Render the new modals --- */}
       <StartProcessModal
         isOpen={isStartProcessModalOpen}
@@ -3737,11 +3735,11 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         onSuccess={handleUpdateSuccess}
         getAllUserDataOptions={getAllUserDataOptions}
       />
-      
+
       <PendingLeadsModal
-          isOpen={isPendingLeadsModalOpen}
-          onClose={() => setIsPendingLeadsModalOpen(false)}
-          onActionSuccess={handleUpdateSuccess}
+        isOpen={isPendingLeadsModalOpen}
+        onClose={() => setIsPendingLeadsModalOpen(false)}
+        onActionSuccess={handleUpdateSuccess}
       />
 
       <ConfirmDialog
