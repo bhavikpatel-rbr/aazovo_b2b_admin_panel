@@ -120,6 +120,7 @@ import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
 import { BiNotification } from "react-icons/bi";
 import { useSelector } from "react-redux";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- START: Detailed Type Definitions ---
 interface UserReference {
@@ -2293,8 +2294,8 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
   );
   const dispatch = useAppDispatch();
   useEffect(() => {
-        dispatch(getPendingBillAction());
-    dispatch(getCompanyAction()); 
+    dispatch(getPendingBillAction());
+    dispatch(getCompanyAction());
     dispatch(getCountriesAction());
     dispatch(getContinentsAction());
     dispatch(getAllUsersAction());
@@ -2638,15 +2639,17 @@ const CompanyActionColumn = ({
   const navigate = useNavigate();
   return (
     <div className="flex items-center justify-center gap-1">
-      <Tooltip title="Edit">
-        <div
-          className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600"
-          role="button"
-          onClick={() => onEdit(rowData.id)}
-        >
-          <TbPencil />
-        </div>
-      </Tooltip>
+      {
+        getMenuRights("company")?.is_export && <Tooltip title="Edit">
+          <div
+            className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600"
+            role="button"
+            onClick={() => onEdit(rowData.id)}
+          >
+            <TbPencil />
+          </div>
+        </Tooltip>
+      }
       <Tooltip title="View">
         <div
           className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600"
@@ -3688,12 +3691,12 @@ const CompanyListTable = () => {
     }
   };
 
-   const statusOptions = [
-     { value: "Active", label: "Active" },
-     { value: "Disabled", label: "Disabled" },
-     { value: "Blocked", label: "Blocked" },
-     { value: "Inactive", label: "Inactive" },
-   ];
+  const statusOptions = [
+    { value: "Active", label: "Active" },
+    { value: "Disabled", label: "Disabled" },
+    { value: "Blocked", label: "Blocked" },
+    { value: "Inactive", label: "Inactive" },
+  ];
   const companyTypeOptions = useMemo(
     () =>
       Array.from(new Set(companyList.map((c) => c.ownership_type)))
@@ -3735,6 +3738,7 @@ const CompanyListTable = () => {
     "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-1";
 
+
   return (
     <>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
@@ -3759,14 +3763,16 @@ const CompanyListTable = () => {
               {PendingBillData?.data?.length || 0}
             </span>
           </div>
-
-          <Button
-            variant="solid"
-            icon={<TbPlus className="text-lg" />}
-            onClick={() => navigate("/business-entities/company-create")}
-          >
-            Add New
-          </Button>
+          {
+            getMenuRights("company")?.is_add && (
+              <Button
+                variant="solid"
+                icon={<TbPlus className="text-lg" />}
+                onClick={() => navigate("/business-entities/company-create")}
+              >
+                Add New
+              </Button>)
+          }
         </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
@@ -3961,15 +3967,17 @@ const CompanyListTable = () => {
               </span>
             )}
           </Button>
-          <Button
-            icon={<TbCloudUpload />}
-            onClick={handleOpenExportReasonModal}
-            disabled={
-              !allFilteredAndSortedData || allFilteredAndSortedData.length === 0
-            }
-          >
-            Export
-          </Button>
+          {
+            getMenuRights("company")?.is_export && (<Button
+              icon={<TbCloudUpload />}
+              onClick={handleOpenExportReasonModal}
+              disabled={
+                !allFilteredAndSortedData || allFilteredAndSortedData.length === 0
+              }
+            >
+              Export
+            </Button>)
+          }
         </div>
       </div>
       <ActiveFiltersDisplay
@@ -4494,7 +4502,9 @@ const Company = () => {
       <Container>
         <AdaptiveCard>
           <div className="flex flex-col gap-4">
-            <CompanyListTable />
+            {
+              getMenuRights("company")?.is_view &&
+              <CompanyListTable />}
           </div>
         </AdaptiveCard>
       </Container>

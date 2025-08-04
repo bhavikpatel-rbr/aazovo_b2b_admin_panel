@@ -7,10 +7,11 @@ import React, {
   useMemo,
   useState,
 } from "react";
+
 import { Controller, useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
-import { z } from "zod";
 import * as XLSX from 'xlsx'; // <-- ADD THIS IMPORT
+import { z } from "zod";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -28,27 +29,29 @@ import {
   Dialog,
   Drawer,
   Dropdown,
-  Form as UiForm,
-  FormItem as UiFormItem,
+  Form,
+  FormItem,
   Input,
-  Select as UiSelect,
+  Spinner,
   Table,
   Tag,
   Tooltip,
-  Spinner,
-  Form,
-  FormItem,
+  Form as UiForm,
+  FormItem as UiFormItem,
+  Select as UiSelect,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast";
 import Td from "@/components/ui/Table/Td";
 import Tr from "@/components/ui/Table/Tr";
+import toast from "@/components/ui/toast";
 
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  TbAlarm, TbBell, TbBellRinging, TbBrandWhatsapp, TbCalendarEvent, TbCalendarTime, TbChecks, TbCloudUpload, TbColumns, TbEye, TbFileSearch, TbFilter, TbInfoCircle, TbMail, TbNotesOff, TbPencil, TbPencilPlus, TbPlus, TbReceipt, TbReload, TbSearch, TbTagStarred, TbUser, TbUserCancel, TbUserCheck, TbUserCircle, TbUserExclamation, TbUsersGroup, TbX
+  TbAlarm, TbBell, TbBellRinging, TbBrandWhatsapp, TbCalendarEvent, TbCalendarTime, TbChecks, TbCloudUpload, TbColumns, TbEye, TbFileSearch, TbFilter, TbInfoCircle, TbMail, TbNotesOff, TbPencil, TbPencilPlus, TbPlus,
+  TbReload,
+  TbTagStarred, TbUser, TbUserCancel, TbUserCheck, TbUserCircle, TbUserExclamation, TbUsersGroup, TbX
 } from "react-icons/tb";
 
 // Types & Utils
@@ -62,20 +65,17 @@ import {
   addScheduleAction,
   addTaskAction,
   deleteAllMemberAction,
-  getAllUsersAction,
   getAlertsAction,
-  submitExportReasonAction,
+  getAllUsersAction,
   getMemberlistingAction,
+  submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 import { encryptStorage } from "@/utils/secureLocalStorage";
-import cloneDeep from "lodash/cloneDeep";
 import dayjs from "dayjs";
-import { useSelector } from "react-redux";
-import { isEmptyArray } from "formik";
 import { config } from "localforage";
-import { log } from "console";
+import { useSelector } from "react-redux";
 
 
 // --- START: Detailed Type Definitions (Matching API Response) ---
@@ -1190,7 +1190,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
         </div>
       </div>
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
-      <DataTable selectable columns={filteredColumns} data={pageData} noData={!isLoading && pageData.length === 0} loading={isLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
+      <DataTable menuName="member" selectable columns={filteredColumns} data={pageData} noData={!isLoading && pageData.length === 0} loading={isLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} width={500} onClose={() => setFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterMemberForm" type="submit">Apply</Button></div>}>
         <UiForm id="filterMemberForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">

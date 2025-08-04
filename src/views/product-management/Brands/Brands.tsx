@@ -577,6 +577,7 @@ const Brands = () => {
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="flex-grow overflow-auto">
             <BrandTable
+              menuName="brands"
               columns={filteredColumns} data={pageData} loading={tableLoading}
               pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
               selectedItems={selectedItems}

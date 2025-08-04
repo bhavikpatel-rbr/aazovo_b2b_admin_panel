@@ -5,7 +5,7 @@ import classNames from "classnames";
 import dayjs from "dayjs";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { useNavigate, Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -40,9 +40,14 @@ import { BsThreeDotsVertical } from "react-icons/bs";
 import {
   TbBell, TbBookmark, TbBox, TbBoxOff, TbBrandWhatsapp, TbBulb, TbCalendar,
   TbCalendarEvent, TbCancel, TbCheck, TbChecks, TbCircleCheck, TbCloudDownload,
-  TbCloudUpload, TbColumns, TbCopy, TbEye, TbFilter, TbListDetails, TbMail,
+  TbCloudUpload, TbColumns, TbCopy, TbEye, TbFilter,
+  TbHandGrab,
+  TbListDetails, TbMail,
+  TbMailForward,
   TbPackageExport, TbPencil, TbPlus, TbProgress, TbReload, TbSearch, TbShare,
-  TbStack2, TbTagStarred, TbUser, TbX, TbUserPlus, TbHandGrab, TbMailForward
+  TbStack2, TbTagStarred, TbUser,
+  TbUserPlus,
+  TbX
 } from "react-icons/tb";
 
 // Types
@@ -333,12 +338,12 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
     switch (type) {
       case 'offer_demand':
         if (wallItem.want_to === 'Buy') {
-            navigate('/sales-leads/wall-item/demands/create', { state: { buyerId: firstOp.member_id, productId: firstOp.product_id,...firstOp } });
-          
+          navigate('/sales-leads/wall-item/demands/create', { state: { buyerId: firstOp.member_id, productId: firstOp.product_id, ...firstOp } });
 
-         
+
+
         } else {
-                  navigate('/sales-leads/wall-item/offers/create', { state: { supplierId: firstOp.member_id, productId: firstOp.product_id, ...firstOp } }); 
+          navigate('/sales-leads/wall-item/offers/create', { state: { supplierId: firstOp.member_id, productId: firstOp.product_id, ...firstOp } });
         }
         break;
       case 'lead':
@@ -547,7 +552,9 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filt
   );
 };
 
-const WallTable = (props: { columns: ColumnDef<WallItem>[]; data: WallItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: WallItem[]; onPaginationChange: (page: number) => void; onSelectChange: (size: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: WallItem) => void; onAllRowSelect: (checked: boolean, rows: Row<WallItem>[]) => void; selectable?: boolean; }) => (<DataTable selectable={props.selectable} columns={props.columns} data={props.data} loading={props.loading} pagingData={props.pagingData} checkboxChecked={(row) => props.selectedItems.some((s) => s.id === row.id)} onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange} onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect} noData={!props.loading && props.data.length === 0} />);
+const WallTable = (props: { columns: ColumnDef<WallItem>[]; data: WallItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: WallItem[]; onPaginationChange: (page: number) => void; onSelectChange: (size: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: WallItem) => void; onAllRowSelect: (checked: boolean, rows: Row<WallItem>[]) => void; selectable?: boolean; }) => (<DataTable
+  menuName="wall_listing"
+  selectable={props.selectable} columns={props.columns} data={props.data} loading={props.loading} pagingData={props.pagingData} checkboxChecked={(row) => props.selectedItems.some((s) => s.id === row.id)} onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange} onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect} noData={!props.loading && props.data.length === 0} />);
 
 const WallSelectedFooter = ({ selectedItems, deleteConfirmOpen, setDeleteConfirmOpen, onConfirmDelete, isDeleting }: { selectedItems: WallItem[]; deleteConfirmOpen: boolean; setDeleteConfirmOpen: (open: boolean) => void; onConfirmDelete: () => void; isDeleting: boolean; }) => {
   if (selectedItems.length === 0) return null;

@@ -2665,6 +2665,7 @@ const InquiryListTable = () => {
         onClearAll={onClearFilters}
       />
       <DataTable
+        menuName="inquiry"
         selectable
         columns={filteredColumns}
         data={pageData}
