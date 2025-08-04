@@ -1980,7 +1980,7 @@ const Products = () => {
   const { data: rawProductsData = [] } = paginatedData;
 
   const paginationInfo = useMemo(() => ({
-    total: countsData.total ,
+    total: countsData.total,
     active: countsData.active || 0,
     inactive: countsData.inactive || 0,
     pending: countsData.pending || 0,
@@ -2751,9 +2751,9 @@ const Products = () => {
               }
             ></Avatar>
             <Tooltip title={props.row.original.name}>
-              <Link 
-              to={`/product-management/product/${props.row.original.id}`}
-              className="truncate">
+              <Link
+                to={`/product-management/product/${props.row.original.id}`}
+                className="truncate">
                 <span
                   className="font-semibold hover:text-blue-600 cursor-pointer"
                   onClick={() => openViewDetailModal(props.row.original)}
@@ -3026,6 +3026,7 @@ const Products = () => {
           />
           <div className="flex-grow overflow-y-auto">
             <DataTable
+              menuName="products"
               columns={filteredColumns}
               data={pageData}
               loading={tableLoading} // MODIFIED
@@ -3476,7 +3477,7 @@ const Products = () => {
                     name="short_description"
                     control={formControl}
                     render={({ field }) => (
-                       <RichTextEditor
+                      <RichTextEditor
                         content={field.value}
                         onChange={(val) => field.onChange(val.html)}
                         className="flex-grow min-h-[150px] sm:min-h-[200px]"
@@ -3493,7 +3494,7 @@ const Products = () => {
                     name="payment_term"
                     control={formControl}
                     render={({ field }) => (
-                       <RichTextEditor
+                      <RichTextEditor
                         content={field.value}
                         onChange={(val) => field.onChange(val.html)}
                         className="flex-grow min-h-[150px] sm:min-h-[200px]"
@@ -3510,7 +3511,7 @@ const Products = () => {
                     name="delivery_details"
                     control={formControl}
                     render={({ field }) => (
-                       <RichTextEditor
+                      <RichTextEditor
                         content={field.value}
                         onChange={(val) => field.onChange(val.html)}
                         className="flex-grow min-h-[150px] sm:min-h-[200px]"
@@ -3527,7 +3528,7 @@ const Products = () => {
                     name="product_specification"
                     control={formControl}
                     render={({ field }) => (
-                       <RichTextEditor
+                      <RichTextEditor
                         content={field.value}
                         onChange={(val) => field.onChange(val.html)}
                         className="flex-grow min-h-[150px] sm:min-h-[200px]"

@@ -72,7 +72,6 @@ import {
   TbReload,
   TbSearch,
   TbTagStarred,
-  TbTrash,
   TbUser,
   TbUserCircle,
   TbX
@@ -1257,10 +1256,10 @@ const PartnerListTable = () => {
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
               <Link
-             
-               to={
-              `/business-entities/member-view/${id}`
-            }
+
+                to={
+                  `/business-entities/member-view/${id}`
+                }
               >
                 <h6 className="text-xs font-semibold"><em className="text-blue-600">{String(id).padStart(5, '0') || "Partner Code"}</em></h6>
                 <span className="text-xs font-semibold leading-1">{partner_name}</span>
@@ -1366,7 +1365,7 @@ const PartnerListTable = () => {
         </div>
       </div>
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
-      <DataTable selectable columns={filteredColumns} data={pageData} loading={isLoading} noData={pageData.length <= 0} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
+      <DataTable menuName="partner" selectable columns={filteredColumns} data={pageData} loading={isLoading} noData={pageData.length <= 0} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
 
       {/* --- MODIFIED: Filter Drawer UI --- */}
       <Drawer

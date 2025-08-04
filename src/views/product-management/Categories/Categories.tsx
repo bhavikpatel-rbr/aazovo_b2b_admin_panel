@@ -464,6 +464,7 @@ const CategoryTable = ({
   onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect,
 }: CategoryTableProps) => (
   <DataTable
+    menuName="category"
     selectable columns={columns} data={data}
     noData={!loading && data.length === 0} loading={loading}
     pagingData={pagingData}
@@ -588,21 +589,21 @@ const CategoryDetailView = ({
               <Tag className={`${categoryStatusColor[category.status]} capitalize font-semibold text-sm`}>{category.status}</Tag>
             </div>
           </Card>
-           {category.mobileIconFullPath &&
-                <Card>
-                    <div className="p-4 flex flex-col items-center justify-center">
-                        <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Mobile Icon</p>
-                        <Avatar
-                            size={100}
-                            shape="rounded"
-                            src={category.mobileIconFullPath}
-                            icon={<TbPhoto />}
-                            className="border-2 border-white dark:border-gray-600 shadow-md cursor-pointer hover:ring-2 hover:ring-indigo-500"
-                            onClick={() => onImageClick(category.mobileIconFullPath)}
-                        />
-                    </div>
-                </Card>
-            }
+          {category.mobileIconFullPath &&
+            <Card>
+              <div className="p-4 flex flex-col items-center justify-center">
+                <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Mobile Icon</p>
+                <Avatar
+                  size={100}
+                  shape="rounded"
+                  src={category.mobileIconFullPath}
+                  icon={<TbPhoto />}
+                  className="border-2 border-white dark:border-gray-600 shadow-md cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                  onClick={() => onImageClick(category.mobileIconFullPath)}
+                />
+              </div>
+            </Card>
+          }
         </div>
 
         {/* Right Column */}
@@ -610,7 +611,7 @@ const CategoryDetailView = ({
           <Card>
             <div className="p-4">
               <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <TbSitemap/> General Information
+                <TbSitemap /> General Information
               </h6>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-y-5 gap-x-4">
                 <DetailItem icon={<TbCategory2 />} label="Parent Category">
@@ -631,46 +632,46 @@ const CategoryDetailView = ({
 
           <Card>
             <div className="p-4">
-               <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <TbSettings/> Settings
+              <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                <TbSettings /> Settings
               </h6>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-y-5 gap-x-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-5 gap-x-4">
                 <DetailItem icon={<TbLayoutDashboard />} label="Show on Home">
                   {category.showHomePage === 1 ? 'Yes' : 'No'}
                 </DetailItem>
                 <DetailItem icon={<TbWorldWww />} label="Show in Header">
                   {category.showHeader === 1 ? 'Yes' : 'No'}
                 </DetailItem>
-                 <DetailItem icon={<TbCalendarEvent />} label="Coming Soon">
+                <DetailItem icon={<TbCalendarEvent />} label="Coming Soon">
                   {category.comingSoon === 1 ? 'Yes' : 'No'}
                 </DetailItem>
                 {category.showPageName &&
-                    <DetailItem icon={<TbFileText/>} label="Display Page">
-                        {category.showPageName}
-                    </DetailItem>
+                  <DetailItem icon={<TbFileText />} label="Display Page">
+                    {category.showPageName}
+                  </DetailItem>
                 }
-               </div>
+              </div>
             </div>
           </Card>
 
           {(category.metaTitle || category.metaDescription || category.metaKeyword) && (
             <Card>
-                <div className="p-4">
-                    <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                        <TbSeo /> SEO & Meta
-                    </h6>
-                    <div className="space-y-4">
-                        <DetailItem icon={<TbTypography/>} label="Meta Title">
-                            {category.metaTitle || <span className="text-gray-400 dark:text-gray-500">—</span>}
-                        </DetailItem>
-                         <DetailItem icon={<TbFileText/>} label="Meta Description">
-                            {category.metaDescription || <span className="text-gray-400 dark:text-gray-500">—</span>}
-                        </DetailItem>
-                         <DetailItem icon={<TbTags/>} label="Meta Keywords">
-                            {category.metaKeyword || <span className="text-gray-400 dark:text-gray-500">—</span>}
-                        </DetailItem>
-                    </div>
+              <div className="p-4">
+                <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                  <TbSeo /> SEO & Meta
+                </h6>
+                <div className="space-y-4">
+                  <DetailItem icon={<TbTypography />} label="Meta Title">
+                    {category.metaTitle || <span className="text-gray-400 dark:text-gray-500">—</span>}
+                  </DetailItem>
+                  <DetailItem icon={<TbFileText />} label="Meta Description">
+                    {category.metaDescription || <span className="text-gray-400 dark:text-gray-500">—</span>}
+                  </DetailItem>
+                  <DetailItem icon={<TbTags />} label="Meta Keywords">
+                    {category.metaKeyword || <span className="text-gray-400 dark:text-gray-500">—</span>}
+                  </DetailItem>
                 </div>
+              </div>
             </Card>
           )}
         </div>
@@ -857,7 +858,7 @@ const Categories = () => {
     if (category.webIconFullPath) setEditWebIconPreview(category.webIconFullPath);
     if (category.mobileIconFullPath) setEditMobileIconPreview(category.mobileIconFullPath);
     if (category.bannerIconFullPath) setEditBannerPreview(category.bannerIconFullPath);
-    
+
     setActiveEditTab('general'); // Reset to general tab
     setEditDrawerOpen(true);
   };
@@ -1310,117 +1311,117 @@ const Categories = () => {
 
       {/* Add Category Drawer */}
       <Drawer
-          title="Add Category"
-          width={480}
-          isOpen={isAddDrawerOpen}
-          onClose={closeAddCategoryDrawer}
-          onRequestClose={closeAddCategoryDrawer}
-          bodyClass="p-0"
-          footer={
-              <div className="text-right w-full">
-                  <Button size="sm" className="mr-2" onClick={closeAddCategoryDrawer} disabled={isSubmitting}>Cancel</Button>
-                  <Button size="sm" variant="solid" form="addCategoryForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}>
-                      {isSubmitting ? "Adding..." : "Save"}
-                  </Button>
-              </div>
-          }
+        title="Add Category"
+        width={480}
+        isOpen={isAddDrawerOpen}
+        onClose={closeAddCategoryDrawer}
+        onRequestClose={closeAddCategoryDrawer}
+        bodyClass="p-0"
+        footer={
+          <div className="text-right w-full">
+            <Button size="sm" className="mr-2" onClick={closeAddCategoryDrawer} disabled={isSubmitting}>Cancel</Button>
+            <Button size="sm" variant="solid" form="addCategoryForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}>
+              {isSubmitting ? "Adding..." : "Save"}
+            </Button>
+          </div>
+        }
       >
-          <div className="border-b border-gray-200 dark:border-gray-600 px-4">
-              <div className="flex -mb-px">
-                  <button
-                      type="button"
-                      onClick={() => setActiveAddTab('general')}
-                      className={classNames(
-                          "mr-4 py-3 px-1 text-sm font-medium focus:outline-none",
-                          activeAddTab === 'general'
-                              ? "text-indigo-600 dark:text-indigo-300 border-b-2 border-indigo-500"
-                              : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border-b-2 border-transparent"
-                      )}
-                  >
-                      General
-                  </button>
-                  <button
-                      type="button"
-                      onClick={() => setActiveAddTab('meta')}
-                      className={classNames(
-                          "py-3 px-1 text-sm font-medium focus:outline-none",
-                          activeAddTab === 'meta'
-                              ? "text-indigo-600 dark:text-indigo-300 border-b-2 border-indigo-500"
-                              : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border-b-2 border-transparent"
-                      )}
-                  >
-                      Meta Options
-                  </button>
+        <div className="border-b border-gray-200 dark:border-gray-600 px-4">
+          <div className="flex -mb-px">
+            <button
+              type="button"
+              onClick={() => setActiveAddTab('general')}
+              className={classNames(
+                "mr-4 py-3 px-1 text-sm font-medium focus:outline-none",
+                activeAddTab === 'general'
+                  ? "text-indigo-600 dark:text-indigo-300 border-b-2 border-indigo-500"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border-b-2 border-transparent"
+              )}
+            >
+              General
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveAddTab('meta')}
+              className={classNames(
+                "py-3 px-1 text-sm font-medium focus:outline-none",
+                activeAddTab === 'meta'
+                  ? "text-indigo-600 dark:text-indigo-300 border-b-2 border-indigo-500"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border-b-2 border-transparent"
+              )}
+            >
+              Meta Options
+            </button>
+          </div>
+        </div>
+        <div className="p-4 h-full overflow-y-auto">
+          <Form id="addCategoryForm" onSubmit={addFormMethods.handleSubmit(onAddCategorySubmit)}>
+            <div style={{ display: activeAddTab === 'general' ? 'block' : 'none' }}>
+              <div className="flex flex-col gap-3">
+                <FormItem label={<div>Category Name<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.name} errorMessage={addFormMethods.formState.errors.name?.message} isRequired> <Controller name="name" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Category Name" />} /> </FormItem>
+                <FormItem label={<div>Slug/URL<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.slug} errorMessage={addFormMethods.formState.errors.slug?.message} isRequired> <Controller name="slug" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter category-slug" />} /> </FormItem>
+                <FormItem label="Parent Category" invalid={!!addFormMethods.formState.errors.parent_category} errorMessage={addFormMethods.formState.errors.parent_category?.message as string}> <Controller name="parent_category" control={addFormMethods.control} render={({ field }) => <UiSelect placeholder="Select Parent or None" options={parentCategoryOptions} value={parentCategoryOptions.find(opt => opt.value === field.value)} onChange={option => field.onChange(option ? option.value : null)} isClearable />} /> </FormItem>
+
+                <div className="flex gap-2">
+                  <FormItem className="w-full" label={<div>Web Icon (467 X 250)<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.web_icon} errorMessage={addFormMethods.formState.errors.web_icon?.message as string}>
+                    <Controller name="web_icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) =>
+                      <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const file = e.target.files?.[0] || null;
+                        onChange(file);
+                        if (addWebIconPreview) URL.revokeObjectURL(addWebIconPreview);
+                        setAddWebIconPreview(file ? URL.createObjectURL(file) : null);
+                      }} accept="image/*" />} />
+                  </FormItem>
+                  {addWebIconPreview && <div className="mt-2"><Avatar src={addWebIconPreview} size={70} className="rounded-sm" icon={<TbPhoto />} /></div>}
+                </div>
+
+                <div className="flex gap-2">
+                  <FormItem className="w-full" label={<div>Mobile Icon (500 X 500)<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.mobile_icon} errorMessage={addFormMethods.formState.errors.mobile_icon?.message as string}>
+                    <Controller name="mobile_icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) =>
+                      <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const file = e.target.files?.[0] || null;
+                        onChange(file);
+                        if (addMobileIconPreview) URL.revokeObjectURL(addMobileIconPreview);
+                        setAddMobileIconPreview(file ? URL.createObjectURL(file) : null);
+                      }} accept="image/*" />} />
+                  </FormItem>
+                  {addMobileIconPreview && <div className="mt-2"><Avatar src={addMobileIconPreview} size={70} className="rounded-sm" icon={<TbPhoto />} /></div>}
+                </div>
+
+                <FormItem
+                  label={<div>Category Banner (Recommended: 1920x400)<span className="text-red-500"> * </span></div>}
+                  invalid={!!addFormMethods.formState.errors.category_icon}
+                  errorMessage={addFormMethods.formState.errors.category_icon?.message as string}
+                >
+                  <Controller name="category_icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) =>
+                    <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const file = e.target.files?.[0] || null;
+                      onChange(file);
+                      if (addBannerIconPreview) URL.revokeObjectURL(addBannerIconPreview);
+                      setAddBannerIconPreview(file ? URL.createObjectURL(file) : null);
+                    }} accept="image/*" />} />
+                  {addBannerIconPreview && <div className="mt-2 border border-gray-200 rounded-md"><img src={addBannerIconPreview} alt="Banner Preview" style={{ width: '100%', maxHeight: '150px', objectFit: 'contain', borderRadius: '4px' }} /></div>}
+                </FormItem>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <FormItem label="Show on Home Page?" invalid={!!addFormMethods.formState.errors.show_home_page} errorMessage={addFormMethods.formState.errors.show_home_page?.message} isRequired> <Controller name="show_home_page" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
+                  <FormItem label="Show in Header?" invalid={!!addFormMethods.formState.errors.show_header} errorMessage={addFormMethods.formState.errors.show_header?.message} isRequired> <Controller name="show_header" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <FormItem label="Coming Soon?" invalid={!!addFormMethods.formState.errors.comingsoon} errorMessage={addFormMethods.formState.errors.comingsoon?.message} isRequired> <Controller name="comingsoon" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
+                  <FormItem label="Status" invalid={!!addFormMethods.formState.errors.status} errorMessage={addFormMethods.formState.errors.status?.message} isRequired> <Controller name="status" control={addFormMethods.control} render={({ field }) => <UiSelect options={apiCategoryStatusOptions} value={apiCategoryStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
+                </div>
               </div>
-          </div>
-          <div className="p-4 h-full overflow-y-auto">
-              <Form id="addCategoryForm" onSubmit={addFormMethods.handleSubmit(onAddCategorySubmit)}>
-                  <div style={{ display: activeAddTab === 'general' ? 'block' : 'none' }}>
-                      <div className="flex flex-col gap-3">
-                        <FormItem label={<div>Category Name<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.name} errorMessage={addFormMethods.formState.errors.name?.message} isRequired> <Controller name="name" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Category Name" />} /> </FormItem>
-                        <FormItem label={<div>Slug/URL<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.slug} errorMessage={addFormMethods.formState.errors.slug?.message} isRequired> <Controller name="slug" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter category-slug" />} /> </FormItem>
-                        <FormItem label="Parent Category" invalid={!!addFormMethods.formState.errors.parent_category} errorMessage={addFormMethods.formState.errors.parent_category?.message as string}> <Controller name="parent_category" control={addFormMethods.control} render={({ field }) => <UiSelect placeholder="Select Parent or None" options={parentCategoryOptions} value={parentCategoryOptions.find(opt => opt.value === field.value)} onChange={option => field.onChange(option ? option.value : null)} isClearable />} /> </FormItem>
-
-                        <div className="flex gap-2">
-                          <FormItem className="w-full" label={<div>Web Icon (467 X 250)<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.web_icon} errorMessage={addFormMethods.formState.errors.web_icon?.message as string}>
-                            <Controller name="web_icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) =>
-                              <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                const file = e.target.files?.[0] || null;
-                                onChange(file);
-                                if (addWebIconPreview) URL.revokeObjectURL(addWebIconPreview);
-                                setAddWebIconPreview(file ? URL.createObjectURL(file) : null);
-                              }} accept="image/*" />} />
-                          </FormItem>
-                          {addWebIconPreview && <div className="mt-2"><Avatar src={addWebIconPreview} size={70} className="rounded-sm" icon={<TbPhoto />} /></div>}
-                        </div>
-
-                        <div className="flex gap-2">
-                          <FormItem className="w-full" label={<div>Mobile Icon (500 X 500)<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.mobile_icon} errorMessage={addFormMethods.formState.errors.mobile_icon?.message as string}>
-                            <Controller name="mobile_icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) =>
-                              <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                const file = e.target.files?.[0] || null;
-                                onChange(file);
-                                if (addMobileIconPreview) URL.revokeObjectURL(addMobileIconPreview);
-                                setAddMobileIconPreview(file ? URL.createObjectURL(file) : null);
-                              }} accept="image/*" />} />
-                          </FormItem>
-                          {addMobileIconPreview && <div className="mt-2"><Avatar src={addMobileIconPreview} size={70} className="rounded-sm" icon={<TbPhoto />} /></div>}
-                        </div>
-
-                        <FormItem
-                          label={<div>Category Banner (Recommended: 1920x400)<span className="text-red-500"> * </span></div>}
-                          invalid={!!addFormMethods.formState.errors.category_icon}
-                          errorMessage={addFormMethods.formState.errors.category_icon?.message as string}
-                        >
-                          <Controller name="category_icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) =>
-                            <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                              const file = e.target.files?.[0] || null;
-                              onChange(file);
-                              if (addBannerIconPreview) URL.revokeObjectURL(addBannerIconPreview);
-                              setAddBannerIconPreview(file ? URL.createObjectURL(file) : null);
-                            }} accept="image/*" />} />
-                          {addBannerIconPreview && <div className="mt-2 border border-gray-200 rounded-md"><img src={addBannerIconPreview} alt="Banner Preview" style={{ width: '100%', maxHeight: '150px', objectFit: 'contain', borderRadius: '4px' }} /></div>}
-                        </FormItem>
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <FormItem label="Show on Home Page?" invalid={!!addFormMethods.formState.errors.show_home_page} errorMessage={addFormMethods.formState.errors.show_home_page?.message} isRequired> <Controller name="show_home_page" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
-                          <FormItem label="Show in Header?" invalid={!!addFormMethods.formState.errors.show_header} errorMessage={addFormMethods.formState.errors.show_header?.message} isRequired> <Controller name="show_header" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <FormItem label="Coming Soon?" invalid={!!addFormMethods.formState.errors.comingsoon} errorMessage={addFormMethods.formState.errors.comingsoon?.message} isRequired> <Controller name="comingsoon" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
-                          <FormItem label="Status" invalid={!!addFormMethods.formState.errors.status} errorMessage={addFormMethods.formState.errors.status?.message} isRequired> <Controller name="status" control={addFormMethods.control} render={({ field }) => <UiSelect options={apiCategoryStatusOptions} value={apiCategoryStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
-                        </div>
-                      </div>
-                  </div>
-                  <div style={{ display: activeAddTab === 'meta' ? 'block' : 'none' }}>
-                    <div className="flex flex-col gap-3">
-                      <FormItem label={<div>Meta Title<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.meta_title} errorMessage={addFormMethods.formState.errors.meta_title?.message}> <Controller name="meta_title" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Title" />} /> </FormItem>
-                      <FormItem label={<div>Meta Description<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.meta_descr} errorMessage={addFormMethods.formState.errors.meta_descr?.message}> <Controller name="meta_descr" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Meta Description" />} /> </FormItem>
-                      <FormItem label="Meta Keywords" invalid={!!addFormMethods.formState.errors.meta_keyword} errorMessage={addFormMethods.formState.errors.meta_keyword?.message}> <Controller name="meta_keyword" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Keywords (comma-separated)" />} /> </FormItem>
-                    </div>
-                  </div>
-              </Form>
-          </div>
+            </div>
+            <div style={{ display: activeAddTab === 'meta' ? 'block' : 'none' }}>
+              <div className="flex flex-col gap-3">
+                <FormItem label={<div>Meta Title<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.meta_title} errorMessage={addFormMethods.formState.errors.meta_title?.message}> <Controller name="meta_title" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Title" />} /> </FormItem>
+                <FormItem label={<div>Meta Description<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.meta_descr} errorMessage={addFormMethods.formState.errors.meta_descr?.message}> <Controller name="meta_descr" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Meta Description" />} /> </FormItem>
+                <FormItem label="Meta Keywords" invalid={!!addFormMethods.formState.errors.meta_keyword} errorMessage={addFormMethods.formState.errors.meta_keyword?.message}> <Controller name="meta_keyword" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Keywords (comma-separated)" />} /> </FormItem>
+              </div>
+            </div>
+          </Form>
+        </div>
       </Drawer>
 
       {/* Edit Category Drawer */}
@@ -1441,32 +1442,32 @@ const Categories = () => {
         }
       >
         <div className="border-b border-gray-200 dark:border-gray-600 px-4">
-            <div className="flex -mb-px">
-                <button
-                    type="button"
-                    onClick={() => setActiveEditTab('general')}
-                    className={classNames(
-                        "mr-4 py-3 px-1 text-sm font-medium focus:outline-none",
-                        activeEditTab === 'general'
-                            ? "text-indigo-600 dark:text-indigo-300 border-b-2 border-indigo-500"
-                            : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border-b-2 border-transparent"
-                    )}
-                >
-                    General
-                </button>
-                <button
-                    type="button"
-                    onClick={() => setActiveEditTab('meta')}
-                    className={classNames(
-                        "py-3 px-1 text-sm font-medium focus:outline-none",
-                        activeEditTab === 'meta'
-                            ? "text-indigo-600 dark:text-indigo-300 border-b-2 border-indigo-500"
-                            : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border-b-2 border-transparent"
-                    )}
-                >
-                    Meta Options
-                </button>
-            </div>
+          <div className="flex -mb-px">
+            <button
+              type="button"
+              onClick={() => setActiveEditTab('general')}
+              className={classNames(
+                "mr-4 py-3 px-1 text-sm font-medium focus:outline-none",
+                activeEditTab === 'general'
+                  ? "text-indigo-600 dark:text-indigo-300 border-b-2 border-indigo-500"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border-b-2 border-transparent"
+              )}
+            >
+              General
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveEditTab('meta')}
+              className={classNames(
+                "py-3 px-1 text-sm font-medium focus:outline-none",
+                activeEditTab === 'meta'
+                  ? "text-indigo-600 dark:text-indigo-300 border-b-2 border-indigo-500"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border-b-2 border-transparent"
+              )}
+            >
+              Meta Options
+            </button>
+          </div>
         </div>
         <div className="p-4 h-full overflow-y-auto">
           <Form id="editCategoryForm" onSubmit={editFormMethods.handleSubmit(onEditCategorySubmit)}>
@@ -1529,11 +1530,11 @@ const Categories = () => {
               </div>
             </div>
             <div style={{ display: activeEditTab === 'meta' ? 'block' : 'none' }}>
-                <div className="flex flex-col gap-4">
-                  <FormItem label={<div>Meta Title<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.meta_title} errorMessage={editFormMethods.formState.errors.meta_title?.message}> <Controller name="meta_title" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} /> </FormItem>
-                  <FormItem label={<div>Meta Description<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.meta_descr} errorMessage={editFormMethods.formState.errors.meta_descr?.message}> <Controller name="meta_descr" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea />} /> </FormItem>
-                  <FormItem label="Meta Keywords" invalid={!!editFormMethods.formState.errors.meta_keyword} errorMessage={editFormMethods.formState.errors.meta_keyword?.message}> <Controller name="meta_keyword" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} /> </FormItem>
-                </div>
+              <div className="flex flex-col gap-4">
+                <FormItem label={<div>Meta Title<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.meta_title} errorMessage={editFormMethods.formState.errors.meta_title?.message}> <Controller name="meta_title" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} /> </FormItem>
+                <FormItem label={<div>Meta Description<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.meta_descr} errorMessage={editFormMethods.formState.errors.meta_descr?.message}> <Controller name="meta_descr" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea />} /> </FormItem>
+                <FormItem label="Meta Keywords" invalid={!!editFormMethods.formState.errors.meta_keyword} errorMessage={editFormMethods.formState.errors.meta_keyword?.message}> <Controller name="meta_keyword" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} /> </FormItem>
+              </div>
             </div>
           </Form>
         </div>
@@ -1574,7 +1575,7 @@ const Categories = () => {
       <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} title="Category Image" width={600}>
         <div className="flex justify-center items-center p-4"> {imageToView ? <img src={imageToView} alt="Category Image Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} /> : <p>No image.</p>} </div>
       </Dialog>
-      
+
       <ConfirmDialog
         isOpen={isExportReasonModalOpen}
         type="info"
@@ -1618,7 +1619,7 @@ const Categories = () => {
           </FormItem>
         </Form>
       </ConfirmDialog>
-      
+
       <Dialog
         isOpen={isImportModalOpen}
         onClose={closeImportModal}
