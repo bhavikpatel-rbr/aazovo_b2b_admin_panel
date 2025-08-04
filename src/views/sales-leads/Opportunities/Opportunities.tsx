@@ -3537,55 +3537,62 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
   };
   const currentSelectedItems = selectedItems[currentTab] || [];
 
-  const autoSpbTableData = useMemo<OpportunityItem[]>(() => {
-    const autoSpbData = autoMatchData?.data;
-    if (!autoSpbData) return [];
+ const autoSpbTableData = useMemo<OpportunityItem[]>(() => {
+  // Access the core data object from the response
+  const autoSpbData = autoMatchData?.data;
+  if (!autoSpbData) return [];
 
-    const transformedData: OpportunityItem[] = [];
-    const autospbNumber = autoMatchData?.autospbNumber || "N/A";
+  const transformedData: OpportunityItem[] = [];
+  const autospbNumber = autoMatchData?.autospbNumber || "N/A";
 
-    for (const groupId in autoSpbData) {
-      const group = autoSpbData[groupId];
-      const buyItems = group.Buy || [];
-      const sellItems = group.Sell || [];
-      const allItems = [...buyItems, ...sellItems];
-      if (allItems.length === 0) continue;
+  // Loop through each product group (the key is the product_id)
+  for (const groupId in autoSpbData) {
+    const group = autoSpbData[groupId];
+    
+    // Use lowercase 'buy' and 'sell' as per the new object reference
+    const buyItems = group.buy || [];
+    const sellItems = group.sell || [];
+    const allItems = [...buyItems, ...sellItems];
 
-      const representativeItem = allItems[0];
-      const totalqty = allItems.reduce(
-        (sum, item) => sum + (parseInt(item.qty, 10) || 0),
-        0
-      );
-      const productNames = [
-        ...new Set(
-          allItems.map((i) => i.product_name || i.brand_name).filter(Boolean)
-        ),
-      ];
+    // Skip if there are no buy or sell items in this group
+    if (allItems.length === 0) continue;
 
-      const matchRow: OpportunityItem = {
-        id: `spb-match-${groupId}`,
-        opportunity_id: `ASPB-${autospbNumber}-${groupId}`,
-        product_name: productNames.join(", ") || `Match Group ${groupId}`,
-        status: "active",
-        opportunity_status: "Shortlisted",
-        match_score: 88,
-        created_date: representativeItem.created_at,
-        spb_role: "Match",
-        want_to: "Exchange",
-        company_name: `Buyers: ${buyItems.length}`,
-        customer_name: `Sellers: ${sellItems.length}`,
-        member_type: "SPB Match",
-        qty: totalqty,
-        brand: representativeItem.brand_name || undefined,
-        _rawSpbBuyItems: buyItems,
-        _rawSpbSellItems: sellItems,
-        listing_url: null,
-      };
-      transformedData.push(matchRow);
-    }
-    return transformedData;
-  }, [autoMatchData]);
+    // A representative item to get common details like creation date
+    const representativeItem = allItems[0];
 
+    // Calculate the total quantity for the match group
+    const totalqty = allItems.reduce(
+      (sum, item) => sum + (Number(item.qty) || 0),
+      0
+    );
+
+    // Get the product name directly from the group object
+    const productName = group.product_name || `Match Group ${groupId}`;
+
+    const matchRow: OpportunityItem = {
+      id: `spb-match-${groupId}`,
+      opportunity_id: `ASPB-${autospbNumber}-${groupId}`,
+      product_name: productName,
+      status: "active",
+      opportunity_status: "Shortlisted",
+      match_score: 88, // Assuming this is a default/placeholder value
+      created_date: representativeItem.created_at,
+      spb_role: "Match",
+      want_to: "Exchange",
+      company_name: `Buyers: ${buyItems.length}`,
+      customer_name: `Sellers: ${sellItems.length}`,
+      member_type: "SPB Match",
+      qty: totalqty,
+      // The new data has a 'brand' key, not 'brand_name'
+      brand: representativeItem.brand || undefined,
+      _rawSpbBuyItems: buyItems,
+      _rawSpbSellItems: sellItems,
+      listing_url: null,
+    };
+    transformedData.push(matchRow);
+  }
+  return transformedData;
+}, [autoMatchData]);
   // SERVER-SIDE CHANGE: This hook now handles both client-side (for AUTO_MATCH) and server-side data.
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     // Client-side logic for the AUTO_MATCH tab remains
