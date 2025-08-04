@@ -3036,7 +3036,7 @@ const SpbSummaryRow: React.FC<SpbSummaryRowProps> = ({
 }) => {
   console.log(item, 'item');
 
-  const memberName = `Member: ${item.member_code}` || `Member ID: ${item.id}`;
+  const memberName = `Member: (${item.customer_code}) ${item.customer_name}` || `Member ID: ${item.customer_id}`;
   const memberPhone = `Phone: ${item.mobile_no || 'N/A'}`;
   // const createDate = `Date: ${formatCustomDateTime(item.created_at)}`;
   const prodColor = `Color: ${item.color}`;
