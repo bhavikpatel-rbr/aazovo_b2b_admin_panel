@@ -255,7 +255,7 @@ function DataTable<T>(props: DataTableProps<T>) {
         );
     };
 
-    console.log(getMenuRights(menuName)?.is_view, "getMenuRights(menuName)?.is_view", menuName);
+    console.log(getMenuRights(menuName)?.is_view, "getMenuRights(menuName)?.is_view", menuName, getMenuRights(menuName)?.useRights);
     
     return (
         <>

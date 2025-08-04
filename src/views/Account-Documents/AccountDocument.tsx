@@ -270,9 +270,8 @@ const PendingLeadViewModal = ({
               {renderDetail(
                 "Status",
                 <Tag
-                  className={`${
-                    leadStatusColor[lead.status] || leadStatusColor.default
-                  } capitalize`}
+                  className={`${leadStatusColor[lead.status] || leadStatusColor.default
+                    } capitalize`}
                 >
                   {lead.status}
                 </Tag>
@@ -894,13 +893,11 @@ const AddNotificationDialog = ({
   } = useForm<NotificationFormData>({
     resolver: zodResolver(notificationSchema),
     defaultValues: {
-      notification_title: `Regarding Document: ${
-        document.documentNumber || document.document_number
-      }`,
+      notification_title: `Regarding Document: ${document.documentNumber || document.document_number
+        }`,
       send_users: [],
-      message: `This is a notification for document number "${
-        document.documentNumber || document.document_number
-      }" for company "${document.companyName || document.company?.company_name}".`,
+      message: `This is a notification for document number "${document.documentNumber || document.document_number
+        }" for company "${document.companyName || document.company?.company_name}".`,
     },
     mode: "onChange",
   });
@@ -1015,15 +1012,13 @@ const AddScheduleDialog: React.FC<any> = ({ document, onClose }) => {
   } = useForm<ScheduleFormData>({
     resolver: zodResolver(scheduleSchema),
     defaultValues: {
-      event_title: `Follow-up on Document ${
-        document.documentNumber || document.document_number
-      }`,
+      event_title: `Follow-up on Document ${document.documentNumber || document.document_number
+        }`,
       event_type: undefined,
       date_time: null as any,
       remind_from: null,
-      notes: `Regarding document for ${
-        document.companyName || document.company?.company_name
-      } (Lead: ${document.leadNumber || "N/A"})`,
+      notes: `Regarding document for ${document.companyName || document.company?.company_name
+        } (Lead: ${document.leadNumber || "N/A"})`,
     },
     mode: "onChange",
   });
@@ -1046,9 +1041,8 @@ const AddScheduleDialog: React.FC<any> = ({ document, onClose }) => {
         <Notification
           type="success"
           title="Event Scheduled"
-          children={`Successfully scheduled event for document ${
-            document.documentNumber || document.document_number
-          }.`}
+          children={`Successfully scheduled event for document ${document.documentNumber || document.document_number
+            }.`}
         />
       );
       onClose();
@@ -1335,9 +1329,8 @@ const ViewDocumentDialog = ({
                         />
                         <DetailItem
                           label="Phone"
-                          value={`${
-                            company.primary_contact_number_code || ""
-                          } ${company.primary_contact_number || ""}`.trim()}
+                          value={`${company.primary_contact_number_code || ""
+                            } ${company.primary_contact_number || ""}`.trim()}
                         />
                         <DetailItem label="GST" value={company.gst_number} />
                       </div>
@@ -1356,9 +1349,8 @@ const ViewDocumentDialog = ({
                         <DetailItem label="Email" value={member.email} />
                         <DetailItem
                           label="Phone"
-                          value={`${member.customer_code || ""} ${
-                            member.number || ""
-                          }`.trim()}
+                          value={`${member.customer_code || ""} ${member.number || ""
+                            }`.trim()}
                         />
                         <DetailItem
                           label="Business Type"
@@ -1469,17 +1461,17 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
   const DocumentListDataOptions =
     DocumentListData.length > 0
       ? DocumentListData.map((p: any) => ({
-          value: p.id,
-          label: p.name,
-        }))
+        value: p.id,
+        label: p.name,
+      }))
       : [];
 
   const tokenFormDataOptions =
     tokenForm.length > 0
       ? tokenForm?.map((p: any) => ({
-          value: p.id,
-          label: p.form_title,
-        }))
+        value: p.id,
+        label: p.form_title,
+      }))
       : [];
 
   const EmployyDataOptions =
@@ -2820,9 +2812,9 @@ const AccountDocument = () => {
     () =>
       Array.isArray(getAllUserData)
         ? getAllUserData.map((b: any) => ({
-            value: b.id,
-            label: `(${b.employee_id}) - ${b.name || "N/A"}`,
-          }))
+          value: b.id,
+          label: `(${b.employee_id}) - ${b.name || "N/A"}`,
+        }))
         : [],
     [getAllUserData]
   );
@@ -3225,12 +3217,11 @@ const AccountDocument = () => {
         size: 120,
         cell: (props: CellContext<AccountDocumentListItem, any>) => (
           <Tag
-            className={`${
-              accountDocumentStatusColor[
-                props.row.original
-                  .status as keyof typeof accountDocumentStatusColor
+            className={`${accountDocumentStatusColor[
+              props.row.original
+                .status as keyof typeof accountDocumentStatusColor
               ] || "bg-gray-100"
-            } capitalize px-2 py-1 text-xs`}
+              } capitalize px-2 py-1 text-xs`}
           >
             {props.row.original.status.replace(/_/g, " ")}
           </Tag>
@@ -3514,6 +3505,7 @@ const AccountDocument = () => {
           />
           <div className="mt-4 flex-grow overflow-y-auto">
             <AccountDocumentTable
+              menuName="account_documents"
               selectable
               columns={filteredColumns}
               data={pageData}
