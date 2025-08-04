@@ -1361,7 +1361,8 @@ const PartnerListTable = () => {
             Filter
             {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}
           </Button>
-          <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={!allFilteredAndSortedData.length}>Export</Button>
+          <Button menuName="partner"
+            isExport={true} icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={!allFilteredAndSortedData.length}>Export</Button>
         </div>
       </div>
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
@@ -1512,7 +1513,8 @@ const Partner = () => {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
               <h5>Partner</h5>
               <div className="flex flex-col md:flex-row gap-3">
-                <Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={() => navigate("/business-entities/create-partner")}>
+                <Button menuName="partner"
+                  isAdd={true} variant="solid" icon={<TbPlus className="text-lg" />} onClick={() => navigate("/business-entities/create-partner")}>
                   Add New Partner
                 </Button>
               </div>

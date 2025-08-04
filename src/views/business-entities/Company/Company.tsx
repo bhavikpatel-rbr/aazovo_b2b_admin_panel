@@ -3763,16 +3763,16 @@ const CompanyListTable = () => {
               {PendingBillData?.data?.length || 0}
             </span>
           </div>
-          {
-            getMenuRights("company")?.is_add && (
-              <Button
-                variant="solid"
-                icon={<TbPlus className="text-lg" />}
-                onClick={() => navigate("/business-entities/company-create")}
-              >
-                Add New
-              </Button>)
-          }
+
+          <Button
+            menuName="company"
+            isAdd={true}
+            variant="solid"
+            icon={<TbPlus className="text-lg" />}
+            onClick={() => navigate("/business-entities/company-create")}
+          >
+            Add New
+          </Button>
         </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
@@ -3967,17 +3967,17 @@ const CompanyListTable = () => {
               </span>
             )}
           </Button>
-          {
-            getMenuRights("company")?.is_export && (<Button
-              icon={<TbCloudUpload />}
-              onClick={handleOpenExportReasonModal}
-              disabled={
-                !allFilteredAndSortedData || allFilteredAndSortedData.length === 0
-              }
-            >
-              Export
-            </Button>)
-          }
+          <Button
+            isExport={true}
+            menuName="company"
+            icon={<TbCloudUpload />}
+            onClick={handleOpenExportReasonModal}
+            disabled={
+              !allFilteredAndSortedData || allFilteredAndSortedData.length === 0
+            }
+          >
+            Export
+          </Button>
         </div>
       </div>
       <ActiveFiltersDisplay

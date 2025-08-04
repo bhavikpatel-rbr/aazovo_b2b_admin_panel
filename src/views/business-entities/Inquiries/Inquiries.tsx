@@ -2650,7 +2650,8 @@ const InquiryListTable = () => {
               </span>
             )}
           </Button>
-          <Button
+          <Button menuName="inquiry"
+            isExport={true}
             icon={<TbCloudUpload />}
             onClick={handleExport}
             disabled={allFilteredAndSortedData.length === 0}
@@ -3109,6 +3110,8 @@ const Inquiries = () => {
                 <h5>Inquiries</h5>
                 <div className="flex flex-col md:flex-row gap-3">
                   <Button
+                    menuName="inquiry"
+                    isAdd={true}
                     variant="solid"
                     icon={<TbPlus className="text-lg" />}
                     onClick={() => {

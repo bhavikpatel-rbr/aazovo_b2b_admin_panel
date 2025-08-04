@@ -226,7 +226,8 @@ const BrandTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, c
         </Dropdown>
         <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
         <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
-        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+        <Button menuName="brands"
+          isExport={true} icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
       </div>
     </div>
   )
@@ -555,7 +556,8 @@ const Brands = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h3 className="mb-4 sm:mb-0">Brands</h3>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} className="w-full sm:w-auto mt-2 sm:mt-0">Add Brand</Button>
+            <Button menuName="brands"
+              isAdd={true} variant="solid" icon={<TbPlus />} onClick={openAddDrawer} className="w-full sm:w-auto mt-2 sm:mt-0">Add Brand</Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 mb-4 gap-4">
             <Tooltip title="Click to show all brands"><div onClick={() => handleCardClick('all')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbBrandRedux size={20} /></div><div><h6 className="text-sm">{(mappedBrands || []).length}</h6><span className="text-xs">Total</span></div></Card></div></Tooltip>

@@ -288,7 +288,7 @@ const ExcelViewerModal: React.FC<{ isOpen: boolean; onClose: () => void; fileUrl
 
         try {
           const response = await fetch(fileUrl);
-          
+
           if (!response.ok) {
             throw new Error(`Could not find the file at '${fileUrl}'. (HTTP Status: ${response.status}). Please ensure the file is in the 'public' directory and the dev server has been restarted.`);
           }
@@ -298,7 +298,7 @@ const ExcelViewerModal: React.FC<{ isOpen: boolean; onClose: () => void; fileUrl
 
           const arrayBuffer = await response.arrayBuffer();
           const workbook = XLSX.read(arrayBuffer, { type: 'buffer' });
-          
+
           const parsedSheets: ExcelSheet[] = workbook.SheetNames.map(sheetName => {
             const worksheet = workbook.Sheets[sheetName];
             // Using { defval: "" } ensures that empty cells are represented as empty strings instead of being omitted.
@@ -318,7 +318,7 @@ const ExcelViewerModal: React.FC<{ isOpen: boolean; onClose: () => void; fileUrl
           setIsLoading(false);
         }
       };
-      
+
       loadExcelFile();
     }
   }, [isOpen, fileUrl]);
@@ -350,10 +350,10 @@ const ExcelViewerModal: React.FC<{ isOpen: boolean; onClose: () => void; fileUrl
 
         {error && (
           <div className="flex-grow flex flex-col items-center justify-center text-center p-8">
-             <TbFileSearch className="text-6xl text-red-400 mb-4" />
+            <TbFileSearch className="text-6xl text-red-400 mb-4" />
             <h6 className="text-red-500">Error Loading File</h6>
             <p className="max-w-md text-gray-600 dark:text-gray-300">{error}</p>
-             <p className="mt-4 text-xs text-gray-400">Please verify the file <code>{fileUrl}</code> in your project's <code>public</code> folder is a valid, uncorrupted Excel file.</p>
+            <p className="mt-4 text-xs text-gray-400">Please verify the file <code>{fileUrl}</code> in your project's <code>public</code> folder is a valid, uncorrupted Excel file.</p>
           </div>
         )}
 
@@ -362,17 +362,17 @@ const ExcelViewerModal: React.FC<{ isOpen: boolean; onClose: () => void; fileUrl
             {sheets.length > 1 && (
               <div className="flex-shrink-0 p-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                 <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm mr-2">Sheets:</span>
-                    {sheets.map((sheet, index) => (
+                  <span className="font-semibold text-sm mr-2">Sheets:</span>
+                  {sheets.map((sheet, index) => (
                     <Button
-                        key={sheet.name}
-                        size="xs"
-                        variant={index === activeSheetIndex ? 'solid' : 'default'}
-                        onClick={() => setActiveSheetIndex(index)}
+                      key={sheet.name}
+                      size="xs"
+                      variant={index === activeSheetIndex ? 'solid' : 'default'}
+                      onClick={() => setActiveSheetIndex(index)}
                     >
-                        {sheet.name}
+                      {sheet.name}
                     </Button>
-                    ))}
+                  ))}
                 </div>
               </div>
             )}
@@ -394,7 +394,7 @@ const ExcelViewerModal: React.FC<{ isOpen: boolean; onClose: () => void; fileUrl
                       ))}
                     </Tr>
                   )) : (
-                     <Tr><Td colSpan={headers.length || 1} className="text-center py-8">No data found in this sheet.</Td></Tr>
+                    <Tr><Td colSpan={headers.length || 1} className="text-center py-8">No data found in this sheet.</Td></Tr>
                   )}
                 </tbody>
               </Table>
@@ -1186,7 +1186,8 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
           </Dropdown>
           <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onRefreshData} /></Tooltip>
           <Button icon={<TbFilter />} onClick={() => setFilterDrawerOpen(true)}>Filter{activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
-          <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={total === 0}>Export</Button>
+          <Button isExport={true} menuName="member"
+            icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={total === 0}>Export</Button>
         </div>
       </div>
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
@@ -1339,15 +1340,16 @@ const Member = () => {
               <h5>Members</h5>
               <div className="flex items-center gap-2">
                 <Button
-                icon={<TbEye />}
-                onClick={handleViewBitRouteClick} // <-- MODIFIED
-                clickFeedback={false}
-                color="green-600"
-              >
-                View Bit Route
-              </Button>
-              <Button variant="solid" icon={<TbPlus />} onClick={() => navigate("/business-entities/member-create")}>Add New</Button>
-              
+                  icon={<TbEye />}
+                  onClick={handleViewBitRouteClick} // <-- MODIFIED
+                  clickFeedback={false}
+                  color="green-600"
+                >
+                  View Bit Route
+                </Button>
+                <Button menuName="member"
+                  isAdd={true} variant="solid" icon={<TbPlus />} onClick={() => navigate("/business-entities/member-create")}>Add New</Button>
+
 
               </div>
             </div>

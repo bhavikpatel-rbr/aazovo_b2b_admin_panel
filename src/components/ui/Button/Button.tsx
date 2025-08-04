@@ -11,10 +11,11 @@ import type {
     MouseEvent,
     ElementType,
 } from 'react'
+import { getMenuRights } from '@/utils/getMenuRights'
 
 export interface ButtonProps
     extends CommonProps,
-        Omit<ComponentPropsWithRef<'button'>, 'onClick'> {
+    Omit<ComponentPropsWithRef<'button'>, 'onClick'> {
     asElement?: ElementType
     active?: boolean
     block?: boolean
@@ -31,7 +32,10 @@ export interface ButtonProps
     shape?: TypeAttributes.Shape
     size?: TypeAttributes.Size
     variant?: 'solid' | 'plain' | 'default'
-    iconAlignment?: 'start' | 'end'
+    iconAlignment?: 'start' | 'end',
+    menuName?: string,
+    isExport?: boolean,
+    isAdd?: boolean,
 }
 
 type ButtonColor = {
@@ -61,9 +65,12 @@ const Button = (props: ButtonProps) => {
         loading = false,
         ref,
         shape = 'round',
-        size ="xs",
+        size = "xs",
         variant = 'default',
         iconAlignment = 'start',
+        menuName = "",
+        isAdd = false,
+        isExport = false,
         ...rest
     } = props
     const { controlSize, ui } = useConfig()
@@ -162,9 +169,8 @@ const Button = (props: ButtonProps) => {
         activeColor,
         textColor,
     }: ButtonColor) => {
-        return `${bgColor} ${
-            unclickable ? disabledClass : hoverColor + ' ' + activeColor
-        } ${textColor}`
+        return `${bgColor} ${unclickable ? disabledClass : hoverColor + ' ' + activeColor
+            } ${textColor}`
     }
 
     const btnColor = () => {
@@ -237,16 +243,40 @@ const Button = (props: ButtonProps) => {
         return <>{children}</>
     }
 
+    console.log(menuName != "" && getMenuRights(menuName)?.is_export, "dddddddddddddd", menuName != "" && getMenuRights(menuName)?.is_add, menuName != "" && !getMenuRights(menuName)?.is_add, menuName != "" && getMenuRights(menuName)?.is_export, menuName != "" && !getMenuRights(menuName)?.is_export);
+
+    const renderComponent = () => {
+        // If menuName is not provided, render the component by default.
+        if (menuName === "") {
+            return true;
+        }
+
+        // If a menuName is provided, check for add or export rights.
+        const rights = getMenuRights(menuName);
+        if (rights?.is_add && isAdd) {
+            return true;
+        }
+
+        if (rights?.is_export && isExport) {
+            return true;
+        }
+
+        // Otherwise, do not render the component.
+        return false;
+    };
+
     return (
-        <Component
-            ref={ref}
-            className={classes}
-            {...rest}
-            onClick={handleClick}
-        >
-            {renderChildren()}
-        </Component>
-    )
+        renderComponent() ? (
+            <Component
+                ref={ref}
+                className={classes}
+                {...rest}
+                onClick={handleClick}
+            >
+                {renderChildren()}
+            </Component>
+        ) : <></>
+    );
 }
 
 export default Button
