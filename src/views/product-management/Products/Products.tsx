@@ -2881,7 +2881,8 @@ const Products = () => {
                   Import Keywords
                 </Dropdown.Item>
               </Dropdown>
-              <Button
+              <Button 
+              menuName="products" isAdd={true}
                 variant="solid"
                 icon={<TbPlus />}
                 onClick={openAddDrawer}

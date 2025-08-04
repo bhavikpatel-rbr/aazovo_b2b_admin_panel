@@ -499,6 +499,7 @@ const EmailTemplatesTableTools = ({
           )}
         </Button>
         <Button
+          menuName="email_templates" isExport={true}
           icon={<TbCloudUpload />}
           onClick={onExport}
           className="w-full sm:w-auto"
@@ -1851,6 +1852,7 @@ const EmailTemplatesListing = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Email Templates</h5>
             <Button
+              menuName="email_templates" isAdd={true}
               variant="solid"
               icon={<TbPlus />}
               onClick={openAddDrawer}

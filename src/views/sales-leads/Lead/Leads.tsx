@@ -2528,7 +2528,7 @@ const LeadTableTools = ({
               </span>
             )}
           </Button>
-          <Button icon={<TbCloudUpload />} onClick={onExport}>
+          <Button menuName="leads" isExport={true} icon={<TbCloudUpload />} onClick={onExport}>
             Export
           </Button>
         </div>
@@ -3344,6 +3344,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               <h5 className="mb-2 sm:mb-0">Leads Listing</h5>
               <div className="flex items-center gap-2">
                 <Button
+                  menuName="leads" isAdd={true}
                   variant="solid"
                   color="blue-600"
                   onClick={() => setIsPendingLeadsModalOpen(true)}
@@ -3352,6 +3353,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
                   Pending Leads
                 </Button>
                 <Button
+                  menuName="leads" isAdd={true}
                   variant="solid"
                   icon={<TbPlus />}
                   onClick={handleOpenAddLeadPage}

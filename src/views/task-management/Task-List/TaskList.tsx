@@ -905,7 +905,7 @@ export const TaskTableTools = ({
                     uniqueAssignees={uniqueAssignees}
                     uniqueStatuses={uniqueStatuses}
                 />
-                <Button icon={<TbCloudUpload />} onClick={onExport}>
+                <Button menuName="task_list" isExport={true} icon={<TbCloudUpload />} onClick={onExport}>
                     Export
                 </Button>
             </div>}
@@ -1056,7 +1056,7 @@ const TaskListActionTools = ({ pageTitle }: { pageTitle: string }) => {
         navigate('/task/task-list/create')
     }
     return (
-        <Button variant="solid" icon={<TbPlus />} onClick={handleAddNewTask}>
+        <Button menuName="task_list" isAdd={true} variant="solid" icon={<TbPlus />} onClick={handleAddNewTask}>
             Add New Task
         </Button>
     )

@@ -411,7 +411,7 @@ const CategoryTableTools = ({
           )}
         </Button>
         <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
-        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+        <Button menuName="category" isExport={true} icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
       </div>
     </div>
   );
@@ -1230,7 +1230,8 @@ const Categories = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Categories</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddCategoryDrawer}>Add New</Button>
+            <Button variant="solid" menuName="category"
+              isAdd={true} icon={<TbPlus />} onClick={openAddCategoryDrawer}>Add New</Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
             <Tooltip title="Click to show all categories">

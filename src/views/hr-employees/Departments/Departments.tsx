@@ -294,7 +294,10 @@ const DepartmentsTableTools = ({ onSearchChange, onFilter, onExport, onClearFilt
         <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>
           Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
         </Button>
-        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
+        <Button
+          menuName="department" isExport={true}
+
+          icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
       </div>
     </div>
   );
@@ -829,7 +832,10 @@ const DepartmentListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Departments</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>
+            <Button
+              menuName="department" isAdd={true}
+
+              variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>
               Add New
             </Button>
           </div>
