@@ -165,7 +165,7 @@ const PendingLeadViewModal = ({
           <Card bodyClass="p-4">
             <h6 className="mb-2 text-base font-semibold">Lead Information</h6>
             <dl>
-              {renderDetail('Lead Number', lead.lead_number || `LD-${lead.id}`)}
+              {renderDetail('Lead Number', lead.lead_number || `LD-${lead.id.toString().padStart(5, '0')}`)}
               {renderDetail('Product', lead.product?.name)}
               {renderDetail('Quantity', lead.qty)}
               {renderDetail('Target Price', lead.target_price ? `$${lead.target_price}` : 'N/A')}
@@ -216,7 +216,7 @@ const PendingLeadsModal = ({
   const fetchPendingLeads = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await axiosInstance.get('/sales-form?per_page=99999&Status=Pending');
+      const response = await axiosInstance.get('/sales-form?per_page=99999&status=Pending');
       setPendingLeads(response.data?.data?.data || []);
     } catch (error) {
       toast.push(<Notification type="danger" title="Error">Failed to fetch pending leads.</Notification>);
@@ -441,6 +441,8 @@ const StartProcessModal = ({
 
   if (!isOpen || !lead) return null;
 
+    console.log(lead, 'lead');
+    
   return (
     <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Start Process for Lead: {lead.lead_number}</h5>
@@ -2251,12 +2253,13 @@ const LeadActionColumn = ({
         >
           <TbTagStarred size={18} /> Add Activity
         </Dropdown.Item>
-        <Dropdown.Item
+       {data.lead_status == 'Approved' ? <Dropdown.Item
           onClick={() => onOpenModal("convertToDeal")}
           className="flex items-center gap-2 text-xs"
         >
           <TbRocket size={18} /> Convert to Deal
-        </Dropdown.Item>
+        </Dropdown.Item> : null}
+
         <Dropdown.Item
           onClick={() => onOpenModal("viewOpportunities")}
           className="flex items-center gap-2 text-xs"
@@ -2619,7 +2622,8 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     return LeadsData?.data?.data.map(
       (apiLead: any): LeadListItem => ({
         id: apiLead.id,
-        lead_number: apiLead.lead_number || `LD-${apiLead.id}`,
+       
+        lead_number:  apiLead.lead_number || `LD-${apiLead.id}`,
         lead_status: apiLead.status || apiLead.lead_status || "New",
         enquiry_type: apiLead.lead_type || apiLead.enquiry_type || "Other",
         lead_info: apiLead.lead_info,
@@ -3057,7 +3061,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         size: 130,
         cell: (props: CellContext<LeadListItem, any>) => (
           <div className="flex flex-col gap-0.5 text-xs">
-            <span className="font-semibold">{props.getValue() as string}</span>
+            <span className="font-semibold">{props.row.original.enquiry_type == "Manual lead" ? `ML-${props.row.original.id.toString().padStart(5, '0')}` : props.row.original.enquiry_type == "Product lead" ?  `PL-${props.row.original.id.toString().padStart(5, '0')}` : props.row.original.enquiry_type == "Wall lead" ? `WL-${props.row.original.id.toString().padStart(5, '0')}` : null}</span>
             <div>
               <Tag
                 className={`${enquiryTypeColor[props.row.original.enquiry_type] ||
@@ -3267,7 +3271,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
                 <div onClick={() => handleCardClick("New")}>
                   <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}>
                     <div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbCircleCheck size={20} /></div>
-                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.active, "text-green-500")}<span className="font-semibold text-[10px]">Active</span></div>
+                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.new, "text-green-500")}<span className="font-semibold text-[10px]">New</span></div>
                   </Card>
                 </div>
               </Tooltip>

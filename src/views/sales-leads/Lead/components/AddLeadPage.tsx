@@ -180,6 +180,7 @@ const AddLeadPage = () => {
       )?.label || null;
 
     const apiPayload = {
+      lead_type:'Manual lead',
       lead_intent: data.lead_intent,
       lead_member: data.member_id,
       product_id: data.product_id,
