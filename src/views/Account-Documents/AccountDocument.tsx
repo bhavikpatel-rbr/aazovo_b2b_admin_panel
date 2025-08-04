@@ -42,8 +42,8 @@ import {
   Form as UiForm,
   FormItem as UiFormItem,
   Select as UiSelect,
-  Table, // Added for done leads modal
-  Skeleton, // Added for done leads modal
+  Table,
+  Skeleton,
 } from "@/components/ui";
 import Button from "@/components/ui/Button";
 import Dropdown from "@/components/ui/Dropdown";
@@ -60,6 +60,7 @@ import {
   TbBellRinging,
   TbBrandGoogleDrive,
   TbBrandWhatsapp,
+  TbBuildingStore, // Added for new modal
   TbCalendarClock,
   TbCalendarEvent,
   TbCheck,
@@ -67,12 +68,13 @@ import {
   TbCloudDownload,
   TbCloudUpload,
   TbColumns,
-  TbEye, // Added for done leads modal
+  TbEye,
   TbFileAlert,
   TbFileCertificate,
   TbFileCheck,
   TbFileDescription,
   TbFileExcel,
+  TbFilePlus, // Added for new modal
   TbFilter,
   TbMailShare,
   TbNotesOff,
@@ -182,170 +184,263 @@ const leadStatusColor: Record<LeadStatus | "default" | string, string> = {
 };
 // --- END: Copied types and constants ---
 
-// --- START: NEW COMPONENT FOR PENDING LEAD DETAILS VIEW MODAL ---
-const PendingLeadViewModal = ({
-  isOpen,
-  onClose,
-  leadData,
-}: {
+// --- START: NEW TYPES FOR VERIFIED LEAD MODAL ---
+export type LeadMemberInfo = {
+  id: number;
+  name: string;
+  member_code: string;
+};
+export type VerifiedLead = {
+  id: number;
+  lead_number: string | null;
+  qty: number;
+  target_price: number;
+  color: string | null;
+  device_condition: string | null;
+  lead_status: string;
+  product: {
+    id: number;
+    name: string;
+  };
+  product_spec: {
+    id: number;
+    name: string;
+  } | null;
+  lead_info: {
+    buyer: LeadMemberInfo | null;
+    seller: LeadMemberInfo | null;
+  };
+  customer: {
+    company_actual: string | null;
+  };
+};
+// Note: SalesFormItem type appears to be inconsistent with usage, so it is being corrected at the component level
+export type SalesFormItem = {
+  id: number; // This is the sales_form_id
+  lead: VerifiedLead;
+};
+// --- END: NEW TYPES ---
+
+
+// --- START: NEW REFACTORED COMPONENT FOR PENDING LEAD DETAILS VIEW MODAL ---
+const StatBox: React.FC<{
+  value: React.ReactNode;
+  label: string;
+  className?: string;
+}> = ({ value, label, className }) => (
+  <div className={`text-center px-4 py-2 border-dashed border-gray-200 dark:border-gray-600 ${className}`}>
+    <h4 className="font-bold">{value}</h4>
+    <p className="text-gray-500 text-sm">{label}</p>
+  </div>
+);
+
+const InfoRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div className="flex justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+    <span className="font-semibold text-gray-700 dark:text-gray-200">{label}</span>
+    <span className="text-gray-900 dark:text-gray-50 text-right">{children || '—'}</span>
+  </div>
+);
+
+const HeaderCard: React.FC<{ lead: VerifiedLead }> = ({ lead }) => (
+  <Card>
+    <div className="flex flex-col md:flex-row items-center gap-4">
+      <div className="flex-grow grid grid-cols-2 sm:grid-cols-5 gap-1 w-full">
+        <StatBox value={lead?.qty} label="Quantity" />
+        <StatBox value={`$${lead?.target_price || '0.00'}`} label="Target Price" className="sm:border-l" />
+        <StatBox
+          value={<Tag className="bg-emerald-100 text-emerald-600">{lead?.lead_status}</Tag>}
+          label="Lead Status"
+          className="sm:border-l"
+        />
+        <StatBox value={lead?.lead_number || `LD-${lead?.id}`} label="Lead #" className="col-span-2 sm:col-span-1 sm:border-l" />
+        <StatBox value={<div className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-md">
+          <TbBuildingStore className="text-gray-500 dark:text-gray-400" />
+          <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">
+            {lead.customer.company_actual || 'N/A'}
+          </span>
+        </div>} label="Actual Company" className="col-span-2 sm:col-span-1 sm:border-l" />
+
+      </div>
+    </div>
+  </Card>
+);
+
+const ProductDetailsTab: React.FC<{ lead: VerifiedLead }> = ({ lead }) => (
+  <Card>
+    <h5 className="font-semibold mb-4">Product Details</h5>
+    <InfoRow label="Product Name">{lead?.product.name}</InfoRow>
+    <InfoRow label="Quantity">{lead?.qty}</InfoRow>
+    <InfoRow label="Target Price">{`$${lead?.target_price || 'N/A'}`}</InfoRow>
+    <InfoRow label="Color">{lead?.color}</InfoRow>
+    <InfoRow label="Device Condition">{lead?.device_condition}</InfoRow>
+    <InfoRow label="Product Spec">{lead?.product_spec?.name}</InfoRow>
+
+  </Card>
+);
+
+const MemberDetailsTab: React.FC<{ title: string; member: LeadMemberInfo | null }> = ({ title, member }) => (
+  <Card>
+    <h5 className="font-semibold mb-4">{title}</h5>
+    {member ? (
+      <>
+        <InfoRow label="Name">{member?.name}</InfoRow>
+        <InfoRow label="Member ID">{member?.member_code}</InfoRow>
+      </>
+    ) : (
+      <p className="text-gray-500">No details available.</p>
+    )}
+  </Card>
+);
+
+const PendingLeadViewModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
-  leadData: any | null;
+  onend: () => void;
+  leadData: VerifiedLead | null; // MODIFIED: Corrected type from SalesFormItem to VerifiedLead
+  onNavigateAway: (path: string) => void;
+  handleOpenAddDrawer: (leadNumber?: string) => void; // MODIFIED: Changed signature
+}> = ({
+  isOpen,
+  onClose,
+  onend,
+  leadData,
+  onNavigateAway,
+  handleOpenAddDrawer,
 }) => {
-  if (!isOpen || !leadData || !leadData.lead) return null;
+    const [activeTab, setActiveTab] = useState('product_details');
 
-  const lead = leadData.lead;
-  const salesForm = leadData.sales_form;
+    useEffect(() => {
+      if (isOpen) {
+        setActiveTab('product_details'); // Reset to first tab on open
+      }
+    }, [isOpen]);
 
-  const renderDetail = (label: string, value: React.ReactNode) => (
-    <div className="flex flex-col sm:flex-row py-2 border-b border-gray-200 dark:border-gray-700">
-      <dt className="sm:w-1/3 font-semibold text-gray-600 dark:text-gray-300">
-        {label}
-      </dt>
-      <dd className="sm:w-2/3 mt-1 sm:mt-0 text-gray-800 dark:text-gray-100 break-words">
-        {value ?? "N/A"}
-      </dd>
-    </div>
-  );
+    if (!isOpen || !leadData) {
+      return null;
+    }
 
-  const renderSalesFormDetails = (formData: any) => {
-    if (!formData || Object.keys(formData).length === 0)
-      return (
-        <p className="text-sm text-gray-500">No form data available.</p>
-      );
 
-    return Object.entries(formData).map(
-      ([sectionKey, sectionValue]: [string, any]) => (
-        <div
-          key={sectionKey}
-          className="mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md"
-        >
-          <h6 className="font-semibold capitalize border-b pb-1 mb-2">
-            {sectionKey.replace(/_/g, " ")}
-          </h6>
-          {Object.entries(sectionValue).map(([fieldKey, fieldValue]) => (
-            <div key={fieldKey} className="text-sm py-1">
-              <span className="font-medium capitalize">
-                {fieldKey.replace(/_/g, " ")}:
-              </span>
-              <span className="ml-2 text-gray-700 dark:text-gray-200">
-                {Array.isArray(fieldValue)
-                  ? fieldValue.join(", ")
-                  : String(fieldValue)}
-              </span>
-            </div>
+    const tabList = [
+      { key: 'product_details', label: 'Product Details' },
+      { key: 'seller_details', label: 'Seller Details (From)' },
+      { key: 'buyer_details', label: 'Buyer Details (To)' },
+    ];
+
+    const renderActiveTabContent = () => {
+      switch (activeTab) {
+        case 'product_details':
+          return <ProductDetailsTab lead={leadData} />;
+        case 'seller_details':
+          return <MemberDetailsTab title="Purchase From (Supplier)" member={leadData?.lead_info?.seller} />;
+        case 'buyer_details':
+          return <MemberDetailsTab title="Sale To (Buyer)" member={leadData?.lead_info?.buyer} />;
+        default:
+          return <ProductDetailsTab lead={leadData} />;
+      }
+    };
+
+    return (
+      <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width={800}>
+        <div className="mb-4">
+          <h5 className="mb-1">Verify Done Lead</h5>
+          <p>Review the details of the completed lead before final processing.</p>
+        </div>
+
+        <div className="mb-6">
+          <HeaderCard lead={leadData} />
+        </div>
+
+        <div className="flex flex-row items-center border-b border-gray-200 dark:border-gray-600 mb-3 flex-wrap">
+          {tabList.map((tab) => (
+            <button
+              type="button"
+              key={tab.key}
+              className={classNames('px-4 py-3 -mb-px font-semibold focus:outline-none whitespace-nowrap', {
+                'text-indigo-600 border-b-2 border-indigo-600': activeTab === tab.key,
+                'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200': activeTab !== tab.key,
+              })}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.label}
+            </button>
           ))}
         </div>
-      )
+
+        <div className="min-h-[200px]">
+          {renderActiveTabContent()}
+        </div>
+
+        <div className="flex justify-between items-center mt-2">
+          <div>
+            <Button
+              variant="plain"
+              icon={<TbX />}
+              onClick={onClose}
+            >
+              Close
+            </Button>
+          </div>
+          <div className="flex items-center gap-4">
+            {!leadData?.customer?.company_actual ? (
+              <Button
+                variant="twoTone"
+                icon={<TbBuildingStore />}
+                onClick={() => onNavigateAway('/business-entities/company-create')}
+              >
+                Create Company Member
+              </Button>
+            ) : null}
+            <Button
+              variant="solid"
+              icon={<TbFilePlus />}
+              onClick={() => {
+                onClose(); // Close the detail modal
+                onend(); // Close the list modal
+                const leadNum = leadData.lead_number || `LD-${leadData.id}`;
+                handleOpenAddDrawer(leadNum); // Call with lead number
+              }}
+            >
+              Create Account Document
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     );
   };
+// --- END: NEW REFACTORED COMPONENT ---
 
-  return (
-    <Dialog
-      isOpen={isOpen}
-      onClose={onClose}
-      onRequestClose={onClose}
-      width={800}
-      bodyOpenClassName="overflow-hidden"
-    >
-      <div className="flex flex-col h-full max-h-[85vh]">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h5 className="mb-0">
-            Lead Details: {lead.lead_number || `LD-${lead.id}`}
-          </h5>
-        </div>
-        <div className="flex-grow overflow-y-auto px-6 py-4 custom-scrollbar">
-          <Card bodyClass="p-4">
-            <h6 className="mb-2 text-base font-semibold">
-              Lead Information
-            </h6>
-            <dl>
-              {renderDetail("Lead Number", lead.lead_number || `LD-${lead.id}`)}
-              {renderDetail("Product", lead.product?.name)}
-              {renderDetail("Quantity", lead.qty)}
-              {renderDetail(
-                "Target Price",
-                lead.target_price ? `$${lead.target_price}` : "N/A"
-              )}
-              {renderDetail(
-                "Status",
-                <Tag
-                  className={`${leadStatusColor[lead.status] || leadStatusColor.default
-                    } capitalize`}
-                >
-                  {lead.status}
-                </Tag>
-              )}
-              {renderDetail("Intent", <Tag className="capitalize">{lead.lead_intent}</Tag>)}
-              {renderDetail(
-                "Created At",
-                dayjs(lead.created_at).format("DD MMM YYYY, h:mm A")
-              )}
-            </dl>
-          </Card>
 
-          <Card bodyClass="p-4" className="mt-4">
-            <h6 className="mb-2 text-base font-semibold">
-              Member Information
-            </h6>
-            <dl>
-              {renderDetail(
-                "Buyer",
-                <span>
-                  {lead.lead_info?.buyer?.name}{" "}
-                  <span className="text-gray-500">
-                    ({lead.lead_info?.buyer?.member_code})
-                  </span>
-                </span>
-              )}
-              {renderDetail(
-                "Supplier",
-                <span>
-                  {lead.lead_info?.seller?.name}{" "}
-                  <span className="text-gray-500">
-                    ({lead.lead_info?.seller?.member_code})
-                  </span>
-                </span>
-              )}
-            </dl>
-          </Card>
-
-          <Card bodyClass="p-4" className="mt-4">
-            <h6 className="mb-2 text-base font-semibold">
-              Form Submission Details
-            </h6>
-            {renderSalesFormDetails(salesForm)}
-          </Card>
-        </div>
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
-          <Button variant="solid" onClick={onClose}>
-            Close
-          </Button>
-        </div>
-      </div>
-    </Dialog>
-  );
-};
-// --- END: NEW COMPONENT ---
-
-// --- START: NEW COMPONENT FOR done leads MODAL ---
+// --- START: MODIFIED COMPONENT FOR "Deal Done" LEADS MODAL ---
 const PendingLeadsModal = ({
   isOpen,
   onClose,
   onActionSuccess,
+  handleOpenAddDrawer,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onActionSuccess: () => void;
+  handleOpenAddDrawer: (leadNumber?: string) => void; // MODIFIED: Changed signature
 }) => {
-  const [pendingLeads, setPendingLeads] = useState<any[]>([]);
+  const navigate = useNavigate();
+  const { getaccountdoc } = useSelector(masterSelector); // ADDED: Get account docs from store
+  const [pendingLeads, setPendingLeads] = useState<VerifiedLead[]>([]); // MODIFIED: Corrected type
   const [isLoading, setIsLoading] = useState(false);
-  const [actionLoading, setActionLoading] = useState<{
-    id: string | number | null;
-    type: "approve" | "reject" | null;
-  }>({ id: null, type: null });
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedLead, setSelectedLead] = useState<any | null>(null);
+  const [selectedLead, setSelectedLead] = useState<VerifiedLead | null>(null); // MODIFIED: Corrected type
+
+  // ADDED: Create a set of existing document numbers for efficient filtering
+  const existingDocNumbers = useMemo(() => {
+    if (!getaccountdoc?.data || !Array.isArray(getaccountdoc.data)) {
+        return new Set<string>();
+    }
+    return new Set(
+        getaccountdoc.data
+            .map((doc: any) => doc.document_number)
+            .filter(Boolean)
+    );
+}, [getaccountdoc]);
+
 
   const fetchPendingLeads = useCallback(async () => {
     setIsLoading(true);
@@ -353,7 +448,16 @@ const PendingLeadsModal = ({
       const response = await axiosInstance.get(
         "/lead/lead?per_page=99999&status=Deal Done"
       );
-      setPendingLeads(response.data?.data?.data || []);
+      const allPendingLeads = response.data?.data?.data || [];
+      
+      // ADDED: Filter out leads that already have an account document
+      const filteredLeads = allPendingLeads.filter((lead: VerifiedLead) => {
+        const leadNum = lead.lead_number || `LD-${lead.id}`;
+        return !existingDocNumbers.has(leadNum);
+      });
+      
+      setPendingLeads(filteredLeads);
+
     } catch (error) {
       toast.push(
         <Notification type="danger" title="Error">
@@ -364,7 +468,7 @@ const PendingLeadsModal = ({
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [existingDocNumbers]); // MODIFIED: Add dependency
 
   useEffect(() => {
     if (isOpen) {
@@ -372,41 +476,19 @@ const PendingLeadsModal = ({
     }
   }, [isOpen, fetchPendingLeads]);
 
-  const handleAction = async (
-    salesFormId: string | number,
-    status: "Approved" | "Rejected"
-  ) => {
-    setActionLoading({
-      id: salesFormId,
-      type: status === "Approved" ? "approve" : "reject",
-    });
-    try {
-      await axiosInstance.post(`/sales-form/status/${salesFormId}`, { status });
-      toast.push(
-        <Notification
-          type="success"
-          title={`Lead ${status}`}
-        >{`Lead has been successfully ${status.toLowerCase()}.`}</Notification>
-      );
-      fetchPendingLeads(); // Refresh list in modal
-      onActionSuccess(); // Refresh main table
-    } catch (error: any) {
-      toast.push(
-        <Notification
-          type="danger"
-          title="Action Failed"
-        >{`Could not ${status.toLowerCase()} the lead.`}</Notification>
-      );
-      console.error(error);
-    } finally {
-      setActionLoading({ id: null, type: null });
-    }
-  };
-
-  const handleViewClick = (leadData: any) => {
+  const handleViewClick = (leadData: VerifiedLead) => { // MODIFIED: Corrected type
     setSelectedLead(leadData);
     setIsViewModalOpen(true);
   };
+
+  const handleNavigateAway = (path: string) => {
+    setIsViewModalOpen(false); // Close detail modal
+    onClose(); // Close list modal
+
+    // The user wants to navigate to a different page after closing the modals.
+    navigate(path);
+  };
+
 
   return (
     <>
@@ -441,24 +523,24 @@ const PendingLeadsModal = ({
                   {pendingLeads.map((item) => (
                     <Table.Tr key={item.id}>
                       <Table.Td>
-                        {item.lead?.lead_number || `LD-${item.lead?.id}`}
+                        {item?.lead_number || `LD-${item?.id}`}
                       </Table.Td>
-                      <Table.Td>{item.lead?.product?.name || "N/A"}</Table.Td>
+                      <Table.Td>{item?.product?.name || "N/A"}</Table.Td>
                       <Table.Td>
                         <div className="text-xs">
                           <p>
                             <strong>B:</strong>{" "}
-                            {item.lead?.lead_info?.buyer?.name || "N/A"}
+                            {item?.lead_info?.buyer?.name || "N/A"}
                           </p>
                           <p>
                             <strong>S:</strong>{" "}
-                            {item.lead?.lead_info?.seller?.name || "N/A"}
+                            {item?.lead_info?.seller?.name || "N/A"}
                           </p>
                         </div>
                       </Table.Td>
                       <Table.Td>
-                        Qty: {item.lead?.qty || "-"} | Price: $
-                        {item.lead?.target_price || "-"}
+                        Qty: {item?.qty || "-"} | Price: $
+                        {item?.target_price || "-"}
                       </Table.Td>
                       <Table.Td>
                         <div className="flex items-center gap-2">
@@ -470,30 +552,6 @@ const PendingLeadsModal = ({
                               onClick={() => handleViewClick(item)}
                             />
                           </Tooltip>
-                          {/* <Button
-                            size="xs"
-                            variant="solid"
-                            color="emerald-600"
-                            onClick={() => handleAction(item.id, "Approved")}
-                            loading={
-                              actionLoading.id === item.id &&
-                              actionLoading.type === "approve"
-                            }
-                          >
-                            Approve
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="solid"
-                            color="red-600"
-                            onClick={() => handleAction(item.id, "Rejected")}
-                            loading={
-                              actionLoading.id === item.id &&
-                              actionLoading.type === "reject"
-                            }
-                          >
-                            Reject
-                          </Button> */}
                         </div>
                       </Table.Td>
                     </Table.Tr>
@@ -502,7 +560,7 @@ const PendingLeadsModal = ({
               </Table>
             ) : (
               <div className="text-center p-10 text-gray-500">
-                <p>No done leads found.</p>
+                <p>No done leads found to be processed.</p>
               </div>
             )}
           </div>
@@ -518,11 +576,15 @@ const PendingLeadsModal = ({
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
         leadData={selectedLead}
+        onend={onClose}
+        onNavigateAway={handleNavigateAway}
+        handleOpenAddDrawer={handleOpenAddDrawer}
       />
     </>
   );
 };
-// --- END: NEW COMPONENT ---
+// --- END: MODIFIED COMPONENT ---
+
 
 // --- Define Types ---
 export type SelectOption = { value: any; label: string };
@@ -577,6 +639,7 @@ const exportReasonSchema = z.object({
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 const addEditDocumentSchema = z.object({
+  lead_number: z.string().optional().nullable(),
   company_document: z
     .string({ required_error: "Company Document is required." })
     .min(1, "Company Document is required."),
@@ -1419,7 +1482,7 @@ const ViewDocumentDialog = ({
   );
 };
 
-const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
+const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, prefilledLeadNumber }: any) => { // MODIFIED: Added prefilledLeadNumber
   const dispatch = useAppDispatch();
   const title = editingId ? "Edit Document" : "Add New Document";
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1551,9 +1614,10 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
         });
     } else if (isOpen && !editingId) {
       reset({
+        lead_number: prefilledLeadNumber || "", // MODIFIED: Prefill lead number
         company_document: undefined,
         document_type: undefined,
-        document_number: "",
+        document_number: "", // MODIFIED: Prefill document number
         invoice_number: "",
         form_id: undefined,
         employee_id: undefined,
@@ -1562,7 +1626,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
       });
       setSelectedCompanyStatus(null);
     }
-  }, [isOpen, editingId, dispatch, reset, AllCompanyData]);
+  }, [isOpen, editingId, dispatch, reset, AllCompanyData, prefilledLeadNumber]); // MODIFIED: Added dependency
 
   const onSave = async (data: AddEditDocumentFormData) => {
     setIsSubmitting(true);
@@ -2727,6 +2791,8 @@ const AccountDocument = () => {
 
   const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  // ADDED: State to hold pre-filled lead number for the add drawer
+  const [prefilledLeadNumber, setPrefilledLeadNumber] = useState<string | null>(null);
 
   const searchInputRef = useRef<any>(null);
 
@@ -2856,10 +2922,13 @@ const AccountDocument = () => {
     setModalState({ isOpen: false, type: null, data: null });
   }, []);
 
-  const handleOpenAddDrawer = () => {
+  // MODIFIED: handleOpenAddDrawer now accepts an optional lead number
+  const handleOpenAddDrawer = (leadNumber?: string) => {
     setEditingId(null);
+    setPrefilledLeadNumber(leadNumber || null); // Store the lead number
     setIsAddEditDrawerOpen(true);
   };
+
 
   const handleOpenEditDrawer = (rowData: AccountDocumentListItem) => {
     setEditingId(rowData.id);
@@ -2869,6 +2938,7 @@ const AccountDocument = () => {
   const handleDrawerClose = () => {
     setIsAddEditDrawerOpen(false);
     setEditingId(null);
+    setPrefilledLeadNumber(null); // Clear the prefilled number on close
   };
 
   const filterOptions = useMemo(() => {
@@ -2919,7 +2989,7 @@ const AccountDocument = () => {
       id: String(item.id),
       status: (item.status?.toLowerCase() ||
         "pending") as AccountDocumentStatus,
-      leadNumber: item.lead_id ? `LD-${item.lead_id}` : "N/A",
+      leadNumber: item.lead_id ? `LD-${item.lead_id}` : (item.document_number?.startsWith("LD-") ? item.document_number : "N/A"), // Fallback to doc number if it looks like a lead
       enquiryType: item.member?.interested_in?.toLowerCase().includes("sell")
         ? "sales"
         : "purchase",
@@ -3220,7 +3290,7 @@ const AccountDocument = () => {
             className={`${accountDocumentStatusColor[
               props.row.original
                 .status as keyof typeof accountDocumentStatusColor
-              ] || "bg-gray-100"
+            ] || "bg-gray-100"
               } capitalize px-2 py-1 text-xs`}
           >
             {props.row.original.status.replace(/_/g, " ")}
@@ -3366,7 +3436,7 @@ const AccountDocument = () => {
                 variant="solid"
                 icon={<TbPlus />}
                 className="px-5"
-                onClick={handleOpenAddDrawer}
+                onClick={() => handleOpenAddDrawer()}
               >
                 Add New
               </Button>
@@ -3505,7 +3575,6 @@ const AccountDocument = () => {
           />
           <div className="mt-4 flex-grow overflow-y-auto">
             <AccountDocumentTable
-              menuName="account_documents"
               selectable
               columns={filteredColumns}
               data={pageData}
@@ -3620,6 +3689,7 @@ const AccountDocument = () => {
         isOpen={isAddEditDrawerOpen}
         onClose={handleDrawerClose}
         editingId={editingId}
+        prefilledLeadNumber={prefilledLeadNumber} // MODIFIED: Pass prefilled number
       />
 
       <AccountDocumentModals
@@ -3634,6 +3704,7 @@ const AccountDocument = () => {
         isOpen={isPendingLeadsModalOpen}
         onClose={() => setIsPendingLeadsModalOpen(false)}
         onActionSuccess={handleActionSuccess}
+        handleOpenAddDrawer={handleOpenAddDrawer}
       />
 
       <ConfirmDialog
