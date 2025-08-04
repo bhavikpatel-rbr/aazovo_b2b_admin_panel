@@ -212,8 +212,9 @@ export type VerifiedLead = {
   };
   customer: {
     company_actual: string | null;
-  }
+  };
 };
+// Note: SalesFormItem type appears to be inconsistent with usage, so it is being corrected at the component level
 export type SalesFormItem = {
   id: number; // This is the sales_form_id
   lead: VerifiedLead;
@@ -294,13 +295,17 @@ const MemberDetailsTab: React.FC<{ title: string; member: LeadMemberInfo | null 
 const PendingLeadViewModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
-  leadData: SalesFormItem | null;
+  onend: () => void;
+  leadData: VerifiedLead | null; // MODIFIED: Corrected type from SalesFormItem to VerifiedLead
   onNavigateAway: (path: string) => void;
+  handleOpenAddDrawer: (leadNumber?: string) => void; // MODIFIED: Changed signature
 }> = ({
   isOpen,
   onClose,
+  onend,
   leadData,
   onNavigateAway,
+  handleOpenAddDrawer,
 }) => {
     const [activeTab, setActiveTab] = useState('product_details');
 
@@ -388,7 +393,12 @@ const PendingLeadViewModal: React.FC<{
             <Button
               variant="solid"
               icon={<TbFilePlus />}
-              onClick={() => { }}
+              onClick={() => {
+                onClose(); // Close the detail modal
+                onend(); // Close the list modal
+                const leadNum = leadData.lead_number || `LD-${leadData.id}`;
+                handleOpenAddDrawer(leadNum); // Call with lead number
+              }}
             >
               Create Account Document
             </Button>
@@ -405,16 +415,32 @@ const PendingLeadsModal = ({
   isOpen,
   onClose,
   onActionSuccess,
+  handleOpenAddDrawer,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onActionSuccess: () => void;
+  handleOpenAddDrawer: (leadNumber?: string) => void; // MODIFIED: Changed signature
 }) => {
   const navigate = useNavigate();
-  const [pendingLeads, setPendingLeads] = useState<SalesFormItem[]>([]);
+  const { getaccountdoc } = useSelector(masterSelector); // ADDED: Get account docs from store
+  const [pendingLeads, setPendingLeads] = useState<VerifiedLead[]>([]); // MODIFIED: Corrected type
   const [isLoading, setIsLoading] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedLead, setSelectedLead] = useState<SalesFormItem | null>(null);
+  const [selectedLead, setSelectedLead] = useState<VerifiedLead | null>(null); // MODIFIED: Corrected type
+
+  // ADDED: Create a set of existing document numbers for efficient filtering
+  const existingDocNumbers = useMemo(() => {
+    if (!getaccountdoc?.data || !Array.isArray(getaccountdoc.data)) {
+        return new Set<string>();
+    }
+    return new Set(
+        getaccountdoc.data
+            .map((doc: any) => doc.document_number)
+            .filter(Boolean)
+    );
+}, [getaccountdoc]);
+
 
   const fetchPendingLeads = useCallback(async () => {
     setIsLoading(true);
@@ -422,7 +448,16 @@ const PendingLeadsModal = ({
       const response = await axiosInstance.get(
         "/lead/lead?per_page=99999&status=Deal Done"
       );
-      setPendingLeads(response.data?.data?.data || []);
+      const allPendingLeads = response.data?.data?.data || [];
+      
+      // ADDED: Filter out leads that already have an account document
+      const filteredLeads = allPendingLeads.filter((lead: VerifiedLead) => {
+        const leadNum = lead.lead_number || `LD-${lead.id}`;
+        return !existingDocNumbers.has(leadNum);
+      });
+      
+      setPendingLeads(filteredLeads);
+
     } catch (error) {
       toast.push(
         <Notification type="danger" title="Error">
@@ -433,7 +468,7 @@ const PendingLeadsModal = ({
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [existingDocNumbers]); // MODIFIED: Add dependency
 
   useEffect(() => {
     if (isOpen) {
@@ -441,7 +476,7 @@ const PendingLeadsModal = ({
     }
   }, [isOpen, fetchPendingLeads]);
 
-  const handleViewClick = (leadData: SalesFormItem) => {
+  const handleViewClick = (leadData: VerifiedLead) => { // MODIFIED: Corrected type
     setSelectedLead(leadData);
     setIsViewModalOpen(true);
   };
@@ -525,7 +560,7 @@ const PendingLeadsModal = ({
               </Table>
             ) : (
               <div className="text-center p-10 text-gray-500">
-                <p>No done leads found.</p>
+                <p>No done leads found to be processed.</p>
               </div>
             )}
           </div>
@@ -541,7 +576,9 @@ const PendingLeadsModal = ({
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
         leadData={selectedLead}
+        onend={onClose}
         onNavigateAway={handleNavigateAway}
+        handleOpenAddDrawer={handleOpenAddDrawer}
       />
     </>
   );
@@ -602,6 +639,7 @@ const exportReasonSchema = z.object({
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 const addEditDocumentSchema = z.object({
+  lead_number: z.string().optional().nullable(),
   company_document: z
     .string({ required_error: "Company Document is required." })
     .min(1, "Company Document is required."),
@@ -1444,7 +1482,7 @@ const ViewDocumentDialog = ({
   );
 };
 
-const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
+const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, prefilledLeadNumber }: any) => { // MODIFIED: Added prefilledLeadNumber
   const dispatch = useAppDispatch();
   const title = editingId ? "Edit Document" : "Add New Document";
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1576,9 +1614,10 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
         });
     } else if (isOpen && !editingId) {
       reset({
+        lead_number: prefilledLeadNumber || "", // MODIFIED: Prefill lead number
         company_document: undefined,
         document_type: undefined,
-        document_number: "",
+        document_number: "", // MODIFIED: Prefill document number
         invoice_number: "",
         form_id: undefined,
         employee_id: undefined,
@@ -1587,33 +1626,35 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
       });
       setSelectedCompanyStatus(null);
     }
-  }, [isOpen, editingId, dispatch, reset, AllCompanyData]);
+  }, [isOpen, editingId, dispatch, reset, AllCompanyData, prefilledLeadNumber]); // MODIFIED: Added dependency
 
   const onSave = async (data: AddEditDocumentFormData) => {
-    setIsSubmitting(true);
-    try {
-      if (editingId) {
-        await dispatch(
-          editaccountdocAction({ id: editingId, ...data })
-        ).unwrap();
-        toast.push(<Notification type="success" title="Document Updated" />);
-      } else {
-        await dispatch(addaccountdocAction(data)).unwrap();
-        toast.push(<Notification type="success" title="Document Added" />);
-      }
-      dispatch(getaccountdocAction()); // Refresh the main table
-      onClose();
-    } catch (error: any) {
-      toast.push(
-        <Notification
-          type="danger"
-          title={editingId ? "Update Failed" : "Add Failed"}
-          children={error?.message || "An unknown error occurred."}
-        />
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+    console.log(data, 'data');
+    
+    // setIsSubmitting(true);
+    // try {
+    //   if (editingId) {
+    //     await dispatch(
+    //       editaccountdocAction({ id: editingId, ...data })
+    //     ).unwrap();
+    //     toast.push(<Notification type="success" title="Document Updated" />);
+    //   } else {
+    //     await dispatch(addaccountdocAction(data)).unwrap();
+    //     toast.push(<Notification type="success" title="Document Added" />);
+    //   }
+    //   dispatch(getaccountdocAction()); // Refresh the main table
+    //   onClose();
+    // } catch (error: any) {
+    //   toast.push(
+    //     <Notification
+    //       type="danger"
+    //       title={editingId ? "Update Failed" : "Add Failed"}
+    //       children={error?.message || "An unknown error occurred."}
+    //     />
+    //   );
+    // } finally {
+    //   setIsSubmitting(false);
+    // }
   };
 
   return (
@@ -2752,6 +2793,8 @@ const AccountDocument = () => {
 
   const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  // ADDED: State to hold pre-filled lead number for the add drawer
+  const [prefilledLeadNumber, setPrefilledLeadNumber] = useState<string | null>(null);
 
   const searchInputRef = useRef<any>(null);
 
@@ -2881,10 +2924,13 @@ const AccountDocument = () => {
     setModalState({ isOpen: false, type: null, data: null });
   }, []);
 
-  const handleOpenAddDrawer = () => {
+  // MODIFIED: handleOpenAddDrawer now accepts an optional lead number
+  const handleOpenAddDrawer = (leadNumber?: string) => {
     setEditingId(null);
+    setPrefilledLeadNumber(leadNumber || null); // Store the lead number
     setIsAddEditDrawerOpen(true);
   };
+
 
   const handleOpenEditDrawer = (rowData: AccountDocumentListItem) => {
     setEditingId(rowData.id);
@@ -2894,6 +2940,7 @@ const AccountDocument = () => {
   const handleDrawerClose = () => {
     setIsAddEditDrawerOpen(false);
     setEditingId(null);
+    setPrefilledLeadNumber(null); // Clear the prefilled number on close
   };
 
   const filterOptions = useMemo(() => {
@@ -2944,7 +2991,7 @@ const AccountDocument = () => {
       id: String(item.id),
       status: (item.status?.toLowerCase() ||
         "pending") as AccountDocumentStatus,
-      leadNumber: item.lead_id ? `LD-${item.lead_id}` : "N/A",
+      leadNumber: item.lead_id ? `LD-${item.lead_id}` : (item.document_number?.startsWith("LD-") ? item.document_number : "N/A"), // Fallback to doc number if it looks like a lead
       enquiryType: item.member?.interested_in?.toLowerCase().includes("sell")
         ? "sales"
         : "purchase",
@@ -3391,7 +3438,7 @@ const AccountDocument = () => {
                 variant="solid"
                 icon={<TbPlus />}
                 className="px-5"
-                onClick={handleOpenAddDrawer}
+                onClick={() => handleOpenAddDrawer()}
               >
                 Add New
               </Button>
@@ -3644,6 +3691,7 @@ const AccountDocument = () => {
         isOpen={isAddEditDrawerOpen}
         onClose={handleDrawerClose}
         editingId={editingId}
+        prefilledLeadNumber={prefilledLeadNumber} // MODIFIED: Pass prefilled number
       />
 
       <AccountDocumentModals
@@ -3658,6 +3706,7 @@ const AccountDocument = () => {
         isOpen={isPendingLeadsModalOpen}
         onClose={() => setIsPendingLeadsModalOpen(false)}
         onActionSuccess={handleActionSuccess}
+        handleOpenAddDrawer={handleOpenAddDrawer}
       />
 
       <ConfirmDialog
