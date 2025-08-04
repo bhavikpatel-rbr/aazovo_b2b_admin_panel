@@ -60,7 +60,7 @@ import {
   TbBellRinging,
   TbBrandGoogleDrive,
   TbBrandWhatsapp,
-  TbBuildingStore, // Added for new modal
+  TbBuildingStore,
   TbCalendarClock,
   TbCalendarEvent,
   TbCheck,
@@ -74,7 +74,7 @@ import {
   TbFileCheck,
   TbFileDescription,
   TbFileExcel,
-  TbFilePlus, // Added for new modal
+  TbFilePlus,
   TbFilter,
   TbMailShare,
   TbNotesOff,
@@ -85,6 +85,7 @@ import {
   TbTagStarred,
   TbUser,
   TbX,
+  TbCircleCheck, // Icon for Verify button
 } from "react-icons/tb";
 
 // Types
@@ -118,6 +119,8 @@ import {
   getbyIDaccountdocAction,
   getDocumentListAction,
   getEmployeesListingAction,
+  getFillUpFormAction, // IMPORTED from FillUpForm
+  getFilledFormAction, // IMPORTED from FillUpForm
   getFormBuilderAction,
   getfromIDcompanymemberAction,
   submitExportReasonAction,
@@ -126,6 +129,7 @@ import { useAppDispatch } from "@/reduxtool/store";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
 import { shallowEqual, useSelector } from "react-redux";
+
 
 // --- START: Copied types and constants from LeadsListing for PendingLeadsModal ---
 export type LeadStatus =
@@ -420,16 +424,15 @@ const PendingLeadsModal = ({
   isOpen: boolean;
   onClose: () => void;
   onActionSuccess: () => void;
-  handleOpenAddDrawer: (leadNumber?: string) => void; // MODIFIED: Changed signature
+  handleOpenAddDrawer: (leadNumber?: string) => void;
 }) => {
   const navigate = useNavigate();
-  const { getaccountdoc } = useSelector(masterSelector); // ADDED: Get account docs from store
-  const [pendingLeads, setPendingLeads] = useState<VerifiedLead[]>([]); // MODIFIED: Corrected type
+  const { getaccountdoc } = useSelector(masterSelector);
+  const [pendingLeads, setPendingLeads] = useState<VerifiedLead[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedLead, setSelectedLead] = useState<VerifiedLead | null>(null); // MODIFIED: Corrected type
+  const [selectedLead, setSelectedLead] = useState<VerifiedLead | null>(null);
 
-  // ADDED: Create a set of existing document numbers for efficient filtering
   const existingDocNumbers = useMemo(() => {
     if (!getaccountdoc?.data || !Array.isArray(getaccountdoc.data)) {
       return new Set<string>();
@@ -450,7 +453,7 @@ const PendingLeadsModal = ({
       );
       const allPendingLeads = response.data?.data?.data || [];
 
-      // ADDED: Filter out leads that already have an account document
+      // Filter out leads that already have an account document
       const filteredLeads = allPendingLeads.filter((lead: VerifiedLead) => {
         const leadNum = lead.lead_number || `LD-${lead.id}`;
         return !existingDocNumbers.has(leadNum);
@@ -468,7 +471,7 @@ const PendingLeadsModal = ({
     } finally {
       setIsLoading(false);
     }
-  }, [existingDocNumbers]); // MODIFIED: Add dependency
+  }, [existingDocNumbers]);
 
   useEffect(() => {
     if (isOpen) {
@@ -476,16 +479,14 @@ const PendingLeadsModal = ({
     }
   }, [isOpen, fetchPendingLeads]);
 
-  const handleViewClick = (leadData: VerifiedLead) => { // MODIFIED: Corrected type
+  const handleViewClick = (leadData: VerifiedLead) => {
     setSelectedLead(leadData);
     setIsViewModalOpen(true);
   };
 
   const handleNavigateAway = (path: string) => {
-    setIsViewModalOpen(false); // Close detail modal
-    onClose(); // Close list modal
-
-    // The user wants to navigate to a different page after closing the modals.
+    setIsViewModalOpen(false);
+    onClose();
     navigate(path);
   };
 
@@ -609,14 +610,31 @@ type FilterFormData = {
   doc_type?: SelectOption[];
   comp_doc?: SelectOption[];
 };
-// START: Alert Note Type Definition
 interface AlertNote {
   id: number;
   note: string; // HTML content from RichTextEditor
   created_by_user: { name: string };
   created_at: string; // ISO date string
 }
-// END: Alert Note Type Definition
+// --- START: Types from FillUpForm ---
+interface FormField {
+  name: string;
+  label: string;
+  type: 'text' | 'textarea' | 'file' | 'date' | 'checkbox' | 'multi_checkbox';
+  options?: { label: string, name: string }[];
+  required: boolean;
+}
+interface FormSection {
+  id: string;
+  label: string;
+  fields: FormField[];
+}
+interface FormStructure {
+  form_title: string;
+  sections: FormSection[];
+}
+// --- END: Types from FillUpForm ---
+
 
 // --- Zod Schemas ---
 const scheduleSchema = z.object({
@@ -840,6 +858,29 @@ const enquiryTypeColor: Record<EnquiryType | "default", string> = {
   default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300",
 };
 
+
+// --- START: Helper Functions from FillUpForm ---
+const sanitizeForName = (str: string): string => str.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/_$/, '');
+
+const transformApiDataToFormStructure = (apiData: any): FormStructure | null => {
+  if (!apiData || !apiData.section) return null;
+  const transformedSections: FormSection[] = apiData.section.map((apiSection: any, sectionIndex: number) => {
+    const sectionId = sanitizeForName(apiSection.title || `section_${sectionIndex}`);
+    const transformedFields: FormField[] = apiSection.questions.flatMap((question: any) => {
+      const baseFieldName = sanitizeForName(question.question);
+      if (question.question_type === 'checkbox' && question.question_label) {
+        const labels = question.question_label.split(',');
+        return [{ name: `${sectionId}.${baseFieldName}`, label: question.question, type: 'multi_checkbox', required: question.required, options: labels.map((label: string) => ({ label: label.trim(), name: `${sectionId}.${baseFieldName}.${sanitizeForName(label)}` })) }] as FormField;
+      }
+      return [{ name: `${sectionId}.${baseFieldName}`, label: question.question, type: question.question_type, required: question.required }] as FormField;
+    });
+    return { id: sectionId, label: apiSection.title, fields: transformedFields };
+  });
+  return { form_title: apiData.form_name || 'Dynamic Form', sections: transformedSections };
+};
+// --- END: Helper Functions from FillUpForm ---
+
+
 // --- Helper Components ---
 const AccountDocumentActionColumn = ({
   onOpenModal,
@@ -850,7 +891,7 @@ const AccountDocumentActionColumn = ({
   const navigate = useNavigate();
 
   const handleFillUpClick = () => {
-    if (rowData.formId) {
+    if (rowData.formId && rowData.formId !== 'N/A') {
       navigate(`/fill-up-form/${rowData.id}/${rowData.formId}`);
     } else {
       toast.push(
@@ -1278,13 +1319,144 @@ const InfoItem = ({
   );
 };
 
+// --- NEW: Filled Form Viewer Component ---
+const FilledFormViewer = ({
+  formStructure,
+  filledData,
+}: {
+  formStructure: FormStructure;
+  filledData: any;
+}) => {
+  // Helper to get value from nested filledData object
+  const getFieldValue = (field: FormField, sectionId: string) => {
+    const questionKey = field.name.split('.').pop() || '';
+    return filledData?.[sectionId]?.[questionKey];
+  };
+
+  return (
+    <div className='mt-6 space-y-6'>
+      {formStructure.sections.map((section) => (
+        <div key={section.id}>
+          <h6 className="font-semibold text-base mb-4 border-b dark:border-gray-700 pb-3">
+            {section.label}
+          </h6>
+          <div className="space-y-4">
+            {section.fields.map((field) => {
+              const value = getFieldValue(field, section.id);
+              if (value === undefined || value === null || value === '') {
+                return (
+                  <DetailItem key={field.name} label={field.label} value="N/A" />
+                );
+              }
+
+              switch (field.type) {
+                case 'file':
+                  return (
+                    <DetailItem key={field.name} label={field.label}>
+                      {value ? (
+                        <a href={value} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          View/Download File
+                        </a>
+                      ) : ('N/A')}
+                    </DetailItem>
+                  );
+                case 'multi_checkbox':
+                  return (
+                    <DetailItem key={field.name} label={field.label}>
+                      {(Array.isArray(value) && value.length > 0) ? value.join(', ') : 'No selection'}
+                    </DetailItem>
+                  );
+                case 'checkbox':
+                  return (
+                    <DetailItem key={field.name} label={field.label} value={value ? 'Yes' : 'No'} />
+                  );
+                case 'date':
+                  return (
+                    <DetailItem key={field.name} label={field.label} value={dayjs(value).format('DD MMM YYYY')} />
+                  );
+                case 'textarea':
+                  return (
+                    <DetailItem key={field.name} label={field.label}>
+                      <p className="whitespace-pre-wrap">{value}</p>
+                    </DetailItem>
+                  );
+                default:
+                  return (
+                    <DetailItem key={field.name} label={field.label} value={value} />
+                  );
+              }
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+
+// --- MODIFIED: ViewDocumentDialog with Form Viewer and Verify Button ---
 const ViewDocumentDialog = ({
   document,
   onClose,
+  onActionSuccess,
 }: {
   document: any;
   onClose: () => void;
+  onActionSuccess: () => void;
 }) => {
+  const dispatch = useAppDispatch();
+
+  // State for form data
+  const [isFormLoading, setIsFormLoading] = useState(false);
+  const [formStructure, setFormStructure] = useState<FormStructure | null>(null);
+  const [filledData, setFilledData] = useState<any>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  useEffect(() => {
+    if (!document?.form?.id || !document?.id) {
+      return; // No form associated with this document
+    }
+
+    const fetchFormData = async () => {
+      setIsFormLoading(true);
+      try {
+        const structurePromise = dispatch(getFillUpFormAction(document.form.id)).unwrap();
+        const dataPromise = dispatch(getFilledFormAction(document.id)).unwrap();
+
+        const [structureResponse, dataResponse] = await Promise.all([structurePromise, dataPromise]);
+
+        const uiStructure = transformApiDataToFormStructure(structureResponse);
+        if (uiStructure) {
+          setFormStructure(uiStructure);
+          setFilledData(dataResponse?.form_data || {});
+        }
+      } catch (error: any) {
+        toast.push(
+          <Notification type="danger" title="Form Load Error" children={error.message || 'Could not load form data.'} />
+        );
+      } finally {
+        setIsFormLoading(false);
+      }
+    };
+
+    fetchFormData();
+  }, [document, dispatch]);
+
+  const handleVerify = async () => {
+    setIsVerifying(true);
+    try {
+      axiosInstance.post(`/account_doc/status/${document.id}`, { status: "Verified" });
+      // await dispatch(verifyAccountDocAction(document.id)).unwrap();
+      toast.push(<Notification type="success" title="Document Verified!" />);
+      onActionSuccess(); // Refresh the main table
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Verification Failed" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   if (!document) return null;
 
   const {
@@ -1307,12 +1479,14 @@ const ViewDocumentDialog = ({
   const statusColor = accountDocumentStatusColor[statusKey] || "bg-gray-100";
   const statusLabel = status?.replace(/_/g, " ") || "N/A";
 
+  const canVerify = status && status !== 'approved' && status !== 'rejected';
+
   return (
     <Dialog
       isOpen={true}
       onClose={onClose}
       onRequestClose={onClose}
-      width={900}
+      width={1000} // Increased width for better form view
       bodyOpenClassName="overflow-y-hidden"
     >
       <div className="flex flex-col h-full">
@@ -1336,14 +1510,14 @@ const ViewDocumentDialog = ({
         </div>
 
         {/* --- Dialog Body --- */}
-        <div className="p-6 max-h-[75vh] overflow-y-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="p-6 max-h-[65vh] overflow-y-auto">
           {/* Main Content (2/3 width) */}
-          <div className="lg:col-span-2 flex flex-col gap-6">
+          <div className="flex flex-col gap-6">
             <Card bodyClass="p-4">
               <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
                 Document Information
               </h6>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <InfoItem
                   icon={<TbFileCertificate size={20} />}
                   label="Document Type"
@@ -1366,123 +1540,67 @@ const ViewDocumentDialog = ({
                     value={form.form_name}
                   />
                 )}
-              </div>
-            </Card>
-
-            {/* Client Details Card */}
-            {(company || member) && (
-              <Card bodyClass="p-4">
-                <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
-                  Client Information
-                </h6>
-                <div className="flex flex-col gap-6">
-                  {company && (
-                    <div>
-                      <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                        <TbBrandGoogleDrive size={18} /> Company Details
-                      </h6>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                        <DetailItem
-                          label="Name"
-                          value={company.company_name}
-                        />
-                        <DetailItem
-                          label="Email"
-                          value={company.primary_email_id}
-                        />
-                        <DetailItem
-                          label="Phone"
-                          value={`${company.primary_contact_number_code || ""
-                            } ${company.primary_contact_number || ""}`.trim()}
-                        />
-                        <DetailItem label="GST" value={company.gst_number} />
-                      </div>
-                    </div>
-                  )}
-                  {company && member && (
-                    <div className="border-t dark:border-gray-600 -mx-4 my-2"></div>
-                  )}
-                  {member && (
-                    <div className={company ? "pt-0" : ""}>
-                      <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                        <TbUser size={18} /> Member Details
-                      </h6>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                        <DetailItem label="Name" value={member.name} />
-                        <DetailItem label="Email" value={member.email} />
-                        <DetailItem
-                          label="Phone"
-                          value={`${member.customer_code || ""} ${member.number || ""
-                            }`.trim()}
-                        />
-                        <DetailItem
-                          label="Business Type"
-                          value={member.business_type}
-                        />
-                        <DetailItem
-                          label="Interested In"
-                          value={member.interested_in}
-                        />
-                        {!company && (
-                          <DetailItem
-                            label="Company Name"
-                            value={
-                              member?.company_actual || member?.company_temp
-                            }
-                          />
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Card>
-            )}
-          </div>
-
-          {/* Sidebar (1/3 width) */}
-          <div className="lg:col-span-1 flex flex-col gap-6">
-            <Card bodyClass="p-4">
-              <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
-                Ownership & History
-              </h6>
-              <div className="flex flex-col gap-5">
                 <InfoItem
-                  icon={<TbUser size={20} />}
-                  label="Assigned To"
-                  value={created_by_user?.name}
+                  icon={<TbCalendarClock size={20} />}
+                  label="Created On"
+                  value={dayjs(created_at).format("DD MMM YYYY, hh:mm A")}
                 />
                 <InfoItem
                   icon={<TbUser size={20} />}
                   label="Created By"
                   value={created_by_user?.name}
                 />
-                <InfoItem
-                  icon={<TbCalendarClock size={20} />}
-                  label="Created On"
-                >
-                  {dayjs(created_at).format("DD MMM YYYY, hh:mm A")}
-                </InfoItem>
-                <InfoItem
-                  icon={<TbPencil size={20} />}
-                  label="Last Updated By"
-                  value={updated_by_user?.name}
-                />
-                <InfoItem
-                  icon={<TbCalendarClock size={20} />}
-                  label="Last Updated On"
-                >
-                  {dayjs(updated_at).format("DD MMM YYYY, hh:mm A")}
-                </InfoItem>
               </div>
             </Card>
+
+            {/* --- NEW: Filled Form Data Viewer --- */}
+            {form?.id && (
+              <Card bodyClass="p-4">
+                {isFormLoading ? (
+                  <div className="text-center p-8">
+                    <Spinner />
+                    <p className="mt-2 text-sm text-gray-500">Loading form data...</p>
+                  </div>
+                ) : formStructure && filledData ? (
+                  <FilledFormViewer formStructure={formStructure} filledData={filledData} />
+                ) : (
+                  <div className="text-center p-8">
+                    <p className="text-sm text-gray-500">No filled form data found for this document.</p>
+                  </div>
+                )}
+              </Card>
+            )}
+
           </div>
+        </div>
+        {/* --- Dialog Footer --- */}
+        <div className="flex justify-between items-center p-4 border-t dark:border-gray-700">
+          <Button
+            type="button"
+            onClick={onClose}
+            disabled={isVerifying}
+          >
+            Close
+          </Button>
+          {canVerify && form?.id && (
+            <Button
+              variant="solid"
+              color="emerald"
+              icon={<TbCircleCheck />}
+              onClick={handleVerify}
+              loading={isVerifying}
+            >
+              {isVerifying ? 'Verifying...' : 'Verify & Approve'}
+            </Button>
+          )}
         </div>
       </div>
     </Dialog>
   );
 };
 
-const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, prefilledLeadNumber }: any) => { // MODIFIED: Added prefilledLeadNumber
+
+const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, prefilledLeadNumber }: any) => {
   const dispatch = useAppDispatch();
   const title = editingId ? "Edit Document" : "Add New Document";
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1614,10 +1732,10 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, prefilledLeadNumber
         });
     } else if (isOpen && !editingId) {
       reset({
-        lead_number: prefilledLeadNumber || "", // MODIFIED: Prefill lead number
+        lead_number: prefilledLeadNumber || "",
         company_document: undefined,
         document_type: undefined,
-        document_number: "", // MODIFIED: Prefill document number
+        document_number: "",
         invoice_number: "",
         form_id: undefined,
         employee_id: undefined,
@@ -1626,7 +1744,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, prefilledLeadNumber
       });
       setSelectedCompanyStatus(null);
     }
-  }, [isOpen, editingId, dispatch, reset, AllCompanyData, prefilledLeadNumber]); // MODIFIED: Added dependency
+  }, [isOpen, editingId, dispatch, reset, AllCompanyData, prefilledLeadNumber]);
 
   const onSave = async (data: AddEditDocumentFormData) => {
     setIsSubmitting(true);
@@ -1904,8 +2022,6 @@ const SendEmailAction = ({
   onClose: () => void;
 }) => {
   useEffect(() => {
-    console.log("document?.company?", document);
-
     const email =
       document?.company?.primary_email_id || document?.member?.email;
     if (!email) {
@@ -2549,6 +2665,7 @@ const DownloadDocumentsDialog = ({
 const AccountDocumentModals = ({
   modalState,
   onClose,
+  onActionSuccess, // Pass this prop down
   getAllUserDataOptions,
   user,
 }: any) => {
@@ -2566,7 +2683,8 @@ const AccountDocumentModals = ({
     case "schedule":
       return <AddScheduleDialog document={document} onClose={onClose} />;
     case "view":
-      return <ViewDocumentDialog document={document} onClose={onClose} />;
+      // Pass the onActionSuccess callback to the View dialog
+      return <ViewDocumentDialog document={document} onClose={onClose} onActionSuccess={onActionSuccess} />;
     case "email":
       return <SendEmailAction document={document} onClose={onClose} />;
     case "whatsapp":
@@ -2793,7 +2911,6 @@ const AccountDocument = () => {
 
   const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  // ADDED: State to hold pre-filled lead number for the add drawer
   const [prefilledLeadNumber, setPrefilledLeadNumber] = useState<string | null>(null);
 
   const searchInputRef = useRef<any>(null);
@@ -2827,7 +2944,6 @@ const AccountDocument = () => {
   const [userData, setUserData] = useState<any>(null);
   const [activeShortcut, setActiveShortcut] = useState("Total");
 
-  // State for the new done leads modal
   const [isPendingLeadsModalOpen, setIsPendingLeadsModalOpen] =
     useState(false);
 
@@ -2850,7 +2966,7 @@ const AccountDocument = () => {
     }
   }, [dispatch]);
 
-  // Handler to refresh table data, passed to the done leads modal
+  // Handler to refresh table data, passed to modals
   const handleActionSuccess = useCallback(() => {
     dispatch(getaccountdocAction());
   }, [dispatch]);
@@ -2863,7 +2979,6 @@ const AccountDocument = () => {
 
   const handleShortcutClick = (shortcut: string) => {
     setActiveShortcut(shortcut);
-    // Clear other filters when a shortcut is used
     setFilterCriteria({});
     filterForm.reset({});
     if (searchInputRef.current) {
@@ -2914,7 +3029,6 @@ const AccountDocument = () => {
             );
           });
       } else {
-        // For simple modals like notification and schedule that have enough data in the list item
         setModalState({ isOpen: true, type, data: itemData });
       }
     },
@@ -2924,10 +3038,9 @@ const AccountDocument = () => {
     setModalState({ isOpen: false, type: null, data: null });
   }, []);
 
-  // MODIFIED: handleOpenAddDrawer now accepts an optional lead number
   const handleOpenAddDrawer = (leadNumber?: string) => {
     setEditingId(null);
-    setPrefilledLeadNumber(leadNumber || null); // Store the lead number
+    setPrefilledLeadNumber(leadNumber || null);
     setIsAddEditDrawerOpen(true);
   };
 
@@ -2940,7 +3053,7 @@ const AccountDocument = () => {
   const handleDrawerClose = () => {
     setIsAddEditDrawerOpen(false);
     setEditingId(null);
-    setPrefilledLeadNumber(null); // Clear the prefilled number on close
+    setPrefilledLeadNumber(null);
   };
 
   const filterOptions = useMemo(() => {
@@ -2991,7 +3104,7 @@ const AccountDocument = () => {
       id: String(item.id),
       status: (item.status?.toLowerCase() ||
         "pending") as AccountDocumentStatus,
-      leadNumber: item.lead_id ? `LD-${item.lead_id}` : (item.document_number?.startsWith("LD-") ? item.document_number : "N/A"), // Fallback to doc number if it looks like a lead
+      leadNumber: item.lead_id ? `LD-${item.lead_id}` : (item.document_number?.startsWith("LD-") ? item.document_number : "N/A"),
       enquiryType: item.member?.interested_in?.toLowerCase().includes("sell")
         ? "sales"
         : "purchase",
@@ -3019,8 +3132,6 @@ const AccountDocument = () => {
 
     let processedData: AccountDocumentListItem[] = cloneDeep(mappedData);
 
-    // Determine which filter system to use (exclusive logic)
-    // An active shortcut (other than 'Total') takes precedence.
     if (activeShortcut && activeShortcut !== "Total") {
       switch (activeShortcut) {
         case "Today":
@@ -3070,7 +3181,6 @@ const AccountDocument = () => {
           break;
       }
     } else {
-      // Otherwise, use search and advanced filters
       if (tableData.query) {
         const query = tableData.query.toLowerCase().trim();
         processedData = processedData.filter((item) =>
@@ -3692,17 +3802,17 @@ const AccountDocument = () => {
         isOpen={isAddEditDrawerOpen}
         onClose={handleDrawerClose}
         editingId={editingId}
-        prefilledLeadNumber={prefilledLeadNumber} // MODIFIED: Pass prefilled number
+        prefilledLeadNumber={prefilledLeadNumber}
       />
 
       <AccountDocumentModals
         modalState={modalState}
         onClose={handleCloseModal}
+        onActionSuccess={handleActionSuccess} // Pass callback here
         getAllUserDataOptions={getAllUserDataOptions}
         user={userData}
       />
 
-      {/* RENDER THE NEW Done Leads MODAL */}
       <PendingLeadsModal
         isOpen={isPendingLeadsModalOpen}
         onClose={() => setIsPendingLeadsModalOpen(false)}
