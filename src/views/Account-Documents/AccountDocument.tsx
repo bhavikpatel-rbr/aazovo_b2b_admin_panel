@@ -1629,32 +1629,30 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, prefilledLeadNumber
   }, [isOpen, editingId, dispatch, reset, AllCompanyData, prefilledLeadNumber]); // MODIFIED: Added dependency
 
   const onSave = async (data: AddEditDocumentFormData) => {
-    console.log(data, 'data');
-    
-    // setIsSubmitting(true);
-    // try {
-    //   if (editingId) {
-    //     await dispatch(
-    //       editaccountdocAction({ id: editingId, ...data })
-    //     ).unwrap();
-    //     toast.push(<Notification type="success" title="Document Updated" />);
-    //   } else {
-    //     await dispatch(addaccountdocAction(data)).unwrap();
-    //     toast.push(<Notification type="success" title="Document Added" />);
-    //   }
-    //   dispatch(getaccountdocAction()); // Refresh the main table
-    //   onClose();
-    // } catch (error: any) {
-    //   toast.push(
-    //     <Notification
-    //       type="danger"
-    //       title={editingId ? "Update Failed" : "Add Failed"}
-    //       children={error?.message || "An unknown error occurred."}
-    //     />
-    //   );
-    // } finally {
-    //   setIsSubmitting(false);
-    // }
+    setIsSubmitting(true);
+    try {
+      if (editingId) {
+        await dispatch(
+          editaccountdocAction({ id: editingId, ...data })
+        ).unwrap();
+        toast.push(<Notification type="success" title="Document Updated" />);
+      } else {
+        await dispatch(addaccountdocAction(data)).unwrap();
+        toast.push(<Notification type="success" title="Document Added" />);
+      }
+      dispatch(getaccountdocAction()); // Refresh the main table
+      onClose();
+    } catch (error: any) {
+      toast.push(
+        <Notification
+          type="danger"
+          title={editingId ? "Update Failed" : "Add Failed"}
+          children={error?.message || "An unknown error occurred."}
+        />
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
