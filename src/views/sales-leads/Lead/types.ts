@@ -90,13 +90,10 @@ export type LeadFormData = z.infer<typeof leadFormSchema>;
 export const leadStatusOptions: { value: LeadStatus, label: string }[] = [
   { value: "New", label: "New" },
   { value: "Assigned", label: "Assigned" },
-  { value: "Accepted", label: "Accepted" },
   { value: "Approval Waiting", label: "Approval Waiting" },
   { value: "Approved", label: "Approved" },
   { value: "Deal done", label: "Deal done" },
   { value: "Rejected", label: "Rejected" },
-  { value: "Cancelled", label: "Cancelled" },
-  { value: "Completed", label: "Completed" },
 ];
 
 export const enquiryTypeOptions: { value: EnquiryType, label: string }[] = [
