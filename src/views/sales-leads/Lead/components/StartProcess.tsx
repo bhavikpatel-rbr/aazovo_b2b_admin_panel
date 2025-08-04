@@ -4,13 +4,13 @@ import { Control, Controller, useForm } from 'react-hook-form'
 import { useParams, useNavigate, NavLink } from 'react-router-dom'
 import { useAppDispatch } from '@/reduxtool/store'
 import { useSelector } from 'react-redux'
-import { 
-    getFillUpFormAction, 
+import {
+    getFillUpFormAction,
     submitStartProcessAction,
     getLeadByIdAction,
     getStartProcessAction,
 } from '@/reduxtool/master/middleware'
-
+import axiosInstance from "@/services/api/api";
 // UI Components
 import Card from '@/components/ui/Card'
 import Checkbox from '@/components/ui/Checkbox'
@@ -25,20 +25,20 @@ import { BiChevronRight } from 'react-icons/bi'
 
 // --- Type Definitions for the UI-friendly Form Structure ---
 interface FormField {
-  name: string;
-  label: string;
-  type: 'text' | 'textarea' | 'file' | 'date' | 'checkbox' | 'multi_checkbox';
-  options?: { label: string, name: string }[]; 
-  required: boolean;
+    name: string;
+    label: string;
+    type: 'text' | 'textarea' | 'file' | 'date' | 'checkbox' | 'multi_checkbox';
+    options?: { label: string, name: string }[];
+    required: boolean;
 }
 interface FormSection {
-  id: string; 
-  label: string; 
-  fields: FormField[];
+    id: string;
+    label: string;
+    fields: FormField[];
 }
 interface FormStructure {
-  form_title: string;
-  sections: FormSection[];
+    form_title: string;
+    sections: FormSection[];
 }
 
 
@@ -58,7 +58,7 @@ const transformApiDataToFormStructure = (apiData: any): FormStructure | null => 
 
         const transformedFields: FormField[] = apiSection.questions.flatMap((question: any) => {
             const baseFieldName = sanitizeForName(question.question);
-            
+
             if (question.question_type === 'checkbox' && question.question_label) {
                 const labels = question.question_label.split(',');
                 return [{
@@ -72,7 +72,7 @@ const transformApiDataToFormStructure = (apiData: any): FormStructure | null => 
                     }))
                 }] as FormField;
             }
-            
+
             return [{
                 name: `${sectionId}.${baseFieldName}`,
                 label: question.question,
@@ -97,7 +97,7 @@ const transformApiDataToFormStructure = (apiData: any): FormStructure | null => 
 // --- Helper: Prepares form default values for react-hook-form ---
 const prepareDefaultValues = (structure: FormStructure, savedData: any): any => {
     if (!structure || !savedData) return {};
-    
+
     const defaultValues: { [key: string]: any } = {};
 
     structure.sections.forEach(section => {
@@ -162,7 +162,7 @@ const MultiCheckboxField: FC<{ control: Control<any>, field: FormField }> = ({ c
 
 // --- Dynamic Field Renderer ---
 const renderField = (
-    field: FormField, 
+    field: FormField,
     control: Control<any>,
     handleFileChange: (fieldName: string, file: File | null) => void // New handler for preview
 ) => {
@@ -175,35 +175,35 @@ const renderField = (
     switch (field.type) {
         case 'multi_checkbox':
             return <MultiCheckboxField key={field.name} control={control} field={field} />;
-        
+
         case 'checkbox':
             return (
                 <FormItem {...commonProps}>
                     <Controller name={field.name} control={control} render={({ field: controllerField }) => (
-                         <Checkbox {...controllerField} checked={!!controllerField.value}>{field.label}</Checkbox>
+                        <Checkbox {...controllerField} checked={!!controllerField.value}>{field.label}</Checkbox>
                     )} />
                 </FormItem>
             );
 
         case 'file':
             return (
-              // This field will span 2 columns on medium screens and up
-              <FormItem {...commonProps} className="col-span-2 md:col-span-1">
-                  <Controller 
-                      name={field.name} 
-                      control={control} 
-                      render={({ field: { onChange, ...rest } }) => (
-                          <Input
-                              type="file"
-                              onChange={(e) => {
-                                  const file = e.target.files?.[0] || null;
-                                  onChange(file); // Update react-hook-form state
-                                  handleFileChange(field.name, file); // Update visual preview state
-                              }}
-                          />
-                      )} 
-                  />
-              </FormItem>
+                // This field will span 2 columns on medium screens and up
+                <FormItem {...commonProps} className="col-span-2 md:col-span-1">
+                    <Controller
+                        name={field.name}
+                        control={control}
+                        render={({ field: { onChange, ...rest } }) => (
+                            <Input
+                                type="file"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0] || null;
+                                    onChange(file); // Update react-hook-form state
+                                    handleFileChange(field.name, file); // Update visual preview state
+                                }}
+                            />
+                        )}
+                    />
+                </FormItem>
             );
         case 'textarea':
             return (
@@ -214,7 +214,7 @@ const renderField = (
                 </FormItem>
             );
         case 'date':
-             return (
+            return (
                 <FormItem {...commonProps}>
                     <Controller name={field.name} control={control} render={({ field: controllerField }) => <DatePicker {...controllerField} />} />
                 </FormItem>
@@ -233,20 +233,20 @@ const renderField = (
 // --- Navigator ---
 const NavigatorComponent: FC<{ sections: FormSection[]; activeSection: string; onNavigate: (sectionId: string) => void }> = ({ sections, activeSection, onNavigate }) => (
     <div className="flex flex-row items-center justify-between gap-x-1 md:gap-x-2 py-2 flex-nowrap overflow-x-auto">
-    {sections.map((nav) => (
-        <button
-            type="button"
-            key={nav.id}
-            className={classNames('cursor-pointer px-2 md:px-3 py-2 rounded-md text-center transition-colors duration-150 flex-1 basis-0 min-w-max', {
-                'bg-indigo-50 dark:bg-indigo-700/60 text-[#00baf2] dark:text-indigo-200 font-semibold': activeSection === nav.id,
-                'bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200': activeSection !== nav.id,
-            })}
-            onClick={() => onNavigate(nav.id)}
-            title={nav.label}
-        >
-            <span className="font-medium text-[10px] xxs:text-xs sm:text-sm truncate">{nav.label}</span>
-        </button>
-    ))}
+        {sections.map((nav) => (
+            <button
+                type="button"
+                key={nav.id}
+                className={classNames('cursor-pointer px-2 md:px-3 py-2 rounded-md text-center transition-colors duration-150 flex-1 basis-0 min-w-max', {
+                    'bg-indigo-50 dark:bg-indigo-700/60 text-[#00baf2] dark:text-indigo-200 font-semibold': activeSection === nav.id,
+                    'bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200': activeSection !== nav.id,
+                })}
+                onClick={() => onNavigate(nav.id)}
+                title={nav.label}
+            >
+                <span className="font-medium text-[10px] xxs:text-xs sm:text-sm truncate">{nav.label}</span>
+            </button>
+        ))}
     </div>
 );
 
@@ -266,7 +266,7 @@ const SalesForm = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [formStructure, setFormStructure] = useState<FormStructure | null>(null);
     const [activeSection, setActiveSection] = useState<string>('');
-    
+
     // State for image previews and drawer
     const [imagePreviews, setImagePreviews] = useState<{ [fieldName: string]: string }>({});
     const [isImageDrawerOpen, setIsImageDrawerOpen] = useState(false);
@@ -290,17 +290,17 @@ const SalesForm = () => {
                 }
             });
         };
-    }, []); 
+    }, []);
 
     useEffect(() => {
         const urlsToRevoke = { ...previousBlobUrls.current };
-        previousBlobUrls.current = {}; 
+        previousBlobUrls.current = {};
         Object.values(urlsToRevoke).forEach(url => {
             if (url && url.startsWith('blob:')) {
                 URL.revokeObjectURL(url);
             }
         });
-    }, [imagePreviews]); 
+    }, [imagePreviews]);
 
 
     // --- Data fetching and initialization logic ---
@@ -335,11 +335,11 @@ const SalesForm = () => {
         const uiStructure = transformApiDataToFormStructure(formResponse);
         if (uiStructure) {
             setFormStructure(uiStructure);
-            
+
             if (uiStructure.sections.length > 0) {
                 setActiveSection(uiStructure.sections[0].id);
             }
-            
+
             const initialPreviews: { [fieldName: string]: string } = {};
 
             if (startFormData) {
@@ -380,15 +380,15 @@ const SalesForm = () => {
     const onFormSubmit = async (values: any) => {
         const getProcessedFormData = async (data: any, structure: FormStructure | null) => {
             if (!structure) return data;
-    
+
             const processedData = JSON.parse(JSON.stringify(data));
-    
+
             for (const section of structure.sections) {
                 const sectionId = section.id;
-    
+
                 for (const field of section.fields) {
                     const questionKey = field.name.split('.').pop() as string;
-    
+
                     if (field.type === 'multi_checkbox') {
                         const checkboxGroupData = processedData[sectionId]?.[questionKey];
                         if (checkboxGroupData && typeof checkboxGroupData === 'object') {
@@ -400,7 +400,7 @@ const SalesForm = () => {
                             }
                         }
                     }
-    
+
                     if (field.type === 'file') {
                         const fileOrUrl: File | string | null = data?.[sectionId]?.[questionKey];
                         if (fileOrUrl instanceof File) {
@@ -423,6 +423,7 @@ const SalesForm = () => {
                 sales_form: processedValues,
             };
 
+            axiosInstance.post(`/lead/lead/status/${Number(id)}`, { status: "Approval Waiting" });
             await dispatch(submitStartProcessAction(payload)).unwrap();
             toast.push(<Notification type="success" title="Form Submitted Successfully!" />);
             navigate('/sales-leads/lead');
@@ -435,7 +436,7 @@ const SalesForm = () => {
             );
         }
     };
-    
+
     // Handler to update image previews on file selection
     const handleFileChange = (fieldName: string, file: File | null) => {
         setImagePreviews(prev => {
@@ -493,9 +494,9 @@ const SalesForm = () => {
     }
 
     if (error || !formStructure) {
-      return <div className="p-8 text-center text-red-500">Failed to load form structure. Please try again.</div>;
+        return <div className="p-8 text-center text-red-500">Failed to load form structure. Please try again.</div>;
     }
-  
+
     const currentSectionData = formStructure.sections.find(s => s.id === activeSection);
 
     return (
@@ -503,8 +504,8 @@ const SalesForm = () => {
             {/* Form Title */}
             {/* <h3 className="mb-4">{formStructure.form_title}</h3> */}
             <div className="flex gap-1 items-end mb-3">
-                <NavLink to="/sales-leads/lead">   
-                <h6 className="font-semibold hover:text-primary-600">Leads</h6>
+                <NavLink to="/sales-leads/lead">
+                    <h6 className="font-semibold hover:text-primary-600">Leads</h6>
                 </NavLink>
                 <BiChevronRight size={22} />
                 <h6 className="font-semibold text-primary-600 dark:text-primary-300">
@@ -528,34 +529,34 @@ const SalesForm = () => {
                         <h5 className="mb-4">Documents</h5>
                         <div className="max-h-[70vh] overflow-y-auto pr-2">
                             <div className="space-y-4">
-                            {Object.keys(imagePreviews).length > 0 ? (
-                                Object.entries(imagePreviews).map(([fieldName, imageUrl]) => (
-                                    <>
-                                    <span>
-                                        {fieldName
-                                            .split('.')
-                                            .pop()
-                                            ?.replace(/_/g, ' ')
-                                            .replace(/\b\w/g, c => c.toUpperCase())}
-                                    </span>
-                                    <div 
-                                        key={fieldName}
-                                        className="cursor-pointer border-2 border-gray-200 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-md overflow-hidden transition-colors" 
-                                        onClick={() => handleImageClick(imageUrl, fieldName)}
-                                    >
-                                        <img
-                                            src={imageUrl}
-                                            alt={`Preview for ${fieldName}`}
-                                            className="w-full h-auto object-cover"
-                                        />
-                                    </div>
-                                    </>
-                                ))
-                            ) : (
-                                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                                    No images to preview.
-                                </p>
-                            )}
+                                {Object.keys(imagePreviews).length > 0 ? (
+                                    Object.entries(imagePreviews).map(([fieldName, imageUrl]) => (
+                                        <>
+                                            <span>
+                                                {fieldName
+                                                    .split('.')
+                                                    .pop()
+                                                    ?.replace(/_/g, ' ')
+                                                    .replace(/\b\w/g, c => c.toUpperCase())}
+                                            </span>
+                                            <div
+                                                key={fieldName}
+                                                className="cursor-pointer border-2 border-gray-200 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-md overflow-hidden transition-colors"
+                                                onClick={() => handleImageClick(imageUrl, fieldName)}
+                                            >
+                                                <img
+                                                    src={imageUrl}
+                                                    alt={`Preview for ${fieldName}`}
+                                                    className="w-full h-auto object-cover"
+                                                />
+                                            </div>
+                                        </>
+                                    ))
+                                ) : (
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                                        No images to preview.
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </Card>
@@ -574,15 +575,15 @@ const SalesForm = () => {
                     </form>
                 </div>
             </div>
-      
+
             {/* Footer and Drawer */}
             <Card className="mt-auto sticky bottom-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex justify-between items-center p-4">
                     <div>
-                        <Button 
-                            type="button" 
+                        <Button
+                            type="button"
                             customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"}
-                            onClick={() => navigate(-1)} 
+                            onClick={() => navigate(-1)}
                             disabled={isSubmitting}
                         >
                             Discard
@@ -601,7 +602,7 @@ const SalesForm = () => {
                     </div>
                 </div>
             </Card>
-      
+
             <Drawer
                 title="Document Viewer"
                 isOpen={isImageDrawerOpen}
@@ -611,16 +612,16 @@ const SalesForm = () => {
                 width={500}
             >
                 <div className="p-4 h-full overflow-y-auto">
-                    {selectedImage && selectedLabel &&  (
+                    {selectedImage && selectedLabel && (
                         <>
-                        <span>
-                            {selectedLabel
-                                .split('.')
-                                .pop()
-                                ?.replace(/_/g, ' ')
-                                .replace(/\b\w/g, c => c.toUpperCase())}
-                        </span>
-                        <img src={selectedImage} alt="Selected Document" className="w-full h-auto border border-indigo-200 rounded-md" />
+                            <span>
+                                {selectedLabel
+                                    .split('.')
+                                    .pop()
+                                    ?.replace(/_/g, ' ')
+                                    .replace(/\b\w/g, c => c.toUpperCase())}
+                            </span>
+                            <img src={selectedImage} alt="Selected Document" className="w-full h-auto border border-indigo-200 rounded-md" />
                         </>
                     )}
                 </div>

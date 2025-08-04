@@ -352,7 +352,7 @@ const PendingLeadsModal = ({
     setIsLoading(true);
     try {
       const response = await axiosInstance.get(
-        "/sales-form?per_page=99999&Status=Approved"
+        "/lead/lead?per_page=99999&status=Deal Done"
       );
       setPendingLeads(response.data?.data?.data || []);
     } catch (error) {

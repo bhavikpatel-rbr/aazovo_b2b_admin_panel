@@ -10,6 +10,9 @@ import { useNavigate } from "react-router-dom";
 import axiosInstance from "@/services/api/api";
 import { z } from "zod";
 
+// --- Icons ---
+import { TbCurrencyDollar } from 'react-icons/tb';
+
 dayjs.extend(isBetween);
 dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
@@ -121,223 +124,223 @@ import { shallowEqual, useSelector } from "react-redux";
 
 
 // --- START: NEW COMPONENT FOR PENDING LEAD DETAILS VIEW MODAL ---
-const PendingLeadViewModal = ({ 
-    isOpen, 
-    onClose, 
-    leadData 
-}: { 
-    isOpen: boolean; 
-    onClose: () => void; 
-    leadData: any | null; 
+const PendingLeadViewModal = ({
+  isOpen,
+  onClose,
+  leadData
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  leadData: any | null;
 }) => {
-    if (!isOpen || !leadData || !leadData.lead) return null;
+  if (!isOpen || !leadData || !leadData.lead) return null;
 
-    const lead = leadData.lead;
-    const salesForm = leadData.sales_form;
+  const lead = leadData.lead;
+  const salesForm = leadData.sales_form;
 
-    const renderDetail = (label: string, value: React.ReactNode) => (
-        <div className="flex flex-col sm:flex-row py-2 border-b border-gray-200 dark:border-gray-700">
-            <dt className="sm:w-1/3 font-semibold text-gray-600 dark:text-gray-300">{label}</dt>
-            <dd className="sm:w-2/3 mt-1 sm:mt-0 text-gray-800 dark:text-gray-100 break-words">{value ?? 'N/A'}</dd>
+  const renderDetail = (label: string, value: React.ReactNode) => (
+    <div className="flex flex-col sm:flex-row py-2 border-b border-gray-200 dark:border-gray-700">
+      <dt className="sm:w-1/3 font-semibold text-gray-600 dark:text-gray-300">{label}</dt>
+      <dd className="sm:w-2/3 mt-1 sm:mt-0 text-gray-800 dark:text-gray-100 break-words">{value ?? 'N/A'}</dd>
+    </div>
+  );
+
+  const renderSalesFormDetails = (formData: any) => {
+    if (!formData || Object.keys(formData).length === 0) return <p className="text-sm text-gray-500">No form data available.</p>;
+
+    return Object.entries(formData).map(([sectionKey, sectionValue]: [string, any]) => (
+      <div key={sectionKey} className="mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md">
+        <h6 className="font-semibold capitalize border-b pb-1 mb-2">{sectionKey.replace(/_/g, ' ')}</h6>
+        {Object.entries(sectionValue).map(([fieldKey, fieldValue]) => (
+          <div key={fieldKey} className="text-sm py-1">
+            <span className="font-medium capitalize">{fieldKey.replace(/_/g, ' ')}:</span>
+            <span className="ml-2 text-gray-700 dark:text-gray-200">
+              {Array.isArray(fieldValue) ? fieldValue.join(', ') : String(fieldValue)}
+            </span>
+          </div>
+        ))}
+      </div>
+    ));
+  };
+
+  return (
+    <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width={800} bodyOpenClassName="overflow-hidden">
+      <div className="flex flex-col h-full max-h-[85vh]">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h5 className="mb-0">Lead Details: {lead.lead_number || `LD-${lead.id}`}</h5>
         </div>
-    );
-    
-    const renderSalesFormDetails = (formData: any) => {
-        if (!formData || Object.keys(formData).length === 0) return <p className="text-sm text-gray-500">No form data available.</p>;
+        <div className="flex-grow overflow-y-auto px-6 py-4 custom-scrollbar">
+          <Card bodyClass="p-4">
+            <h6 className="mb-2 text-base font-semibold">Lead Information</h6>
+            <dl>
+              {renderDetail('Lead Number', lead.lead_number || `LD-${lead.id.toString().padStart(5, '0')}`)}
+              {renderDetail('Product', lead.product?.name)}
+              {renderDetail('Quantity', lead.qty)}
+              {renderDetail('Target Price', lead.target_price ? `$${lead.target_price}` : 'N/A')}
+              {renderDetail('Status', <Tag className={`${leadStatusColor[lead.status] || leadStatusColor.default} capitalize`}>{lead.status}</Tag>)}
+              {renderDetail('Intent', <Tag className="capitalize">{lead.lead_intent}</Tag>)}
+              {renderDetail('Created At', dayjs(lead.created_at).format('DD MMM YYYY, h:mm A'))}
+            </dl>
+          </Card>
 
-        return Object.entries(formData).map(([sectionKey, sectionValue]: [string, any]) => (
-            <div key={sectionKey} className="mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md">
-                <h6 className="font-semibold capitalize border-b pb-1 mb-2">{sectionKey.replace(/_/g, ' ')}</h6>
-                {Object.entries(sectionValue).map(([fieldKey, fieldValue]) => (
-                     <div key={fieldKey} className="text-sm py-1">
-                        <span className="font-medium capitalize">{fieldKey.replace(/_/g, ' ')}:</span> 
-                        <span className="ml-2 text-gray-700 dark:text-gray-200">
-                            {Array.isArray(fieldValue) ? fieldValue.join(', ') : String(fieldValue)}
-                        </span>
-                     </div>
-                ))}
-            </div>
-        ));
-    };
+          <Card bodyClass="p-4" className="mt-4">
+            <h6 className="mb-2 text-base font-semibold">Member Information</h6>
+            <dl>
+              {renderDetail('Buyer', <span>{lead.lead_info?.buyer?.name} <span className="text-gray-500">({lead.lead_info?.buyer?.member_code})</span></span>)}
+              {renderDetail('Supplier', <span>{lead.lead_info?.seller?.name} <span className="text-gray-500">({lead.lead_info?.seller?.member_code})</span></span>)}
+            </dl>
+          </Card>
 
-    return (
-        <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width={800} bodyOpenClassName="overflow-hidden">
-            <div className="flex flex-col h-full max-h-[85vh]">
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                  <h5 className="mb-0">Lead Details: {lead.lead_number || `LD-${lead.id}`}</h5>
-                </div>
-                <div className="flex-grow overflow-y-auto px-6 py-4 custom-scrollbar">
-                    <Card bodyClass="p-4">
-                        <h6 className="mb-2 text-base font-semibold">Lead Information</h6>
-                        <dl>
-                            {renderDetail('Lead Number', lead.lead_number || `LD-${lead.id.toString().padStart(5, '0')}`)}
-                            {renderDetail('Product', lead.product?.name)}
-                            {renderDetail('Quantity', lead.qty)}
-                            {renderDetail('Target Price', lead.target_price ? `$${lead.target_price}` : 'N/A')}
-                            {renderDetail('Status', <Tag className={`${leadStatusColor[lead.status] || leadStatusColor.default} capitalize`}>{lead.status}</Tag>)}
-                            {renderDetail('Intent', <Tag className="capitalize">{lead.lead_intent}</Tag>)}
-                            {renderDetail('Created At', dayjs(lead.created_at).format('DD MMM YYYY, h:mm A'))}
-                        </dl>
-                    </Card>
-
-                    <Card bodyClass="p-4" className="mt-4">
-                        <h6 className="mb-2 text-base font-semibold">Member Information</h6>
-                        <dl>
-                             {renderDetail('Buyer', <span>{lead.lead_info?.buyer?.name} <span className="text-gray-500">({lead.lead_info?.buyer?.member_code})</span></span>)}
-                             {renderDetail('Supplier', <span>{lead.lead_info?.seller?.name} <span className="text-gray-500">({lead.lead_info?.seller?.member_code})</span></span>)}
-                        </dl>
-                    </Card>
-
-                     <Card bodyClass="p-4" className="mt-4">
-                        <h6 className="mb-2 text-base font-semibold">Form Submission Details</h6>
-                        {renderSalesFormDetails(salesForm)}
-                    </Card>
-                </div>
-                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
-                    <Button variant="solid" onClick={onClose}>Close</Button>
-                </div>
-            </div>
-        </Dialog>
-    );
+          <Card bodyClass="p-4" className="mt-4">
+            <h6 className="mb-2 text-base font-semibold">Form Submission Details</h6>
+            {renderSalesFormDetails(salesForm)}
+          </Card>
+        </div>
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
+          <Button variant="solid" onClick={onClose}>Close</Button>
+        </div>
+      </div>
+    </Dialog>
+  );
 };
 // --- END: NEW COMPONENT ---
 
 // --- START: NEW COMPONENT FOR PENDING LEADS MODAL ---
-const PendingLeadsModal = ({ 
-    isOpen, 
-    onClose, 
-    onActionSuccess 
-}: { 
-    isOpen: boolean; 
-    onClose: () => void; 
-    onActionSuccess: () => void; 
+const PendingLeadsModal = ({
+  isOpen,
+  onClose,
+  onActionSuccess
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onActionSuccess: () => void;
 }) => {
-    const [pendingLeads, setPendingLeads] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [actionLoading, setActionLoading] = useState<{ id: string | number | null, type: 'approve' | 'reject' | null }>({ id: null, type: null });
-    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-    const [selectedLead, setSelectedLead] = useState<any | null>(null);
+  const [pendingLeads, setPendingLeads] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<{ id: string | number | null, type: 'approve' | 'reject' | null }>({ id: null, type: null });
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<any | null>(null);
 
-    const fetchPendingLeads = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const response = await axiosInstance.get('/sales-form?per_page=99999&status=Pending');
-            setPendingLeads(response.data?.data?.data || []);
-        } catch (error) {
-            toast.push(<Notification type="danger" title="Error">Failed to fetch pending leads.</Notification>);
-            console.error(error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []); 
+  const fetchPendingLeads = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await axiosInstance.get('/sales-form?per_page=99999&status=Pending');
+      setPendingLeads(response.data?.data?.data || []);
+    } catch (error) {
+      toast.push(<Notification type="danger" title="Error">Failed to fetch pending leads.</Notification>);
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-    useEffect(() => {
-        if (isOpen) {
-            fetchPendingLeads();
-        }
-    }, [isOpen, fetchPendingLeads]);
+  useEffect(() => {
+    if (isOpen) {
+      fetchPendingLeads();
+    }
+  }, [isOpen, fetchPendingLeads]);
 
-    const handleAction = async (salesFormId: string | number, status: 'Approved' | 'Rejected') => {
-        setActionLoading({ id: salesFormId, type: status === 'Approved' ? 'approve' : 'reject' });
-        try {
-            await axiosInstance.post(`/sales-form/status/${salesFormId}`, { status });
-            toast.push(<Notification type="success" title={`Lead ${status}`}>{`Lead has been successfully ${status.toLowerCase()}.`}</Notification>);
-            fetchPendingLeads(); // Refresh list in modal
-            onActionSuccess(); // Refresh main table
-        } catch (error: any) {
-            toast.push(<Notification type="danger" title="Action Failed">{error.response?.data?.message || `Could not ${status.toLowerCase()} the lead.`}</Notification>);
-            console.error(error);
-        } finally {
-            setActionLoading({ id: null, type: null });
-        }
-    };
-    
-    const handleViewClick = (leadData: any) => {
-        setSelectedLead(leadData);
-        setIsViewModalOpen(true);
-    };
-    
-    return (
-        <>
-            <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width={1000} bodyOpenClassName="overflow-hidden">
-                 <div className="flex flex-col h-full max-h-[80vh]">
-                    <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                      <h5 className="mb-0">Pending Leads for Verification</h5>
-                    </div>
-                    <div className="flex-grow overflow-y-auto px-6 py-4">
-                        {isLoading ? (
-                             <div className="flex justify-center items-center h-64"><Spinner size={40} /></div>
-                        ) : pendingLeads.length > 0 ? (
-                            <Table>
-                                <Table.THead>
-                                    <Table.Tr>
-                                        <Table.Th>Lead Info</Table.Th>
-                                        <Table.Th>Product</Table.Th>
-                                        <Table.Th>Members (Buyer/Seller)</Table.Th>
-                                        <Table.Th>Details</Table.Th>
-                                        <Table.Th>Actions</Table.Th>
-                                    </Table.Tr>
-                                </Table.THead>
-                                <Table.TBody>
-                                    {pendingLeads.map((item) => (
-                                        <Table.Tr key={item.id}>
-                                            <Table.Td>{item.lead?.lead_number || `LD-${item.lead?.id}`}</Table.Td>
-                                            <Table.Td>{item.lead?.product?.name || 'N/A'}</Table.Td>
-                                            <Table.Td>
-                                                <div className="text-xs">
-                                                  <p><strong>B:</strong> {item.lead?.lead_info?.buyer?.name || 'N/A'}</p>
-                                                  <p><strong>S:</strong> {item.lead?.lead_info?.seller?.name || 'N/A'}</p>
-                                                </div>
-                                            </Table.Td>
-                                            <Table.Td>Qty: {item.lead?.qty || '-'} | Price: ${item.lead?.target_price || '-'}</Table.Td>
-                                            <Table.Td>
-                                                <div className="flex items-center gap-2">
-                                                    <Tooltip title="View Details">
-                                                      <Button shape="circle" size="xs" icon={<TbEye />} onClick={() => handleViewClick(item)} />
-                                                    </Tooltip>
-                                                    <Button 
-                                                        size="xs" 
-                                                        variant="solid" 
-                                                        color="emerald-600" 
-                                                        onClick={() => handleAction(item.id, 'Approved')} 
-                                                        loading={actionLoading.id === item.id && actionLoading.type === 'approve'}
-                                                    >
-                                                        Approve
-                                                    </Button>
-                                                    <Button 
-                                                        size="xs" 
-                                                        variant="solid" 
-                                                        color="red-600" 
-                                                        onClick={() => handleAction(item.id, 'Rejected')} 
-                                                        loading={actionLoading.id === item.id && actionLoading.type === 'reject'}
-                                                    >
-                                                        Reject
-                                                    </Button>
-                                                </div>
-                                            </Table.Td>
-                                        </Table.Tr>
-                                    ))}
-                                </Table.TBody>
-                            </Table>
-                        ) : (
-                            <div className="text-center p-10 text-gray-500">
-                                <p>No pending leads found.</p>
-                            </div>
-                        )}
-                    </div>
-                    <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
-                        <Button variant="solid" onClick={onClose}>Close</Button>
-                    </div>
-                </div>
-            </Dialog>
+  const handleAction = async (salesFormId: string | number, status: 'Approved' | 'Rejected') => {
+    setActionLoading({ id: salesFormId, type: status === 'Approved' ? 'approve' : 'reject' });
+    try {
+      await axiosInstance.post(`/sales-form/status/${salesFormId}`, { status });
+      toast.push(<Notification type="success" title={`Lead ${status}`}>{`Lead has been successfully ${status.toLowerCase()}.`}</Notification>);
+      fetchPendingLeads(); // Refresh list in modal
+      onActionSuccess(); // Refresh main table
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Action Failed">{error.response?.data?.message || `Could not ${status.toLowerCase()} the lead.`}</Notification>);
+      console.error(error);
+    } finally {
+      setActionLoading({ id: null, type: null });
+    }
+  };
 
-            <PendingLeadViewModal 
-                isOpen={isViewModalOpen}
-                onClose={() => setIsViewModalOpen(false)}
-                leadData={selectedLead}
-            />
-        </>
-    );
+  const handleViewClick = (leadData: any) => {
+    setSelectedLead(leadData);
+    setIsViewModalOpen(true);
+  };
+
+  return (
+    <>
+      <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width={1000} bodyOpenClassName="overflow-hidden">
+        <div className="flex flex-col h-full max-h-[80vh]">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h5 className="mb-0">Pending Leads for Verification</h5>
+          </div>
+          <div className="flex-grow overflow-y-auto px-6 py-4">
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64"><Spinner size={40} /></div>
+            ) : pendingLeads.length > 0 ? (
+              <Table>
+                <Table.THead>
+                  <Table.Tr>
+                    <Table.Th>Lead Info</Table.Th>
+                    <Table.Th>Product</Table.Th>
+                    <Table.Th>Members (Buyer/Seller)</Table.Th>
+                    <Table.Th>Details</Table.Th>
+                    <Table.Th>Actions</Table.Th>
+                  </Table.Tr>
+                </Table.THead>
+                <Table.TBody>
+                  {pendingLeads.map((item) => (
+                    <Table.Tr key={item.id}>
+                      <Table.Td>{item.lead?.lead_number || `LD-${item.lead?.id}`}</Table.Td>
+                      <Table.Td>{item.lead?.product?.name || 'N/A'}</Table.Td>
+                      <Table.Td>
+                        <div className="text-xs">
+                          <p><strong>B:</strong> {item.lead?.lead_info?.buyer?.name || 'N/A'}</p>
+                          <p><strong>S:</strong> {item.lead?.lead_info?.seller?.name || 'N/A'}</p>
+                        </div>
+                      </Table.Td>
+                      <Table.Td>Qty: {item.lead?.qty || '-'} | Price: ${item.lead?.target_price || '-'}</Table.Td>
+                      <Table.Td>
+                        <div className="flex items-center gap-2">
+                          <Tooltip title="View Details">
+                            <Button shape="circle" size="xs" icon={<TbEye />} onClick={() => handleViewClick(item)} />
+                          </Tooltip>
+                          <Button
+                            size="xs"
+                            variant="solid"
+                            color="emerald-600"
+                            onClick={() => handleAction(item.id, 'Approved')}
+                            loading={actionLoading.id === item.id && actionLoading.type === 'approve'}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="solid"
+                            color="red-600"
+                            onClick={() => handleAction(item.id, 'Rejected')}
+                            loading={actionLoading.id === item.id && actionLoading.type === 'reject'}
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.TBody>
+              </Table>
+            ) : (
+              <div className="text-center p-10 text-gray-500">
+                <p>No pending leads found.</p>
+              </div>
+            )}
+          </div>
+          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
+            <Button variant="solid" onClick={onClose}>Close</Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <PendingLeadViewModal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        leadData={selectedLead}
+      />
+    </>
+  );
 };
 // --- END: NEW COMPONENT ---
 
@@ -400,99 +403,101 @@ const startProcessSchema = z.object({
 type StartProcessFormData = z.infer<typeof startProcessSchema>;
 
 const StartProcessModal = ({
-    isOpen,
-    onClose,
-    lead,
+  isOpen,
+  onClose,
+  lead,
 }: {
-    isOpen: boolean
-    onClose: () => void
-    lead: LeadListItem | null
+  isOpen: boolean
+  onClose: () => void
+  lead: LeadListItem | null
 }) => {
-    const navigate = useNavigate();
-    const { formsData = [] } = useSelector(masterSelector);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+  const { formsData = [] } = useSelector(masterSelector);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const {
-        control,
-        handleSubmit,
-        reset,
-        formState: { errors, isValid },
-    } = useForm<StartProcessFormData>({
-        resolver: zodResolver(startProcessSchema),
-        mode: 'onChange',
-    });
-    
-    useEffect(() => {
-        if (!isOpen) {
-            reset(); // Reset form when modal closes
-        }
-    }, [isOpen, reset]);
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors, isValid },
+  } = useForm<StartProcessFormData>({
+    resolver: zodResolver(startProcessSchema),
+    mode: 'onChange',
+  });
 
-    const tokenFormOptions = useMemo(
-        () =>
-            (formsData || []).map((form: any) => ({
-                value: form.id,
-                label: form.form_title || 'Untitled Form',
-            })),
-        [formsData]
-    );
+  if (lead?.formId && lead?.id) navigate(`/start-process/${lead?.id}/${lead?.formId}`);
 
-    const onSubmit = (data: StartProcessFormData) => {
-        if (!lead) return;
-        setIsSubmitting(true);
-        navigate(`/start-process/${lead.id}/${data.formId}`);
-        onClose();
-    };
+  useEffect(() => {
+    if (!isOpen) {
+      reset(); // Reset form when modal closes
+    }
+  }, [isOpen, reset]);
 
-    if (!isOpen || !lead) return null;
+  const tokenFormOptions = useMemo(
+    () =>
+      (formsData || []).map((form: any) => ({
+        value: form.id,
+        label: form.form_title || 'Untitled Form',
+      })),
+    [formsData]
+  );
 
-    console.log(lead, 'lead');
-    
-    return (
-        <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose}>
-            <h5 className="mb-4">Start Process for Lead: {lead.lead_number}</h5>
-            <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                Select a form to initiate a new process for this lead.
-            </p>
-            <Form id="startProcessForm" onSubmit={handleSubmit(onSubmit)}>
-                <FormItem
-                    label="Token Form"
-                    invalid={!!errors.formId}
-                    errorMessage={errors.formId?.message}
-                >
-                    <Controller
-                        name="formId"
-                        control={control}
-                        render={({ field }) => (
-                            <UiSelect
-                                placeholder="Select a form..."
-                                options={tokenFormOptions}
-                                value={tokenFormOptions.find(
-                                    (opt) => opt.value === field.value
-                                )}
-                                onChange={(opt: any) => field.onChange(opt?.value)}
-                            />
-                        )}
-                    />
-                </FormItem>
-            </Form>
-            <div className="text-right mt-6">
-                <Button className="mr-2" onClick={onClose} disabled={isSubmitting}>
-                    Cancel
-                </Button>
-                <Button
-                    variant="solid"
-                    type="submit"
-                    form="startProcessForm"
-                    loading={isSubmitting}
-                    disabled={!isValid || isSubmitting}
-                    icon={<TbPlayerPlay />}
-                >
-                    Proceed
-                </Button>
-            </div>
-        </Dialog>
-    );
+  const onSubmit = (data: StartProcessFormData) => {
+    if (!lead) return;
+
+
+    setIsSubmitting(true);
+    navigate(`/start-process/${lead.id}/${data.formId}`);
+    onClose();
+  };
+
+  if (!isOpen || !lead) return null;
+
+  return (
+    <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Start Process for Lead: {lead.lead_number}</h5>
+      <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+        Select a form to initiate a new process for this lead.
+      </p>
+      <Form id="startProcessForm" onSubmit={handleSubmit(onSubmit)}>
+        <FormItem
+          label="Token Form"
+          invalid={!!errors.formId}
+          errorMessage={errors.formId?.message}
+        >
+          <Controller
+            name="formId"
+            control={control}
+            render={({ field }) => (
+              <UiSelect
+                placeholder="Select a form..."
+                options={tokenFormOptions}
+                value={tokenFormOptions.find(
+                  (opt) => opt.value === field.value
+                )}
+                onChange={(opt: any) => field.onChange(opt?.value)}
+              />
+            )}
+          />
+        </FormItem>
+      </Form>
+      <div className="text-right mt-6">
+        <Button className="mr-2" onClick={onClose} disabled={isSubmitting}>
+          Cancel
+        </Button>
+        <Button
+          variant="solid"
+          type="submit"
+          form="startProcessForm"
+          loading={isSubmitting}
+          disabled={!isValid || isSubmitting}
+          icon={<TbPlayerPlay />}
+        >
+          Proceed
+        </Button>
+      </div>
+    </Dialog>
+  );
 };
 // --- END: NEW SCHEMA AND MODAL ---
 
@@ -906,21 +911,107 @@ const LeadModals: React.FC<LeadModalsProps> = ({
   };
   return <>{renderModalContent()}</>;
 };
+
+
+// For clarity, I'm including a sample definition here.
+type Member = {
+  name: string;
+  member_code: string;
+};
+
+// type LeadListItem = {
+//     lead_number: string;
+//     productName: string;
+//     customerName: string; // Could be buyer's name
+//     qty: number;
+//     target_price: number;
+//     seller?: Member;
+//     buyer?: Member;
+// };
+
+// --- REUSABLE HELPER COMPONENTS (from the example) ---
+
+const StatBox: React.FC<{
+  value: string | number | React.ReactNode;
+  label: string;
+  className?: string;
+}> = ({ value, label, className }) => (
+  <div className={`text-center px-4 py-2 border-dashed border-gray-200 dark:border-gray-600 ${className}`}>
+    <h4 className="font-bold">{value}</h4>
+    <p className="text-gray-500 text-sm">{label}</p>
+  </div>
+);
+
+const InfoRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div className="flex justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+    <span className="font-semibold text-gray-700 dark:text-gray-200">{label}</span>
+    <span className="text-gray-900 dark:text-gray-50 text-right">{children || '—'}</span>
+  </div>
+);
+
+// --- TAB CONTENT COMPONENTS (adapted for the dialog) ---
+
+const HeaderCard: React.FC<{ lead: LeadListItem }> = ({ lead }) => (
+  <Card>
+    <div className="flex flex-col md:flex-row items-center gap-4">
+      <div className="flex-grow grid grid-cols-2 sm:grid-cols-4 gap-1 w-full">
+        <StatBox value={lead.qty} label="Quantity" />
+        <StatBox value={`$${lead.target_price || '0.00'}`} label="Target Price" className="sm:border-l" />
+        <StatBox
+          value={<Tag className="bg-blue-100 text-blue-600">Qualified</Tag>}
+          label="Lead Status"
+          className="sm:border-l"
+        />
+        <StatBox value={lead.lead_number} label="Lead #" className="col-span-2 sm:col-span-1 sm:border-l" />
+      </div>
+    </div>
+  </Card>
+);
+
+const ProductDetailsTab: React.FC<{ lead: LeadListItem }> = ({ lead }) => (
+  <Card>
+    <h5 className="font-semibold mb-4">Product Details</h5>
+    <InfoRow label="Product Name">{lead.productName}</InfoRow>
+    <InfoRow label="Quantity">{lead.qty}</InfoRow>
+    <InfoRow label="Target Price">{`$${lead.target_price || 'N/A'}`}</InfoRow>
+  </Card>
+);
+
+const MemberDetailsTab: React.FC<{ title: string; member: Member | undefined }> = ({ title, member }) => (
+  <Card>
+    <h5 className="font-semibold mb-4">{title}</h5>
+    {member ? (
+      <>
+        <InfoRow label="Name">{member.name}</InfoRow>
+        <InfoRow label="Member ID">{member.member_code}</InfoRow>
+      </>
+    ) : (
+      <p className="text-gray-500">No details available.</p>
+    )}
+  </Card>
+);
+
+// --- MAIN DIALOG COMPONENT ---
+
 const ConvertLeadToDealDialog: React.FC<{
   lead: LeadListItem;
   onClose: () => void;
 }> = ({ lead, onClose }) => {
-
   const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({
+  const [activeTab, setActiveTab] = useState('product_details');
+
+  const { handleSubmit } = useForm({
+    // This logic remains the same, providing data for the conversion action
     defaultValues: {
       dealValue: lead.target_price || 0,
       dealName: `${lead.productName} for ${lead.customerName}`,
     },
   });
+
   const onConvert = (data: any) => {
     setIsLoading(true);
     console.log(`Converting lead ${lead.lead_number} to deal with data:`, data);
+    axiosInstance.post(`/lead/lead/status/${lead.id}`, { status: "Deal done" });
     setTimeout(() => {
       toast.push(
         <Notification type="success" title="Lead Converted">
@@ -931,41 +1022,60 @@ const ConvertLeadToDealDialog: React.FC<{
       onClose();
     }, 1000);
   };
+
+  const tabList = [
+    { key: 'product_details', label: 'Product Details' },
+    { key: 'seller_details', label: 'Seller Details (From)' },
+    { key: 'buyer_details', label: 'Buyer Details (To)' },
+  ];
+
+  const renderActiveTabContent = () => {
+    switch (activeTab) {
+      case 'product_details':
+        return <ProductDetailsTab lead={lead} />;
+      case 'seller_details':
+        return <MemberDetailsTab title="Purchase From (Supplier)" member={lead.seller} />;
+      case 'buyer_details':
+        return <MemberDetailsTab title="Sale To (Buyer)" member={lead.buyer} />;
+      default:
+        return <ProductDetailsTab lead={lead} />;
+    }
+  };
+
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={700}>
-      <h5 className="mb-4">Convert Lead to Deal</h5>
-      <p className="mb-4">
-        You are about to convert lead <span className="font-semibold">{lead.lead_number}</span> into a new deal.
-        This will initiate the Purchase Order (PO) and Sales Order (SO) process for the accounts team.
-        Please confirm the details below.
-      </p>
-      <Card>
-        <div className="p-4">
-          <h6 className="mb-4">Deal Summary</h6>
-          <div className="text-center font-semibold mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
-            {lead.productName}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-            <div>
-              <h6 className="font-bold text-gray-800 dark:text-gray-200 border-b pb-1 mb-2">Purchase From (Supplier)</h6>
-              <p><strong>Name:</strong> {lead.seller?.name || 'N/A'}</p>
-              <p><strong>Member ID:</strong> {lead.seller?.member_code || 'N/A'}</p>
-            </div>
-            <div>
-              <h6 className="font-bold text-gray-800 dark:text-gray-200 border-b pb-1 mb-2">Sale To (Buyer)</h6>
-              <p><strong>Name:</strong> {lead.buyer?.name || 'N/A'}</p>
-              <p><strong>Member ID:</strong> {lead.buyer?.member_code || 'N/A'}</p>
-            </div>
-          </div>
-          <hr className="my-4" />
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div><strong className="block">Quantity:</strong> {lead.qty || 'N/A'}</div>
-            <div><strong className="block">Target Price:</strong> ${lead.target_price || 'N/A'}</div>
-          </div>
-        </div>
-      </Card>
+      <div className="mb-4">
+        <h5 className="mb-1">Convert Lead to Deal</h5>
+        <p>
+          You are about to convert this lead into a new deal. Please confirm the details.
+        </p>
+      </div>
 
-      <div className="text-right mt-6">
+      <div className="mb-6">
+        <HeaderCard lead={lead} />
+      </div>
+
+      <div className="flex flex-row items-center border-b border-gray-200 dark:border-gray-600 mb-6 flex-wrap">
+        {tabList.map((tab) => (
+          <button
+            type="button"
+            key={tab.key}
+            className={classNames('px-4 py-3 -mb-px font-semibold focus:outline-none whitespace-nowrap', {
+              'text-indigo-600 border-b-2 border-indigo-600': activeTab === tab.key,
+              'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200': activeTab !== tab.key,
+            })}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div>
+        {renderActiveTabContent()}
+      </div>
+
+      <div className="text-right mt-8">
         <Button
           type="button"
           className="mr-2"
@@ -981,6 +1091,7 @@ const ConvertLeadToDealDialog: React.FC<{
     </Dialog>
   );
 };
+
 type WallIntent = 'Sell' | 'Buy' | 'Exchange';
 const intentTagColor: Record<WallIntent, string> = {
   Sell: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
@@ -1398,6 +1509,8 @@ const AssignLeadDialog: React.FC<{
     try {
       const response = await axiosInstance.get(`/lead/lead/${lead.id}`);
 
+
+
       if (!response.data?.data) {
         throw new Error("Failed to fetch latest lead data.");
       }
@@ -1410,7 +1523,7 @@ const AssignLeadDialog: React.FC<{
       };
 
       await dispatch(editLeadAction(payload)).unwrap();
-
+      axiosInstance.post(`/lead/lead/status/${lead.id}`, { status: "Assigned" });
       toast.push(
         <Notification type="success" title="Lead Assigned">
           Lead has been successfully assigned.
@@ -2178,7 +2291,7 @@ const LeadActionColumn = ({
   const iconButtonClass =
     "text-lg p-0.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
-  
+
   return (
     <div className="flex items-center justify-center">
       <Tooltip title="Edit Lead">
@@ -2213,7 +2326,7 @@ const LeadActionColumn = ({
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
-      
+
 
         <Dropdown.Item
           onClick={() => onOpenModal("email")}
@@ -2221,7 +2334,7 @@ const LeadActionColumn = ({
         >
           <TbMail size={18} /> Send Email
         </Dropdown.Item>
-       {data.assigned_saled_id ? <Dropdown.Item
+        {data.assigned_saled_id && data.lead_status != "Rejected" && data.lead_status != "Approved" ? <Dropdown.Item
           onClick={onStartProcess}
           className="flex items-center gap-2 text-xs"
         >
@@ -2257,7 +2370,7 @@ const LeadActionColumn = ({
         >
           <TbTagStarred size={18} /> Add Activity
         </Dropdown.Item>
-       {data.lead_status == 'Approved' ? <Dropdown.Item
+        {data.lead_status == 'Approved' ? <Dropdown.Item
           onClick={() => onOpenModal("convertToDeal")}
           className="flex items-center gap-2 text-xs"
         >
@@ -2288,12 +2401,12 @@ const LeadActionColumn = ({
         >
           <TbFileInvoice size={18} /> Add Account Documents
         </Dropdown.Item>
-          {!data.assigned_saled_id ? <Dropdown.Item
+        {!data.assigned_saled_id ? <Dropdown.Item
           onClick={() => onOpenModal("assignLead")}
           className="flex items-center gap-2 text-xs"
         >
           <TbUserSearch size={18} /> Assign Sales Person
-        </Dropdown.Item>: null}
+        </Dropdown.Item> : null}
       </Dropdown>
     </div>
   );
@@ -2543,12 +2656,12 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     type: null,
     data: null,
   });
-  
+
   // --- START: NEW STATE FOR START PROCESS MODAL ---
   const [isStartProcessModalOpen, setIsStartProcessModalOpen] = useState(false);
   const [leadForProcess, setLeadForProcess] = useState<LeadListItem | null>(null);
   // --- END: NEW STATE ---
-  
+
   // --- START: NEW STATE FOR PENDING LEADS ---
   const [isPendingLeadsModalOpen, setIsPendingLeadsModalOpen] = useState(false);
   // --- END: NEW STATE ---
@@ -2626,8 +2739,8 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     return LeadsData?.data?.data.map(
       (apiLead: any): LeadListItem => ({
         id: apiLead.id,
-       
-        lead_number:  apiLead.lead_number || `LD-${apiLead.id}`,
+
+        lead_number: apiLead.lead_number || `LD-${apiLead.id}`,
         lead_status: apiLead.status || apiLead.lead_status || "New",
         enquiry_type: apiLead.lead_type || apiLead.enquiry_type || "Other",
         lead_info: apiLead.lead_info,
@@ -2783,7 +2896,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     },
     [navigate]
   );
-  
+
   // --- UPDATED: New handleStartProcess function to open the modal ---
   const handleStartProcess = useCallback((lead: LeadListItem) => {
     setLeadForProcess(lead);
@@ -3065,7 +3178,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         size: 130,
         cell: (props: CellContext<LeadListItem, any>) => (
           <div className="flex flex-col gap-0.5 text-xs">
-            <span className="font-semibold">{props.row.original.enquiry_type == "Manual lead" ? `ML-${props.row.original.id.toString().padStart(5, '0')}` : props.row.original.enquiry_type == "Product lead" ?  `PL-${props.row.original.id.toString().padStart(5, '0')}` : props.row.original.enquiry_type == "Wall lead" ? `WL-${props.row.original.id.toString().padStart(5, '0')}` : null}</span>
+            <span className="font-semibold">{props.row.original.enquiry_type == "Manual lead" ? `ML-${props.row.original.id.toString().padStart(5, '0')}` : props.row.original.enquiry_type == "Product lead" ? `PL-${props.row.original.id.toString().padStart(5, '0')}` : props.row.original.enquiry_type == "Wall lead" ? `WL-${props.row.original.id.toString().padStart(5, '0')}` : null}</span>
             <div>
               <Tag
                 className={`${enquiryTypeColor[props.row.original.enquiry_type] ||
@@ -3234,22 +3347,22 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
               <h5 className="mb-2 sm:mb-0">Leads Listing</h5>
               <div className="flex items-center gap-2">
-                  <Button
-                      variant="solid"
-                      color="blue-600"
-                      onClick={() => setIsPendingLeadsModalOpen(true)}
-                      disabled={initialLoading}
-                  >
-                      Pending Leads
-                  </Button>
-                  <Button
-                      variant="solid"
-                      icon={<TbPlus />}
-                      onClick={handleOpenAddLeadPage}
-                      disabled={initialLoading}
-                  >
-                      Add New
-                  </Button>
+                <Button
+                  variant="solid"
+                  color="blue-600"
+                  onClick={() => setIsPendingLeadsModalOpen(true)}
+                  disabled={initialLoading}
+                >
+                  Pending Leads
+                </Button>
+                <Button
+                  variant="solid"
+                  icon={<TbPlus />}
+                  onClick={handleOpenAddLeadPage}
+                  disabled={initialLoading}
+                >
+                  Add New
+                </Button>
               </div>
             </div>
           )}
@@ -3728,7 +3841,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           3260032
         </p>
       </ConfirmDialog>
-      
+
       {/* --- ADDED: Render the new modals --- */}
       <StartProcessModal
         isOpen={isStartProcessModalOpen}
@@ -3741,11 +3854,11 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         onSuccess={handleUpdateSuccess}
         getAllUserDataOptions={getAllUserDataOptions}
       />
-      
+
       <PendingLeadsModal
-          isOpen={isPendingLeadsModalOpen}
-          onClose={() => setIsPendingLeadsModalOpen(false)}
-          onActionSuccess={handleUpdateSuccess}
+        isOpen={isPendingLeadsModalOpen}
+        onClose={() => setIsPendingLeadsModalOpen(false)}
+        onActionSuccess={handleUpdateSuccess}
       />
 
       <ConfirmDialog
