@@ -103,7 +103,7 @@ export type RequestFeedbackType = "Request" | "Feedback";
 
 export type RequestFeedbackStatus =
   | "Pending"
-  
+
   | "Resolved"
 
 export type RequestFeedbackItem = {
@@ -131,20 +131,20 @@ export type RequestFeedbackItem = {
 
 // --- NEW CONDITIONAL CATEGORY OPTIONS ---
 const REQUEST_CATEGORY_OPTIONS: SelectOption[] = [
-    { value: "New Product Request", label: "New Product Request" },
-    { value: "Account Statement Request", label: "Account Statement Request" },
-    { value: "Catalogue Request", label: "Catalogue Request" },
-    { value: "Account Documents request", label: "Account Documents request" },
-    { value: "Others", label: "Others" },
+  { value: "New Product Request", label: "New Product Request" },
+  { value: "Account Statement Request", label: "Account Statement Request" },
+  { value: "Catalogue Request", label: "Catalogue Request" },
+  { value: "Account Documents request", label: "Account Documents request" },
+  { value: "Others", label: "Others" },
 ];
 
 const FEEDBACK_CATEGORY_OPTIONS: SelectOption[] = [
-    { value: "Feature feedback", label: "Feature feedback" },
-    { value: "Website feedback", label: "Website feedback" },
-    { value: "Testimonial", label: "Testimonial" },
-    { value: "Service feedback", label: "Service feedback" },
-    { value: "Transactional feedback", label: "Transactional feedback" },
-    { value: "Others", label: "Others" },
+  { value: "Feature feedback", label: "Feature feedback" },
+  { value: "Website feedback", label: "Website feedback" },
+  { value: "Testimonial", label: "Testimonial" },
+  { value: "Service feedback", label: "Service feedback" },
+  { value: "Transactional feedback", label: "Transactional feedback" },
+  { value: "Others", label: "Others" },
 ];
 
 const ALL_STATIC_CATEGORIES = [...REQUEST_CATEGORY_OPTIONS, ...FEEDBACK_CATEGORY_OPTIONS];
@@ -187,12 +187,12 @@ const requestFeedbackFormSchema = z.object({
     .min(1, "Email is required."),
   mobile_no: z.string().min(1, "Mobile number is required.").max(20),
   company_name: z.string().max(150).optional().or(z.literal("")).nullable(),
-  type: z.enum(["Request", "Feedback"], { required_error: 'Type is required.'}),
+  type: z.enum(["Request", "Feedback"], { required_error: 'Type is required.' }),
   category_id: z.string().optional().nullable(),
   department_id: z.string().optional().nullable(),
   feedback_details: z
     .string()
-   .optional().nullable(),
+    .optional().nullable(),
   status: z.enum(["Pending", "Resolved"], {
     errorMap: () => ({ message: "Please select a status." }),
   }),
@@ -651,7 +651,7 @@ const RequestAndFeedbackListing = () => {
       setEditingItem(item);
       setSelectedFile(null);
       setRemoveExistingAttachment(false);
-      
+
       reset({
         name: item.name,
         email: item.email,
@@ -689,12 +689,12 @@ const RequestAndFeedbackListing = () => {
       if (value !== null && value !== undefined && value !== "")
         formData.append(key, String(value));
     });
-    
+
     if (editingItem) {
       formData.append("_method", "PUT");
       formData.append('department_id', editingItem.department_id == null ? '' : String(editingItem.department_id));
       formData.append('category_id', data.category_id == null ? '' : String(data.category_id));
-     
+
       if (selectedFile instanceof File)
         formData.append("attachment", selectedFile);
       else if (removeExistingAttachment && editingItem.attachment)
@@ -936,7 +936,7 @@ const RequestAndFeedbackListing = () => {
           </div>
         ),
       },
-      
+
       {
         header: "Type",
         accessorKey: "type",
@@ -1009,9 +1009,9 @@ const RequestAndFeedbackListing = () => {
 
   const DrawerFormContent = () => {
     const conditionalCategoryOptions = useMemo(() => {
-        if (watchedType === 'Request') return REQUEST_CATEGORY_OPTIONS;
-        if (watchedType === 'Feedback') return FEEDBACK_CATEGORY_OPTIONS;
-        return [];
+      if (watchedType === 'Request') return REQUEST_CATEGORY_OPTIONS;
+      if (watchedType === 'Feedback') return FEEDBACK_CATEGORY_OPTIONS;
+      return [];
     }, [watchedType]);
 
     return (
@@ -1045,12 +1045,12 @@ const RequestAndFeedbackListing = () => {
           invalid={!!errors.type}
           errorMessage={errors.type?.message}
         >
-          <Controller name="type" control={control} render={({ field }) => <Select placeholder="Select Type" options={TYPE_OPTIONS} value={TYPE_OPTIONS.find((o) => o.value === field.value)} 
-          onChange={(opt) => {
+          <Controller name="type" control={control} render={({ field }) => <Select placeholder="Select Type" options={TYPE_OPTIONS} value={TYPE_OPTIONS.find((o) => o.value === field.value)}
+            onChange={(opt) => {
               field.onChange(opt?.value);
-              setValue('category_id', null, {shouldValidate: true});
-          }}
-          prefix={<TbMessageDots />} />} />
+              setValue('category_id', null, { shouldValidate: true });
+            }}
+            prefix={<TbMessageDots />} />} />
         </FormItem>
         <FormItem
           label={<div>Category</div>}
@@ -1076,14 +1076,14 @@ const RequestAndFeedbackListing = () => {
           <Controller name="feedback_details" control={control} render={({ field }) => <Input textArea {...field} rows={5} placeholder="Describe your feedback or request in detail..." />} />
         </FormItem>
         {watchedType === 'Feedback' && (
-            <FormItem
+          <FormItem
             label="Rating"
             className="md:col-span-2"
             invalid={!!errors.rating}
             errorMessage={errors.rating?.message}
-            >
+          >
             <Controller name="rating" control={control} render={({ field }) => <Select placeholder="Select Rating (Optional)" options={RATING_OPTIONS} value={RATING_OPTIONS.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbStar />} />} />
-            </FormItem>
+          </FormItem>
         )}
         <FormItem label="Attachment (Optional)" className="md:col-span-2">
           <Controller name="attachment" control={control} render={({ field: { onChange, name, ref, onBlur } }) => (<Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e) => { const file = e.target.files?.[0]; onChange(file); setSelectedFile(file || null); if (file) setRemoveExistingAttachment(false); }} prefix={<TbPaperclip />} />)} />
@@ -1131,6 +1131,7 @@ const RequestAndFeedbackListing = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Requests & Feedbacks</h5>
             <Button
+              menuName="request_feedback" isAdd={true}
               variant="solid"
               icon={<TbPlus />}
               onClick={openAddDrawer}

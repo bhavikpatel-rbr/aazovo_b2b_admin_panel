@@ -531,7 +531,7 @@ const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearF
         <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
         <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
         <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
-        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+        <Button menuName="wall_listing" isExport={true} icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
       </div>}
     </div>
   )
@@ -649,7 +649,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           {!isDashboard && (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
               <h5 className="mb-2 sm:mb-0">Wall Listing</h5>
-              <div className="flex gap-2"><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={initialLoading}>Add New</Button></div>
+              <div className="flex gap-2"><Button menuName="wall_listing" isAdd={true} variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={initialLoading}>Add New</Button></div>
             </div>
           )}
           {!isDashboard && (

@@ -1139,7 +1139,7 @@ const OpportunityAlertModal: React.FC<{ opportunity: OpportunityItem; onClose: (
             <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
               <div className="flex items-center gap-2">
                 <TbPencilPlus className="text-xl text-red-600 dark:text-red-400" />
-                <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6>
+              <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6>
               </div>
             </header>
             <Form onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">

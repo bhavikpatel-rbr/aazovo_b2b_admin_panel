@@ -432,14 +432,14 @@ const PendingLeadsModal = ({
   // ADDED: Create a set of existing document numbers for efficient filtering
   const existingDocNumbers = useMemo(() => {
     if (!getaccountdoc?.data || !Array.isArray(getaccountdoc.data)) {
-        return new Set<string>();
+      return new Set<string>();
     }
     return new Set(
-        getaccountdoc.data
-            .map((doc: any) => doc.document_number)
-            .filter(Boolean)
+      getaccountdoc.data
+        .map((doc: any) => doc.document_number)
+        .filter(Boolean)
     );
-}, [getaccountdoc]);
+  }, [getaccountdoc]);
 
 
   const fetchPendingLeads = useCallback(async () => {
@@ -449,13 +449,13 @@ const PendingLeadsModal = ({
         "/lead/lead?per_page=99999&status=Deal Done"
       );
       const allPendingLeads = response.data?.data?.data || [];
-      
+
       // ADDED: Filter out leads that already have an account document
       const filteredLeads = allPendingLeads.filter((lead: VerifiedLead) => {
         const leadNum = lead.lead_number || `LD-${lead.id}`;
         return !existingDocNumbers.has(leadNum);
       });
-      
+
       setPendingLeads(filteredLeads);
 
     } catch (error) {
@@ -2683,7 +2683,9 @@ const AccountDocumentTableTools = ({
             </span>
           )}
         </Button>
-        <Button icon={<TbCloudUpload />} onClick={onExport}>
+        <Button
+          menuName="account_documents" isExport={true}
+          icon={<TbCloudUpload />} onClick={onExport}>
           Export
         </Button>
       </div>
@@ -3433,6 +3435,7 @@ const AccountDocument = () => {
                 Done Leads
               </Button>
               <Button
+                menuName="account_documents" isAdd={true}
                 variant="solid"
                 icon={<TbPlus />}
                 className="px-5"

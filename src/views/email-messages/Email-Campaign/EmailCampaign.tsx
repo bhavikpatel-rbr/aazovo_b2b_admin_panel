@@ -536,7 +536,10 @@ const EmailCampaignTableTools = ({ onSearchChange, onFilter, onExport, onClearFi
         <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>
           Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
         </Button>
-        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
+        <Button 
+              menuName="email_campaign" isExport={true}
+
+         icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
       </div>
     </div>
   );
@@ -2124,6 +2127,7 @@ const EmailCampaignListing = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Email Campaigns</h5>
             <Button
+              menuName="email_campaign" isAdd={true}
               variant="solid"
               icon={<TbPlus />}
               onClick={() => openCreateDrawer()}

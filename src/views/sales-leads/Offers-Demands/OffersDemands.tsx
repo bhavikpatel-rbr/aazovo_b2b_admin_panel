@@ -1757,7 +1757,7 @@ const ItemTableTools = React.memo(
               </span>
             )}
           </Button>
-          <Button icon={<TbCloudUpload />} onClick={onExport}>
+          <Button menuName="offer_demand" isExport={true} icon={<TbCloudUpload />} onClick={onExport}>
             Export
           </Button>
         </div>
@@ -2829,7 +2829,7 @@ const OffersDemands = () => {
           <div className="lg:flex items-center justify-between mb-4">
             <h5 className="mb-4 lg:mb-0">Offers & Demands</h5>
             <div className="flex flex-col md:flex-row gap-2">
-              <Button
+              <Button menuName="offer_demand" isAdd={true}
                 variant="solid"
                 icon={<TbPlus />}
                 onClick={() => navigate("/sales-leads/offers/create")}
@@ -2838,7 +2838,7 @@ const OffersDemands = () => {
               >
                 Add Offer
               </Button>
-              <Button
+              <Button menuName="offer_demand" isAdd={true}
                 icon={<TbPlus />}
                 variant="solid"
                 onClick={() => navigate("/sales-leads/demands/create")}
