@@ -424,11 +424,11 @@ const CreateTaskPage = () => {
 
     if (!isEditMode) {
       if (data.activity_type && data.note_remark) {
-        formDataPayload.append("activity_note[user_id]", String(loggedInUserData.id));
+        // formDataPayload.append("activity_note[user_id]", String(loggedInUserData.id));
         formDataPayload.append("activity_note[activity_type]", data.activity_type);
         formDataPayload.append("activity_note[activity_comment]", data.note_remark);
       } else {
-        formDataPayload.append("activity_note[user_id]", String(loggedInUserData.id));
+        // formDataPayload.append("activity_note[user_id]", String(loggedInUserData.id));
         formDataPayload.append("activity_note[activity_type]", "created_task");
         formDataPayload.append("activity_note[activity_comment]", `Task "${data.task_title}" created.`);
       }
@@ -446,17 +446,15 @@ const CreateTaskPage = () => {
           messageContent = parts.slice(1).join(': ').trim();
         }
 
-        formDataPayload.append(`new_activity_notes[${index}][user_id]`, String(comment.user_id));
-        formDataPayload.append(`new_activity_notes[${index}][activity_type]`, activityTypeForComment);
-        formDataPayload.append(`new_activity_notes[${index}][activity_comment]`, messageContent);
+        // formDataPayload.append(`activity_notes[${index}][user_id]`, String(comment.user_id));
+        formDataPayload.append(`activity_notes[${index}][activity_type]`, activityTypeForComment);
+        formDataPayload.append(`activity_notes[${index}][activity_comment]`, messageContent);
       });
     }
     attachments.filter(att => att.file).forEach((att, index) => {
       formDataPayload.append(`attachments[${index}][user_id]`, String(loggedInUserData.id));
       formDataPayload.append(`attachments[${index}][file_data]`, att.file!, att.name);
     });
-    formDataPayload.append("activity_note[activity_type]", data.activity_type);
-    formDataPayload.append("activity_note[activity_comment]", data.note_remark);
     try {
       if (isEditMode && taskId) {
         await dispatch(addTaskAction(formDataPayload)).unwrap();
