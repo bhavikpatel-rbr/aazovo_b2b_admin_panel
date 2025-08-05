@@ -99,6 +99,7 @@ import {
   getCompanyAction,
   getBrandAction,
   getCategoriesAction,
+  getEmailTemplatesAction,
   // Assuming these actions exist for the filter modal
   // getMemberTypesAction,
   // getProductSpecsAction,
@@ -977,7 +978,7 @@ const EmailCampaignListing = () => {
   const dispatch = useAppDispatch();
   const {
     emailCampaignsData = { data: [], counts: {} },
-    mailTemplatesData = [],
+    emailTemplatesData = [],
     ProductsData = [], // This is already in the selector, used by both the form and the filter modal
   } = useSelector(masterSelector, shallowEqual);
 
@@ -1016,13 +1017,13 @@ const EmailCampaignListing = () => {
 
   const mailTemplateOptions = useMemo(
     () =>
-      Array.isArray(mailTemplatesData)
-        ? mailTemplatesData.map((t: ApiMailTemplate) => ({
+      Array.isArray(emailTemplatesData.data)
+        ? emailTemplatesData?.data?.map((t: ApiMailTemplate) => ({
           value: String(t.id),
           label: t.name,
         }))
         : [],
-    [mailTemplatesData]
+    [emailTemplatesData]
   );
   const productOptions = useMemo(
     (): ProductOption[] =>
@@ -1073,6 +1074,7 @@ const EmailCampaignListing = () => {
         await Promise.all([
           dispatch(getEmailCampaignsAction({ params: tableData })),
           dispatch(getMailTemplatesAction()),
+          dispatch(getEmailTemplatesAction()),
           dispatch(getProductsAction()),
           dispatch(getContinentsAction()),
           dispatch(getCountriesAction()),
