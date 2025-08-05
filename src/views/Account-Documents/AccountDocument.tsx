@@ -1446,7 +1446,8 @@ const ViewDocumentDialog = ({
     setIsVerifying(true);
     try {
       axiosInstance.post(`/account_doc/status/${document.id}`, { status: "Verified" });
-      // await dispatch(verifyAccountDocAction(document.id)).unwrap();
+      // await dispatch(editaccountdocAction({ ...document, id: document.id,company_id: String(document.company_id), status: "Verified" })).unwrap()
+
       toast.push(<Notification type="success" title="Document Verified!" />);
       onActionSuccess(); // Refresh the main table
       onClose();

@@ -243,8 +243,6 @@ const Button = (props: ButtonProps) => {
         return <>{children}</>
     }
 
-    console.log(menuName != "" && getMenuRights(menuName)?.is_export, "dddddddddddddd", menuName != "" && getMenuRights(menuName)?.is_add, menuName != "" && !getMenuRights(menuName)?.is_add, menuName != "" && getMenuRights(menuName)?.is_export, menuName != "" && !getMenuRights(menuName)?.is_export);
-
     const renderComponent = () => {
         // If menuName is not provided, render the component by default.
         if (menuName === "") {
