@@ -109,6 +109,7 @@ import {
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { ConfirmDialog } from "@/components/shared";
 import dayjs from "dayjs";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Define Item Types & Constants ---
 export type ApiMailTemplate = {
@@ -421,7 +422,7 @@ const ActionColumn = ({
 }) => {
   return (
     <div className="flex items-center justify-center gap-2">
-      <Tooltip title="Edit Campaign">
+      {getMenuRights("email_campaign")?.is_edit && <Tooltip title="Edit Campaign">
         <div
           className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600"
           role="button"
@@ -429,7 +430,7 @@ const ActionColumn = ({
         >
           <TbPencil />
         </div>
-      </Tooltip>
+      </Tooltip>}
       <Tooltip title="Send Test Email">
         <div
           className="text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600"
@@ -537,10 +538,10 @@ const EmailCampaignTableTools = ({ onSearchChange, onFilter, onExport, onClearFi
         <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>
           Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
         </Button>
-        <Button 
-              menuName="email_campaign" isExport={true}
+        <Button
+          menuName="email_campaign" isExport={true}
 
-         icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
+          icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
       </div>
     </div>
   );

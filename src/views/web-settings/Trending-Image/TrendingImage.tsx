@@ -55,6 +55,7 @@ import {
 } from '@/reduxtool/master/middleware'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 import { Link } from 'react-router-dom'
+import { getMenuRights } from '@/utils/getMenuRights'
 
 // --- Utility Functions ---
 function formatCustomDateTime(dateString: string | null | undefined): string {
@@ -143,7 +144,7 @@ function classNames(...classes: (string | boolean | undefined)[]) { return class
 // --- Child Components ---
 const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) => (
     <div className="flex items-center justify-center">
-        <Tooltip title="Edit"><div className="text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400" role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
+        {getMenuRights("trending_image")?.is_edit && <Tooltip title="Edit"><div className="text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400" role="button" onClick={onEdit}><TbPencil /></div></Tooltip>}
         <Tooltip title="Delete"><div className="text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400" role="button" onClick={onDelete}><TbTrash /></div></Tooltip>
     </div>
 );
@@ -170,7 +171,7 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearAll, allCol
                 </Dropdown>
                 <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearAll} />
                 <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
-                <Button icon={<TbCloudUpload />}  menuName="trending_image" isExport={true} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+                <Button icon={<TbCloudUpload />} menuName="trending_image" isExport={true} onClick={onExport} className="w-full sm:w-auto">Export</Button>
             </div>
         </div>
     )
@@ -198,7 +199,7 @@ const TrendingImages = () => {
     const dispatch = useAppDispatch();
     const { PageData: pageName = [], trendingImagesData = [], productsMasterData = [], status: masterLoadingStatus = 'idle' } = useSelector(masterSelector);
 
-    const pageNameOptionsConst =  useMemo(() => Array.from(new Set((Array.isArray(pageName?.data) ? pageName?.data : []).map(p => p.name))).map(name => ({ value: name, label: name })), [pageName?.data]);;
+    const pageNameOptionsConst = useMemo(() => Array.from(new Set((Array.isArray(pageName?.data) ? pageName?.data : []).map(p => p.name))).map(name => ({ value: name, label: name })), [pageName?.data]);;
     const pageNameValues = pageNameOptionsConst.map(opt => opt.value) as [string, ...string[]];
     const apiStatusOptions: { value: 'Active' | 'Inactive'; label: string }[] = [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' },];
     const statusColor: Record<'Active' | 'Inactive', string> = { Active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700", Inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700" };
@@ -244,7 +245,7 @@ const TrendingImages = () => {
         const sourceData: TrendingPageImageItem[] = Array.isArray(trendingImagesData) ? trendingImagesData : [];
         let processedData: TrendingPageImageItem[] = cloneDeep(sourceData);
 
-        
+
         const initialCounts = { total: sourceData.length, active: sourceData.filter(i => i.status === 'Active').length, inactive: sourceData.filter(i => i.status === 'Inactive').length, };
 
         if (activeFilters.filterPageNames?.length) {

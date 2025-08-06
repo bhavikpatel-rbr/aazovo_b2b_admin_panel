@@ -84,6 +84,7 @@ import {
 import { encryptStorage } from '@/utils/secureLocalStorage'
 import { config } from 'localforage'
 import { formatCustomDateTime } from '@/utils/formatCustomDateTime'
+import { getMenuRights } from '@/utils/getMenuRights'
 
 // --- Consolidated Type Definitions ---
 
@@ -542,7 +543,7 @@ export const ActionColumn = ({
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
     return (
         <div className="flex items-center justify-center">
-            <Tooltip title="Edit Task">
+            {getMenuRights("task_list")?.is_edit && <Tooltip title="Edit Task">
                 <div
                     className={classNames(
                         iconButtonClass,
@@ -554,7 +555,7 @@ export const ActionColumn = ({
                 >
                     <TbPencil />
                 </div>
-            </Tooltip>
+            </Tooltip>}
             <Tooltip title="View Details">
                 <div
                     className={classNames(

@@ -59,6 +59,7 @@ import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Type Definitions ---
 export type TrendingCarouselItemData = {
@@ -155,7 +156,7 @@ function classNames(...classes: (string | boolean | undefined)[]) { return class
 // --- Child Components ---
 const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) => (
     <div className="flex items-center justify-center">
-        <Tooltip title="Edit"><div className="text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400" role="button" tabIndex={0} onClick={onEdit}><TbPencil /></div></Tooltip>
+        {getMenuRights("trending_carousel")?.is_edit && <Tooltip title="Edit"><div className="text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400" role="button" tabIndex={0} onClick={onEdit}><TbPencil /></div></Tooltip>}
         <Tooltip title="Delete"><div className="text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400" role="button" tabIndex={0} onClick={onDelete}><TbTrash /></div></Tooltip>
     </div>
 )

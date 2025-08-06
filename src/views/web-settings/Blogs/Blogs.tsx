@@ -69,6 +69,7 @@ import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { Link } from "react-router-dom";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Define Blog Type ---
 export type BlogItem = {
@@ -265,7 +266,7 @@ const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () =
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
     <div className="flex items-center justify-center">
-      <Tooltip title="Edit"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400")} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
+      {getMenuRights("blog")?.is_edit && <Tooltip title="Edit"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400")} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>}
       <Tooltip title="Delete"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400")} role="button" onClick={onDelete}><TbTrash /></div></Tooltip>
     </div>
   );

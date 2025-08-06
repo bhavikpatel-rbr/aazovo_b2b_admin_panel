@@ -94,6 +94,7 @@ import {
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { Link } from "react-router-dom";
 import { BsThreeDotsVertical } from "react-icons/bs";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Define Types ---
 export type CountryListItem = { id: string | number; name: string };
@@ -244,9 +245,9 @@ function exportRowDataToCsvLogic(filename: string, rows: RowDataItem[], countryO
 // --- ActionColumn ---
 const ActionColumn = ({ onEdit, onViewDetail, onDelete, onBlacklist, item }: { onEdit: () => void; onViewDetail: () => void; onDelete: () => void; onBlacklist: () => void; item: RowDataItem; }) => {
   return (<div className="flex items-center justify-center gap-1">
-    <Tooltip title="Edit">
+    {getMenuRights("row_data")?.is_edit && <Tooltip title="Edit">
       <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={onEdit}><TbPencil />
-      </div></Tooltip>
+      </div></Tooltip>}
     <Tooltip title="View Details"><div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`} role="button" onClick={onViewDetail}><TbEye /></div></Tooltip>
 
     <Dropdown renderTitle={

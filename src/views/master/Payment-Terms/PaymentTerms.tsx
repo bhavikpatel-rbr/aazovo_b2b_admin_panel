@@ -1,44 +1,45 @@
 // src/views/your-path/PaymentTerms.tsx
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react'
-import cloneDeep from 'lodash/cloneDeep'
-import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import classNames from 'classnames'
+import cloneDeep from 'lodash/cloneDeep'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
+import { z } from 'zod'
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import Container from '@/components/shared/Container'
 import DataTable from '@/components/shared/DataTable'
-import Tooltip from '@/components/ui/Tooltip'
+import DebounceInput from '@/components/shared/DebouceInput'
+import { Avatar, Card, Checkbox, Dialog, Drawer, Dropdown, Form, FormItem, Input, Skeleton, Tag } from '@/components/ui'; // Import Skeleton
 import Button from '@/components/ui/Button'
 import Notification from '@/components/ui/Notification'
-import toast from '@/components/ui/toast'
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import DebounceInput from '@/components/shared/DebouceInput'
 import Select from '@/components/ui/Select'
-import { Drawer, Form, FormItem, Input, Tag, Dropdown, Checkbox, Card, Avatar, Dialog, Skeleton } from '@/components/ui' // Import Skeleton
+import toast from '@/components/ui/toast'
+import Tooltip from '@/components/ui/Tooltip'
 
 // Icons
-import { TbPencil, TbTrash, TbSearch, TbFilter, TbPlus, TbCloudUpload, TbReload, TbX, TbColumns, TbFile, TbFileCheck, TbFileX, TbUserCircle } from 'react-icons/tb'
+import { TbCloudUpload, TbColumns, TbFile, TbFileCheck, TbFileX, TbFilter, TbPencil, TbPlus, TbReload, TbSearch, TbUserCircle, TbX } from 'react-icons/tb'
 
 // Types
-import type { OnSortParam, ColumnDef } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
+import type { ColumnDef, OnSortParam } from '@/components/shared/DataTable'
 
 // Redux Imports
-import { useAppDispatch } from '@/reduxtool/store'
-import { shallowEqual, useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 import {
-    getPaymentTermAction,
     addPaymentTermAction,
-    editPaymentTermAction,
     deletePaymentTermAction,
+    editPaymentTermAction,
+    getPaymentTermAction,
     submitExportReasonAction,
 } from '@/reduxtool/master/middleware'
+import { useAppDispatch } from '@/reduxtool/store'
 import { formatCustomDateTime } from '@/utils/formatCustomDateTime'
+import { getMenuRights } from '@/utils/getMenuRights'
+import { shallowEqual, useSelector } from 'react-redux'
 
 // --- FEATURE-SPECIFIC TYPES & SCHEMAS ---
 export type PaymentTermItem = { id: string | number; term_name: string; status: 'Active' | 'Inactive'; created_at?: string; updated_at?: string; updated_by_user?: { name: string; profile_pic_path?: string; roles: { display_name: string }[] }; };
@@ -136,7 +137,7 @@ const PaymentTerms = () => {
     const { PaymentTermsData = [] } = useSelector(masterSelector, shallowEqual);
     const isDataReady = !initialLoading;
     const termNameOptionsForFilter = useMemo(() => Array.isArray(PaymentTermsData) ? [...new Set(PaymentTermsData.map(term => term.term_name))].sort().map(name => ({ value: name, label: name })) : [], [PaymentTermsData]);
-    
+
     const refreshData = useCallback(async () => {
         setInitialLoading(true);
         try {
@@ -148,7 +149,7 @@ const PaymentTerms = () => {
             setInitialLoading(false);
         }
     }, [dispatch]);
-    
+
     useEffect(() => {
         refreshData();
     }, [refreshData]);
@@ -173,39 +174,45 @@ const PaymentTerms = () => {
     const columns: ColumnDef<PaymentTermItem>[] = useMemo(() => [
         { header: "Term Name", accessorKey: "term_name", enableSorting: true, size: 360 },
         {
-        header: "Updated Info",
-        accessorKey: "updated_at",
-        enableSorting: true,
-        size: 200,
-        cell: (props) => {
-          const { updated_at, updated_by_user } = props.row.original;
-          return (
-            <div className="flex items-center gap-2">
-              <Avatar
-                src={updated_by_user?.profile_pic_path}
-                shape="circle"
-                size="sm"
-                icon={<TbUserCircle />}
-                className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-                onClick={() =>
-                  openImageViewer(updated_by_user?.profile_pic_path)
-                }
-              />
-              <div>
-                <span>{updated_by_user?.name || "N/A"}</span>
-                <div className="text-xs">
-                  <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
-                </div>
-                <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
-              </div>
-            </div>
-          );
+            header: "Updated Info",
+            accessorKey: "updated_at",
+            enableSorting: true,
+            size: 200,
+            cell: (props) => {
+                const { updated_at, updated_by_user } = props.row.original;
+                return (
+                    <div className="flex items-center gap-2">
+                        <Avatar
+                            src={updated_by_user?.profile_pic_path}
+                            shape="circle"
+                            size="sm"
+                            icon={<TbUserCircle />}
+                            className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                            onClick={() =>
+                                openImageViewer(updated_by_user?.profile_pic_path)
+                            }
+                        />
+                        <div>
+                            <span>{updated_by_user?.name || "N/A"}</span>
+                            <div className="text-xs">
+                                <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
+                            </div>
+                            <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
+                        </div>
+                    </div>
+                );
+            },
         },
-      },
         { header: "Status", accessorKey: "status", enableSorting: true, size: 80, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
-        { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip>
-        {/* <Tooltip title="Delete"><div className="text-lg p-1.5 cursor-pointer hover:text-red-500" onClick={() => handleDeleteClick(props.row.original)}><TbTrash /></div></Tooltip> */}
-        </div>) },
+        {
+            header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (
+                <>
+                    {getMenuRights("payment_terms")?.is_edit && <div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip>
+                        {/* <Tooltip title="Delete"><div className="text-lg p-1.5 cursor-pointer hover:text-red-500" onClick={() => handleDeleteClick(props.row.original)}><TbTrash /></div></Tooltip> */}
+                    </div>}
+                </>
+            )
+        },
     ], [openEditDrawer, handleDeleteClick]);
 
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<PaymentTermItem>[]>(columns);
@@ -216,7 +223,7 @@ const PaymentTerms = () => {
         let processedData: PaymentTermItem[] = cloneDeep(sourceData);
         if (activeFilters.names?.length) { const names = new Set(activeFilters.names.map(n => n.toLowerCase())); processedData = processedData.filter(item => names.has(item.term_name.toLowerCase())); }
         if (activeFilters.status?.length) { const statuses = new Set(activeFilters.status); processedData = processedData.filter(item => statuses.has(item.status)); }
-        
+
         if (tableData.query) {
             const query = tableData.query.toLowerCase().trim();
             processedData = processedData.filter(item =>
@@ -256,50 +263,50 @@ const PaymentTerms = () => {
 
     const openAddDrawer = () => { formMethods.reset({ term_name: "", status: 'Active' }); setIsAddDrawerOpen(true); };
     const closeAddDrawer = () => { setIsAddDrawerOpen(false); };
-    const onAddPaymentTermSubmit = async (data: PaymentTermFormData) => { 
-        setIsSubmitting(true); 
-        try { 
-            await dispatch(addPaymentTermAction(data)).unwrap(); 
-            toast.push(<Notification title="Payment Term Added" type="success">{`Term "${data.term_name}" was successfully added.`}</Notification>); 
-            closeAddDrawer(); 
-            refreshData(); 
-        } catch (error: any) { 
-            toast.push(<Notification title="Failed to Add Term" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
-        } finally { 
-            setIsSubmitting(false); 
-        } 
+    const onAddPaymentTermSubmit = async (data: PaymentTermFormData) => {
+        setIsSubmitting(true);
+        try {
+            await dispatch(addPaymentTermAction(data)).unwrap();
+            toast.push(<Notification title="Payment Term Added" type="success">{`Term "${data.term_name}" was successfully added.`}</Notification>);
+            closeAddDrawer();
+            refreshData();
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Add Term" type="danger">{error.message || "An unexpected error occurred."}</Notification>);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
-    
+
     const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingPaymentTerm(null); };
-    const onEditPaymentTermSubmit = async (data: PaymentTermFormData) => { 
-        if (!editingPaymentTerm?.id) return; 
-        setIsSubmitting(true); 
-        try { 
-            await dispatch(editPaymentTermAction({ id: editingPaymentTerm.id, ...data })).unwrap(); 
-            toast.push(<Notification title="Payment Term Updated" type="success">{`"${data.term_name}" was successfully updated.`}</Notification>); 
-            closeEditDrawer(); 
-            refreshData(); 
-        } catch (error: any) { 
-            toast.push(<Notification title="Failed to Update Term" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
-        } finally { 
-            setIsSubmitting(false); 
-        } 
+    const onEditPaymentTermSubmit = async (data: PaymentTermFormData) => {
+        if (!editingPaymentTerm?.id) return;
+        setIsSubmitting(true);
+        try {
+            await dispatch(editPaymentTermAction({ id: editingPaymentTerm.id, ...data })).unwrap();
+            toast.push(<Notification title="Payment Term Updated" type="success">{`"${data.term_name}" was successfully updated.`}</Notification>);
+            closeEditDrawer();
+            refreshData();
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Update Term" type="danger">{error.message || "An unexpected error occurred."}</Notification>);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
-    
-    const onConfirmSingleDelete = async () => { 
-        if (!termToDelete?.id) return; 
-        setIsDeleting(true); 
-        try { 
-            await dispatch(deletePaymentTermAction({ id: termToDelete.id })).unwrap(); 
-            toast.push(<Notification title="Payment Term Deleted" type="success">{`"${termToDelete.term_name}" was successfully deleted.`}</Notification>); 
-            refreshData(); 
-        } catch (error: any) { 
-            toast.push(<Notification title="Failed to Delete Term" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
-        } finally { 
-            setIsDeleting(false); 
-            setSingleDeleteConfirmOpen(false); 
-            setTermToDelete(null); 
-        } 
+
+    const onConfirmSingleDelete = async () => {
+        if (!termToDelete?.id) return;
+        setIsDeleting(true);
+        try {
+            await dispatch(deletePaymentTermAction({ id: termToDelete.id })).unwrap();
+            toast.push(<Notification title="Payment Term Deleted" type="success">{`"${termToDelete.term_name}" was successfully deleted.`}</Notification>);
+            refreshData();
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Delete Term" type="danger">{error.message || "An unexpected error occurred."}</Notification>);
+        } finally {
+            setIsDeleting(false);
+            setSingleDeleteConfirmOpen(false);
+            setTermToDelete(null);
+        }
     };
 
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
@@ -355,68 +362,68 @@ const PaymentTerms = () => {
                 </Form>
                 {isEditDrawerOpen && editingPaymentTerm && (
                     <div className=" grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-            <div>
-              <b className="mt-3 mb-3 font-semibold text-primary">
-                Latest Update:
-              </b>
-              <br />
-              <p className="text-sm font-semibold">
-                {editingPaymentTerm.updated_by_user?.name || "N/A"}
-              </p>
-              <p>
-                {editingPaymentTerm.updated_by_user?.roles[0]?.display_name ||
-                  "N/A"}
-              </p>
-            </div>
-            <div className="text-right">
-              <br />
-              <span className="font-semibold">Created At:</span>{" "}
-              <span>
-                {editingPaymentTerm.created_at
-                  ? `${new Date(
-                      editingPaymentTerm.created_at
-                    ).getDate()} ${new Date(
-                      editingPaymentTerm.created_at
-                    ).toLocaleString("en-US", {
-                      month: "short",
-                    })} ${new Date(
-                      editingPaymentTerm.created_at
-                    ).getFullYear()}, ${new Date(
-                      editingPaymentTerm.created_at
-                    ).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}`
-                  : "N/A"}
-              </span>
-              <br />
-              <span className="font-semibold">Updated At:</span>{" "}
-              <span>
-                {}
-                {editingPaymentTerm.updated_at
-                  ? `${new Date(
-                      editingPaymentTerm.updated_at
-                    ).getDate()} ${new Date(
-                      editingPaymentTerm.updated_at
-                    ).toLocaleString("en-US", {
-                      month: "short",
-                    })} ${new Date(
-                      editingPaymentTerm.updated_at
-                    ).getFullYear()}, ${new Date(
-                      editingPaymentTerm.updated_at
-                    ).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}`
-                  : "N/A"}
-              </span>
-            </div>
-          </div>
+                        <div>
+                            <b className="mt-3 mb-3 font-semibold text-primary">
+                                Latest Update:
+                            </b>
+                            <br />
+                            <p className="text-sm font-semibold">
+                                {editingPaymentTerm.updated_by_user?.name || "N/A"}
+                            </p>
+                            <p>
+                                {editingPaymentTerm.updated_by_user?.roles[0]?.display_name ||
+                                    "N/A"}
+                            </p>
+                        </div>
+                        <div className="text-right">
+                            <br />
+                            <span className="font-semibold">Created At:</span>{" "}
+                            <span>
+                                {editingPaymentTerm.created_at
+                                    ? `${new Date(
+                                        editingPaymentTerm.created_at
+                                    ).getDate()} ${new Date(
+                                        editingPaymentTerm.created_at
+                                    ).toLocaleString("en-US", {
+                                        month: "short",
+                                    })} ${new Date(
+                                        editingPaymentTerm.created_at
+                                    ).getFullYear()}, ${new Date(
+                                        editingPaymentTerm.created_at
+                                    ).toLocaleTimeString("en-US", {
+                                        hour: "numeric",
+                                        minute: "2-digit",
+                                        hour12: true,
+                                    })}`
+                                    : "N/A"}
+                            </span>
+                            <br />
+                            <span className="font-semibold">Updated At:</span>{" "}
+                            <span>
+                                { }
+                                {editingPaymentTerm.updated_at
+                                    ? `${new Date(
+                                        editingPaymentTerm.updated_at
+                                    ).getDate()} ${new Date(
+                                        editingPaymentTerm.updated_at
+                                    ).toLocaleString("en-US", {
+                                        month: "short",
+                                    })} ${new Date(
+                                        editingPaymentTerm.updated_at
+                                    ).getFullYear()}, ${new Date(
+                                        editingPaymentTerm.updated_at
+                                    ).toLocaleTimeString("en-US", {
+                                        hour: "numeric",
+                                        minute: "2-digit",
+                                        hour12: true,
+                                    })}`
+                                    : "N/A"}
+                            </span>
+                        </div>
+                    </div>
                 )}
             </Drawer>
-            
+
             <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
                 <Form id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
                     <FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem>
@@ -426,7 +433,7 @@ const PaymentTerms = () => {
             <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Payment Term" onClose={() => { setSingleDeleteConfirmOpen(false); setTermToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setTermToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setTermToDelete(null); }} onConfirm={onConfirmSingleDelete} loading={isDeleting}>
                 <p>Are you sure you want to delete the term "<strong>{termToDelete?.term_name}</strong>"? This action cannot be undone.</p>
             </ConfirmDialog>
-            
+
             <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
                 <div className="flex justify-center items-center p-4">
                     {imageToView ? (<img src={imageToView} alt="User Profile" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}

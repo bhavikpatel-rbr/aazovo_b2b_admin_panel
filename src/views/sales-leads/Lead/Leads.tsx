@@ -116,6 +116,7 @@ import { useAppDispatch } from "@/reduxtool/store";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
 import { shallowEqual, useSelector } from "react-redux";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 
 // --- START: NEW COMPONENT FOR PENDING LEAD DETAILS VIEW MODAL ---
@@ -2290,7 +2291,7 @@ const LeadActionColumn = ({
 
   return (
     <div className="flex items-center justify-center">
-      <Tooltip title="Edit Lead">
+      {getMenuRights("leads")?.is_edit && <Tooltip title="Edit Lead">
         <div
           className={classNames(
             iconButtonClass,
@@ -2302,7 +2303,7 @@ const LeadActionColumn = ({
         >
           <TbPencil />
         </div>
-      </Tooltip>
+      </Tooltip>}
       <Tooltip title="View Lead">
         <div
           className={classNames(

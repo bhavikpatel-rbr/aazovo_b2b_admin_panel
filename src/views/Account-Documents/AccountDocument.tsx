@@ -129,6 +129,7 @@ import { useAppDispatch } from "@/reduxtool/store";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
 import { shallowEqual, useSelector } from "react-redux";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 
 // --- START: Copied types and constants from LeadsListing for PendingLeadsModal ---
@@ -908,11 +909,11 @@ const AccountDocumentActionColumn = ({
           <TbChecklist />
         </div>
       </Tooltip>
-      <Tooltip title="Edit">
+     { getMenuRights("account_documents")?.is_edit && <Tooltip title="Edit">
         <div className="text-xl cursor-pointer" onClick={onEdit}>
           <TbPencil />
         </div>
-      </Tooltip>
+      </Tooltip> }
       <Tooltip title="View">
         <div className="text-xl cursor-pointer" onClick={onView}>
           <TbEye />

@@ -91,6 +91,7 @@ import {
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import dayjs from "dayjs";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Define Types ---
 export type SelectOption = { value: string; label: string };
@@ -341,7 +342,7 @@ const ActionColumn = ({
   onDelete: () => void;
 }) => (
   <div className="flex items-center justify-center gap-2">
-    <Tooltip title="Edit">
+   { getMenuRights("email_templates")?.is_edit && <Tooltip title="Edit">
       <div
         className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-500"
         role="button"
@@ -349,7 +350,7 @@ const ActionColumn = ({
       >
         <TbPencil />
       </div>
-    </Tooltip>
+    </Tooltip> }
     <Tooltip title="Send test email">
       <div
         className="text-xl cursor-pointer text-gray-500 hover:text-orange-600"

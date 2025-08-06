@@ -104,6 +104,7 @@ import { encryptStorage } from "@/utils/secureLocalStorage";
 import dayjs from "dayjs";
 import { config } from "localforage";
 import { useSelector } from "react-redux";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 
 // --- MODIFIED: PartnerItem Type (Data Structure) ---
@@ -946,7 +947,7 @@ const PartnerActionColumn = ({ rowData, onEdit, onOpenModal, onDelete }: {
 
   return (
     <div className="flex items-center justify-center gap-1">
-      <Tooltip title="Edit"><div className="text-xl cursor-pointer hover:text-emerald-600" role="button" onClick={() => onEdit(rowData.id)}><TbPencil /></div></Tooltip>
+      {getMenuRights("partner")?.is_edit && <Tooltip title="Edit"><div className="text-xl cursor-pointer hover:text-emerald-600" role="button" onClick={() => onEdit(rowData.id)}><TbPencil /></div></Tooltip>}
       <Tooltip title="View"><div className="text-xl cursor-pointer hover:text-blue-600" role="button" onClick={() => navigate(`/business-entities/partner-view/${rowData.id}`)}><TbEye /></div></Tooltip>
       {/* <Tooltip title="Delete">
         <div

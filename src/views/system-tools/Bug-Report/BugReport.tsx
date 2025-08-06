@@ -80,20 +80,20 @@ import type { TableQueries } from "@/@types/common";
 import type { ColumnDef, OnSortParam, Row } from "@/components/shared/DataTable";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addAllActionAction,
   addBugReportAction,
   addNotificationAction,
   addScheduleAction,
+  addTaskAction,
   deleteAllBugReportsAction,
   deleteBugReportAction,
   editBugReportAction,
   getAllUsersAction,
   getBugReportsAction,
   submitExportReasonAction,
-  addTaskAction,
-  addAllActionAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import { authSelector } from "@/reduxtool/auth/authSlice";
+import { getMenuRights } from "@/utils/getMenuRights";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
 
@@ -250,7 +250,7 @@ const ActionColumn = ({
 }) => (
   <div className="flex items-center justify-center text-center">
     <Tooltip title="View Details"><button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onViewDetail}><TbEye /></button></Tooltip>
-    <Tooltip title="Edit Report"><button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onEdit}><TbPencil /></button></Tooltip>
+    {getMenuRights("bug_report")?.is_edit && <Tooltip title="Edit Report"><button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onEdit}><TbPencil /></button></Tooltip>}
     <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
       <Dropdown.Item className="flex items-center gap-2" onClick={onSendEmail}><TbMailShare size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
       <Dropdown.Item className="flex items-center gap-2" onClick={onSendWhatsapp}><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>

@@ -99,6 +99,7 @@ import {
 import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- FEATURE-SPECIFIC TYPES & SCHEMAS ---
 export type ApiProduct = {
@@ -815,14 +816,14 @@ const ActionColumn = ({
   };
   return (
     <div className="flex items-center justify-center gap-1">
-      <Tooltip title="Edit">
+      {getMenuRights("price_list")?.is_edit && <Tooltip title="Edit">
         <div
           className="text-lg p-1.5 cursor-pointer hover:text-blue-500"
           onClick={onEdit}
         >
           <TbPencil />
         </div>
-      </Tooltip>
+      </Tooltip>}
       <Tooltip title="Notify">
         <div
           className="text-lg p-1.5 cursor-pointer hover:text-amber-500"

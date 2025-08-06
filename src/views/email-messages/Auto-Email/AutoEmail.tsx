@@ -68,6 +68,7 @@ import { shallowEqual, useSelector } from "react-redux";
 
 // Utils
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 
 // --- TYPE DEFINITIONS ---
@@ -175,7 +176,7 @@ function exportAutoEmailsToCsv(filename: string, rows: AutoEmailItem[]) {
 
 const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) => (
     <div className="flex items-center justify-center gap-2">
-        <Tooltip title="Edit"><div className="p-1.5 rounded-md text-xl cursor-pointer select-none text-gray-500 hover:bg-gray-100 hover:text-emerald-600 dark:hover:bg-gray-700" role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
+        {getMenuRights("automation_email")?.is_edit && <Tooltip title="Edit"><div className="p-1.5 rounded-md text-xl cursor-pointer select-none text-gray-500 hover:bg-gray-100 hover:text-emerald-600 dark:hover:bg-gray-700" role="button" onClick={onEdit}><TbPencil /></div></Tooltip>}
         <Tooltip title="Delete"><div className="p-1.5 rounded-md text-xl cursor-pointer select-none text-gray-500 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-700" role="button" onClick={onDelete}><TbTrash /></div></Tooltip>
         <Dropdown
             placement="bottom-end"

@@ -64,6 +64,7 @@ import { useSelector, shallowEqual } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import classNames from "classnames";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Define Types ---
 export type DesignationItem = {
@@ -233,7 +234,7 @@ const ActionColumn = ({
 }) => {
   return (
     <div className="flex items-center justify-center gap-2">
-      <Tooltip title="Edit">
+      {getMenuRights("designation")?.is_edit && <Tooltip title="Edit">
         <div
           className={`text-xl p-1.5 cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
@@ -241,7 +242,7 @@ const ActionColumn = ({
         >
           <TbPencil />
         </div>
-      </Tooltip>
+      </Tooltip>}
       <Tooltip title="Delete">
         <div
           className={`text-xl p-1.5 cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}

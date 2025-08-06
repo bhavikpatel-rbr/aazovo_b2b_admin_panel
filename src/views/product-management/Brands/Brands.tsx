@@ -70,6 +70,7 @@ import {
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector } from "react-redux";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Type Definitions ---
 type ApiBrandItem = {
@@ -173,7 +174,7 @@ const showHeaderOptions: { value: "1" | "0"; label: string }[] = [{ value: "1", 
 const ActionColumn = ({ onEdit, onViewDetail, onDelete, }: { onEdit: () => void; onViewDetail: () => void; onDelete: () => void; }) => {
   return (
     <div className="flex items-center justify-center gap-2">
-      <Tooltip title="Edit"><div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
+      {getMenuRights("brands")?.is_edit && <Tooltip title="Edit"><div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>}
       <Tooltip title="View"><div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`} role="button" onClick={onViewDetail}><TbEye /></div></Tooltip>
     </div>
   );

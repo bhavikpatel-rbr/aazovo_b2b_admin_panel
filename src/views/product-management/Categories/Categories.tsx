@@ -92,6 +92,7 @@ import {
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector } from "react-redux";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Type Definitions (Categories) ---
 type ApiCategoryItem = {
@@ -305,7 +306,7 @@ const CategoryActionColumn = ({
 }) => {
   return (
     <div className="flex items-center justify-center gap-2">
-      <Tooltip title="Edit">
+      {getMenuRights("category")?.is_edit && <Tooltip title="Edit">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
@@ -313,7 +314,7 @@ const CategoryActionColumn = ({
         >
           <TbPencil />
         </div>
-      </Tooltip>
+      </Tooltip>}
       <Tooltip title="View">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}

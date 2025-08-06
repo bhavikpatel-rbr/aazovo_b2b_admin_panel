@@ -94,6 +94,7 @@ import {
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Define Types & Constants ---
 export type SelectOption = { value: any; label: string };
@@ -241,7 +242,7 @@ const ItemActionColumn = ({
   onAddSchedule: () => void;
 }) => (
   <div className="flex items-center justify-center gap-1">
-    <Tooltip title="Edit">
+   { getMenuRights("request_feedback")?.is_edit && <Tooltip title="Edit">
       <div
         className="text-xl p-1 cursor-pointer text-gray-500 hover:text-emerald-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
         role="button"
@@ -249,7 +250,7 @@ const ItemActionColumn = ({
       >
         <TbPencil />
       </div>
-    </Tooltip>
+    </Tooltip> }
     <Tooltip title="View">
       <div
         className="text-xl p-1 cursor-pointer text-gray-500 hover:text-blue-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"

@@ -84,6 +84,7 @@ import dayjs from "dayjs";
 import { shallowEqual, useSelector } from "react-redux";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 
 // --- Type Definitions ---
@@ -233,7 +234,7 @@ const ActionColumn = ({ rowData, onOpenModal }: {
     return (
         <div className="flex items-center justify-center gap-1">
             <Tooltip title="View"><div className={`text-xl p-1.5 cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`} role="button" onClick={() => navigate(`/hr-employees/employees/view/${rowData.id}`)}><TbEye /></div></Tooltip>
-            <Tooltip title="Edit"><div className={`text-xl p-1.5 cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={() => navigate(`/hr-employees/employees/edit/${rowData.id}`)}><TbPencil /></div></Tooltip>
+            {getMenuRights("employees")?.is_edit && <Tooltip title="Edit"><div className={`text-xl p-1.5 cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={() => navigate(`/hr-employees/employees/edit/${rowData.id}`)}><TbPencil /></div></Tooltip>}
 
             <Dropdown renderTitle={<BsThreeDotsVertical className="text-xl p-1.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />} placement="bottom-end">
                 <Dropdown.Item onClick={() => onOpenModal('email', rowData)} className="flex items-center gap-2"><TbMail size={18} /><span className="text-sm">Send Email</span></Dropdown.Item>
@@ -285,9 +286,9 @@ const EmployeeTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters
                 <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end"><div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>{columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}</div></Dropdown>
                 <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload" disabled={!isDataReady}></Button>
                 <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
-                <Button 
-                        menuName="employees" isExport={true}
-                 icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
+                <Button
+                    menuName="employees" isExport={true}
+                    icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
             </div>
         </div>
     );

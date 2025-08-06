@@ -40,6 +40,7 @@ import {
     submitExportReasonAction,
 } from '@/reduxtool/master/middleware'
 import { formatCustomDateTime } from '@/utils/formatCustomDateTime'
+import { getMenuRights } from '@/utils/getMenuRights'
 
 // --- FEATURE-SPECIFIC TYPES & SCHEMAS ---
 type Department = { id: number; name: string; };
@@ -90,7 +91,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, departme
 const DocumentTypeTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, typeNameOptions, departmentOptions, columns, filteredColumns, setFilteredColumns, searchInputValue, isDataReady }, ref) => {
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const { control, handleSubmit, setValue } = useForm<DocumentTypeFilterSchema>({ defaultValues: { names: [], departmentIds: [], status: [] } });
-    
+
     const { names, departmentIds, status } = activeFilters;
     useEffect(() => {
         setValue('names', names || []);
@@ -147,10 +148,10 @@ const Documentmaster = () => {
 
     const { DocumentTypeData = [], departmentsData = { data: [] } } = useSelector(masterSelector);
     const isDataReady = !initialLoading;
-    
+
     const departmentOptionsForSelect = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData?.data.map((d: Department) => ({ value: d.id, label: d.name })) : [], [departmentsData?.data]);
     const typeNameOptionsForFilter = useMemo(() => Array.isArray(DocumentTypeData) ? [...new Set(DocumentTypeData.map(item => item.name))].sort().map(name => ({ value: name, label: name })) : [], [DocumentTypeData]);
-    
+
     const refreshData = useCallback(async () => {
         setInitialLoading(true);
         try {
@@ -196,40 +197,46 @@ const Documentmaster = () => {
         { header: "Document Type Name", accessorKey: "name", enableSorting: true, size: 200 },
         { header: "Departments", accessorKey: "departments", size: 250, cell: (props) => { const departments = props.row.original.departments || []; return (<div className="flex flex-wrap gap-1">{departments.map(dept => <Tag key={dept.id} className="bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 text-[11px] border-b border-emerald-300 dark:border-emerald-700">{dept.name}</Tag>)}</div>) } },
         {
-        header: "Updated Info",
-        accessorKey: "updated_at",
-        enableSorting: true,
-        size: 200,
-        cell: (props) => {
-          const { updated_at, updated_by_user } = props.row.original;
-          return (
-            <div className="flex items-center gap-2">
-              <Avatar
-                src={updated_by_user?.profile_pic_path}
-                shape="circle"
-                size="sm"
-                icon={<TbUserCircle />}
-                className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-                onClick={() =>
-                  openImageViewer(updated_by_user?.profile_pic_path)
-                }
-              />
-              <div>
-                <span>{updated_by_user?.name || "N/A"}</span>
-                <div className="text-xs">
-                  <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
-                </div>
-                <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
-              </div>
-            </div>
-          );
+            header: "Updated Info",
+            accessorKey: "updated_at",
+            enableSorting: true,
+            size: 200,
+            cell: (props) => {
+                const { updated_at, updated_by_user } = props.row.original;
+                return (
+                    <div className="flex items-center gap-2">
+                        <Avatar
+                            src={updated_by_user?.profile_pic_path}
+                            shape="circle"
+                            size="sm"
+                            icon={<TbUserCircle />}
+                            className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                            onClick={() =>
+                                openImageViewer(updated_by_user?.profile_pic_path)
+                            }
+                        />
+                        <div>
+                            <span>{updated_by_user?.name || "N/A"}</span>
+                            <div className="text-xs">
+                                <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
+                            </div>
+                            <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
+                        </div>
+                    </div>
+                );
+            },
         },
-      },
 
         { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
-        { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip>
-        {/* <Tooltip title="Delete"><div className="text-lg p-1.5 cursor-pointer hover:text-red-500" onClick={() => handleDeleteClick(props.row.original)}><TbTrash /></div></Tooltip> */}
-        </div>) },
+        {
+            header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (
+                <>
+                    {getMenuRights("document_list")?.is_edit && <div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip>
+                        {/* <Tooltip title="Delete"><div className="text-lg p-1.5 cursor-pointer hover:text-red-500" onClick={() => handleDeleteClick(props.row.original)}><TbTrash /></div></Tooltip> */}
+                    </div>}
+                </>
+            )
+        },
     ], [departmentOptionsForSelect, openEditDrawer, handleDeleteClick]);
 
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<DocumentTypeItem>[]>(columns);
@@ -241,7 +248,7 @@ const Documentmaster = () => {
         if (activeFilters.names?.length) { const names = new Set(activeFilters.names.map(n => n.toLowerCase())); processedData = processedData.filter(item => names.has(item.name.toLowerCase())); }
         if (activeFilters.departmentIds?.length) { const deptIds = new Set(activeFilters.departmentIds.map(id => Number(id))); processedData = processedData.filter(item => (item.departments || []).some(dept => deptIds.has(dept.id))); }
         if (activeFilters.status?.length) { const statuses = new Set(activeFilters.status); processedData = processedData.filter(item => statuses.has(item.status)); }
-        
+
         if (tableData.query) {
             const query = tableData.query.toLowerCase().trim();
             processedData = processedData.filter(item =>
@@ -282,50 +289,50 @@ const Documentmaster = () => {
 
     const openAddDrawer = () => { formMethods.reset({ name: "", department_id: [], status: 'Active' }); setIsAddDrawerOpen(true); };
     const closeAddDrawer = () => { setIsAddDrawerOpen(false); };
-    const onAddDocumentTypeSubmit = async (data: DocumentTypeFormData) => { 
-        setIsSubmitting(true); 
-        try { 
-            await dispatch(addDocumentTypeAction(data)).unwrap(); 
-            toast.push(<Notification title="Document Type Added" type="success">{`Type "${data.name}" was successfully added.`}</Notification>); 
-            closeAddDrawer(); 
-            refreshData(); 
-        } catch (error: any) { 
-            toast.push(<Notification title="Failed to Add Type" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
-        } finally { 
-            setIsSubmitting(false); 
-        } 
+    const onAddDocumentTypeSubmit = async (data: DocumentTypeFormData) => {
+        setIsSubmitting(true);
+        try {
+            await dispatch(addDocumentTypeAction(data)).unwrap();
+            toast.push(<Notification title="Document Type Added" type="success">{`Type "${data.name}" was successfully added.`}</Notification>);
+            closeAddDrawer();
+            refreshData();
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Add Type" type="danger">{error.message || "An unexpected error occurred."}</Notification>);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
-    
+
     const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingDocType(null); };
-    const onEditDocumentTypeSubmit = async (data: DocumentTypeFormData) => { 
-        if (!editingDocType?.id) return; 
-        setIsSubmitting(true); 
-        try { 
-            await dispatch(editDocumentTypeAction({ id: editingDocType.id, ...data })).unwrap(); 
-            toast.push(<Notification title="Document Type Updated" type="success">{`"${data.name}" was successfully updated.`}</Notification>); 
-            closeEditDrawer(); 
-            refreshData(); 
-        } catch (error: any) { 
-            toast.push(<Notification title="Failed to Update Type" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
-        } finally { 
-            setIsSubmitting(false); 
-        } 
+    const onEditDocumentTypeSubmit = async (data: DocumentTypeFormData) => {
+        if (!editingDocType?.id) return;
+        setIsSubmitting(true);
+        try {
+            await dispatch(editDocumentTypeAction({ id: editingDocType.id, ...data })).unwrap();
+            toast.push(<Notification title="Document Type Updated" type="success">{`"${data.name}" was successfully updated.`}</Notification>);
+            closeEditDrawer();
+            refreshData();
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Update Type" type="danger">{error.message || "An unexpected error occurred."}</Notification>);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
-    
-    const onConfirmSingleDelete = async () => { 
-        if (!typeToDelete?.id) return; 
-        setIsDeleting(true); 
-        try { 
-            await dispatch(deleteDocumentTypeAction({ id: typeToDelete.id })).unwrap(); 
-            toast.push(<Notification title="Document Type Deleted" type="success">{`"${typeToDelete.name}" was successfully deleted.`}</Notification>); 
-            refreshData(); 
-        } catch (error: any) { 
-            toast.push(<Notification title="Failed to Delete Type" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
-        } finally { 
-            setIsDeleting(false); 
-            setSingleDeleteConfirmOpen(false); 
-            setTypeToDelete(null); 
-        } 
+
+    const onConfirmSingleDelete = async () => {
+        if (!typeToDelete?.id) return;
+        setIsDeleting(true);
+        try {
+            await dispatch(deleteDocumentTypeAction({ id: typeToDelete.id })).unwrap();
+            toast.push(<Notification title="Document Type Deleted" type="success">{`"${typeToDelete.name}" was successfully deleted.`}</Notification>);
+            refreshData();
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Delete Type" type="danger">{error.message || "An unexpected error occurred."}</Notification>);
+        } finally {
+            setIsDeleting(false);
+            setSingleDeleteConfirmOpen(false);
+            setTypeToDelete(null);
+        }
     };
 
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
@@ -382,68 +389,68 @@ const Documentmaster = () => {
                 </Form>
                 {isEditDrawerOpen && editingDocType && (
                     <div className=" grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-            <div>
-              <b className="mt-3 mb-3 font-semibold text-primary">
-                Latest Update:
-              </b>
-              <br />
-              <p className="text-sm font-semibold">
-                {editingDocType.updated_by_user?.name || "N/A"}
-              </p>
-              <p>
-                {editingDocType.updated_by_user?.roles[0]?.display_name ||
-                  "N/A"}
-              </p>
-            </div>
-            <div className="text-right">
-              <br />
-              <span className="font-semibold">Created At:</span>{" "}
-              <span>
-                {editingDocType.created_at
-                  ? `${new Date(
-                      editingDocType.created_at
-                    ).getDate()} ${new Date(
-                      editingDocType.created_at
-                    ).toLocaleString("en-US", {
-                      month: "short",
-                    })} ${new Date(
-                      editingDocType.created_at
-                    ).getFullYear()}, ${new Date(
-                      editingDocType.created_at
-                    ).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}`
-                  : "N/A"}
-              </span>
-              <br />
-              <span className="font-semibold">Updated At:</span>{" "}
-              <span>
-                {}
-                {editingDocType.updated_at
-                  ? `${new Date(
-                      editingDocType.updated_at
-                    ).getDate()} ${new Date(
-                      editingDocType.updated_at
-                    ).toLocaleString("en-US", {
-                      month: "short",
-                    })} ${new Date(
-                      editingDocType.updated_at
-                    ).getFullYear()}, ${new Date(
-                      editingDocType.updated_at
-                    ).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}`
-                  : "N/A"}
-              </span>
-            </div>
-          </div>
+                        <div>
+                            <b className="mt-3 mb-3 font-semibold text-primary">
+                                Latest Update:
+                            </b>
+                            <br />
+                            <p className="text-sm font-semibold">
+                                {editingDocType.updated_by_user?.name || "N/A"}
+                            </p>
+                            <p>
+                                {editingDocType.updated_by_user?.roles[0]?.display_name ||
+                                    "N/A"}
+                            </p>
+                        </div>
+                        <div className="text-right">
+                            <br />
+                            <span className="font-semibold">Created At:</span>{" "}
+                            <span>
+                                {editingDocType.created_at
+                                    ? `${new Date(
+                                        editingDocType.created_at
+                                    ).getDate()} ${new Date(
+                                        editingDocType.created_at
+                                    ).toLocaleString("en-US", {
+                                        month: "short",
+                                    })} ${new Date(
+                                        editingDocType.created_at
+                                    ).getFullYear()}, ${new Date(
+                                        editingDocType.created_at
+                                    ).toLocaleTimeString("en-US", {
+                                        hour: "numeric",
+                                        minute: "2-digit",
+                                        hour12: true,
+                                    })}`
+                                    : "N/A"}
+                            </span>
+                            <br />
+                            <span className="font-semibold">Updated At:</span>{" "}
+                            <span>
+                                { }
+                                {editingDocType.updated_at
+                                    ? `${new Date(
+                                        editingDocType.updated_at
+                                    ).getDate()} ${new Date(
+                                        editingDocType.updated_at
+                                    ).toLocaleString("en-US", {
+                                        month: "short",
+                                    })} ${new Date(
+                                        editingDocType.updated_at
+                                    ).getFullYear()}, ${new Date(
+                                        editingDocType.updated_at
+                                    ).toLocaleTimeString("en-US", {
+                                        hour: "numeric",
+                                        minute: "2-digit",
+                                        hour12: true,
+                                    })}`
+                                    : "N/A"}
+                            </span>
+                        </div>
+                    </div>
                 )}
             </Drawer>
-            
+
             <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
                 <Form id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
                     <FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem>
@@ -453,7 +460,7 @@ const Documentmaster = () => {
             <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Document Type" onClose={() => { setSingleDeleteConfirmOpen(false); setTypeToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setTypeToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setTypeToDelete(null); }} onConfirm={onConfirmSingleDelete} loading={isDeleting}>
                 <p>Are you sure you want to delete the document type "<strong>{typeToDelete?.name}</strong>"? This action cannot be undone.</p>
             </ConfirmDialog>
-            
+
             <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
                 <div className="flex justify-center items-center p-4">
                     {imageToView ? (<img src={imageToView} alt="User Profile" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}

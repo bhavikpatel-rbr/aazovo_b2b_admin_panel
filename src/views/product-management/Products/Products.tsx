@@ -118,6 +118,7 @@ import { useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Type Definitions ---
 // ... (existing type definitions are correct)
@@ -1262,7 +1263,7 @@ const ActionColumn = React.memo(
           <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Edit">
+      {getMenuRights("products")?.is_edit && <Tooltip title="Edit">
         <div
           className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
           role="button"
@@ -1270,7 +1271,7 @@ const ActionColumn = React.memo(
         >
           <TbPencil />
         </div>
-      </Tooltip>
+      </Tooltip>}
       <Dropdown
         placement="bottom-end"
         renderTitle={
@@ -2881,8 +2882,8 @@ const Products = () => {
                   Import Keywords
                 </Dropdown.Item>
               </Dropdown>
-              <Button 
-              menuName="products" isAdd={true}
+              <Button
+                menuName="products" isAdd={true}
                 variant="solid"
                 icon={<TbPlus />}
                 onClick={openAddDrawer}

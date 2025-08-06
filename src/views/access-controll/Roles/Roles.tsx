@@ -59,6 +59,7 @@ import {
   getDesignationsAction,
   submitExportReasonAction
 } from "@/reduxtool/master/middleware";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Define Item Types ---
 export type DepartmentItem = { id: string | number; name: string };
@@ -151,7 +152,7 @@ const ActionColumn = ({ onEdit, onViewDetail, onPermissions }: { onEdit: () => v
   return (
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Permissions"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400")} role="button" onClick={onPermissions}><TbShieldLock /></div></Tooltip>
-      <Tooltip title="Edit"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400")} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
+      {getMenuRights("roles")?.is_edit && <Tooltip title="Edit"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400")} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>}
       <Tooltip title="View"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400")} role="button" onClick={onViewDetail}><TbEye /></div></Tooltip>
     </div>
   );

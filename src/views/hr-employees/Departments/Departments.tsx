@@ -58,6 +58,7 @@ import { masterSelector } from "@/reduxtool/master/masterSlice";
 
 // Utils
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 // Type for Select options
 type SelectOption = {
@@ -208,7 +209,7 @@ const ActionColumn = ({
 }) => {
   return (
     <div className="flex items-center justify-center gap-1">
-      <Tooltip title="Edit">
+      {getMenuRights("department")?.is_edit && <Tooltip title="Edit">
         <div
           className={`text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
@@ -216,7 +217,7 @@ const ActionColumn = ({
         >
           <TbPencil />
         </div>
-      </Tooltip>
+      </Tooltip>}
     </div>
   );
 };

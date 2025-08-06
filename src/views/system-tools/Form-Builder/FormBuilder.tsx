@@ -79,6 +79,7 @@ import {
   getAllUsersAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Constants and Type Definitions ---
 export const FORM_STATUS_OPTIONS = [
@@ -213,7 +214,7 @@ function exportFormsToCsvLogic(filename: string, rows: FormBuilderItem[]) {
 
 const ActionColumn = ({ item, onEdit, onViewDetail, onClone, onAssignToTask }: { item: FormBuilderItem; onEdit: (id: number) => void; onViewDetail: (item: FormBuilderItem) => void; onClone: (item: FormBuilderItem) => void; onAssignToTask: () => void; }) => (
     <div className="flex items-center justify-center gap-1">
-        <Tooltip title="Edit"><div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600`} role="button" onClick={() => onEdit(item.id)}><TbPencil /></div></Tooltip>
+      { getMenuRights("form_builder")?.is_edit &&  <Tooltip title="Edit"><div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600`} role="button" onClick={() => onEdit(item.id)}><TbPencil /></div></Tooltip> }
         <Tooltip title="Preview"><div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600`} role="button" onClick={() => onViewDetail(item)}><TbEye /></div></Tooltip>
         <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer" />}>
             <Dropdown.Item className="flex items-center gap-2" onClick={() => onClone(item)}><TbCopy size={18} /> <span className="text-xs">Clone Form</span></Dropdown.Item>

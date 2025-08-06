@@ -2640,7 +2640,7 @@ const CompanyActionColumn = ({
   return (
     <div className="flex items-center justify-center gap-1">
       {
-        getMenuRights("company")?.is_export && <Tooltip title="Edit">
+        getMenuRights("company")?.is_edit && <Tooltip title="Edit">
           <div
             className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600"
             role="button"

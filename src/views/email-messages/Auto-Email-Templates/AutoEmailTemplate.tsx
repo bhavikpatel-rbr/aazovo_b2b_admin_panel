@@ -1,75 +1,71 @@
 // src/views/your-path/AutoEmailTemplatesListing.tsx
 
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
-import cloneDeep from "lodash/cloneDeep";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import classNames from "classnames";
+import cloneDeep from "lodash/cloneDeep";
+import React, { Ref, useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
-import Tooltip from "@/components/ui/Tooltip";
+import DebounceInput from "@/components/shared/DebouceInput"; // Corrected
+import StickyFooter from "@/components/shared/StickyFooter";
+import { Avatar, Card, Checkbox, Dialog, Drawer, Dropdown, Form, FormItem, Input, Skeleton, Tag } from "@/components/ui"; // ADDED Skeleton
 import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
-import DebounceInput from "@/components/shared/DebouceInput"; // Corrected
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, Dialog, Skeleton } from "@/components/ui"; // ADDED Skeleton
+import toast from "@/components/ui/toast";
+import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
 import {
-  TbPencil,
-  TbEye,
-  TbChecks,
-  TbSearch,
-  TbFilter,
-  TbPlus,
-  TbCloudUpload,
-  TbMailBolt,
-  TbKey,
-  TbTrash,
-  TbCategory2, // For Category
+  TbAlignBoxCenterBottom, // For Category
   TbBuildingArch,
-  TbReload,
-  TbCopy,
-  TbMailSearch,
-  TbMailForward,
-  TbMailOpened,
-  TbAlignBoxCenterBottom,
   TbBuildingCog,
-  TbBuildingOff, // For Department
+  TbBuildingOff,
+  TbCategory2,
+  TbChecks,
+  TbCloudUpload, // For Department
   TbColumns,
-  TbX,
-  TbUserCircle, // ADDED for Avatar fallback
+  TbFilter,
+  TbKey,
+  TbMailBolt,
+  TbMailForward,
+  TbPencil,
+  TbPlus,
+  TbReload,
+  TbSearch,
+  TbTrash,
+  TbUserCircle,
+  TbX
 } from "react-icons/tb";
 
 // Types
-import type { OnSortParam, ColumnDef, Row } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
+import type { ColumnDef, OnSortParam, Row } from "@/components/shared/DataTable";
 
 // Redux
-import { useAppDispatch } from "@/reduxtool/store";
-import { shallowEqual, useSelector } from "react-redux";
-import {
-  // !!! REPLACE WITH YOUR ACTUAL ACTIONS !!!
-  getAutoEmailTemplatesAction,
-  addAutoEmailTemplateAction,
-  editAutoEmailTemplateAction,
-  deleteAutoEmailTemplateAction,
-  deleteAllAutoEmailTemplatesAction,
-  getCategoriesAction, // Action to fetch categories for templates
-  getDepartmentsAction, // Action to fetch departments for templates
-  submitExportReasonAction,
-  getParentCategoriesAction, // ADDED for export reason
-} from "@/reduxtool/master/middleware"; // Adjust path
 import { masterSelector } from "@/reduxtool/master/masterSlice"; // Adjust path
-import dayjs from "dayjs";
+import {
+  addAutoEmailTemplateAction,
+  deleteAllAutoEmailTemplatesAction,
+  deleteAutoEmailTemplateAction,
+  editAutoEmailTemplateAction,
+  // !!! REPLACE WITH YOUR ACTUAL ACTIONS !!!
+  getAutoEmailTemplatesAction, // Action to fetch categories for templates
+  getDepartmentsAction,
+  getParentCategoriesAction, // Action to fetch departments for templates
+  submitExportReasonAction
+} from "@/reduxtool/master/middleware"; // Adjust path
+import { useAppDispatch } from "@/reduxtool/store";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
+import { getMenuRights } from "@/utils/getMenuRights";
+import dayjs from "dayjs";
+import { shallowEqual, useSelector } from "react-redux";
 
 
 // --- Define Types ---
@@ -174,7 +170,7 @@ function exportAutoEmailTemplatesToCsv(filename: string, rows: AutoEmailTemplate
 const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) => {
   return (
     <div className="flex items-center justify-center gap-2">
-      <Tooltip title="Edit">
+      {getMenuRights("auto_email_templates")?.is_edit && <Tooltip title="Edit">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 
           dark:text-gray-400 dark:hover:text-emerald-400`}
@@ -183,7 +179,7 @@ const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () =
         >
           <TbPencil />
         </div>
-      </Tooltip>
+      </Tooltip>}
       <Tooltip title="Send test email">
         <div className="text-xl cursor-pointer text-gray-500 hover:text-orange-600" role="button">
           <TbMailForward size={18} />
@@ -266,8 +262,8 @@ const AutoEmailTemplatesTableTools = ({ onSearchChange, onFilter, onExport, onCl
           Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
         </Button>
         <Button
-              menuName="auto_email_templates" isExport={true}
-         icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
+          menuName="auto_email_templates" isExport={true}
+          icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
       </div>
     </div>
   );

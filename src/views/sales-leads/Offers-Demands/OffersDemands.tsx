@@ -109,6 +109,7 @@ import type {
 } from "@/components/shared/DataTable";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 interface TableQueries extends CommonTableQueries { }
 
@@ -1520,7 +1521,7 @@ const ActionColumn = React.memo(
     onOpenModal: (type: OfferDemandModalType, data: OfferDemandItem) => void;
   }) => (
     <div className="flex items-center justify-center gap-0">
-      <Tooltip title="Edit">
+      {getMenuRights("offer_demand")?.is_edit && <Tooltip title="Edit">
         <div
           role="button"
           onClick={onEdit}
@@ -1528,7 +1529,7 @@ const ActionColumn = React.memo(
         >
           <TbPencil />
         </div>
-      </Tooltip>
+      </Tooltip>}
       <Tooltip title="View Details">
         <div
           role="button"

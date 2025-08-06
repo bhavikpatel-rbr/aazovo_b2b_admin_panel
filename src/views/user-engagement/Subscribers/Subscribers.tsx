@@ -90,6 +90,7 @@ import {
 import { useAppDispatch } from "@/reduxtool/store";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 import { shallowEqual, useSelector } from "react-redux";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Define Types ---
 export type ApiSubscriberItem = {
@@ -879,7 +880,7 @@ const SubscribersListing = () => {
         header: "Action", id: "action", size: 120,
         cell: (props: CellContext<SubscriberItem, unknown>) => (
           <div className="flex gap-2 items-center justify-center">
-            <Tooltip title="Edit Subscriber"><div className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600" onClick={() => openEditDrawer(props.row.original)} role="button"><TbPencil /></div></Tooltip>
+            {getMenuRights("subscriber")?.is_edit && <Tooltip title="Edit Subscriber"><div className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600" onClick={() => openEditDrawer(props.row.original)} role="button"><TbPencil /></div></Tooltip>}
             <Tooltip title="Delete"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600" role="button" onClick={() => handleDeleteClick(props.row.original)}><TbTrash size={18} /></div></Tooltip>
           </div>
         ),
