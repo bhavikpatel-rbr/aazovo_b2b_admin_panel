@@ -170,7 +170,7 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearAll, allCol
                 </Dropdown>
                 <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearAll} />
                 <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+                <Button icon={<TbCloudUpload />}  menuName="trending_image" isExport={true} onClick={onExport} className="w-full sm:w-auto">Export</Button>
             </div>
         </div>
     )
@@ -313,7 +313,7 @@ const TrendingImages = () => {
                         <h5 className="mb-2 sm:mb-0">Trending Images</h5>
                         <div>
                             <Link to='/task/task-list/create'><Button className="mr-2" icon={<TbUser />}>Assign to Task</Button></Link>
-                            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>Add New</Button>
+                            <Button variant="solid" menuName="trending_image" isAdd={true} icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>Add New</Button>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">

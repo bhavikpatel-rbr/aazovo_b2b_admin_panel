@@ -303,7 +303,7 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, se
         </Dropdown>
         <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload" disabled={!isDataReady}></Button>
         <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
-        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
+        <Button icon={<TbCloudUpload />} menuName="bug_report" isExport={true} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
       </div>
     </div>
   );
@@ -980,7 +980,7 @@ const BugReportListing = () => {
     <>
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"><h5 className="mb-2 sm:mb-0">Bug Reports</h5><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button></div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"><h5 className="mb-2 sm:mb-0">Bug Reports</h5><Button variant="solid" icon={<TbPlus />} menuName="bug_report" isAdd={true} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button></div>
           <div className="grid grid-cols-5 gap-2 w-full sm:w-auto mb-4 gap-4">
             <Tooltip title="View All Reports (Clear Filters)"><div className="cursor-pointer" onClick={() => handleCardClick()}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-blue-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbBug size={24} /></div><div>{renderCardContent(rawBugReportsData?.counts?.total, "text-blue-500")}<span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
             <Tooltip title="Filter by Status: New"><div className="cursor-pointer" onClick={() => handleCardClick("New")}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-pink-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbMailPlus size={24} /></div><div>{renderCardContent(rawBugReportsData?.counts?.new, "text-pink-500")}<span className="font-semibold text-xs">New</span></div></Card></div></Tooltip>

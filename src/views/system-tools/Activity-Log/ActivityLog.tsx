@@ -371,6 +371,7 @@ const ItemTableTools = ({
           )}
         </Button>
         <Button
+          menuName="activity_log" isExport={true}
           icon={<TbCloudUpload />}
           onClick={onExport}
           className="w-full sm:w-auto"
@@ -407,15 +408,15 @@ const ActivityLog = () => {
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
 
   const refreshData = useCallback(async () => {
-      setInitialLoading(true);
-      try {
-          await dispatch(getActivityLogAction(location?.state?.userId || 0));
-      } catch (error) {
-          console.error("Failed to fetch activity logs:", error);
-          toast.push(<Notification title="Data Fetch Failed" type="danger">Could not load activity logs.</Notification>);
-      } finally {
-          setInitialLoading(false);
-      }
+    setInitialLoading(true);
+    try {
+      await dispatch(getActivityLogAction(location?.state?.userId || 0));
+    } catch (error) {
+      console.error("Failed to fetch activity logs:", error);
+      toast.push(<Notification title="Data Fetch Failed" type="danger">Could not load activity logs.</Notification>);
+    } finally {
+      setInitialLoading(false);
+    }
   }, [dispatch, location?.state?.userId]);
 
   const onClearAllFilters = useCallback(() => {
@@ -644,11 +645,13 @@ const ActivityLog = () => {
           );
         },
       },
-      { header: "Actions", id: "actions", size: 100, meta: { cellClass: "text-center" }, cell: (props) => (
-      <ActionColumn onViewDetail={() => openViewDialog(props.row.original)} 
-      
-      onBlockOrUnblock={() => openBlockOrUnblockDialog(props.row.original)} 
-      isBlocked={props.row.original.is_blocked === 1} />), },
+      {
+        header: "Actions", id: "actions", size: 100, meta: { cellClass: "text-center" }, cell: (props) => (
+          <ActionColumn onViewDetail={() => openViewDialog(props.row.original)}
+
+            onBlockOrUnblock={() => openBlockOrUnblockDialog(props.row.original)}
+            isBlocked={props.row.original.is_blocked === 1} />),
+      },
     ],
     [openViewDialog, openBlockOrUnblockDialog]
   );
@@ -714,7 +717,7 @@ const ActivityLog = () => {
       </div>
     );
   };
-  
+
   const renderCardContent = (
     content: string | number | undefined,
     colorClass: string
@@ -744,7 +747,7 @@ const ActivityLog = () => {
             <Card bodyClass="flex gap-2 p-3 items-center" className="rounded-lg border border-orange-200 dark:border-orange-700 cursor-default"><div className="h-12 w-12 rounded-lg flex items-center justify-center bg-orange-100 text-orange-500 dark:bg-orange-500/20 dark:text-orange-300"><TbCloudCog size={24} /></div><div>{renderCardContent(counts.distinact_ip, "text-orange-500 dark:text-orange-300")}<span className="font-semibold text-xs">Distinct IP</span></div></Card>
             <Card bodyClass="flex gap-2 p-3 items-center" className="rounded-lg border border-red-200 dark:border-red-700 cursor-default"><div className="h-12 w-12 rounded-lg flex items-center justify-center bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-300"><TbCloudExclamation size={24} /></div><div>{renderCardContent(counts.suspicious_ip, "text-red-500 dark:text-red-300")}<span className="font-semibold text-xs">Suspicious</span></div></Card>
           </div>
-          <ItemTableTools onSearchChange={(q) => handleSetTableData({ query: q, pageIndex: 1 })} searchValue={tableData.query} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportModal} onClearAll={onClearAllFilters} columns={baseColumns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady}/>
+          <ItemTableTools onSearchChange={(q) => handleSetTableData({ query: q, pageIndex: 1 })} searchValue={tableData.query} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportModal} onClearAll={onClearAllFilters} columns={baseColumns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady} />
           <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={onClearAllFilters} />
           <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">{total !== mappedData.length && (<span>Showing <strong>{total}</strong> matching results of <strong>{mappedData.length}</strong></span>)}</div>
           <div className="mt-1 flex-grow overflow-y-auto">

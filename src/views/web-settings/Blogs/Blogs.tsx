@@ -170,9 +170,9 @@ function exportToCsvBlog(filename: string, rows: BlogItem[]): boolean {
     );
     return false;
   }
-  const CSV_HEADERS = [ "ID", "Title", "Author", "Tags", "Slug", "Status", "Meta Title", "Meta Description", "Meta Keywords", "Icon Full Path", "Created At", "Updated By", "Updated Role", "Updated At", ];
+  const CSV_HEADERS = ["ID", "Title", "Author", "Tags", "Slug", "Status", "Meta Title", "Meta Description", "Meta Keywords", "Icon Full Path", "Created At", "Updated By", "Updated Role", "Updated At",];
   type BlogExportItem = Omit<BlogItem, "created_at" | "updated_at"> & { created_at_formatted?: string; updated_at_formatted?: string; };
-  const CSV_KEYS_EXPORT: (keyof BlogExportItem)[] = [ "id", "title", "author", "tags", "slug", "status", "meta_title", "meta_descr", "meta_keyword", "icon_full_path", "created_at_formatted", "updated_by_name", "updated_by_role", "updated_at_formatted", ];
+  const CSV_KEYS_EXPORT: (keyof BlogExportItem)[] = ["id", "title", "author", "tags", "slug", "status", "meta_title", "meta_descr", "meta_keyword", "icon_full_path", "created_at_formatted", "updated_by_name", "updated_by_role", "updated_at_formatted",];
 
   const preparedRows: BlogExportItem[] = rows.map((row) => ({
     ...row,
@@ -191,15 +191,15 @@ function exportToCsvBlog(filename: string, rows: BlogItem[]): boolean {
   const csvContent =
     CSV_HEADERS.join(separator) + "\n" +
     preparedRows.map((row: any) =>
-        CSV_KEYS_EXPORT.map((k) => {
-          let cell = row[k] === null || row[k] === undefined ? "" : String(row[k]);
-          cell = cell.replace(/"/g, '""');
-          if (cell.search(/("|,|\n)/g) >= 0) {
-            cell = `"${cell}"`;
-          }
-          return cell;
-        }).join(separator)
-      ).join("\n");
+      CSV_KEYS_EXPORT.map((k) => {
+        let cell = row[k] === null || row[k] === undefined ? "" : String(row[k]);
+        cell = cell.replace(/"/g, '""');
+        if (cell.search(/("|,|\n)/g) >= 0) {
+          cell = `"${cell}"`;
+        }
+        return cell;
+      }).join(separator)
+    ).join("\n");
 
   const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
@@ -222,41 +222,41 @@ function exportToCsvBlog(filename: string, rows: BlogItem[]): boolean {
 function classNames(...classes: (string | boolean | undefined)[]) { return classes.filter(Boolean).join(" "); }
 // --- ActiveFiltersDisplay ---
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
-    filterData: Partial<FilterFormData>;
-    onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
-    onClearAll: () => void;
+  filterData: Partial<FilterFormData>;
+  onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
+  onClearAll: () => void;
 }) => {
-    const activeStatuses = filterData.filterStatus || [];
-    const activeCreators = filterData.filterCreatedBy || [];
-    const activeDateRange = filterData.date;
-    const hasActiveFilters = activeStatuses.length > 0 || activeCreators.length > 0 || !!activeDateRange;
+  const activeStatuses = filterData.filterStatus || [];
+  const activeCreators = filterData.filterCreatedBy || [];
+  const activeDateRange = filterData.date;
+  const hasActiveFilters = activeStatuses.length > 0 || activeCreators.length > 0 || !!activeDateRange;
 
-    if (!hasActiveFilters) { return null; }
+  if (!hasActiveFilters) { return null; }
 
-    return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {activeStatuses.map((status) => (
-                <Tag key={`status-${status.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">
-                    Status: {status.label}
-                    <TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter('filterStatus', status.value)} />
-                </Tag>
-            ))}
-            {activeCreators.map((creator) => (
-                <Tag key={`creator-${creator.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">
-                    Author: {creator.label}
-                    <TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter('filterCreatedBy', creator.value)} />
-                </Tag>
-            ))}
-            {activeDateRange && (
-                <Tag prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">
-                    Date: Today
-                    <TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter('date', '')} />
-                </Tag>
-            )}
-            {hasActiveFilters && ( <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button> )}
-        </div>
-    );
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {activeStatuses.map((status) => (
+        <Tag key={`status-${status.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">
+          Status: {status.label}
+          <TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter('filterStatus', status.value)} />
+        </Tag>
+      ))}
+      {activeCreators.map((creator) => (
+        <Tag key={`creator-${creator.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">
+          Author: {creator.label}
+          <TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter('filterCreatedBy', creator.value)} />
+        </Tag>
+      ))}
+      {activeDateRange && (
+        <Tag prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">
+          Date: Today
+          <TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter('date', '')} />
+        </Tag>
+      )}
+      {hasActiveFilters && (<Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>)}
+    </div>
+  );
 };
 
 // --- ActionColumn ---
@@ -364,6 +364,7 @@ const BlogsTableTools = ({
           )}
         </Button>
         <Button
+          menuName="blog" isExport={true}
           icon={<TbCloudUpload />}
           onClick={onExport}
           className="w-full sm:w-auto"
@@ -378,9 +379,9 @@ const BlogsTableTools = ({
 
 // --- BlogsTable ---
 const BlogsTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: {
-    columns: ColumnDef<BlogItem>[]; data: BlogItem[]; loading: boolean; pagingData: any; selectedItems: BlogItem[];
-    onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void;
-    onRowSelect: (checked: boolean, row: BlogItem) => void; onAllRowSelect: (checked: boolean, rows: Row<BlogItem>[]) => void;
+  columns: ColumnDef<BlogItem>[]; data: BlogItem[]; loading: boolean; pagingData: any; selectedItems: BlogItem[];
+  onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void;
+  onRowSelect: (checked: boolean, row: BlogItem) => void; onAllRowSelect: (checked: boolean, rows: Row<BlogItem>[]) => void;
 }) => {
   return (<DataTable menuName="blog" selectable columns={columns} data={data} noData={!loading && data.length === 0} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} />);
 };
@@ -438,19 +439,19 @@ const Blogs = () => {
 
   // --- Initial Data Fetch ---
   const refreshData = useCallback(async () => {
-      setInitialLoading(true);
-      try {
-          await dispatch(getBlogsAction());
-      } catch (error) {
-          console.error("Failed to refresh data:", error);
-          toast.push(<Notification title="Data Refresh Failed" type="danger">Could not reload blogs.</Notification>);
-      } finally {
-          setInitialLoading(false);
-      }
+    setInitialLoading(true);
+    try {
+      await dispatch(getBlogsAction());
+    } catch (error) {
+      console.error("Failed to refresh data:", error);
+      toast.push(<Notification title="Data Refresh Failed" type="danger">Could not reload blogs.</Notification>);
+    } finally {
+      setInitialLoading(false);
+    }
   }, [dispatch]);
 
   useEffect(() => {
-      refreshData();
+    refreshData();
   }, [refreshData]);
 
   // --- Form Hooks ---
@@ -461,7 +462,7 @@ const Blogs = () => {
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
   // --- Drawer & Modal Handlers ---
-  const handleIconChange = ( event: React.ChangeEvent<HTMLInputElement>, formMethodsInstance: typeof addFormMethods | typeof editFormMethods ) => { const file = event.target.files?.[0]; if (iconPreview) URL.revokeObjectURL(iconPreview); if (file) { formMethodsInstance.setValue("icon", file, { shouldValidate: true, shouldDirty: true, shouldTouch: true, }); setIconPreview(URL.createObjectURL(file)); } else { formMethodsInstance.setValue("icon", null, { shouldValidate: true, shouldDirty: true, shouldTouch: true, }); setIconPreview(null); } };
+  const handleIconChange = (event: React.ChangeEvent<HTMLInputElement>, formMethodsInstance: typeof addFormMethods | typeof editFormMethods) => { const file = event.target.files?.[0]; if (iconPreview) URL.revokeObjectURL(iconPreview); if (file) { formMethodsInstance.setValue("icon", file, { shouldValidate: true, shouldDirty: true, shouldTouch: true, }); setIconPreview(URL.createObjectURL(file)); } else { formMethodsInstance.setValue("icon", null, { shouldValidate: true, shouldDirty: true, shouldTouch: true, }); setIconPreview(null); } };
   const openAddDrawer = () => { addFormMethods.reset(defaultFormValues); if (iconPreview) URL.revokeObjectURL(iconPreview); setIconPreview(null); setAddDrawerOpen(true); };
   const closeAddDrawer = () => { addFormMethods.reset(defaultFormValues); if (iconPreview) URL.revokeObjectURL(iconPreview); setIconPreview(null); setAddDrawerOpen(false); };
   const openEditDrawer = (blog: BlogItem) => { setEditingBlog(blog); editFormMethods.reset({ title: blog.title, slug: blog.slug || null, blog_descr: blog.blog_descr || null, author: blog.author || null, tags: blog.tags || null, icon: null, status: blog.status, meta_title: blog.meta_title || null, meta_descr: blog.meta_descr || null, meta_keyword: blog.meta_keyword || null, }); if (iconPreview) URL.revokeObjectURL(iconPreview); setIconPreview(blog.icon_full_path); setEditDrawerOpen(true); };
@@ -470,7 +471,7 @@ const Blogs = () => {
   const closeFilterDrawer = () => setFilterDrawerOpen(false);
   const openImageViewer = (src: string | null) => { if (src) { setImageToView(src); setIsImageViewerOpen(true); } };
   const closeImageViewer = () => { setIsImageViewerOpen(false); setImageToView(null); };
-  
+
   // --- Form Submit Handlers ---
   const onAddBlogSubmit: SubmitHandler<BlogFormData> = async (data) => { setIsSubmitting(true); const formDataToSend = new FormData(); Object.entries(data).forEach(([key, value]) => { if (key === 'icon' && value instanceof File) { formDataToSend.append(key, value); } else if (value !== null && value !== undefined) { formDataToSend.append(key, String(value)); } }); try { await dispatch(addBlogAction(formDataToSend)).unwrap(); toast.push(<Notification title="Blog Added" type="success">New blog created successfully.</Notification>); closeAddDrawer(); refreshData(); } catch (e: any) { toast.push(<Notification title="Add Failed" type="danger">{e.message || "Failed to add blog."}</Notification>); } finally { setIsSubmitting(false); } };
   const onEditBlogSubmit = async (data: BlogFormData) => { if (!editingBlog) return; setIsSubmitting(true); const formData = new FormData(); formData.append("_method", "PUT"); (Object.keys(data) as Array<keyof BlogFormData>).forEach((key) => { const value = data[key]; if (key === 'icon' && value instanceof File) { formData.append(key, value); } else if (value !== null && value !== undefined) { formData.append(key, String(value)); } }); try { await dispatch(editBlogAction({ id: editingBlog.id, formData })).unwrap(); toast.push(<Notification title="Blog Updated" type="success">Blog "{data.title}" updated.</Notification>); closeEditDrawer(); refreshData(); } catch (error: any) { toast.push(<Notification title="Failed to Update" type="danger">{error.message || "Could not update blog."}</Notification>); } finally { setIsSubmitting(false); } };
@@ -480,11 +481,11 @@ const Blogs = () => {
   const handleDeleteClick = (blog: BlogItem) => { setBlogToDelete(blog); setSingleDeleteConfirmOpen(true); };
   const onConfirmSingleDelete = async () => { if (!blogToDelete?.id) return; setIsDeleting(true); try { await dispatch(deleteBlogAction({ id: blogToDelete.id })).unwrap(); toast.push(<Notification title="Blog Deleted" type="success">Blog "{blogToDelete.title}" deleted.</Notification>); refreshData(); } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger">{e.message || "Failed to delete blog."}</Notification>); } finally { setBlogToDelete(null); setSingleDeleteConfirmOpen(false); setIsDeleting(false); } };
   const handleDeleteSelected = async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const idsToDelete = selectedItems.map((item) => item.id).join(","); try { await dispatch(deleteAllBlogsAction({ ids: idsToDelete })).unwrap(); toast.push(<Notification title="Blogs Deleted" type="success">{selectedItems.length} blog(s) deleted.</Notification>); setSelectedItems([]); refreshData(); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{e.message || "Failed to delete selected blogs."}</Notification>); } finally { setIsDeleting(false); } };
-  
+
   // --- Export Handler ---
   const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true); };
-  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const fileName = `blogs_export_${new Date().toISOString().split("T")[0]}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "Blogs", file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportToCsvBlog(fileName, allFilteredAndSortedData); setIsExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Operation Failed" type="danger" children={error.message || "Could not complete export."}/>); } finally { setIsSubmittingExportReason(false); } };
-  
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const fileName = `blogs_export_${new Date().toISOString().split("T")[0]}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "Blogs", file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportToCsvBlog(fileName, allFilteredAndSortedData); setIsExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Operation Failed" type="danger" children={error.message || "Could not complete export."} />); } finally { setIsSubmittingExportReason(false); } };
+
   // --- Table State and Handlers ---
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "created_at" }, query: "" });
   const [selectedItems, setSelectedItems] = useState<BlogItem[]>([]);
@@ -515,19 +516,19 @@ const Blogs = () => {
 
   const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: string) => {
     setActiveFilters(prev => {
-        const newFilters = { ...prev };
-        if (key === 'date') {
-            delete newFilters.date;
-        } else if (key === 'filterStatus' || key === 'filterCreatedBy') {
-            const currentValues = prev[key] || [];
-            const newValues = currentValues.filter(item => item.value !== value);
-            if (newValues.length > 0) {
-                (newFilters as any)[key] = newValues;
-            } else {
-                delete (newFilters as any)[key];
-            }
+      const newFilters = { ...prev };
+      if (key === 'date') {
+        delete newFilters.date;
+      } else if (key === 'filterStatus' || key === 'filterCreatedBy') {
+        const currentValues = prev[key] || [];
+        const newValues = currentValues.filter(item => item.value !== value);
+        if (newValues.length > 0) {
+          (newFilters as any)[key] = newValues;
+        } else {
+          delete (newFilters as any)[key];
         }
-        return newFilters;
+      }
+      return newFilters;
     });
     handleSetTableData({ pageIndex: 1 });
   }, [handleSetTableData]);
@@ -536,67 +537,67 @@ const Blogs = () => {
   const creatorOptions = useMemo(() => {
     const creators = new Map();
     (BlogsData?.data || []).forEach(blog => {
-        if (blog.updated_by_user?.name) {
-            creators.set(blog.updated_by_user.name, {
-                value: blog.updated_by_user.name,
-                label: blog.updated_by_user.name,
-            });
-        }
+      if (blog.updated_by_user?.name) {
+        creators.set(blog.updated_by_user.name, {
+          value: blog.updated_by_user.name,
+          label: blog.updated_by_user.name,
+        });
+      }
     });
     return Array.from(creators.values());
   }, [BlogsData?.data]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let processedData: BlogItem[] = cloneDeep(BlogsData?.data || []);
-    
+
     if (activeFilters.filterStatus && activeFilters.filterStatus.length > 0) {
-        const selectedStatuses = new Set(activeFilters.filterStatus.map(opt => opt.value));
-        processedData = processedData.filter(item => selectedStatuses.has(item.status));
+      const selectedStatuses = new Set(activeFilters.filterStatus.map(opt => opt.value));
+      processedData = processedData.filter(item => selectedStatuses.has(item.status));
     }
-    
+
     if (activeFilters.filterCreatedBy && activeFilters?.filterCreatedBy?.length > 0) {
-        const selectedCreators = new Set(activeFilters?.filterCreatedby?.map(opt => opt.value));
-        processedData = processedData?.filter(item => item?.updated_by_user?.name && selectedCreators.has(item?.updated_by_user?.name));
+      const selectedCreators = new Set(activeFilters?.filterCreatedby?.map(opt => opt.value));
+      processedData = processedData?.filter(item => item?.updated_by_user?.name && selectedCreators.has(item?.updated_by_user?.name));
     }
 
     if (activeFilters.date) {
-        const [startDate] = activeFilters.date;
-        const start = new Date(startDate!).setHours(0, 0, 0, 0);
-        const end = new Date(startDate!).setHours(23, 59, 59, 999);
-        processedData = processedData.filter(item => {
-            if (!item.created_at) return false;
-            const itemDate = new Date(item.created_at).getTime();
-            return itemDate >= start && itemDate <= end;
-        });
+      const [startDate] = activeFilters.date;
+      const start = new Date(startDate!).setHours(0, 0, 0, 0);
+      const end = new Date(startDate!).setHours(23, 59, 59, 999);
+      processedData = processedData.filter(item => {
+        if (!item.created_at) return false;
+        const itemDate = new Date(item.created_at).getTime();
+        return itemDate >= start && itemDate <= end;
+      });
     }
 
     if (tableData.query) {
-        const query = tableData.query.toLowerCase().trim();
-        processedData = processedData.filter(item =>
-            item.title?.toLowerCase().includes(query) ||
-            String(item.id).toLowerCase().includes(query) ||
-            item.slug?.toLowerCase().includes(query) ||
-            (item.author?.toLowerCase() ?? "").includes(query) ||
-            (item.tags?.toLowerCase() ?? "").includes(query) ||
-            (item.updated_by_name?.toLowerCase() ?? "").includes(query)
-        );
+      const query = tableData.query.toLowerCase().trim();
+      processedData = processedData.filter(item =>
+        item.title?.toLowerCase().includes(query) ||
+        String(item.id).toLowerCase().includes(query) ||
+        item.slug?.toLowerCase().includes(query) ||
+        (item.author?.toLowerCase() ?? "").includes(query) ||
+        (item.tags?.toLowerCase() ?? "").includes(query) ||
+        (item.updated_by_name?.toLowerCase() ?? "").includes(query)
+      );
     }
-    
+
     if (tableData.sort.key) {
-        const { key, order } = tableData.sort;
-        processedData.sort((a, b) => {
-          let aValue = (a as any)[key] ?? '';
-          let bValue = (b as any)[key] ?? '';
-          if (key === 'created_at' || key === 'updated_at') {
-              aValue = a[key] ? new Date(a[key]).getTime() : 0;
-              bValue = b[key] ? new Date(b[key]).getTime() : 0;
-          }
-          if (aValue < bValue) return order === 'asc' ? -1 : 1;
-          if (aValue > bValue) return order === 'asc' ? 1 : -1;
-          return 0;
-        });
+      const { key, order } = tableData.sort;
+      processedData.sort((a, b) => {
+        let aValue = (a as any)[key] ?? '';
+        let bValue = (b as any)[key] ?? '';
+        if (key === 'created_at' || key === 'updated_at') {
+          aValue = a[key] ? new Date(a[key]).getTime() : 0;
+          bValue = b[key] ? new Date(b[key]).getTime() : 0;
+        }
+        if (aValue < bValue) return order === 'asc' ? -1 : 1;
+        if (aValue > bValue) return order === 'asc' ? 1 : -1;
+        return 0;
+      });
     }
-    
+
     const currentTotal = processedData.length;
     const startIndex = (tableData.pageIndex - 1) * tableData.pageSize;
     return {
@@ -616,35 +617,35 @@ const Blogs = () => {
       { header: "Author", accessorKey: "author", enableSorting: true, size: 150, cell: (props) => <span>{props.getValue<string>() || "N/A"}</span>, },
       { header: "Tags", accessorKey: "tags", enableSorting: true, size: 180, cell: (props) => { const tags = props.getValue<string | null>(); if (!tags) return <span>-</span>; return (<div className="flex flex-wrap gap-1 max-w-[170px]">{tags.split(",").map((tag) => tag.trim()).filter(Boolean).map((t) => (<Tag key={t} className="bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 text-[11px] border-b border-emerald-300 dark:border-emerald-700">{t}</Tag>))}</div>); }, },
       {
-              header: "Updated Info",
-              accessorKey: "updated_at",
-              enableSorting: true,
-              size: 200,
-              cell: (props) => {
-                const { updated_at, updated_by_user } = props.row.original;
-                return (
-                  <div className="flex items-center gap-2">
-                    <Avatar
-                      src={updated_by_user?.profile_pic_path}
-                      shape="circle"
-                      size="sm"
-                      icon={<TbUserCircle />}
-                      className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-                      onClick={() =>
-                        openImageViewer(updated_by_user?.profile_pic_path)
-                      }
-                    />
-                    <div>
-                      <span>{updated_by_user?.name || "N/A"}</span>
-                      <div className="text-xs">
-                        <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
-                      </div>
-                      <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
-                    </div>
-                  </div>
-                );
-              },
-            },
+        header: "Updated Info",
+        accessorKey: "updated_at",
+        enableSorting: true,
+        size: 200,
+        cell: (props) => {
+          const { updated_at, updated_by_user } = props.row.original;
+          return (
+            <div className="flex items-center gap-2">
+              <Avatar
+                src={updated_by_user?.profile_pic_path}
+                shape="circle"
+                size="sm"
+                icon={<TbUserCircle />}
+                className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                onClick={() =>
+                  openImageViewer(updated_by_user?.profile_pic_path)
+                }
+              />
+              <div>
+                <span>{updated_by_user?.name || "N/A"}</span>
+                <div className="text-xs">
+                  <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
+                </div>
+                <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
+              </div>
+            </div>
+          );
+        },
+      },
       { header: "Status", accessorKey: "status", enableSorting: true, size: 80, cell: (props) => { const status = props.row.original.status; return (<Tag className={classNames("capitalize font-semibold border-0", blogStatusColor[status] || blogStatusColor.Draft)}>{status}</Tag>); }, },
       { header: "Actions", id: "action", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 80, cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />), },
     ],
@@ -654,7 +655,7 @@ const Blogs = () => {
   const [visibleColumnKeys, setVisibleColumnKeys] = useState<string[]>(() =>
     baseColumns.map(c => (c.accessorKey || c.id) as string)
   );
-  
+
   const visibleColumns = useMemo(
     () => baseColumns.filter(c => visibleColumnKeys.includes((c.accessorKey || c.id) as string)),
     [baseColumns, visibleColumnKeys]
@@ -676,7 +677,7 @@ const Blogs = () => {
             <h5 className="mb-2 sm:mb-0">Blogs</h5>
             <div>
               <Link to="/task/task-list/create"><Button className="mr-2" icon={<TbUser />} clickFeedback={false}>Assign to Task</Button></Link>
-              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button>
+              <Button variant="solid" icon={<TbPlus />} menuName="blog" isAdd={true} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button>
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 mb-4 gap-2">
@@ -699,9 +700,9 @@ const Blogs = () => {
             isDataReady={isDataReady}
           />
           <div className="mt-3">
-            
+
             <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} />
-          {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching Blog.</div>}
+            {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching Blog.</div>}
           </div>
           <div className="flex-grow overflow-y-auto mt-4">
             <BlogsTable
@@ -760,73 +761,73 @@ const Blogs = () => {
               <Controller name="meta_descr" control={drawer.methods.control} render={({ field }) => (<Input textArea {...field} value={field.value ?? ""} placeholder="SEO Description (max 160 chars)" rows={3} />)} />
             </FormItem>
             <FormItem label={`Blog Image${drawer.type === "edit" && editingBlog?.icon_full_path && iconPreview === editingBlog.icon_full_path ? " (Change?)" : ""}`} invalid={!!drawer.methods.formState.errors.icon} errorMessage={drawer.methods.formState.errors.icon?.message as string | undefined}>
-              {drawer.type === "edit" && iconPreview && editingBlog?.icon_full_path === iconPreview && (<div className="text-right"><img src={iconPreview} alt="Current Icon" className="w-40 h-40 object-cover border p-1 rounded-md mt-2 mb-2"/></div>)}
-              {iconPreview && (drawer.methods.watch("icon") instanceof File || (drawer.type === "edit" && editingBlog?.icon_full_path !== iconPreview)) && (<img src={iconPreview} alt="Icon Preview" className="w-40 h-40 object-cover border p-1 rounded-md mt-2 mb-2"/>)}
+              {drawer.type === "edit" && iconPreview && editingBlog?.icon_full_path === iconPreview && (<div className="text-right"><img src={iconPreview} alt="Current Icon" className="w-40 h-40 object-cover border p-1 rounded-md mt-2 mb-2" /></div>)}
+              {iconPreview && (drawer.methods.watch("icon") instanceof File || (drawer.type === "edit" && editingBlog?.icon_full_path !== iconPreview)) && (<img src={iconPreview} alt="Icon Preview" className="w-40 h-40 object-cover border p-1 rounded-md mt-2 mb-2" />)}
               {!iconPreview && drawer.type === "edit" && editingBlog?.icon_full_path && !drawer.methods.watch("icon") && (<p className="text-xs text-gray-500 mb-1">Current icon will be removed. Upload a new one if needed.</p>)}
               <Input type="file" accept="image/*" onChange={(e) => handleIconChange(e, drawer.methods)} className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100" />
             </FormItem>
             {drawer.type === "edit" && editingBlog && (
-               <div className=" grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-            <div>
-              <b className="mt-3 mb-3 font-semibold text-primary">
-                Latest Update:
-              </b>
-              <br />
-              <p className="text-sm font-semibold">
-                {editingBlog.updated_by_user?.name || "N/A"}
-              </p>
-              <p>
-                {editingBlog.updated_by_user?.roles[0]?.display_name ||
-                  "N/A"}
-              </p>
-            </div>
-            <div className="text-right">
-              <br />
-              <span className="font-semibold">Created At:</span>{" "}
-              <span>
-                {editingBlog.created_at
-                  ? `${new Date(
-                      editingBlog.created_at
-                    ).getDate()} ${new Date(
-                      editingBlog.created_at
-                    ).toLocaleString("en-US", {
-                      month: "short",
-                    })} ${new Date(
-                      editingBlog.created_at
-                    ).getFullYear()}, ${new Date(
-                      editingBlog.created_at
-                    ).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}`
-                  : "N/A"}
-              </span>
-              <br />
-              <span className="font-semibold">Updated At:</span>{" "}
-              <span>
-                {}
-                {editingBlog.updated_at
-                  ? `${new Date(
-                      editingBlog.updated_at
-                    ).getDate()} ${new Date(
-                      editingBlog.updated_at
-                    ).toLocaleString("en-US", {
-                      month: "short",
-                    })} ${new Date(
-                      editingBlog.updated_at
-                    ).getFullYear()}, ${new Date(
-                      editingBlog.updated_at
-                    ).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}`
-                  : "N/A"}
-              </span>
-            </div>
-          </div>
-              )}
+              <div className=" grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                <div>
+                  <b className="mt-3 mb-3 font-semibold text-primary">
+                    Latest Update:
+                  </b>
+                  <br />
+                  <p className="text-sm font-semibold">
+                    {editingBlog.updated_by_user?.name || "N/A"}
+                  </p>
+                  <p>
+                    {editingBlog.updated_by_user?.roles[0]?.display_name ||
+                      "N/A"}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <br />
+                  <span className="font-semibold">Created At:</span>{" "}
+                  <span>
+                    {editingBlog.created_at
+                      ? `${new Date(
+                        editingBlog.created_at
+                      ).getDate()} ${new Date(
+                        editingBlog.created_at
+                      ).toLocaleString("en-US", {
+                        month: "short",
+                      })} ${new Date(
+                        editingBlog.created_at
+                      ).getFullYear()}, ${new Date(
+                        editingBlog.created_at
+                      ).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}`
+                      : "N/A"}
+                  </span>
+                  <br />
+                  <span className="font-semibold">Updated At:</span>{" "}
+                  <span>
+                    { }
+                    {editingBlog.updated_at
+                      ? `${new Date(
+                        editingBlog.updated_at
+                      ).getDate()} ${new Date(
+                        editingBlog.updated_at
+                      ).toLocaleString("en-US", {
+                        month: "short",
+                      })} ${new Date(
+                        editingBlog.updated_at
+                      ).getFullYear()}, ${new Date(
+                        editingBlog.updated_at
+                      ).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}`
+                      : "N/A"}
+                  </span>
+                </div>
+              </div>
+            )}
           </Form>
         </Drawer>
       ))}
@@ -836,23 +837,23 @@ const Blogs = () => {
           <FormItem label="Created By"><Controller name="filterCreatedBy" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select author..." options={creatorOptions} value={field.value || []} onChange={(selectedVal) => field.onChange(selectedVal || [])} />)} /></FormItem>
         </Form>
       </Drawer>
-      <ConfirmDialog 
-      isOpen={singleDeleteConfirmOpen} 
-      type="danger" title="Delete Blog" 
-      onCancel={() => setSingleDeleteConfirmOpen(false)}
-      onClose={() => setSingleDeleteConfirmOpen(false)} 
-      onConfirm={onConfirmSingleDelete} 
-      loading={isDeleting}>
+      <ConfirmDialog
+        isOpen={singleDeleteConfirmOpen}
+        type="danger" title="Delete Blog"
+        onCancel={() => setSingleDeleteConfirmOpen(false)}
+        onClose={() => setSingleDeleteConfirmOpen(false)}
+        onConfirm={onConfirmSingleDelete}
+        loading={isDeleting}>
         <p>Are you sure you want to delete the blog "<strong>{blogToDelete?.title}
-          </strong>"? This action cannot be undone.</p>
-          </ConfirmDialog>
-      <Dialog 
-      isOpen={isImageViewerOpen} 
-      onClose={closeImageViewer} 
-      onRequestClose={closeImageViewer} 
-      shouldCloseOnOverlayClick={true} 
-      shouldCloseOnEsc={true} width={600}>
-        <div className="flex justify-center items-center p-4">{imageToView ? (<img src={imageToView} alt="Blog Icon Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }}/>) : (<p>No image to display.</p>)}</div></Dialog>
+        </strong>"? This action cannot be undone.</p>
+      </ConfirmDialog>
+      <Dialog
+        isOpen={isImageViewerOpen}
+        onClose={closeImageViewer}
+        onRequestClose={closeImageViewer}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true} width={600}>
+        <div className="flex justify-center items-center p-4">{imageToView ? (<img src={imageToView} alt="Blog Icon Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}</div></Dialog>
       <ConfirmDialog
         isOpen={isExportReasonModalOpen}
         type="info"

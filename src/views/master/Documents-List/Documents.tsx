@@ -362,7 +362,7 @@ const DocumentTableTools = React.forwardRef(
               </span>
             )}
           </Button>
-          <Button icon={<TbCloudUpload />} onClick={onExport} disabled={!isDataReady}>
+          <Button icon={<TbCloudUpload />} menuName="document_list" isExport={true} onClick={onExport} disabled={!isDataReady}>
             Export
           </Button>
         </div>
@@ -969,6 +969,7 @@ const Documents = () => {
             <h5 className="mb-4 lg:mb-0">Documents</h5>
             <div className="flex flex-col sm:flex-row items-center gap-2">
               <Button
+                menuName="document_list" isAdd={true}
                 variant="solid"
                 icon={<TbPlus />}
                 onClick={openAddDrawer}

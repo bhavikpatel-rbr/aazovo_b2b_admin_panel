@@ -356,7 +356,7 @@ const Documentmaster = () => {
                 <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                     <div className="lg:flex items-center justify-between mb-4">
                         <h3 className="mb-4 lg:mb-0">Document Types</h3>
-                        <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} className="w-full sm:w-auto mt-2 sm:mt-0">Add Document Type</Button>
+                        <Button variant="solid" menuName="document_type" isAdd={true} icon={<TbPlus />} onClick={openAddDrawer} className="w-full sm:w-auto mt-2 sm:mt-0">Add Document Type</Button>
                     </div>
                     <div className="grid grid-cols-3 gap-2 w-full sm:w-auto mb-4 gap-4">
                         <Tooltip title="Click to show all document types"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbFile size={20} /></div><div>{renderCardContent(DocumentTypeData.length)}<span className="text-xs">Total</span></div></Card></div></Tooltip>

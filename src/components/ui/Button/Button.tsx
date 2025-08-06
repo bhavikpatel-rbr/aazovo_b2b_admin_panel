@@ -250,7 +250,7 @@ const Button = (props: ButtonProps) => {
         }
 
         // If a menuName is provided, check for add or export rights.
-        const rights = getMenuRights(menuName);
+        const rights = getMenuRights(menuName);        
         if (rights?.is_add && isAdd) {
             return true;
         }

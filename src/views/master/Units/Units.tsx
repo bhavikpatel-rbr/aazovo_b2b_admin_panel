@@ -105,7 +105,7 @@ const UnitTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, onCle
                 </Dropdown>
                 <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} disabled={!isDataReady} />
                 <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)} disabled={!isDataReady}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} disabled={!isDataReady}>Export</Button>
+                <Button icon={<TbCloudUpload />} menuName="unit" isExport={true} onClick={onExport} disabled={!isDataReady}>Export</Button>
             </div>
             <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onDrawerClear}>Clear</Button><Button size="sm" variant="solid" type="submit" form="filterUnitForm">Apply</Button></div>}>
                 <Form id="filterUnitForm" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -331,7 +331,7 @@ const Units = () => {
                     <div className="lg:flex items-center justify-between mb-4">
                         <h3 className="mb-4 lg:mb-0">Units</h3>
                         <div className="flex flex-col sm:flex-row items-center gap-2">
-                            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} className="w-full sm:w-auto mt-2 sm:mt-0">Add Unit</Button>
+                            <Button variant="solid" icon={<TbPlus />} menuName="unit" isAdd={true} onClick={openAddDrawer} className="w-full sm:w-auto mt-2 sm:mt-0">Add Unit</Button>
                         </div>
                     </div>
                     <div className="grid grid-cols-3 gap-2 w-full sm:w-auto mb-4 gap-4">

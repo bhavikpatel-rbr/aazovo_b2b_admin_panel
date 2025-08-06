@@ -70,6 +70,7 @@ import userIconPlaceholder from '/img/avatars/thumb-1.jpg'
 import type { TableQueries } from '@/@types/common'
 import type { ColumnDef, OnSortParam } from '@/components/shared/DataTable'
 import { formatCustomDateTime } from '@/utils/formatCustomDateTime'
+import { getMenuRights } from '@/utils/getMenuRights'
 
 // --- API & Frontend Types ---
 export type ApiExportMapping = {
@@ -218,8 +219,8 @@ const ExportMappingTableTools = React.forwardRef(({
                     Filter
                     {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
                 </Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} disabled={!isDataReady || !allExportMappings.length}>Export</Button>
-                <Button variant="danger" icon={<TbTrash />} onClick={onDeleteAll} disabled={!isDataReady || !allExportMappings.length}>Delete All</Button>
+                <Button icon={<TbCloudUpload />} menuName="export_mapping" isExport={true} onClick={onExport} disabled={!isDataReady || !allExportMappings.length}>Export</Button>
+                {getMenuRights('export_mapping').is_delete && <Button variant="danger" icon={<TbTrash />} onClick={onDeleteAll} disabled={!isDataReady || !allExportMappings.length}>Delete All</Button>}
             </div>
             <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} onRequestClose={() => setIsFilterDrawerOpen(false)} bodyClass="flex flex-col overflow-hidden" footer={<div className="text-right w-full "><Button size="sm" className="mr-2" onClick={handleClearFormInDrawer} type="button">Clear</Button><Button size="sm" variant="solid" type="submit" form="filterForm">Apply</Button></div>}>
                 <Form id="filterForm" size="sm" onSubmit={handleSubmit(exportFiltersSubmitHandler)}>

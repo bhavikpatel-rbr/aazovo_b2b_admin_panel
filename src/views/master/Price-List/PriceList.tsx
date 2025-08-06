@@ -617,7 +617,7 @@ const PriceListTableTools = forwardRef(
               </span>
             )}
           </Button>
-          <Button icon={<TbCloudUpload />} onClick={onExport} disabled={!isDataReady}>
+          <Button icon={<TbCloudUpload />} onClick={onExport} disabled={!isDataReady} menuName="price_list" isExport={true}>
             Export
           </Button>
         </div>
@@ -1914,7 +1914,7 @@ const PriceList = () => {
               >
                 View Today's Prices
               </Button>
-              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
+              <Button variant="solid" menuName="price_list" isAdd={true} icon={<TbPlus />} onClick={openAddDrawer}>
                 Add New
               </Button>
             </div>

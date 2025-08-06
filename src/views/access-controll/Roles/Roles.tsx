@@ -210,7 +210,7 @@ const RoleTableTools = ({ onSearchChange, onApplyFilters, onClearFilters, onExpo
         </Dropdown>
         <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} disabled={!isDataReady} />
         <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)} disabled={!isDataReady}>Filter{activeFilterCount > 0 && <Badge className="ml-2" innerClass="bg-indigo-500 text-white">{activeFilterCount}</Badge>}</Button>
-        <Button icon={<TbCloudUpload />} onClick={onExport} disabled={!isDataReady}>Export</Button>
+        <Button icon={<TbCloudUpload />} menuName="roles" isExport={true} onClick={onExport} disabled={!isDataReady}>Export</Button>
       </div>
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onDrawerClear}>Clear</Button><Button size="sm" variant="solid" type="submit" form="filterRoleForm">Apply</Button></div>}>
         <Form id="filterRoleForm" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -509,7 +509,7 @@ const RolesListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="lg:flex items-center justify-between mb-4">
             <h3 className="mb-4 lg:mb-0">{pageTitle}</h3>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}> Add New Role </Button>
+            <Button variant="solid" menuName="roles" isAdd={true} icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}> Add New Role </Button>
           </div>
           <div className="mb-4">
             <RoleTableTools onSearchChange={handleSearchChange} onApplyFilters={handleApplyFilters} onClearFilters={onClearFiltersAndReload} onExport={handleOpenExportReasonModal} activeFilters={activeFilters} activeFilterCount={activeFilterCount} departmentOptions={departmentOptions} allDesignationOptions={allDesignationOptions} columns={columns} visibleColumnKeys={visibleColumnKeys} setVisibleColumnKeys={setVisibleColumnKeys} searchInputValue={tableData.query} isDataReady={isDataReady} />
