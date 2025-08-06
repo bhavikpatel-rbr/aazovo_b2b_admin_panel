@@ -344,7 +344,7 @@ const ProductSpecification = () => {
                     <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} countryOptions={countryOptions} />
                     {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching specification.</div>}
                     <div className="flex-grow overflow-auto">
-                        <DataTable columns={filteredColumns} data={pageData} noData={pageData.length <= 0} loading={initialLoading || isSubmitting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} />
+                        <DataTable menuName="product_spec" columns={filteredColumns} data={pageData} noData={pageData.length <= 0} loading={initialLoading || isSubmitting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} />
                     </div>
                 </AdaptiveCard>
             </Container>

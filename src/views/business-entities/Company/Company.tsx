@@ -3,6 +3,7 @@ import classNames from "classnames";
 import dayjs from "dayjs";
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -119,6 +120,7 @@ import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
 import { BiNotification } from "react-icons/bi";
 import { useSelector } from "react-redux";
+import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- START: Detailed Type Definitions ---
 interface UserReference {
@@ -212,18 +214,35 @@ interface AlertNote {
 }
 // END: Alert Note Type Definition
 
+// START: Transaction Type Definitions (from reference)
+interface FilledForm {
+  id: number;
+  accountdoc_id: number;
+  created_at: string;
+  form_data?: { uploads_doc_s?: { [key: string]: string | undefined } };
+}
+interface TransactionDoc {
+  id: number;
+  company_document: string;
+  invoice_number: string;
+  status: string;
+  created_at: string;
+  filled_form?: FilledForm;
+}
+// END: Transaction Type Definitions
+
 export type CompanyItem = {
   id: number;
   company_code: string | null;
   company_name: string;
   status:
-    | "Verified"
-    | "Non Verified"
-    | "Active"
-    | "Pending"
-    | "Inactive"
-    | "active"
-    | "inactive";
+  | "Verified"
+  | "Non Verified"
+  | "Active"
+  | "Pending"
+  | "Inactive"
+  | "active"
+  | "inactive";
   primary_email_id: string;
   primary_contact_number: string;
   primary_contact_number_code: string;
@@ -280,6 +299,7 @@ export type CompanyItem = {
   billing_documents: BillingDocument[];
   company_member_management: CompanyMemberManagement[];
   company_team_members: TeamMember[];
+  transaction_docs?: TransactionDoc[]; // ADDED FOR TRANSACTIONS
   profile_completion: number;
   "206AB_file": string | null;
   "206AB_remark": string | null;
@@ -443,7 +463,7 @@ function exportToCsv(filename: string, rows: CompanyItem[]) {
       CSV_HEADERS.map((header) =>
         JSON.stringify(
           row[header.toLowerCase().replace(/ /g, "_") as keyof typeof row] ??
-            "",
+          "",
           (key, value) => (value === null ? "" : value)
         )
       ).join(",")
@@ -550,9 +570,8 @@ const DocumentViewer: React.FC<{
           <img
             src={document.url}
             alt={document.name}
-            className={`max-h-full max-w-full object-contain transition-opacity duration-300 ${
-              isContentLoaded ? "opacity-100" : "opacity-0"
-            }`}
+            className={`max-h-full max-w-full object-contain transition-opacity duration-300 ${isContentLoaded ? "opacity-100" : "opacity-0"
+              }`}
             onLoad={() => setIsContentLoaded(true)}
           />
         );
@@ -561,9 +580,8 @@ const DocumentViewer: React.FC<{
           <iframe
             src={document.url}
             title={document.name}
-            className={`w-full h-full border-0 transition-opacity duration-300 ${
-              isContentLoaded ? "opacity-100" : "opacity-0"
-            }`}
+            className={`w-full h-full border-0 transition-opacity duration-300 ${isContentLoaded ? "opacity-100" : "opacity-0"
+              }`}
             onLoad={() => setIsContentLoaded(true)}
           ></iframe>
         );
@@ -1692,99 +1710,263 @@ const ViewCompanyMembersDialog: React.FC<{
     </div>{" "}
   </Dialog>
 );
-const ViewCompanyDataDialog: React.FC<{
-  title: string;
-  message: string;
-  onClose: () => void;
-}> = ({ title, message, onClose }) => (
-  <Dialog isOpen={true} onClose={onClose}>
-    {" "}
-    <h5 className="mb-4">{title}</h5> <p>{message}</p>{" "}
-    <div className="text-right mt-6">
-      <Button variant="solid" onClick={onClose}>
-        Close
-      </Button>
-    </div>{" "}
-  </Dialog>
+
+const NoDataMessage = ({ message }: { message: string }) => (
+  <div className="text-center py-8 text-gray-500">{message}</div>
 );
-const DownloadDocumentDialog: React.FC<{
-  company: CompanyItem;
-  onClose: () => void;
-}> = ({ company, onClose }) => {
-  const documents = useMemo(() => {
-    const allDocs: { name: string; url: string }[] = [];
-    const addDoc = (name: string, path: string | null | undefined) => {
-      if (path) {
-        allDocs.push({ name, url: path });
+
+// --- START: Document and Transaction Modal Components ---
+
+// A small card to represent a single document in a grid
+const DocumentCard: React.FC<{
+  document: DocumentRecord;
+  onPreview: () => void;
+}> = ({ document, onPreview }) => {
+  const renderPreviewIcon = () => {
+    switch (document.type) {
+      case "image":
+        return (
+          <img
+            src={document.url}
+            alt={document.name}
+            className="w-full h-full object-cover"
+          />
+        );
+      case "pdf":
+        return <TbFileTypePdf className="w-10 h-10 text-red-500" />;
+      default:
+        return <TbFile className="w-10 h-10 text-gray-500" />;
+    }
+  };
+  return (
+    <Card
+      bodyClass="p-0"
+      className="hover:shadow-lg transition-shadow flex flex-col"
+    >
+      <div
+        className="w-full h-32 bg-gray-100 dark:bg-gray-700 flex items-center justify-center cursor-pointer"
+        onClick={onPreview}
+      >
+        {renderPreviewIcon()}
+      </div>
+      <div className="p-3 flex flex-col flex-grow">
+        <p className="font-semibold truncate flex-grow text-sm" title={document.name}>
+          {document.name}
+        </p>
+        <div className="flex justify-between items-center mt-2">
+          {document.verified ? (
+            <Tag className="bg-emerald-100 text-emerald-700 text-xs">
+              <TbCheck className="mr-1" />
+              Verified
+            </Tag>
+          ) : (
+            <Tag className="bg-red-100 text-red-700 text-xs">
+              <TbX className="mr-1" />
+              Not Verified
+            </Tag>
+          )}
+          <div className="flex gap-2">
+            <Tooltip title="Preview">
+              <Button shape="circle" size="xs" icon={<TbEye />} onClick={onPreview} />
+            </Tooltip>
+            <Tooltip title="Download">
+              <a href={document.url} download target="_blank" rel="noopener noreferrer">
+                <Button shape="circle" size="xs" icon={<TbDownload />} />
+              </a>
+            </Tooltip>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+// Tab content for KYC Documents
+const KycDocumentsTab: React.FC<{ company: CompanyItem }> = ({ company }) => {
+  const [viewerState, setViewerState] = useState({ isOpen: false, index: 0 });
+
+  const kycDocs = useMemo((): DocumentRecord[] => {
+    const docs: DocumentRecord[] = [];
+    const addDoc = (name: string, url: string | null | undefined, verified?: boolean | number) => {
+      if (url) {
+        docs.push({ name, url, type: getFileType(url), verified: !!verified });
       }
     };
-    addDoc("206AB Form", company["206AB_file"]);
-    addDoc("ABCQ Form", company.ABCQ_file);
-    addDoc("Office Photo", company.office_photo_file);
-    addDoc("GST Certificate", company.gst_certificate_file);
-    addDoc("Authority Letter", company.authority_letter_file);
-    addDoc("Visiting Card", company.visiting_card_file);
-    addDoc("Cancel Cheque", company.cancel_cheque_file);
-    addDoc("Aadhar Card", company.aadhar_card_file);
-    addDoc("PAN Card", company.pan_card_file);
-    addDoc("Other Document", company.other_document_file);
-    company.company_certificate?.forEach((cert) =>
-      addDoc(
-        cert.certificate_name || `Certificate #${cert.id}`,
-        cert.upload_certificate_path
-      )
-    );
-    company.billing_documents?.forEach((doc) =>
-      addDoc(doc.document_name, doc.document)
-    );
-    company.company_bank_details?.forEach((bank, index) =>
-      addDoc(
-        `Bank Verification Photo (${bank.bank_name || index + 1})`,
-        bank.verification_photo
-      )
-    );
-    return allDocs.sort((a, b) => a.name.localeCompare(b.name));
+    addDoc("Aadhar Card", company.aadhar_card_file, company.aadhar_card_verified);
+    addDoc("PAN Card", company.pan_card_file, company.pan_card_verified);
+    addDoc("GST Certificate", company.gst_certificate_file, company.gst_certificate_verified);
+    addDoc("Office Photo", company.office_photo_file, company.office_photo_verified);
+    addDoc("Cancel Cheque", company.cancel_cheque_file, company.cancel_cheque_verified);
+    addDoc("Visiting Card", company.visiting_card_file, company.visiting_card_verified);
+    addDoc("Authority Letter", company.authority_letter_file, company.authority_letter_verified);
+    addDoc("194Q Declaration", company.ABCQ_file, company.ABCQ_verified);
+    addDoc("Other Document", company.other_document_file, company.other_document_verified);
+    company.company_certificate?.forEach((cert) => addDoc(cert.certificate_name, cert.upload_certificate_path, true));
+    return docs;
   }, [company]);
+
+  const handlePreview = (index: number) => setViewerState({ isOpen: true, index });
+  const handleCloseViewer = () => setViewerState({ isOpen: false, index: 0 });
+  const handleNext = () => setViewerState((prev) => ({ ...prev, index: Math.min(prev.index + 1, kycDocs.length - 1) }));
+  const handlePrev = () => setViewerState((prev) => ({ ...prev, index: Math.max(prev.index - 1, 0) }));
+
+  if (kycDocs.length === 0) {
+    return <NoDataMessage message="No KYC or company certificates are available." />;
+  }
+
   return (
-    <Dialog isOpen={true} onClose={onClose} width={600}>
-      {" "}
-      <h5 className="mb-4">
-        Download Documents for {company.company_name}
-      </h5>{" "}
-      <div className="max-h-96 overflow-y-auto">
-        {" "}
-        {documents.length > 0 ? (
-          <div className="space-y-2">
-            {" "}
-            {documents.map((doc, index) => (
-              <a
-                key={index}
-                href={doc.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600"
-              >
-                {" "}
-                <span className="flex items-center gap-2">
-                  <TbFileDescription className="text-lg" />
-                  {doc.name}
-                </span>{" "}
-                <TbDownload className="text-lg text-blue-500" />{" "}
-              </a>
-            ))}{" "}
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {kycDocs.map((doc, index) => (
+          <DocumentCard key={index} document={doc} onPreview={() => handlePreview(index)} />
+        ))}
+      </div>
+      <DocumentViewer
+        isOpen={viewerState.isOpen}
+        onClose={handleCloseViewer}
+        documents={kycDocs}
+        currentIndex={viewerState.index}
+        onNext={handleNext}
+        onPrev={handlePrev}
+      />
+    </>
+  );
+};
+
+// Tab content for Transaction Documents
+const TransactionsTab: React.FC<{ company: CompanyItem }> = ({ company }) => {
+  const allTransactions = useMemo(() => company.transaction_docs || [], [company]);
+  const [viewerState, setViewerState] = useState<{ isOpen: boolean; docs: DocumentRecord[]; index: number }>({ isOpen: false, docs: [], index: 0 });
+  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
+
+  const filteredTransactions = useMemo(() => {
+    const [startDate, endDate] = dateRange;
+    if (!startDate || !endDate) return allTransactions;
+    return allTransactions.filter((transaction) => {
+      const transactionDate = dayjs(transaction.created_at);
+      return transactionDate.isAfter(dayjs(startDate).startOf('day')) && transactionDate.isBefore(dayjs(endDate).endOf('day'));
+    });
+  }, [allTransactions, dateRange]);
+
+  const handleResetFilter = () => setDateRange([null, null]);
+  const formatDocTitle = (key: string) => {
+    const customTitles: Record<string, string> = { pi_upload: "PO", imei_excel_sheet_miracle: "IMEI Sheet", invoice_upload: "Purchase Invoice", e_way_bill: "E-Way Bill" };
+    return customTitles[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+  const formatTransactionId = (id: number | undefined | null): string => {
+    if (id === null || id === undefined) return "N/A";
+    return String(id).padStart(5, '0');
+  };
+
+  const handlePreview = (docs: DocumentRecord[], index: number) => setViewerState({ isOpen: true, docs, index });
+  const handleCloseViewer = () => setViewerState({ isOpen: false, docs: [], index: 0 });
+  const handleNext = () => setViewerState((prev) => ({ ...prev, index: Math.min(prev.index + 1, prev.docs.length - 1) }));
+  const handlePrev = () => setViewerState((prev) => ({ ...prev, index: Math.max(prev.index - 1, 0) }));
+
+  if (allTransactions.length === 0) {
+    return <NoDataMessage message="No transaction documents found." />;
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <label className="font-semibold">Filter by Date:</label>
+            <DatePicker.DatePickerRange value={dateRange} onChange={setDateRange} placeholder="Pick date range" />
           </div>
-        ) : (
-          <p>No documents available for download.</p>
-        )}{" "}
-      </div>{" "}
-      <div className="text-right mt-6">
-        <Button variant="solid" onClick={onClose}>
-          Close
-        </Button>
-      </div>{" "}
+          <Button onClick={handleResetFilter}>Reset</Button>
+        </div>
+      </Card>
+      {filteredTransactions.length > 0 ? (
+        filteredTransactions.map((transaction) => {
+          const uploadedDocs = transaction.filled_form?.form_data?.uploads_doc_s;
+          if (!transaction.filled_form || !uploadedDocs) return null;
+
+          const transactionDocs: DocumentRecord[] = Object.entries(uploadedDocs)
+            .filter(([, url]) => !!url)
+            .map(([docKey, docUrl]) => ({ name: formatDocTitle(docKey), url: docUrl as string, type: getFileType(docUrl), verified: true }));
+
+          if (transactionDocs.length === 0) return null;
+
+          return (
+            <Card key={transaction.id} bodyClass="p-0">
+              <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/60 p-3 rounded-t-lg">
+                <h6 className="font-semibold">Form ID: #{formatTransactionId(transaction.filled_form?.accountdoc_id)}</h6>
+                <span className="text-sm text-gray-500">{dayjs(transaction.filled_form.created_at).format("DD MMM YYYY, hh:mm A")}</span>
+              </div>
+              <div className="p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {transactionDocs.map((doc, index) => (
+                    <DocumentCard key={doc.url} document={doc} onPreview={() => handlePreview(transactionDocs, index)} />
+                  ))}
+                </div>
+              </div>
+            </Card>
+          );
+        })
+      ) : (
+        <NoDataMessage message="No transactions found for the selected date range." />
+      )}
+      <DocumentViewer isOpen={viewerState.isOpen} onClose={handleCloseViewer} documents={viewerState.docs} currentIndex={viewerState.index} onNext={handleNext} onPrev={handlePrev} />
+    </div>
+  );
+};
+
+
+// The main modal that combines KYC and Transaction tabs
+const CompanyDocumentsModal: React.FC<{
+  company: CompanyItem;
+  onClose: () => void;
+  initialTab?: 'kyc' | 'transactions';
+}> = ({ company, onClose, initialTab = 'kyc' }) => {
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const hasTransactions = (company.transaction_docs || []).length > 0;
+
+  useEffect(() => {
+    // If the initial tab is 'transactions' but there are none, default to 'kyc'
+    if (initialTab === 'transactions' && !hasTransactions) {
+      setActiveTab('kyc');
+    }
+  }, [initialTab, hasTransactions]);
+
+
+  const tabButtonClass = (tabName: string) => classNames(
+    "px-4 py-2 text-sm font-medium rounded-t-md border-b-2",
+    {
+      "border-indigo-500 text-indigo-600 dark:text-indigo-300": activeTab === tabName,
+      "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200": activeTab !== tabName,
+    }
+  );
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} width={1200} contentClassName="flex flex-col h-[90vh]">
+      <h5 className="mb-4">Documents for {company.company_name}</h5>
+      <div className="border-b border-gray-200 dark:border-gray-700">
+        <nav className="-mb-px flex space-x-4" aria-label="Tabs">
+          <button onClick={() => setActiveTab('kyc')} className={tabButtonClass('kyc')}>
+            KYC Documents
+          </button>
+          {hasTransactions && (
+            <button onClick={() => setActiveTab('transactions')} className={tabButtonClass('transactions')}>
+              Transaction Documents
+            </button>
+          )}
+        </nav>
+      </div>
+      <div className="mt-6 flex-grow overflow-y-auto pr-2">
+        {activeTab === 'kyc' && <KycDocumentsTab company={company} />}
+        {activeTab === 'transactions' && hasTransactions && <TransactionsTab company={company} />}
+      </div>
+      <div className="text-right mt-6 pt-4 border-t dark:border-gray-700">
+        <Button variant="solid" onClick={onClose}>Close</Button>
+      </div>
     </Dialog>
   );
 };
+
+// --- END: Document and Transaction Modal Components ---
+
 const activitySchema = z.object({
   item: z
     .string()
@@ -1910,9 +2092,8 @@ const SendEmailAction: React.FC<{
       return;
     }
     const subject = `Regarding Company: ${company.company_name}`;
-    const body = `Hello ${
-      company.owner_name || company.company_name
-    },\n\nThis is regarding your company profile (ID: ${company.id}).`;
+    const body = `Hello ${company.owner_name || company.company_name
+      },\n\nThis is regarding your company profile (ID: ${company.id}).`;
     window.open(
       `mailto:${company.primary_email_id}?subject=${encodeURIComponent(
         subject
@@ -1941,9 +2122,8 @@ const SendWhatsAppAction: React.FC<{
       return;
     }
     const fullPhoneNumber = `${countryCode}${phone}`;
-    const message = `Hello ${
-      company.owner_name || company.company_name
-    },\n\nThis is regarding your company profile with us.`;
+    const message = `Hello ${company.owner_name || company.company_name
+      },\n\nThis is regarding your company profile with us.`;
     window.open(
       `https://wa.me/${fullPhoneNumber}?text=${encodeURIComponent(message)}`,
       "_blank"
@@ -2045,7 +2225,6 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({
         <CompanyAlertModal
           company={company}
           onClose={onClose}
-          user={userData}
         />
       );
     case "activity":
@@ -2058,14 +2237,20 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({
       );
     case "transaction":
       return (
-        <ViewCompanyDataDialog
-          title={`Transactions for ${company.company_name}`}
-          message="No transactions found for this company."
+        <CompanyDocumentsModal
+          company={company}
           onClose={onClose}
+          initialTab="transactions"
         />
       );
     case "document":
-      return <DownloadDocumentDialog company={company} onClose={onClose} />;
+      return (
+        <CompanyDocumentsModal
+          company={company}
+          onClose={onClose}
+          initialTab="kyc"
+        />
+      );
     default:
       return null;
   }
@@ -2074,14 +2259,14 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({
 // --- Child Components ---
 const CompanyListContext = createContext<
   | {
-      companyList: CompanyItem[];
-      setSelectedCompanies: React.Dispatch<React.SetStateAction<CompanyItem[]>>;
-      companyCount: any;
-      ContinentsData: any[];
-      CountriesData: any[];
-      getAllUserData: SelectOption[];
-      selectedCompanies: CompanyItem[];
-    }
+    companyList: CompanyItem[];
+    setSelectedCompanies: React.Dispatch<React.SetStateAction<CompanyItem[]>>;
+    companyCount: any;
+    ContinentsData: any[];
+    CountriesData: any[];
+    getAllUserData: SelectOption[];
+    selectedCompanies: CompanyItem[];
+  }
   | undefined
 >(undefined);
 const useCompanyList = () => {
@@ -2109,6 +2294,7 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
   );
   const dispatch = useAppDispatch();
   useEffect(() => {
+    dispatch(getPendingBillAction());
     dispatch(getCompanyAction());
     dispatch(getCountriesAction());
     dispatch(getContinentsAction());
@@ -2133,6 +2319,79 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
 };
 
 // --- EnableBillingDialog Component ---
+const DocumentPlaceholder = ({ file }: { file: File }) => (
+  <div className="w-full h-full p-2 flex flex-col items-center justify-center text-center bg-gray-100 dark:bg-gray-700/50 rounded-md">
+    <TbFileTypePdf className="text-red-500" size={32} />
+    <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 break-all line-clamp-2">
+      {file.name}
+    </p>
+  </div>
+);
+
+const ImageViewer: React.FC<{ images: { src: string; alt: string }[]; startIndex: number; onClose: () => void; }> = ({ images, startIndex, onClose }) => {
+  const [currentIndex, setCurrentIndex] = useState(startIndex);
+
+  const handleNext = useCallback(() => setCurrentIndex((prev) => (prev + 1) % images.length), [images.length]);
+  const handlePrev = useCallback(() => setCurrentIndex((prev) => (prev - 1 + images.length) % images.length), [images.length]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') handleNext();
+      if (e.key === 'ArrowLeft') handlePrev();
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleNext, handlePrev, onClose]);
+
+  const currentImage = images[currentIndex];
+
+  return (
+    <div className="fixed inset-0 bg-black/90 flex flex-col items-center z-[9999] p-4" onClick={onClose}>
+      <Button icon={<TbX />} className="absolute top-4 right-4 z-10 !p-2 !rounded-full bg-black/50 hover:bg-black/80 text-white" onClick={onClose} />
+      <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+        <div className="relative flex-grow flex items-center justify-center w-full max-w-7xl overflow-hidden">
+          {images.length > 1 && <Button icon={<TbChevronLeft />} className="absolute left-2 md:left-4 !p-3 !rounded-full bg-black/50 hover:bg-black/80 text-white" onClick={handlePrev} />}
+          <div className="flex flex-col items-center justify-center h-full">
+            <img src={currentImage.src} alt={currentImage.alt} className="max-h-[calc(100vh-10rem)] max-w-[calc(100vw-8rem)] object-contain select-none" />
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-sm px-3 py-1.5 rounded-md">{currentImage.alt} ({currentIndex + 1} / {images.length})</div>
+          </div>
+          {images.length > 1 && <Button icon={<TbChevronRight />} className="absolute right-2 md:right-4 !p-3 !rounded-full bg-black/50 hover:bg-black/80 text-white" onClick={handleNext} />}
+        </div>
+        {images.length > 1 && (
+          <div className="w-full max-w-5xl flex-shrink-0 mt-4"><div className="flex justify-center p-2"><div className="flex gap-3 overflow-x-auto pb-2">
+            {images.map((image, index) => (
+              <button key={index} onClick={() => setCurrentIndex(index)} className={classNames("w-24 h-16 flex-shrink-0 rounded-md border-2 transition-all", { 'border-white opacity-100 scale-105': currentIndex === index, 'border-transparent opacity-60 hover:opacity-100': currentIndex !== index })}>
+                <img src={image.src} alt={image.alt} className="w-full h-full object-cover rounded-sm" />
+              </button>
+            ))}
+          </div></div></div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const GenericFileViewer = ({ file, onClose }: { file: File; onClose: () => void; }) => {
+  const fileUrl = useMemo(() => URL.createObjectURL(file), [file]);
+  useEffect(() => {
+    return () => URL.revokeObjectURL(fileUrl); // Clean up when this viewer closes
+  }, [fileUrl]);
+  return (
+    <div className="fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-[9999] p-4" onClick={onClose}>
+      <Button icon={<TbX />} className="absolute top-4 right-4 z-10 !p-2 !rounded-full bg-black/50 hover:bg-black/80 text-white" onClick={onClose} />
+      <div className="w-full h-full" onClick={(e) => e.stopPropagation()}>
+        <iframe src={fileUrl} title={file.name} className="w-full h-full border-none rounded-lg bg-white" />
+      </div>
+    </div>
+  );
+};
+// =========================================================================
+// END: HELPER COMPONENTS
+// =========================================================================
+
+
+// --- Main Component ---
 const enableBillingSchema = z.object({
   enable_billing_documents: z
     .array(
@@ -2143,7 +2402,10 @@ const enableBillingSchema = z.object({
         ),
         document: z
           .any()
-          .refine((file) => file instanceof File, "File is required"),
+          .refine((file) => file instanceof File, "File is required."),
+        // Add helper fields for the UI
+        previewUrl: z.string().optional(),
+        fileType: z.enum(['image', 'pdf', 'other']).optional(),
       })
     )
     .min(1, "At least one document is required.")
@@ -2152,138 +2414,214 @@ const enableBillingSchema = z.object({
 type EnableBillingFormData = z.infer<typeof enableBillingSchema>;
 
 interface EnableBillingDialogProps {
-  company: CompanyItem;
+  company: { company_name: string };
   onClose: () => void;
   onSubmit: (data: EnableBillingFormData) => void;
   isSubmitting: boolean;
-  documentTypeOptions: SelectOption[];
+  documentTypeOptions: { value: string, label: string }[];
 }
 
 const EnableBillingDialog: React.FC<EnableBillingDialogProps> = ({
-  company,
-  onClose,
-  onSubmit,
-  isSubmitting,
-  documentTypeOptions,
+  company, onClose, onSubmit, isSubmitting, documentTypeOptions
 }) => {
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<EnableBillingFormData>({
+  // --- STATE FOR VIEWERS ---
+  const [imageViewer, setImageViewer] = useState({ isOpen: false, startIndex: 0 });
+  const [genericViewer, setGenericViewer] = useState<{ isOpen: boolean; file: File | null }>({ isOpen: false, file: null });
+
+  const formMethods = useForm<EnableBillingFormData>({
     resolver: zodResolver(enableBillingSchema),
-    defaultValues: { enable_billing_documents: [{}] },
+    defaultValues: { enable_billing_documents: [{ document: null, document_name: undefined, previewUrl: undefined }] },
+    mode: 'onTouched',
   });
+  const { control, handleSubmit, formState: { errors }, setValue, watch, getValues } = formMethods;
 
   const { fields, append, remove } = useFieldArray({
     control,
     name: "enable_billing_documents",
   });
 
-  return (
-    <Dialog isOpen={true} onClose={onClose} width={600}>
-      <h5 className="mb-4">
-        Enable Billing Documents for: {company.company_name}
-      </h5>
-      <UiForm id="enableBillingForm" onSubmit={handleSubmit(onSubmit)}>
-        <div className="max-h-[50vh] overflow-y-auto pr-4">
-          <div className="space-y-4">
-            {fields.map((field, index) => (
-              <Card
-                key={field.id}
-                className="p-4 border dark:border-gray-600 relative"
-              >
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-                  <FormItem
-                    label={`Document Type ${index + 1}`}
-                    invalid={
-                      !!errors.enable_billing_documents?.[index]?.document_name
-                    }
-                    errorMessage={
-                      errors.enable_billing_documents?.[index]?.document_name
-                        ?.message as string
-                    }
-                  >
-                    <Controller
-                      name={`enable_billing_documents.${index}.document_name`}
-                      control={control}
-                      render={({ field }) => (
-                        <UiSelect
-                          placeholder="Select type..."
-                          options={documentTypeOptions}
-                          {...field}
-                          menuPortalTarget={document.body}
-                          styles={{
-                            menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-                          }}
-                        />
-                      )}
-                    />
-                  </FormItem>
-                  <FormItem
-                    label={`Upload File ${index + 1}`}
-                    invalid={
-                      !!errors.enable_billing_documents?.[index]?.document
-                    }
-                    errorMessage={
-                      errors.enable_billing_documents?.[index]?.document
-                        ?.message as string
-                    }
-                  >
-                    <Controller
-                      name={`enable_billing_documents.${index}.document`}
-                      control={control}
-                      render={({ field: { onChange } }) => (
-                        <Input
-                          type="file"
-                          onChange={(e) => onChange(e.target.files?.[0])}
-                        />
-                      )}
-                    />
-                  </FormItem>
-                </div>
-                {fields.length > 1 && (
-                  <Button
-                    shape="circle"
-                    size="sm"
-                    variant="plain"
-                    icon={<TbTrash />}
-                    className="absolute top-2 right-2 text-red-500"
-                    onClick={() => remove(index)}
-                  />
-                )}
-              </Card>
-            ))}
-          </div>
-        </div>
+  const watchedDocuments = watch("enable_billing_documents");
 
-        {fields.length < 4 && (
+  // --- MEMORY MANAGEMENT ---
+  useEffect(() => {
+    return () => {
+      getValues("enable_billing_documents").forEach(doc => {
+        if (doc.previewUrl) URL.revokeObjectURL(doc.previewUrl);
+      });
+    };
+  }, [getValues]);
+
+
+  // --- CENTRALIZED PREVIEW LOGIC ---
+  const allImagesInForm = useMemo(() => {
+    return watchedDocuments
+      .map((doc, index) => ({ doc, index }))
+      .filter(({ doc }) => doc.fileType === 'image' && doc.previewUrl)
+      .map(({ doc }) => ({
+        src: doc.previewUrl as string,
+        alt: doc.document_name?.label || `Document ${doc.index + 1}`
+      }));
+  }, [watchedDocuments]);
+
+  const handlePreviewClick = useCallback((clickedDocIndex: number) => {
+    const doc = watchedDocuments[clickedDocIndex];
+    if (!doc || !doc.previewUrl) return;
+
+    if (doc.fileType === 'image') {
+      const imageIndex = allImagesInForm.findIndex(img => img.src === doc.previewUrl);
+      if (imageIndex !== -1) {
+        setImageViewer({ isOpen: true, startIndex: imageIndex });
+      }
+    } else if (doc.document instanceof File) {
+      setGenericViewer({ isOpen: true, file: doc.document });
+    }
+  }, [watchedDocuments, allImagesInForm]);
+
+
+  return (
+    <>
+      <Dialog isOpen={true} onClose={onClose} width={700}>
+        <h5 className="text-xl font-bold mb-4">
+          Enable Billing Documents for: {company.company_name}
+        </h5>
+        <UiForm id="enableBillingForm" onSubmit={handleSubmit(onSubmit)}>
+          <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+            <div className="space-y-4">
+              {fields.map((field, index) => {
+                const currentDoc = watchedDocuments[index];
+                return (
+                  <Card key={field.id} className="p-4 relative">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
+                      <FormItem
+                        label={`Document Type ${index + 1}`}
+                        invalid={!!errors.enable_billing_documents?.[index]?.document_name}
+                        errorMessage={errors.enable_billing_documents?.[index]?.document_name?.message as string}
+                      >
+                        <Controller
+                          name={`enable_billing_documents.${index}.document_name`}
+                          control={control}
+                          render={({ field }) => (
+                            <UiSelect
+                              placeholder="Select type..."
+                              options={documentTypeOptions}
+                              value={documentTypeOptions.find(opt => opt.value === field.value?.value)}
+                              onChange={opt => field.onChange(opt)}
+                            />
+                          )}
+                        />
+                      </FormItem>
+
+                      <div className="flex flex-col space-y-2">
+                        <FormItem
+                          label={`Upload File ${index + 1}`}
+                          invalid={!!errors.enable_billing_documents?.[index]?.document}
+                          errorMessage={errors.enable_billing_documents?.[index]?.document?.message as string}
+                        >
+                          <Controller
+                            name={`enable_billing_documents.${index}.document`}
+                            control={control}
+                            render={({ field: { onChange } }) => (
+                              <Input
+                                type="file"
+                                accept="image/png, image/jpeg, image/gif, application/pdf"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0] ?? null;
+                                  const oldUrl = getValues(`enable_billing_documents.${index}.previewUrl`);
+                                  if (oldUrl) URL.revokeObjectURL(oldUrl);
+
+                                  if (file) {
+                                    const fileType = file.type.startsWith('image/') ? 'image' : (file.type === 'application/pdf' ? 'pdf' : 'other');
+                                    setValue(`enable_billing_documents.${index}.previewUrl`, URL.createObjectURL(file));
+                                    setValue(`enable_billing_documents.${index}.fileType`, fileType);
+                                  } else {
+                                    setValue(`enable_billing_documents.${index}.previewUrl`, undefined);
+                                    setValue(`enable_billing_documents.${index}.fileType`, undefined);
+                                  }
+                                  onChange(file); // This updates the 'document' field for validation
+                                }}
+                              />
+                            )}
+                          />
+                        </FormItem>
+
+                        {currentDoc?.previewUrl && (
+                          <button
+                            type="button"
+                            onClick={() => handlePreviewClick(index)}
+                            className="w-32 h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                          >
+                            {currentDoc.fileType === 'image' ? (
+                              <img
+                                src={currentDoc.previewUrl}
+                                alt={`Preview ${index + 1}`}
+                                className="w-full h-full object-cover rounded-md"
+                              />
+                            ) : (
+                              <DocumentPlaceholder file={currentDoc.document as File} />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {fields.length > 1 && (
+                      <button
+                        type="button"
+                        aria-label="Remove document"
+                        className="absolute top-2 right-2 text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 rounded-full transition-colors"
+                        onClick={() => {
+                          const urlToRevoke = getValues(`enable_billing_documents.${index}.previewUrl`);
+                          if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+                          remove(index);
+                        }}
+                      ><TbTrash size={20} /></button>
+                    )}
+                  </Card>
+                )
+              })}
+            </div>
+            {errors.enable_billing_documents?.root && (
+              <p className="text-red-500 text-sm mt-3">{errors.enable_billing_documents.root.message}</p>
+            )}
+          </div>
+
+          {fields.length < 4 && (
+            <Button
+              type="button"
+              icon={<TbPlus />}
+              onClick={() => append({ document: null, document_name: undefined, previewUrl: undefined, fileType: undefined })}
+              size="sm"
+              className="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200"
+            > Add Document </Button>
+          )}
+        </UiForm>
+
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <Button onClick={onClose} disabled={isSubmitting} className="bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600">Cancel</Button>
           <Button
-            type="button"
-            icon={<TbPlus />}
-            onClick={() => append({ document_name: undefined, document: null })}
-            size="sm"
-            className="mt-4"
-          >
-            Add More
-          </Button>
-        )}
-      </UiForm>
-      <div className="text-right mt-6">
-        <Button className="mr-2" onClick={onClose} disabled={isSubmitting}>
-          Cancel
-        </Button>
-        <Button
-          variant="solid"
-          type="submit"
-          form="enableBillingForm"
-          loading={isSubmitting}
-          disabled={isSubmitting}
-        >
-          Submit
-        </Button>
-      </div>
-    </Dialog>
+            type="submit"
+            form="enableBillingForm"
+            loading={isSubmitting}
+            disabled={isSubmitting}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          > Submit Documents </Button>
+        </div>
+      </Dialog>
+
+      {/* --- RENDER VIEWERS --- */}
+      {imageViewer.isOpen && (
+        <ImageViewer
+          images={allImagesInForm}
+          startIndex={imageViewer.startIndex}
+          onClose={() => setImageViewer({ isOpen: false, startIndex: 0 })}
+        />
+      )}
+      {genericViewer.isOpen && genericViewer.file && (
+        <GenericFileViewer
+          file={genericViewer.file}
+          onClose={() => setGenericViewer({ isOpen: false, file: null })}
+        />
+      )}
+    </>
   );
 };
 
@@ -2301,15 +2639,17 @@ const CompanyActionColumn = ({
   const navigate = useNavigate();
   return (
     <div className="flex items-center justify-center gap-1">
-      <Tooltip title="Edit">
-        <div
-          className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600"
-          role="button"
-          onClick={() => onEdit(rowData.id)}
-        >
-          <TbPencil />
-        </div>
-      </Tooltip>
+      {
+        getMenuRights("company")?.is_export && <Tooltip title="Edit">
+          <div
+            className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600"
+            role="button"
+            onClick={() => onEdit(rowData.id)}
+          >
+            <TbPencil />
+          </div>
+        </Tooltip>
+      }
       <Tooltip title="View">
         <div
           className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600"
@@ -2380,13 +2720,19 @@ const CompanyActionColumn = ({
           onClick={() => onOpenModal("activity", rowData)}
           className="flex items-center gap-2"
         >
-          <TbTagStarred  /> Add Activity
+          <TbTagStarred /> Add Activity
         </Dropdown.Item>
+        {/* <Dropdown.Item
+          onClick={() => onOpenModal("transaction", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbReceipt /> View Transactions
+        </Dropdown.Item> */}
         <Dropdown.Item
           onClick={() => onOpenModal("document", rowData)}
           className="flex items-center gap-2"
         >
-          <TbDownload size={18}/> Download Document
+          <TbDownload /> View/Download Documents
         </Dropdown.Item>
       </Dropdown>
     </div>
@@ -2533,9 +2879,9 @@ const CompanyListTable = () => {
   const documentTypeOptions = useMemo(() => {
     return Array.isArray(DocumentTypeData)
       ? DocumentTypeData.map((d: any) => ({
-          value: String(d.id),
-          label: d.name,
-        }))
+        value: String(d.id),
+        label: d.name,
+      }))
       : [];
   }, [DocumentTypeData]);
 
@@ -2940,7 +3286,7 @@ const CompanyListTable = () => {
       count += (filterCriteria.filterEnableBilling?.length ?? 0) > 0 ? 1 : 0;
       count +=
         filterCriteria.filterCreatedDate?.[0] &&
-        filterCriteria.filterCreatedDate?.[1]
+          filterCriteria.filterCreatedDate?.[1]
           ? 1
           : 0;
 
@@ -2973,13 +3319,13 @@ const CompanyListTable = () => {
               ? av === bv
                 ? 0
                 : av
-                ? -1
-                : 1
+                  ? -1
+                  : 1
               : av === bv
-              ? 0
-              : av
-              ? 1
-              : -1;
+                ? 0
+                : av
+                  ? 1
+                  : -1;
           return 0;
         });
       }
@@ -3106,7 +3452,7 @@ const CompanyListTable = () => {
                 <div>
                   <Link
                     to={`/business-entities/company-view/${id}`}
-                    className="no-underline hover:underline"
+                    className="no-underline "
                   >
                     <h6 className="text-xs font-semibold text-blue-600">
                       {company_code || "Company Code"}
@@ -3224,35 +3570,35 @@ const CompanyListTable = () => {
             ? dayjs(due_after_3_months_date).format("D MMM, YYYY")
             : "N/A";
 
-            function formatDueDateInDays(dueDateString :any) {
-  // Create Date objects for the due date and today
-  const dueDate = new Date(dueDateString);
-  const today = new Date();
+          function formatDueDateInDays(dueDateString: any) {
 
-  // To ensure we're comparing days, not times, reset the time part to midnight
-  dueDate.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
+            // Create Date objects for the due date and today
+            const dueDate = new Date(dueDateString);
+            const today = new Date();
 
-  // Calculate the difference in milliseconds
-  const diffTime = dueDate.getTime() - today.getTime();
+            // To ensure we're comparing days, not times, reset the time part to midnight
+            dueDate.setHours(0, 0, 0, 0);
+            today.setHours(0, 0, 0, 0);
 
-  // Convert the difference from milliseconds to days
-  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+            // Calculate the difference in milliseconds
+            const diffTime = dueDate.getTime() - today.getTime();
 
-  // Return a formatted string based on the difference
-  if (diffDays > 1) {
-    return `in ${diffDays} days`;
-  } else if (diffDays === 1) {
-    return `Tomorrow`;
-  } else if (diffDays === 0) {
-    return `Today`;
-  } else if (diffDays === -1) {
-    return `Yesterday (1 day overdue)`;
-  } else {
-    // The date is in the past
-    return `N/A`;
-  }
-}
+            // Convert the difference from milliseconds to days
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+            // Return a formatted string based on the difference
+            if (diffDays > 1) {
+              return `in ${diffDays} days`;
+            } else if (diffDays === 1) {
+              return `Tomorrow`;
+            } else if (diffDays === 0) {
+              return `Today`;
+            } else if (diffDays === -1) {
+              return `Yesterday (1 day overdue)`;
+            } else {
+              // The date is in the past
+              return `N/A`;
+            }
+          }
           return (
             <div className="flex flex-col gap-1 text-xs">
               {" "}
@@ -3262,16 +3608,12 @@ const CompanyListTable = () => {
               <span>
                 <b>Teams:</b> {teams_count}
               </span>{" "}
-              <div className="flex gap-1 items-center">
-                <b>KYC Verified:</b>
-                <Tooltip title={`KYC: ${kyc_verified ? "Yes" : "No"}`}>
-                  {kyc_verified ? (
-                    <MdCheckCircle className="text-green-500 text-lg" />
-                  ) : (
-                    <MdCancel className="text-red-500 text-lg" />
-                  )}
-                </Tooltip>
-              </div>{" "}
+
+
+              <div className="flex items-center gap-2">
+                <b className="text-gray-700 dark:text-gray-300">KYC Status:</b>
+                {kyc_verified ? <Tag className="bg-emerald-100 text-emerald-700">Verified</Tag> : <Tag className="bg-red-100 text-red-700">Non-Verified</Tag>}
+              </div>
               <div className="flex gap-1 items-center">
                 <b>Enable Billing:</b>
                 <Tooltip title={`Billing: ${enable_billing ? "Yes" : "No"}`}>
@@ -3349,13 +3691,12 @@ const CompanyListTable = () => {
     }
   };
 
-  const statusOptions = useMemo(
-    () =>
-      Array.from(new Set(companyList.map((c) => c.status)))
-        .filter(Boolean)
-        .map((s) => ({ value: s, label: s })),
-    [companyList]
-  );
+  const statusOptions = [
+    { value: "Active", label: "Active" },
+    { value: "Disabled", label: "Disabled" },
+    { value: "Blocked", label: "Blocked" },
+    { value: "Inactive", label: "Inactive" },
+  ];
   const companyTypeOptions = useMemo(
     () =>
       Array.from(new Set(companyList.map((c) => c.ownership_type)))
@@ -3397,20 +3738,35 @@ const CompanyListTable = () => {
     "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-1";
 
+
   return (
     <>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
         <h5>Company</h5>
-
         <div className="flex flex-col md:flex-row gap-3">
+          <div className="relative">
+            <Button
+              icon={<TbUsersGroup />}
+              onClick={handleOpenPendingRequestModal}
+              className="w-full sm:w-auto"
+            >
+              Pending Request
+            </Button>
+            <span
+              className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 bg-red-500 text-white text-xs font-bold                  
+            rounded-full                         
+            min-w-[22px] h-[22px]                
+            flex items-center justify-center   
+            px-1                                 
+            border-2 border-white dark:border-gray-800 
+          " >
+              {PendingBillData?.data?.length || 0}
+            </span>
+          </div>
+
           <Button
-            icon={<TbUsersGroup />}
-            onClick={handleOpenPendingRequestModal}
-            className="w-full sm:w-auto"
-          >
-            Pending Request
-          </Button>
-          <Button
+            menuName="company"
+            isAdd={true}
             variant="solid"
             icon={<TbPlus className="text-lg" />}
             onClick={() => navigate("/business-entities/company-create")}
@@ -3612,6 +3968,8 @@ const CompanyListTable = () => {
             )}
           </Button>
           <Button
+            isExport={true}
+            menuName="company"
             icon={<TbCloudUpload />}
             onClick={handleOpenExportReasonModal}
             disabled={
@@ -3628,6 +3986,7 @@ const CompanyListTable = () => {
         onClearAll={onClearFilters}
       />
       <DataTable
+        menuName="company"
         columns={filteredColumns}
         data={pageData}
         noData={pageData.length === 0}
@@ -3905,7 +4264,7 @@ const CompanyListTable = () => {
             </thead>
             <tbody>
               {PendingBillData?.data && PendingBillData.data.length > 0 ? (
-                PendingBillData.data.map((item: any) => (
+                PendingBillData?.data?.reverse()?.map((item: any) => (
                   <tr key={item.id} className="border-b dark:border-gray-700">
                     <td className="py-3 px-4 text-sm font-medium">
                       {item.company_name}
@@ -4144,7 +4503,9 @@ const Company = () => {
       <Container>
         <AdaptiveCard>
           <div className="flex flex-col gap-4">
-            <CompanyListTable />
+            {
+              getMenuRights("company")?.is_view &&
+              <CompanyListTable />}
           </div>
         </AdaptiveCard>
       </Container>

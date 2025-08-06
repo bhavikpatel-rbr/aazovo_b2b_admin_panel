@@ -15,15 +15,15 @@ import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 // UI Components
+import FileNotFound from "@/assets/svg/FileNotFound";
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DebouceInput from "@/components/shared/DebouceInput";
-import FileNotFound from "@/assets/svg/FileNotFound";
+import TableRowSkeleton from "@/components/shared/loaders/TableRowSkeleton";
 import Loading from "@/components/shared/Loading";
 import RichTextEditor from "@/components/shared/RichTextEditor";
 import StickyFooter from "@/components/shared/StickyFooter";
-import TableRowSkeleton from "@/components/shared/loaders/TableRowSkeleton";
 import {
   Button,
   Card,
@@ -36,11 +36,10 @@ import {
   FormItem,
   Input,
   Pagination,
-  Progress,
   Select,
+  Skeleton,
   Spinner,
-  Table,
-  Skeleton, // Added Skeleton
+  Table
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Notification from "@/components/ui/Notification";
@@ -56,7 +55,6 @@ import {
 } from "react-icons/bs";
 import {
   TbAlarm,
-  TbAlertTriangle,
   TbBell,
   TbBellRinging,
   TbBox,
@@ -65,8 +63,8 @@ import {
   TbBuilding,
   TbBulb,
   TbCalendarEvent,
-  TbChecks,
   TbChecklist,
+  TbChecks,
   TbCircleCheck,
   TbClockHour4,
   TbCloudUpload,
@@ -74,8 +72,6 @@ import {
   TbCopy,
   TbDiscount,
   TbExchange,
-  TbEye,
-  TbFileDescription,
   TbFilter,
   TbFlag,
   TbIdBadge2,
@@ -84,7 +80,6 @@ import {
   TbMail,
   TbMinus,
   TbNotesOff,
-  TbNotebook,
   TbPencilPlus,
   TbPhone,
   TbPlus,
@@ -95,12 +90,10 @@ import {
   TbTag,
   TbTagStarred,
   TbTargetArrow,
-  TbTrash,
   TbUser,
   TbUserCheck,
-  TbUserCircle,
   TbUsers,
-  TbX,
+  TbX
 } from "react-icons/tb";
 
 // Types
@@ -125,6 +118,7 @@ import {
 import type { ChangeEvent, ReactNode } from "react";
 
 // Redux
+import { DataTable } from "@/components/shared";
 import { authSelector } from "@/reduxtool/auth/authSlice";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
@@ -141,10 +135,9 @@ import {
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import { shallowEqual, useSelector } from "react-redux";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
-import { DataTable } from "@/components/shared";
+import { shallowEqual, useSelector } from "react-redux";
 
 // --- Type Definitions ---
 export type ApiOpportunityItem = {
@@ -997,6 +990,7 @@ const ViewOpportunitiesDialog: React.FC<{
             </div>
           ) : (
             <DataTable
+              menuName="opportunity"
               columns={columns}
               data={data}
               noData={data.length === 0}
@@ -1145,7 +1139,7 @@ const OpportunityAlertModal: React.FC<{ opportunity: OpportunityItem; onClose: (
             <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
               <div className="flex items-center gap-2">
                 <TbPencilPlus className="text-xl text-red-600 dark:text-red-400" />
-                <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6>
+              <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6>
               </div>
             </header>
             <Form onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
@@ -3041,8 +3035,8 @@ const SpbSummaryRow: React.FC<SpbSummaryRowProps> = ({
   onToggleSelect,
 }) => {
   console.log(item, 'item');
-  
-  const memberName = `Member: ${item.member_code}` || `Member ID: ${item.id}`;
+
+  const memberName = `Member: (${item.customer_code}) ${item.customer_name}` || `Member ID: ${item.customer_id}`;
   const memberPhone = `Phone: ${item.mobile_no || 'N/A'}`;
   // const createDate = `Date: ${formatCustomDateTime(item.created_at)}`;
   const prodColor = `Color: ${item.color}`;
@@ -3369,7 +3363,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
       try {
         await Promise.all([
           dispatch(getAllUsersAction()),
-          dispatch(getAutoMatchDataAction()),
+          // dispatch(getAutoMatchDataAction()),
           dispatch(getOpportunitieslistingAction({ page: 1, per_page: 10 }))
         ]);
       } catch (error) {
@@ -3543,55 +3537,62 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
   };
   const currentSelectedItems = selectedItems[currentTab] || [];
 
-  const autoSpbTableData = useMemo<OpportunityItem[]>(() => {
-    const autoSpbData = autoMatchData?.data;
-    if (!autoSpbData) return [];
+ const autoSpbTableData = useMemo<OpportunityItem[]>(() => {
+  // Access the core data object from the response
+  const autoSpbData = autoMatchData?.data;
+  if (!autoSpbData) return [];
 
-    const transformedData: OpportunityItem[] = [];
-    const autospbNumber = autoMatchData?.autospbNumber || "N/A";
+  const transformedData: OpportunityItem[] = [];
+  const autospbNumber = autoMatchData?.autospbNumber || "N/A";
 
-    for (const groupId in autoSpbData) {
-      const group = autoSpbData[groupId];
-      const buyItems = group.Buy || [];
-      const sellItems = group.Sell || [];
-      const allItems = [...buyItems, ...sellItems];
-      if (allItems.length === 0) continue;
+  // Loop through each product group (the key is the product_id)
+  for (const groupId in autoSpbData) {
+    const group = autoSpbData[groupId];
+    
+    // Use lowercase 'buy' and 'sell' as per the new object reference
+    const buyItems = group.buy || [];
+    const sellItems = group.sell || [];
+    const allItems = [...buyItems, ...sellItems];
 
-      const representativeItem = allItems[0];
-      const totalqty = allItems.reduce(
-        (sum, item) => sum + (parseInt(item.qty, 10) || 0),
-        0
-      );
-      const productNames = [
-        ...new Set(
-          allItems.map((i) => i.product_name || i.brand_name).filter(Boolean)
-        ),
-      ];
+    // Skip if there are no buy or sell items in this group
+    if (allItems.length === 0) continue;
 
-      const matchRow: OpportunityItem = {
-        id: `spb-match-${groupId}`,
-        opportunity_id: `ASPB-${autospbNumber}-${groupId}`,
-        product_name: productNames.join(", ") || `Match Group ${groupId}`,
-        status: "active",
-        opportunity_status: "Shortlisted",
-        match_score: 88,
-        created_date: representativeItem.created_at,
-        spb_role: "Match",
-        want_to: "Exchange",
-        company_name: `Buyers: ${buyItems.length}`,
-        customer_name: `Sellers: ${sellItems.length}`,
-        member_type: "SPB Match",
-        qty: totalqty,
-        brand: representativeItem.brand_name || undefined,
-        _rawSpbBuyItems: buyItems,
-        _rawSpbSellItems: sellItems,
-        listing_url: null,
-      };
-      transformedData.push(matchRow);
-    }
-    return transformedData;
-  }, [autoMatchData]);
+    // A representative item to get common details like creation date
+    const representativeItem = allItems[0];
 
+    // Calculate the total quantity for the match group
+    const totalqty = allItems.reduce(
+      (sum, item) => sum + (Number(item.qty) || 0),
+      0
+    );
+
+    // Get the product name directly from the group object
+    const productName = group.product_name || `Match Group ${groupId}`;
+
+    const matchRow: OpportunityItem = {
+      id: `spb-match-${groupId}`,
+      opportunity_id: `ASPB-${autospbNumber}-${groupId}`,
+      product_name: productName,
+      status: "active",
+      opportunity_status: "Shortlisted",
+      match_score: 88, // Assuming this is a default/placeholder value
+      created_date: representativeItem.created_at,
+      spb_role: "Match",
+      want_to: "Exchange",
+      company_name: `Buyers: ${buyItems.length}`,
+      customer_name: `Sellers: ${sellItems.length}`,
+      member_type: "SPB Match",
+      qty: totalqty,
+      // The new data has a 'brand' key, not 'brand_name'
+      brand: representativeItem.brand || undefined,
+      _rawSpbBuyItems: buyItems,
+      _rawSpbSellItems: sellItems,
+      listing_url: null,
+    };
+    transformedData.push(matchRow);
+  }
+  return transformedData;
+}, [autoMatchData]);
   // SERVER-SIDE CHANGE: This hook now handles both client-side (for AUTO_MATCH) and server-side data.
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     // Client-side logic for the AUTO_MATCH tab remains
@@ -4405,6 +4406,8 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
           <div className="flex-grow overflow-auto">
             {initialLoading ? (
               <DataTableComponent
+                menuName="opportunity"
+
                 columns={skeletonColumns}
                 data={skeletonData}
                 selectable={false}
@@ -4419,6 +4422,8 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
               />
             ) : (
               <DataTableComponent
+                menuName="opportunity"
+
                 selectable={!isDashboard}
                 columns={columns}
                 data={pageData}

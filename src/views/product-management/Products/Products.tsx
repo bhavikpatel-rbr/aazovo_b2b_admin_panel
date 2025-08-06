@@ -115,7 +115,7 @@ import {
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
 
@@ -1040,19 +1040,13 @@ const productFormSchema = z.object({
     .positive("Category is required.")
     .nullable(),
   sub_category_id: z.number().positive().nullable().optional(),
-  brand_id: z
-    .number({ invalid_type_error: "Brand is required." })
-    .positive("Brand is required.")
-    .nullable(),
+  brand_id: z.number().nullable().optional(),
   name: z.string().min(1, "Product name is required.").max(255),
   slug: z.string().min(1, "Slug is required.").max(255),
   sku_code: z.string().max(50).optional().nullable(),
   hsn_code: z.string().max(50).optional().nullable(),
   supplier_product_code: z.string().max(100).optional().nullable(), // New field
-  country_id: z
-    .number({ invalid_type_error: "Country is required." })
-    .positive("Country is required.")
-    .nullable(),
+  country_id: z.number().nullable().optional(),
   unit_id: z
     .number({ invalid_type_error: "Unit is required." })
     .positive("Unit is required.")
@@ -1986,7 +1980,7 @@ const Products = () => {
   const { data: rawProductsData = [] } = paginatedData;
 
   const paginationInfo = useMemo(() => ({
-    total: countsData.total ,
+    total: countsData.total,
     active: countsData.active || 0,
     inactive: countsData.inactive || 0,
     pending: countsData.pending || 0,
@@ -2757,7 +2751,9 @@ const Products = () => {
               }
             ></Avatar>
             <Tooltip title={props.row.original.name}>
-              <div className="truncate">
+              <Link
+                to={`/product-management/product/${props.row.original.id}`}
+                className="truncate">
                 <span
                   className="font-semibold hover:text-blue-600 cursor-pointer"
                   onClick={() => openViewDetailModal(props.row.original)}
@@ -2767,7 +2763,7 @@ const Products = () => {
                 <div className="text-xs text-gray-500">
                   SKU: {props.row.original.skuCode || "-"}
                 </div>
-              </div>
+              </Link>
             </Tooltip>
           </div>
         ),
@@ -2885,7 +2881,8 @@ const Products = () => {
                   Import Keywords
                 </Dropdown.Item>
               </Dropdown>
-              <Button
+              <Button 
+              menuName="products" isAdd={true}
                 variant="solid"
                 icon={<TbPlus />}
                 onClick={openAddDrawer}
@@ -2993,7 +2990,7 @@ const Products = () => {
               </div>
             </Tooltip>
           </div>
-          <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
+          {/* <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
             <nav className="-mb-px flex space-x-8" aria-label="Tabs">
               {[TABS.ALL, TABS.PENDING].map((tab) => (
                 <button
@@ -3008,7 +3005,7 @@ const Products = () => {
                 </button>
               ))}
             </nav>
-          </div>
+          </div> */}
           <div className="my-4">
             <ProductTableTools
               onSearchChange={handleSearchChange}
@@ -3030,6 +3027,7 @@ const Products = () => {
           />
           <div className="flex-grow overflow-y-auto">
             <DataTable
+              menuName="products"
               columns={filteredColumns}
               data={pageData}
               loading={tableLoading} // MODIFIED
@@ -3148,7 +3146,7 @@ const Products = () => {
                 <FormItem
                   label={
                     <div>
-                      Category<span className="text-red-500"> * </span>
+                      Category
                     </div>
                   }
                   invalid={!!formErrors.category_id}
@@ -3209,7 +3207,7 @@ const Products = () => {
                 <FormItem
                   label={
                     <div>
-                      Brand<span className="text-red-500"> * </span>
+                      Brand
                     </div>
                   }
                   invalid={!!formErrors.brand_id}
@@ -3302,8 +3300,8 @@ const Products = () => {
                 <FormItem
                   label={
                     <div>
-                      Country
-                      <span className="text-red-500"> * </span>
+                      Country of Origin
+                      {/* <span className="text-red-500"> * </span> */}
                     </div>
                   }
                   invalid={!!formErrors.country_id}
@@ -3480,7 +3478,7 @@ const Products = () => {
                     name="short_description"
                     control={formControl}
                     render={({ field }) => (
-                       <RichTextEditor
+                      <RichTextEditor
                         content={field.value}
                         onChange={(val) => field.onChange(val.html)}
                         className="flex-grow min-h-[150px] sm:min-h-[200px]"
@@ -3497,7 +3495,7 @@ const Products = () => {
                     name="payment_term"
                     control={formControl}
                     render={({ field }) => (
-                       <RichTextEditor
+                      <RichTextEditor
                         content={field.value}
                         onChange={(val) => field.onChange(val.html)}
                         className="flex-grow min-h-[150px] sm:min-h-[200px]"
@@ -3514,7 +3512,7 @@ const Products = () => {
                     name="delivery_details"
                     control={formControl}
                     render={({ field }) => (
-                       <RichTextEditor
+                      <RichTextEditor
                         content={field.value}
                         onChange={(val) => field.onChange(val.html)}
                         className="flex-grow min-h-[150px] sm:min-h-[200px]"
@@ -3531,7 +3529,7 @@ const Products = () => {
                     name="product_specification"
                     control={formControl}
                     render={({ field }) => (
-                       <RichTextEditor
+                      <RichTextEditor
                         content={field.value}
                         onChange={(val) => field.onChange(val.html)}
                         className="flex-grow min-h-[150px] sm:min-h-[200px]"
@@ -3730,7 +3728,7 @@ const Products = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Name or SKU">
+          {/* <FormItem label="Name or SKU">
             <Controller
               name="filterNameOrSku"
               control={filterFormControl}
@@ -3738,7 +3736,7 @@ const Products = () => {
                 <Input {...field} placeholder="Enter Name or SKU" />
               )}
             />
-          </FormItem>
+          </FormItem> */}
           <FormItem label="Categories">
             <Controller
               name="filterCategoryIds"

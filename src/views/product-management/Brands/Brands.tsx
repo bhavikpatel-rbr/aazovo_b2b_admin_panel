@@ -226,7 +226,8 @@ const BrandTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, c
         </Dropdown>
         <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
         <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
-        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+        <Button menuName="brands"
+          isExport={true} icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
       </div>
     </div>
   )
@@ -555,7 +556,8 @@ const Brands = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h3 className="mb-4 sm:mb-0">Brands</h3>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} className="w-full sm:w-auto mt-2 sm:mt-0">Add Brand</Button>
+            <Button menuName="brands"
+              isAdd={true} variant="solid" icon={<TbPlus />} onClick={openAddDrawer} className="w-full sm:w-auto mt-2 sm:mt-0">Add Brand</Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 mb-4 gap-4">
             <Tooltip title="Click to show all brands"><div onClick={() => handleCardClick('all')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbBrandRedux size={20} /></div><div><h6 className="text-sm">{(mappedBrands || []).length}</h6><span className="text-xs">Total</span></div></Card></div></Tooltip>
@@ -577,6 +579,7 @@ const Brands = () => {
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="flex-grow overflow-auto">
             <BrandTable
+              menuName="brands"
               columns={filteredColumns} data={pageData} loading={tableLoading}
               pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
               selectedItems={selectedItems}
@@ -593,7 +596,7 @@ const Brands = () => {
 
       <Drawer title="Add Brand" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} width={480} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="addBrandForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Adding..." : "Save"}</Button></div>}>
         <Form id="addBrandForm" onSubmit={addFormMethods.handleSubmit(onAddBrandSubmit)} className="flex flex-col gap-2">
-          <div className="flex gap-2"><FormItem label={<div>Brand Icon (250 X 250)<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.icon} errorMessage={addFormMethods.formState.errors.icon?.message as string} className="w-full"><Controller name="icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => (<Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files && e.target.files.length > 0 ? e.target.files[0] : null; onChange(file); if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl); setAddFormPreviewUrl(file ? URL.createObjectURL(file) : null); }} accept="image/png, image/jpeg, image/gif, image/svg+xml, image/webp" />)} /></FormItem>{addFormPreviewUrl && <div className="mt-2 text-right"><Avatar src={addFormPreviewUrl} size={70} shape="circle" /></div>}</div>
+          <div className="flex gap-2"><FormItem label={<div>Brand Icon (250 X 250)<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.icon} errorMessage={addFormMethods.formState.errors.icon?.message as string} className="w-full"><Controller name="icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => (<Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files && e.target.files.length > 0 ? e.target.files[0] : null; onChange(file); if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl); setAddFormPreviewUrl(file ? URL.createObjectURL(file) : null); }} accept="image/png, image/jpeg, image/gif, image/svg+xml, image/webp" />)} /><p className="text-xs text-gray-500 mt-1">Allowed formats: SVG, PNG, JPG, GIF, WebP. Max size: 2MB.</p></FormItem>{addFormPreviewUrl && <div className="mt-2 text-right"><Avatar src={addFormPreviewUrl} size={70} shape="circle" /></div>}</div>
           <FormItem label={<div>Brand Name<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.name} errorMessage={addFormMethods.formState.errors.name?.message} isRequired><Controller name="name" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Brand Name" />} /></FormItem>
           <FormItem label={<div>Slug/URL<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.slug} errorMessage={addFormMethods.formState.errors.slug?.message} isRequired><Controller name="slug" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter brand-slug" />} /></FormItem>
           <FormItem label={<div>Mobile No.<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.mobile_no} errorMessage={addFormMethods.formState.errors.mobile_no?.message}><Controller name="mobile_no" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Enter Mobile Number" />} /></FormItem>
@@ -610,7 +613,7 @@ const Brands = () => {
           {editingBrand?.icon_full_path && !editFormPreviewUrl && (<FormItem label="Current Icon" ><div className="border border-gray-200 rounded-sm bg-gray-200 h-22 flex items-center justify-center w-22"><Avatar size={80} src={editingBrand.icon_full_path} icon={<TbBuildingStore />} shape="square" /></div></FormItem>)}
           <div className="flex items-center gap-2">
             <FormItem label="New Icon (Optional)" invalid={!!editFormMethods.formState.errors.icon} errorMessage={editFormMethods.formState.errors.icon?.message as string}>
-              <Controller name="icon" control={editFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => (<Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e) => { const file = e.target.files ? e.target.files[0] : null; onChange(file); if (editFormPreviewUrl) URL.revokeObjectURL(editFormPreviewUrl); setEditFormPreviewUrl(file ? URL.createObjectURL(file) : null); }} accept="image/png, image/jpeg, image/gif, image/svg+xml, image/webp" />)} /><p className="text-xs text-gray-500 mt-1">Leave blank to keep current icon. Selecting a new file will replace it.</p>
+              <Controller name="icon" control={editFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => (<Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e) => { const file = e.target.files ? e.target.files[0] : null; onChange(file); if (editFormPreviewUrl) URL.revokeObjectURL(editFormPreviewUrl); setEditFormPreviewUrl(file ? URL.createObjectURL(file) : null); }} accept=".svg, image/svg+xml, image/png, image/jpeg, image/gif, image/svg+xml, image/webp" />)} /><p className="text-xs text-gray-500 mt-1">Allowed formats: SVG, PNG, JPG, GIF, WebP. Max size: 2MB.</p><p className="text-xs text-gray-500 mt-1">Leave blank to keep current icon. Selecting a new file will replace it.</p>
             </FormItem>
             {editFormPreviewUrl && <div className="border border-gray-200 rounded-sm bg-gray-200 p-1 flex items-center justify-center "><Avatar src={editFormPreviewUrl} size={80} shape="square" className="" /></div>}
           </div>
@@ -627,7 +630,7 @@ const Brands = () => {
 
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterBrandForm" type="submit">Apply</Button></div>}>
         <Form id="filterBrandForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
-          <FormItem label="Name"><Controller name="filterNames" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Names" options={brandNameOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />} /></FormItem>
+          {/* <FormItem label="Name"><Controller name="filterNames" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Names" options={brandNameOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />} /></FormItem> */}
           <FormItem label="Status"><Controller name="filterStatuses" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Status" options={uiStatusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />} /></FormItem>
         </Form>
       </Drawer>

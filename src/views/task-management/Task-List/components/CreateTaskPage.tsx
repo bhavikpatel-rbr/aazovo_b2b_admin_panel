@@ -114,17 +114,65 @@ const taskStatusLabelsDisplay = ["Not Started", "Pending", "In Progress", "On Ho
 type TaskStatusDisplay = typeof taskStatusLabelsDisplay[number];
 // --- END NEW STATUS DEFINITIONS ---
 
+// --- MODULE NAME OPTIONS ---
+const moduleNameOptions = [
+  { label: "Company", value: "company" },
+  { label: "Member", value: "member" },
+  { label: "Partner", value: "partner" },
+  { label: "Inquiry", value: "inquiry" },
+  { label: "Brand", value: "brand" },
+  { label: "Category", value: "category" },
+  { label: "Product", value: "product" },
+  { label: "Wall Listing", value: "wall listing" },
+  { label: "Opportunities", value: "opportunities" },
+  { label: "Offer", value: "offer" },
+  { label: "Demand", value: "demand" },
+  { label: "Leads", value: "leads" },
+  { label: "Account Document", value: "account document" },
+  { label: "Subscribers", value: "Subscribers" },
+  { label: "Requests & Feedbacks", value: "Requests & Feedbacks" },
+  { label: "Automation Email", value: "Automation Email" },
+  { label: "Email Campaigns", value: "Email Campaigns" },
+  { label: "Auto Email Templates", value: "Auto Email Templates" },
+  { label: "Email Templates", value: "Email Templates" },
+  { label: "Employees", value: "Employees" },
+  { label: "Designations", value: "Designations" },
+  { label: "Departments", value: "Departments" },
+  { label: "Job Applications", value: "Job Applications" },
+  { label: "Job Posts", value: "Job Posts" },
+  { label: "Raw Data", value: "Raw Data" },
+  { label: "Form Builder", value: "Form Builder" },
+  { label: "Bug Reports", value: "Bug Reports" },
+  { label: "Numbering System", value: "Numbering System" },
+  { label: "Trending Images", value: "Trending Images" },
+  { label: "Trending Carousel", value: "Trending Carousel" },
+  { label: "Sliders", value: "Sliders" },
+  { label: "Blogs", value: "Blogs" },
+  { label: "Page Types", value: "Page Types" },
+  { label: "Document Types", value: "Document Types" },
+  { label: "Member Types", value: "Member Types" },
+  { label: "Payment Terms", value: "Payment Terms" },
+  { label: "Product Spec", value: "Product Spec" },
+  { label: "Currencies", value: "Currencies" },
+  { label: "Units", value: "Units" },
+  { label: "Continents", value: "Continents" },
+  { label: "Countries", value: "Countries" },
+  { label: "Price List", value: "Price List" },
+  { label: "Documents", value: "Documents" },
+  { label: "Other", value: "Other" },
+];
+
 // --- Zod Schema ---
 const createTaskSchema = z.object({
   task_title: z.string().min(1, "Task title is required.").max(255),
-  module_name: z.string().optional().nullable(),
+  module_name: z.string().min(1, "Module name is required."),
   module_id: z.string().optional(),
   assignedToIds: z.array(z.string()).optional().nullable(),
   status: z.enum(taskStatusLabelsApi, { required_error: "Status is required." }), // Updated validation
   priority: z.enum(["Low", "Medium", "High", "Urgent"], { required_error: "Priority is required." }),
   department_id: z.string().optional().nullable(),
   dueDate: z.date({ required_error: "Due date is required." }),
-  note_remark: z.string().optional().nullable() ,
+  note_remark: z.string().optional().nullable(),
   additional_description: z.string().optional(),
   activity_type: z.string().optional(),
 });
@@ -184,6 +232,7 @@ const CreateTaskPage = () => {
 
   useEffect(() => {
     setLoggedInUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage));
+    console.log("Logged in user data:", encryptStorage.getItem("UserData", !useEncryptApplicationStorage));
     dispatch(getUsersAction());
     dispatch(getAllCompany());
     dispatch(getDepartmentsAction());
@@ -360,14 +409,14 @@ const CreateTaskPage = () => {
     data.assignedToIds.forEach(id => formDataPayload.append("assign_to[]", id));
     formDataPayload.append("status", data.status);
     formDataPayload.append("priority", data.priority);
-    console.log("data.department_id",data.department_id);
-    console.log("data.department_id",typeof(data.department_id));
-    
+    console.log("data.department_id", data.department_id);
+    console.log("data.department_id", typeof (data.department_id));
+
     if (data.department_id != 'null') {
-      
+
       formDataPayload.append("department_id", data.department_id);
-    }else{
-       formDataPayload.append("department_id", '');
+    } else {
+      formDataPayload.append("department_id", '');
     }
     formDataPayload.append("due_data", dayjs(data.dueDate).format('YYYY-MM-DD HH:mm:ss'));
     formDataPayload.append("note_remark", data.note_remark);
@@ -375,17 +424,18 @@ const CreateTaskPage = () => {
 
     if (!isEditMode) {
       if (data.activity_type && data.note_remark) {
-        formDataPayload.append("activity_note[user_id]", String(loggedInUserData.id));
+        // formDataPayload.append("activity_note[user_id]", String(loggedInUserData.id));
         formDataPayload.append("activity_note[activity_type]", data.activity_type);
         formDataPayload.append("activity_note[activity_comment]", data.note_remark);
       } else {
-        formDataPayload.append("activity_note[user_id]", String(loggedInUserData.id));
+        // formDataPayload.append("activity_note[user_id]", String(loggedInUserData.id));
         formDataPayload.append("activity_note[activity_type]", "created_task");
         formDataPayload.append("activity_note[activity_comment]", `Task "${data.task_title}" created.`);
       }
 
     } else {
       formDataPayload.append("id", taskId);
+
       const newUiComments = comments.filter(c => c.id.startsWith('temp-'));
       newUiComments.forEach((comment, index) => {
         const parts = comment.message.split(': ');
@@ -396,16 +446,15 @@ const CreateTaskPage = () => {
           messageContent = parts.slice(1).join(': ').trim();
         }
 
-        formDataPayload.append(`new_activity_notes[${index}][user_id]`, String(comment.user_id));
-        formDataPayload.append(`new_activity_notes[${index}][activity_type]`, activityTypeForComment);
-        formDataPayload.append(`new_activity_notes[${index}][activity_comment]`, messageContent);
+        // formDataPayload.append(`activity_notes[${index}][user_id]`, String(comment.user_id));
+        formDataPayload.append(`activity_notes[${index}][activity_type]`, activityTypeForComment);
+        formDataPayload.append(`activity_notes[${index}][activity_comment]`, messageContent);
       });
     }
     attachments.filter(att => att.file).forEach((att, index) => {
       formDataPayload.append(`attachments[${index}][user_id]`, String(loggedInUserData.id));
       formDataPayload.append(`attachments[${index}][file_data]`, att.file!, att.name);
     });
-
     try {
       if (isEditMode && taskId) {
         await dispatch(addTaskAction(formDataPayload)).unwrap();
@@ -494,7 +543,19 @@ const CreateTaskPage = () => {
             <div className="flex items-center">
               <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">Module Name: <span className="text-red-500">*</span></label>
               <div className="w-full">
-                <Controller name="module_name" control={control} render={({ field }) => <Input {...field} placeholder="E.g., Company, Lead" />} />
+                <Controller
+                  name="module_name"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      options={moduleNameOptions}
+                      value={moduleNameOptions.find(opt => opt.value === field.value) || null}
+                      onChange={opt => field.onChange(opt?.value)}
+                      placeholder="Select a module..."
+                    />
+                  )}
+                />
                 {errors.module_name && <p className="text-red-500 text-xs mt-1">{errors.module_name.message}</p>}
               </div>
             </div>
@@ -566,7 +627,7 @@ const CreateTaskPage = () => {
 
 
             <div className="grid grid-cols-1 gap-6 mt-3 col-span-2">
-             
+
               {/* --- Attachments Card --- */}
               <Card>
                 <div className="p-4">
@@ -609,7 +670,7 @@ const CreateTaskPage = () => {
                 </div>
               </Card>
 
-               {/* --- Activity Notes Card --- */}
+              {/* --- Activity Notes Card --- */}
               <Card>
                 <div className="p-4">
                   <h6 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100 mb-4 border-b pb-3 dark:border-gray-600">
@@ -647,7 +708,7 @@ const CreateTaskPage = () => {
                       <div className="absolute bottom-2 right-2"><Button size="xs" variant="solid" onClick={submitComment} type="button">Send</Button></div>
                     </div>
                   </div>
-                  
+
                 </div>
               </Card>
 

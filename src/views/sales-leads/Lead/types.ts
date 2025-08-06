@@ -90,13 +90,10 @@ export type LeadFormData = z.infer<typeof leadFormSchema>;
 export const leadStatusOptions: { value: LeadStatus, label: string }[] = [
   { value: "New", label: "New" },
   { value: "Assigned", label: "Assigned" },
-  { value: "Accepted", label: "Accepted" },
   { value: "Approval Waiting", label: "Approval Waiting" },
   { value: "Approved", label: "Approved" },
   { value: "Deal done", label: "Deal done" },
   { value: "Rejected", label: "Rejected" },
-  { value: "Cancelled", label: "Cancelled" },
-  { value: "Completed", label: "Completed" },
 ];
 
 export const enquiryTypeOptions: { value: EnquiryType, label: string }[] = [
@@ -114,3 +111,36 @@ export const deviceConditionOptions: { value: ProductCondition, label: string }[
   { value: "New", label: "New" },
 
 ];
+
+
+
+
+
+// Add the edit-specific schema here.
+// Note the simplification: .number({ required_error: ... }) is used for non-nullable required fields.
+export const editLeadFormSchema = z.object({
+  // Required fields
+  supplier_id: z.number({ required_error: "Supplier Name is required." }),
+  buyer_id: z.number({ required_error: "Buyer Name is required." }),
+  product_id: z.number({ required_error: "Product Name is required." }),
+  qty: z.number({ required_error: "Quantity is required." }).min(1, "Quantity must be at least 1."),
+  product_status: z.string({ required_error: "Product Status is required." }).min(1, "Product Status is required."),
+
+  // Optional fields (using .nullish() allows null/undefined and .optional() makes the key itself optional)
+  product_spec_id: z.number().nullish().optional(),
+  internal_remarks: z.string().nullish().optional(),
+  price: z.number().nullish().optional(),
+  color: z.string().nullish().optional(),
+  dispatch_status: z.string().nullish().optional(),
+  cartoon_type_id: z.number().nullish().optional(),
+  device_condition: z.string().nullish().optional(),
+  payment_term_id: z.number().nullish().optional(),
+  location: z.string().nullish().optional(),
+  eta: z.date().nullish().optional(),
+  
+  // Hidden fields required for the payload
+  lead_intent: z.string(),
+  lead_status: z.string(),
+});
+
+export type EditLeadFormData = z.infer<typeof editLeadFormSchema>;

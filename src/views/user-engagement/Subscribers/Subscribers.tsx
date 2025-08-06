@@ -103,7 +103,7 @@ export type ApiSubscriberItem = {
   status: string;
   subscription_types?: string[] | null;
   source?: string | null;
-  remarks?: string | null; // CORRECTED
+  remarks?: string | null;
   reason?: string | null;
   updated_by_user?: {
     name: string;
@@ -133,6 +133,125 @@ export interface ModalState {
   type: ModalType | null;
   data: SubscriberItem | null;
 }
+
+const WhatsAppDialog = ({
+  isOpen,
+  onClose,
+  subscribers,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  subscribers: SubscriberItem[];
+}) => {
+  const [message, setMessage] = useState(
+    "Hello! This is a message regarding your subscription."
+  );
+
+  const phoneNumbers = useMemo(
+    () => subscribers.map((s) => s.mobile_no).filter(Boolean),
+    [subscribers]
+  );
+
+  const handleCopyNumbers = () => {
+    navigator.clipboard.writeText(phoneNumbers.join(", ")).then(
+      () => {
+        toast.push(
+          <Notification title="Numbers Copied" type="success" duration={2000} />
+        );
+      },
+      () => {
+        toast.push(
+          <Notification title="Copy Failed" type="danger" duration={2000} />
+        );
+      }
+    );
+  };
+
+  const handleCopyMessage = () => {
+    navigator.clipboard.writeText(message).then(
+      () => {
+        toast.push(
+          <Notification title="Message Copied" type="success" duration={2000} />
+        );
+      },
+      () => {
+        toast.push(
+          <Notification title="Copy Failed" type="danger" duration={2000} />
+        );
+      }
+    );
+  };
+
+  const handleOpenWhatsApp = () => {
+    window.open("https://web.whatsapp.com", "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Send Bulk WhatsApp Message</h5>
+      <p className="mb-4 text-sm">
+        WhatsApp does not allow sending to multiple numbers via a link. Follow
+        these steps:
+      </p>
+      <ol className="list-decimal list-inside text-sm space-y-2 mb-4 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-md">
+        <li>
+          Click <strong>Copy Numbers</strong> to copy all phone numbers.
+        </li>
+        <li>
+          Click <strong>Open WhatsApp</strong> and create a New Group or New
+          Broadcast List.
+        </li>
+        <li>Paste the numbers into the recipient field.</li>
+        <li>Return here, edit the message if needed, and copy it.</li>
+        <li>Paste the message into WhatsApp and send.</li>
+      </ol>
+
+      <div className="mb-4">
+        <h6 className="mb-2">Selected Recipients ({phoneNumbers.length})</h6>
+        <div className="max-h-32 overflow-y-auto p-2 border rounded-md dark:border-gray-600">
+          {subscribers.map((s) => (
+            <div
+              key={s.id}
+              className="text-sm flex justify-between items-center"
+            >
+              <span>{s.name || s.email}</span>
+              <span className="text-gray-500">{s.mobile_no}</span>
+            </div>
+          ))}
+        </div>
+        <div className="text-right mt-1">
+          <Button size="xs" onClick={handleCopyNumbers}>
+            Copy Numbers
+          </Button>
+        </div>
+      </div>
+
+      <FormItem label="Message Template">
+        <Input
+          textArea
+          rows={4}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+        />
+        <div className="text-right mt-1">
+          <Button size="xs" onClick={handleCopyMessage}>
+            Copy Message
+          </Button>
+        </div>
+      </FormItem>
+
+      <div className="text-right mt-6">
+        <Button className="mr-2" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="solid" icon={<TbBrandWhatsapp />} onClick={handleOpenWhatsApp}>
+          Open WhatsApp
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+
 
 // --- Zod Schemas ---
 const filterFormSchema = z.object({
@@ -236,100 +355,100 @@ function exportSubscribersToCsv(filename: string, rows: SubscriberItem[]) {
 }
 
 const AddNotificationDialog = ({ document, onClose, getAllUserDataOptions }: { document: SubscriberItem; onClose: () => void; getAllUserDataOptions: SelectOption[]; }) => {
-    const dispatch = useAppDispatch();
-    const [isLoading, setIsLoading] = useState(false);
-    const notificationSchema = z.object({
-        notification_title: z.string().min(3, "Title must be at least 3 characters long."),
-        send_users: z.array(z.number()).min(1, "Please select at least one user."),
-        message: z.string().min(10, "Message must be at least 10 characters long."),
-    });
-    type NotificationFormData = z.infer<typeof notificationSchema>;
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
-        resolver: zodResolver(notificationSchema),
-        defaultValues: { notification_title: `Regarding Subscriber: ${document.name}`, send_users: [], message: `This is a notification regarding subscriber "${document.name}" (${document.email}).` },
-        mode: 'onChange'
-    });
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const notificationSchema = z.object({
+    notification_title: z.string().min(3, "Title must be at least 3 characters long."),
+    send_users: z.array(z.number()).min(1, "Please select at least one user."),
+    message: z.string().min(10, "Message must be at least 10 characters long."),
+  });
+  type NotificationFormData = z.infer<typeof notificationSchema>;
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
+    resolver: zodResolver(notificationSchema),
+    defaultValues: { notification_title: `Regarding Subscriber: ${document.name}`, send_users: [], message: `This is a notification regarding subscriber "${document.name}" (${document.email}).` },
+    mode: 'onChange'
+  });
 
-    const onSend = async (formData: NotificationFormData) => {
-        setIsLoading(true);
-        const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(document.id), module_name: 'Subscriber' };
-        try {
-            await dispatch(addNotificationAction(payload)).unwrap();
-            toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
-            onClose();
-        } catch (error: any) {
-            toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    return (
-        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-            <h5 className="mb-4">Notify about: {document.name}</h5>
-            <Form onSubmit={handleSubmit(onSend)}>
-                <FormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-                <FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<Select isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />)} /></FormItem>
-                <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem>
-                <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button></div>
-            </Form>
-        </Dialog>
-    );
+  const onSend = async (formData: NotificationFormData) => {
+    setIsLoading(true);
+    const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(document.id), module_name: 'Subscriber' };
+    try {
+      await dispatch(addNotificationAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Notify about: {document.name}</h5>
+      <Form onSubmit={handleSubmit(onSend)}>
+        <FormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+        <FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<Select isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />)} /></FormItem>
+        <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem>
+        <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button></div>
+      </Form>
+    </Dialog>
+  );
 };
 
 const AddScheduleDialog: React.FC<{ document: SubscriberItem; onClose: () => void; }> = ({ document, onClose }) => {
-    const dispatch = useAppDispatch();
-    const [isLoading, setIsLoading] = useState(false);
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
-        resolver: zodResolver(scheduleSchema),
-        defaultValues: { event_title: `Follow-up with Subscriber ${document.name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Regarding subscriber ${document.name} (${document.email}).` },
-        mode: 'onChange',
-    });
-    const onAddEvent = async (data: ScheduleFormData) => {
-        setIsLoading(true);
-        const payload = {
-            module_id: Number(document.id),
-            module_name: 'Subscriber',
-            event_title: data.event_title,
-            event_type: data.event_type,
-            date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
-            ...(data.remind_from && { remind_from: dayjs(data.remind_from).format("YYYY-MM-DDTHH:mm:ss") }),
-            notes: data.notes || '',
-        };
-        try {
-            await dispatch(addScheduleAction(payload)).unwrap();
-            toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${document.name}.`} />);
-            onClose();
-        } catch (error: any) {
-            toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
-        } finally {
-            setIsLoading(false);
-        }
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
+    resolver: zodResolver(scheduleSchema),
+    defaultValues: { event_title: `Follow-up with Subscriber ${document.name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Regarding subscriber ${document.name} (${document.email}).` },
+    mode: 'onChange',
+  });
+  const onAddEvent = async (data: ScheduleFormData) => {
+    setIsLoading(true);
+    const payload = {
+      module_id: Number(document.id),
+      module_name: 'Subscriber',
+      event_title: data.event_title,
+      event_type: data.event_type,
+      date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
+      ...(data.remind_from && { remind_from: dayjs(data.remind_from).format("YYYY-MM-DDTHH:mm:ss") }),
+      notes: data.notes || '',
     };
-    return (
-        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-            <h5 className="mb-4">Add Schedule for Subscriber: {document.name}</h5>
-            <Form onSubmit={handleSubmit(onAddEvent)}>
-                <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<Select placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></FormItem>
-                    <FormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
-                </div>
-                <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}><Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
-                <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
-                <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button></div>
-            </Form>
-        </Dialog>
-    );
+    try {
+      await dispatch(addScheduleAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${document.name}.`} />);
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Schedule for Subscriber: {document.name}</h5>
+      <Form onSubmit={handleSubmit(onAddEvent)}>
+        <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<Select placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></FormItem>
+          <FormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
+        </div>
+        <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}><Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
+        <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
+        <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button></div>
+      </Form>
+    </Dialog>
+  );
 };
 
 const SubscriberModals = ({ modalState, onClose, getAllUserDataOptions }: { modalState: ModalState; onClose: () => void; getAllUserDataOptions: SelectOption[]; }) => {
-    const { type, data: document, isOpen } = modalState;
-    if (!isOpen || !document) return null;
-    switch (type) {
-        case 'notification': return <AddNotificationDialog document={document} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
-        case 'schedule': return <AddScheduleDialog document={document} onClose={onClose} />;
-        default: return null;
-    }
+  const { type, data: document, isOpen } = modalState;
+  if (!isOpen || !document) return null;
+  switch (type) {
+    case 'notification': return <AddNotificationDialog document={document} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
+    case 'schedule': return <AddScheduleDialog document={document} onClose={onClose} />;
+    default: return null;
+  }
 };
 
 type SubscriberSearchProps = {
@@ -405,7 +524,9 @@ const SubscriberTableTools = ({ onSearchChange, onFilter, onExport, onImport, on
           {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}
         </Button>
         <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto" disabled={!isDataReady}>Import</Button>
-        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
+        <Button
+          menuName="subscriber" isExport={true}
+          icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
       </div>
     </div>
   );
@@ -424,10 +545,10 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
       <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
       {filterData.status && (<Tag prefix>Status: {filterData.status} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter("status")} /></Tag>)}
       {filterData.dateRange && (filterData.dateRange[0] || filterData.dateRange[1]) && (
-          <Tag prefix>Date: {dayjs(filterData.dateRange[0]).format("MMM D")} -{" "}{dayjs(filterData.dateRange[1]).format("MMM D, YYYY")}{" "}
-            <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter("dateRange")} />
-          </Tag>
-        )}
+        <Tag prefix>Date: {dayjs(filterData.dateRange[0]).format("MMM D")} -{" "}{dayjs(filterData.dateRange[1]).format("MMM D, YYYY")}{" "}
+          <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter("dateRange")} />
+        </Tag>
+      )}
       <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
     </div>
   );
@@ -438,7 +559,7 @@ const SubscribersListing = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { rawApiSubscribers = { data: [], counts: {} }, getAllUserData = [], status: masterLoadingStatus = "idle", error: masterError = null, } = useSelector(masterSelector, shallowEqual);
-  
+
   const [initialLoading, setInitialLoading] = useState(true);
   const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<SubscriberItem | null>(null);
@@ -454,7 +575,7 @@ const SubscribersListing = () => {
   const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
   const [imageView, setImageView] = useState("");
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [selectedRows, setSelectedRows] = useState<(string | number)[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const isDataReady = !initialLoading;
@@ -468,18 +589,18 @@ const SubscribersListing = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-        setInitialLoading(true);
-        try {
-            await Promise.all([
-                dispatch(getSubscribersAction()),
-                dispatch(getAllUsersAction())
-            ]);
-        } catch (error) {
-            console.error("Failed to load subscriber data", error);
-            toast.push(<Notification type="danger" title="Error">Could not load subscriber data.</Notification>)
-        } finally {
-            setInitialLoading(false);
-        }
+      setInitialLoading(true);
+      try {
+        await Promise.all([
+          dispatch(getSubscribersAction()),
+          dispatch(getAllUsersAction())
+        ]);
+      } catch (error) {
+        console.error("Failed to load subscriber data", error);
+        toast.push(<Notification type="danger" title="Error">Could not load subscriber data.</Notification>)
+      } finally {
+        setInitialLoading(false);
+      }
     };
     fetchData();
   }, [dispatch]);
@@ -506,7 +627,7 @@ const SubscribersListing = () => {
       return {
         id: apiItem.id, email: apiItem.email, name: apiItem.name || "", mobile_no: apiItem.mobile || "",
         subscribedDate: new Date(apiItem.created_at), subscriptionTypes: apiItem.subscription_types || [],
-        source: apiItem.source || "", status: apiItem.status, remarks: apiItem.remarks || "", // CORRECTED
+        source: apiItem.source || "", status: apiItem.status, remarks: apiItem.remarks || "",
         raw_created_at: apiItem.created_at, raw_updated_at: apiItem.updated_at,
         updated_by_user: apiItem.updated_by_user,
       };
@@ -533,7 +654,7 @@ const SubscribersListing = () => {
     let apiPayload = {
       email: data.email, name: data.name || null, mobile: data.mobile_no || null,
       subscription_types: data.subscriptionTypes, source: data.source || null,
-      status: data.status, remarks: data.remarks || null, // CORRECTED
+      status: data.status, remarks: data.remarks || null,
     };
     try {
       if (editingItem) {
@@ -576,7 +697,7 @@ const SubscribersListing = () => {
     const defaultFilters = filterFormSchema.parse({});
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
-    setRowSelection({});
+    setSelectedRows([]);
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
   }, [filterFormMethods]);
 
@@ -646,9 +767,37 @@ const SubscribersListing = () => {
       toast.push(<Notification title="Operation Failed" type="danger">{(error as Error).message || "Could not complete export."}</Notification>);
     } finally { setIsSubmittingExportReason(false); }
   }, [dispatch, allFilteredAndSortedData]);
+  const selectedSubscribers = useMemo(() => {
+    if (selectedRows.length === 0) return [];
+    const selectedIds = new Set(selectedRows);
+    return allFilteredAndSortedData.filter((sub) => selectedIds.has(sub.id));
+  }, [selectedRows, allFilteredAndSortedData]);
+  const handleBulkEmail = useCallback(() => {
+    if (selectedSubscribers.length === 0) {
+      toast.push(<Notification title="No Selection" type="info">Please select subscribers to email.</Notification>);
+      return;
+    }
 
-  const handleBulkEmail = () => { toast.push(<Notification title="Action Triggered" type="info">Sending email to {Object.keys(rowSelection).length} selected subscribers...</Notification>); };
-  const handleBulkWhatsApp = () => { toast.push(<Notification title="Action Triggered" type="info">Sending WhatsApp to {Object.keys(rowSelection).length} selected subscribers...</Notification>); };
+    const emails = selectedSubscribers.map((sub) => sub.email).filter(Boolean);
+
+    if (emails.length === 0) {
+      toast.push(<Notification title="No Email Addresses" type="info">None of the selected subscribers have an email address.</Notification>);
+      return;
+    }
+
+    window.location.href = `mailto:${emails.join(',')}`;
+  }, [selectedSubscribers]);
+  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
+  const handleBulkWhatsApp = useCallback(() => {
+    const subscribersWithMobile = selectedSubscribers.filter((sub) => sub.mobile_no);
+
+    if (subscribersWithMobile.length === 0) {
+      toast.push(<Notification title="No Mobile Numbers" type="info">None of the selected subscribers have a mobile number.</Notification>);
+      return;
+    }
+
+    setIsWhatsAppModalOpen(true);
+  }, [selectedSubscribers]);
   const handleFileImport = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       console.log("Selected file:", e.target.files[0]);
@@ -663,50 +812,80 @@ const SubscribersListing = () => {
   const handleSearchChange = useCallback((query: string) => handleSetTableData({ query, pageIndex: 1 }), [handleSetTableData]);
   const handleViewClick = useCallback((item: SubscriberItem) => { navigate(`/app/crm/subscriber-details/${item.id}`); }, [navigate]);
 
-  const columns: ColumnDef<SubscriberItem>[] = useMemo(() => [
-    {
+  const handleSelectAll = useCallback((checked: boolean) => {
+    if (checked) {
+      setSelectedRows(allFilteredAndSortedData.map(row => row.id));
+    } else {
+      setSelectedRows([]);
+    }
+  }, [allFilteredAndSortedData]);
+
+  const handleSelectRow = useCallback((checked: boolean, rowId: string | number) => {
+    setSelectedRows((prev) =>
+      checked ? [...prev, rowId] : prev.filter((id) => id !== rowId)
+    );
+  }, []);
+
+  const columns: ColumnDef<SubscriberItem>[] = useMemo(() => {
+    const isAllFilteredSelected = allFilteredAndSortedData.length > 0 && selectedRows.length === allFilteredAndSortedData.length;
+    const isSomeFilteredSelected = selectedRows.length > 0 && !isAllFilteredSelected;
+
+    return [
+      {
         id: "select",
-        header: ({ table }) => (<Checkbox checked={table.getIsAllRowsSelected()} indeterminate={table.getIsSomeRowsSelected()} onChange={table.getToggleAllRowsSelectedHandler()} />),
-        cell: ({ row }) => (<Checkbox checked={row.getIsSelected()} disabled={!row.getCanSelect()} onChange={row.getToggleSelectedHandler()} />),
-    },
-    {
+        header: () => (
+          <Checkbox
+            checked={isAllFilteredSelected}
+            indeterminate={isSomeFilteredSelected}
+            onChange={(checked) => handleSelectAll(checked)}
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={selectedRows.includes(row.original.id)}
+            onChange={(checked) => handleSelectRow(checked, row.original.id)}
+          />
+        ),
+      },
+      {
         header: "Subscriber Info", accessorKey: "email", id: "subscriberInfo",
         cell: (props) => { const rowData = props.row.original; return (<div className="flex items-center gap-2"><Avatar size="sm" shape="circle" className="mr-1">{rowData.email?.[0]?.toUpperCase()}</Avatar><div className="flex flex-col gap-0.5"><span className="font-semibold">{rowData.email}</span><div className="text-xs text-gray-500">{rowData.name || "No name provided"}</div></div></div>); },
-    },
-    {
+      },
+      {
         header: "Type", accessorKey: "subscriptionTypes", id: "subscriptionTypes", enableSorting: false,
         cell: (props) => { const types = props.getValue() as string[]; if (!types || types.length === 0) return "N/A"; return (<div className="flex flex-wrap gap-1 max-w-[200px]">{types.map((type) => (<Tag key={type} className="capitalize whitespace-nowrap">{type}</Tag>))}</div>); },
-    },
-    {
+      },
+      {
         header: "Status", accessorKey: "status", id: "status",
         cell: (props) => { const statusVal = props.getValue() as string; return (<Tag className={`capitalize whitespace-nowrap text-center ${statusColors[statusVal] || statusColors.default}`}>{statusVal || "N/A"}</Tag>); },
-    },
-    {
+      },
+      {
         header: "Subscription Date", accessorKey: "subscribedDate", id: "subscribedDate", enableSorting: true, size: 180,
         cell: (props) => { const date = props.row.original.subscribedDate; return !isNaN(date.getTime()) ? (<span className="text-xs">{dayjs(date).format("MMM DD, YYYY hh:mm A")}</span>) : "Invalid Date"; },
-    },
-    {
+      },
+      {
         header: "Updated Info", accessorKey: "raw_updated_at", enableSorting: true, size: 220,
         cell: (props: CellContext<SubscriberItem, unknown>) => {
-            const { raw_updated_at, updated_by_user } = props.row.original;
-            return (
-                <div className="flex items-center gap-2">
-                    <Tooltip title="View Profile Picture"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /></Tooltip>
-                    <div><span className="font-semibold">{updated_by_user?.name || "N/A"}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ""}</div><div className="text-xs text-gray-500">{formatCustomDateTime(raw_updated_at)}</div></div>
-                </div>
-            );
+          const { raw_updated_at, updated_by_user } = props.row.original;
+          return (
+            <div className="flex items-center gap-2">
+              <Tooltip title="View Profile Picture"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /></Tooltip>
+              <div><span className="font-semibold">{updated_by_user?.name || "N/A"}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ""}</div><div className="text-xs text-gray-500">{formatCustomDateTime(raw_updated_at)}</div></div>
+            </div>
+          );
         },
-    },
-    {
+      },
+      {
         header: "Action", id: "action", size: 120,
         cell: (props: CellContext<SubscriberItem, unknown>) => (
-            <div className="flex gap-2 items-center justify-center">
-                <Tooltip title="Edit Subscriber"><div className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600" onClick={() => openEditDrawer(props.row.original)} role="button"><TbPencil /></div></Tooltip>
-                <Tooltip title="Delete"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600" role="button" onClick={() => handleDeleteClick(props.row.original)}><TbTrash size={18} /></div></Tooltip>
-            </div>
+          <div className="flex gap-2 items-center justify-center">
+            <Tooltip title="Edit Subscriber"><div className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600" onClick={() => openEditDrawer(props.row.original)} role="button"><TbPencil /></div></Tooltip>
+            <Tooltip title="Delete"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600" role="button" onClick={() => handleDeleteClick(props.row.original)}><TbTrash size={18} /></div></Tooltip>
+          </div>
         ),
-    },
-  ], [openEditDrawer, handleViewClick, handleDeleteClick, openImageViewer]);
+      },
+    ]
+  }, [selectedRows, allFilteredAndSortedData, handleSelectAll, handleSelectRow, openEditDrawer, handleViewClick, handleDeleteClick, openImageViewer]);
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<SubscriberItem>[]>(columns);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
@@ -715,11 +894,11 @@ const SubscribersListing = () => {
   const counts = rawApiSubscribers?.counts || {};
   const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-2";
-  const selectedRowCount = Object.keys(rowSelection).length;
+  const selectedRowCount = selectedRows.length;
 
   const renderCardContent = (content: number | undefined) => {
     if (initialLoading) {
-        return <Skeleton width={40} height={20} />;
+      return <Skeleton width={40} height={20} />;
     }
     return <h6 className="font-bold">{content ?? 0}</h6>;
   };
@@ -730,11 +909,11 @@ const SubscribersListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Subscribers</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button>
+            <Button menuName="subscriber" isAdd={true} variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 mb-4 gap-2">
             <Tooltip title="Click to show all subscribers"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200 dark:border-blue-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200"><TbCaravan size={24} /></div><div><div className="text-blue-500">{renderCardContent(counts?.total)}</div><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show new subscribers"><div onClick={() => {}}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200 dark:border-violet-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200"><TbUserStar size={24} /></div><div><div className="text-violet-500">{renderCardContent(counts?.new)}</div><span className="font-semibold text-xs">New</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show new subscribers"><div onClick={() => { }}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200 dark:border-violet-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200"><TbUserStar size={24} /></div><div><div className="text-violet-500">{renderCardContent(counts?.new)}</div><span className="font-semibold text-xs">New</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show subscribed users"><div onClick={() => handleCardClick("Subscribed")}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200 dark:border-green-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200"><TbMailForward size={24} /></div><div><div className="text-green-500">{renderCardContent(counts?.subscribed)}</div><span className="font-semibold text-xs">Subscribed</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show unsubscribed users"><div onClick={() => handleCardClick("Unsubscribed")}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200 dark:border-red-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-200"><TbCalendarCancel size={24} /></div><div><div className="text-red-500">{renderCardContent(counts?.unsubscribed)}</div><span className="font-semibold text-xs">Unsubscribed</span></div></Card></div></Tooltip>
           </div>
@@ -751,7 +930,8 @@ const SubscribersListing = () => {
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
 
           <div className="mt-4 flex-grow overflow-auto">
-            <DataTable columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onRowSelectionChange={setRowSelection} rowSelection={rowSelection} enableRowSelection noData={!tableLoading && pageData.length === 0} />
+
+            <DataTable menuName="subscriber" columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} noData={!tableLoading && pageData.length === 0} />
           </div>
         </AdaptiveCard>
       </Container>
@@ -1118,7 +1298,11 @@ const SubscribersListing = () => {
           </FormItem>
         </Form>
       </ConfirmDialog>
-
+      <WhatsAppDialog
+        isOpen={isWhatsAppModalOpen}
+        onClose={() => setIsWhatsAppModalOpen(false)}
+        subscribers={selectedSubscribers.filter((s) => s.mobile_no)}
+      />
       <SubscriberModals
         modalState={modalState}
         onClose={handleCloseModal}

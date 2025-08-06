@@ -75,6 +75,8 @@ import {
   TbX,
   TbCheck,
   TbCopy,
+  TbTag,
+  TbShoppingCart,
 } from "react-icons/tb";
 
 // Redux
@@ -389,119 +391,161 @@ const dummyDocs = [
   { id: "doc1", name: "Offer_Details.pdf", type: "pdf", size: "1.2 MB" },
   { id: "doc2", name: "Images.zip", type: "zip", size: "8.5 MB" },
 ];
-
+// --- Helper Component for View Dialogs ---
+const DialogDetailRow = ({
+  label,
+  value,
+  valueClassName,
+  children,
+}: {
+  label: string;
+  value?: React.ReactNode;
+  valueClassName?: string;
+  children?: React.ReactNode;
+}) => (
+  <div>
+    <h6 className="text-xs font-normal text-slate-500 dark:text-slate-400 mb-0.5">
+      {label}
+    </h6>
+    <div
+      className={classNames(
+        "text-sm font-semibold text-slate-800 dark:text-slate-100",
+        valueClassName
+      )}
+    >
+      {children || value || <span className="font-normal italic text-slate-400 dark:text-slate-500">N/A</span>}
+    </div>
+  </div>
+);
 const ViewDetailsDialog: React.FC<{
-  item: OfferDemandItem;
+  item: OfferDemandItem; // Make sure your OfferDemandItem type includes a 'products' array
   onClose: () => void;
 }> = ({ item, onClose }) => {
+  // --- MOCK DATA FOR PRODUCTS: Replace this with your actual data ---
+  // I've added this to demonstrate the UI. You should get this from your `item` prop.
+  const itemWithProducts = {
+    ...item,
+    products: item.products || [
+      { id: 1, name: 'Premium Leather Sofa', qty: 2, color: 'Cognac Brown', price: '1,500.00', unit: 'piece' },
+      { id: 2, name: 'Oak Wood Coffee Table', qty: 1, color: 'Natural Oak', price: '450.00', unit: 'piece' },
+      { id: 3, name: 'Velvet Accent Chair', qty: 4, color: 'Emerald Green', price: '320.00', unit: 'piece' },
+    ],
+  };
+  // --- End of Mock Data ---
+
+  console.log(item, 'item');
+
   return (
     <Dialog
       isOpen={true}
       onClose={onClose}
       onRequestClose={onClose}
-      width={600}
+      width={700}
+      contentClassName="!p-0 bg-slate-50 dark:bg-slate-900 rounded-xl shadow-2xl"
     >
-      <div className="flex items-start justify-between">
-        <h5 className="mb-4">Details for: {item.name}</h5>
-        <span
-          className={`px-2 py-1 text-xs font-semibold rounded-full ${item.type === "Offer"
-              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
-              : "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300"
-            }`}
-        >
-          {item.type}
-        </span>
-      </div>
-      <div className="mt-4 space-y-3 text-sm max-h-[60vh] overflow-y-auto pr-2">
-        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
-          <span className="font-semibold text-gray-700 dark:text-gray-200">
-            Created By
-          </span>
-          <span className="text-gray-600 dark:text-gray-400">
-            {item.createdByInfo.userName}
-          </span>
-        </div>
-        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
-          <span className="font-semibold text-gray-700 dark:text-gray-200">
-            Assigned To
-          </span>
-          <span className="text-gray-600 dark:text-gray-400">
-            {item.assignedToInfo?.userName || "N/A"}
-          </span>
-        </div>
-        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
-          <span className="font-semibold text-gray-700 dark:text-gray-200">
-            Created Date
-          </span>
-          <span className="text-gray-600 dark:text-gray-400">
-            {dayjs(item.createdDate).format("D MMM YYYY, h:mm A")}
-          </span>
-        </div>
-        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
-          <span className="font-semibold text-gray-700 dark:text-gray-200">
-            Last Updated
-          </span>
-          <span className="text-gray-600 dark:text-gray-400">
-            {item.updated_at
-              ? dayjs(item.updated_at).format("D MMM YYYY, h:mm A")
-              : "N/A"}
-          </span>
-        </div>
-        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
-          <span className="font-semibold text-gray-700 dark:text-gray-200">
-            Updated By
-          </span>
-          <span className="text-gray-600 dark:text-gray-400">
-            {item.updated_by_user?.name || "N/A"}{" "}
-            {item.updated_by_user?.roles?.[0]?.display_name &&
-              `(${item.updated_by_user.roles[0].display_name})`}
-          </span>
-        </div>
-        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
-          <span className="font-semibold text-gray-700 dark:text-gray-200">
-            Number of Buyers
-          </span>
-          <span className="text-gray-600 dark:text-gray-400">
-            {item.numberOfBuyers ?? "N/A"}
-          </span>
-        </div>
-        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
-          <span className="font-semibold text-gray-700 dark:text-gray-200">
-            Number of Sellers
-          </span>
-          <span className="text-gray-600 dark:text-gray-400">
-            {item.numberOfSellers ?? "N/A"}
-          </span>
-        </div>
-        {item.groups && item.groups.length > 0 && (
-          <div className="pt-2">
-            <span className="font-semibold text-gray-700 dark:text-gray-200">
-              Group Details
-            </span>
-            <div className="mt-1 space-y-2 pl-2">
-              {item.groups.map((group, index) => (
-                <div
-                  key={index}
-                  className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md"
-                >
-                  <p className="font-semibold text-gray-800 dark:text-gray-100">
-                    {group.groupName}
-                  </p>
-                  <ul className="list-disc list-inside pl-2 mt-1 text-gray-600 dark:text-gray-400">
-                    {group.items.map((gItem, gIndex) => (
-                      <li key={gIndex}>{gItem}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+      <div className="flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <div className="hidden sm:flex items-center justify-center h-14 w-14 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                {item.type === "Offer" ? <TbTag size={28} /> : <TbShoppingCart size={28} />}
+              </div>
+              <div>
+                <h4 className="font-bold text-lg sm:text-xl text-slate-800 dark:text-slate-100">
+                  {item.name}
+                </h4>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  ID: {String(item?.originalApiItem?.generate_id).padStart(6, '0')}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <span
+                className={`px-2 py-1 text-xs font-semibold rounded-full ${item.type === "Offer"
+                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
+                  : "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300"
+                  }`}
+              >
+                {item.type}
+              </span>
             </div>
           </div>
-        )}
-      </div>
-      <div className="text-right mt-6">
-        <Button variant="solid" onClick={onClose}>
-          Close
-        </Button>
+        </div>
+
+        {/* Body */}
+        <div className="p-4 sm:p-6 space-y-5 overflow-y-auto">
+          {/* Offer Details Card */}
+          <div className="p-4 bg-white dark:bg-slate-800/60 rounded-lg">
+            <h6 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
+              Offer Details
+            </h6>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+              <DialogDetailRow label="Created By" value={item.createdByInfo.userName} />
+              <DialogDetailRow label="Assigned To" value={item.assignedToInfo?.userName} />
+              <DialogDetailRow label="Created Date" value={dayjs(item.createdDate).format("D MMM YYYY, h:mm A")} />
+              <DialogDetailRow label="Last Updated" value={item.updated_at ? dayjs(item.updated_at).format("D MMM YYYY, h:mm A") : 'N/A'} />
+              <DialogDetailRow label="Number of Buyers" value={item.numberOfBuyers} />
+              <DialogDetailRow label="Number of Sellers" value={item.numberOfSellers} />
+            </div>
+          </div>
+
+          {/* Products Card - IMPORTANT: Uses simulated data */}
+          {itemWithProducts.products && itemWithProducts.products.length > 0 && (
+            <div className="p-4 bg-white dark:bg-slate-800/60 rounded-lg">
+              <h6 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
+                Products ({itemWithProducts.products.length})
+              </h6>
+              <div className="space-y-3">
+                {itemWithProducts.products.map(product => (
+                  <div key={product.id} className="p-3 border dark:border-slate-700 rounded-md bg-slate-50 dark:bg-slate-800">
+                    <h6 className="font-semibold text-slate-800 dark:text-slate-100 mb-2">{product.name}</h6>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-xs">
+                      <div>
+                        <p className="text-slate-500">Quantity</p>
+                        <p className="font-semibold">{product.qty} {product.unit}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Color</p>
+                        <p className="font-semibold">{product.color}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Price</p>
+                        <p className="font-semibold">${product.price}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Groups Card */}
+          {item.groups && item.groups.length > 0 && (
+            <div className="p-4 bg-white dark:bg-slate-800/60 rounded-lg">
+              <h6 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
+                Associated Groups
+              </h6>
+              <div className="space-y-2">
+                {item.groups.map((group, index) => (
+                  <div key={index} className="p-2 bg-slate-50 dark:bg-slate-800 rounded-md">
+                    <p className="font-semibold text-sm text-slate-800 dark:text-gray-100">{group.groupName}</p>
+                    <ul className="list-disc list-inside pl-2 mt-1 text-xs text-slate-600 dark:text-slate-400">
+                      {group.items.map((gItem, gIndex) => (<li key={gIndex}>{gItem}</li>))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 text-right border-t border-slate-200 dark:border-slate-700">
+          <Button variant="solid" onClick={onClose}>
+            Close
+          </Button>
+        </div>
       </div>
     </Dialog>
   );
@@ -1077,7 +1121,7 @@ const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({
       send_users: formData.send_users,
       notification_title: formData.notification_title,
       message: formData.message,
-      module_id: String((item.originalApiItem as any).id),
+      module_id: String((item.originalApiItem as any).generate_id),
       module_name: "OfferDemand",
     };
     try {
@@ -1105,7 +1149,7 @@ const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({
         due_date: data.due_date
           ? dayjs(data.due_date).format("YYYY-MM-DD")
           : undefined,
-        module_id: String((item.originalApiItem as any).id),
+        module_id: String((item.originalApiItem as any).generate_id),
         module_name: "OfferDemand",
       };
       await dispatch(addTaskAction(payload)).unwrap();
@@ -1127,7 +1171,7 @@ const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({
     if (!item) return;
     setIsSubmittingAction(true);
     const payload = {
-      module_id: Number((item.originalApiItem as any).id),
+      module_id: Number((item.originalApiItem as any).generate_id),
       module_name: "OfferDemand",
       event_title: data.event_title,
       event_type: data.event_type,
@@ -1159,7 +1203,7 @@ const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({
     const payload = {
       item: data.item,
       notes: data.notes || "",
-      module_id: String((item.originalApiItem as any).id),
+      module_id: String((item.originalApiItem as any).generate_id),
       module_name: "OfferDemand",
       user_id: userData.id,
     };
@@ -1571,6 +1615,7 @@ const ItemTable = React.memo(
     selectable?: boolean;
   }) => (
     <DataTable
+      menuName="offer_demand"
       selectable={selectable}
       columns={columns}
       data={data}
@@ -1712,7 +1757,7 @@ const ItemTableTools = React.memo(
               </span>
             )}
           </Button>
-          <Button icon={<TbCloudUpload />} onClick={onExport}>
+          <Button menuName="offer_demand" isExport={true} icon={<TbCloudUpload />} onClick={onExport}>
             Export
           </Button>
         </div>
@@ -2086,8 +2131,8 @@ const OffersDemands = () => {
   const fetchData = useCallback(() => {
     const timerId = setTimeout(() => {
       const params = prepareApiParams(currentTableConfig, filterCriteria);
-      const shouldFetchOffers = currentTab === TABS.OFFER ||(currentTab === TABS.ALL &&(!filterCriteria.itemType || filterCriteria.itemType === "Offer"));
-      const shouldFetchDemands = currentTab === TABS.DEMAND ||  (currentTab === TABS.ALL && (!filterCriteria.itemType || filterCriteria.itemType === "Demand"));
+      const shouldFetchOffers = currentTab === TABS.OFFER || (currentTab === TABS.ALL && (!filterCriteria.itemType || filterCriteria.itemType === "Offer"));
+      const shouldFetchDemands = currentTab === TABS.DEMAND || (currentTab === TABS.ALL && (!filterCriteria.itemType || filterCriteria.itemType === "Demand"));
       if (shouldFetchOffers) {
         dispatch(getOffersAction(params));
       }
@@ -2099,7 +2144,7 @@ const OffersDemands = () => {
       clearTimeout(timerId);
     };
   }, [
-    dispatch,  currentTab, currentTableConfig, filterCriteria,  prepareApiParams,
+    dispatch, currentTab, currentTableConfig, filterCriteria, prepareApiParams,
   ]);
 
   useEffect(() => {
@@ -2120,10 +2165,10 @@ const OffersDemands = () => {
   }, [dispatch]);
 
   useEffect(() => {
-     const timerId = setTimeout(() => {
-       if (initialLoading) return;
-       fetchData();
-   
+    const timerId = setTimeout(() => {
+      if (initialLoading) return;
+      fetchData();
+
     }, 500);
     return () => {
       clearTimeout(timerId);
@@ -2570,12 +2615,12 @@ const OffersDemands = () => {
     () => [
       {
         header: "ID",
-        accessorKey: "id",
+        accessorKey: "generate_id",
         enableSorting: true,
         size: 70,
         cell: (props: CellContext<OfferDemandItem, any>) => (
           <span className="font-semibold text-xs">
-            {props.row.original.originalApiItem.id}
+            {props.row.original.originalApiItem.generate_id}
           </span>
         ),
       },
@@ -2620,7 +2665,7 @@ const OffersDemands = () => {
                   group.groupName === "Group B";
                 if (isSpecialGroup && group.items?.[0]) {
                   const fullText = group.items[0];
-                  const messageToCopy = `Offer ID: ${row.original.originalApiItem.id}\nOffer Name: ${row.original.name}\n\nMessage:\n${fullText}`;
+                  const messageToCopy = `Offer ID: ${row.original.originalApiItem.generate_id}\nOffer Name: ${row.original.name}\n\nMessage:\n${fullText}`;
                   return (
                     <div
                       key={index}
@@ -2784,7 +2829,7 @@ const OffersDemands = () => {
           <div className="lg:flex items-center justify-between mb-4">
             <h5 className="mb-4 lg:mb-0">Offers & Demands</h5>
             <div className="flex flex-col md:flex-row gap-2">
-              <Button
+              <Button menuName="offer_demand" isAdd={true}
                 variant="solid"
                 icon={<TbPlus />}
                 onClick={() => navigate("/sales-leads/offers/create")}
@@ -2793,7 +2838,7 @@ const OffersDemands = () => {
               >
                 Add Offer
               </Button>
-              <Button
+              <Button menuName="offer_demand" isAdd={true}
                 icon={<TbPlus />}
                 variant="solid"
                 onClick={() => navigate("/sales-leads/demands/create")}
@@ -3064,7 +3109,7 @@ const OffersDemands = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Assigned To">
+          {/* <FormItem label="Assigned To">
             <Controller
               name="assigneeIds"
               control={filterFormMethods.control}
@@ -3082,7 +3127,7 @@ const OffersDemands = () => {
                 />
               )}
             />
-          </FormItem>
+          </FormItem> */}
           <FormItem label="Created Date">
             <Controller
               name="createdDateRange"
@@ -3097,7 +3142,7 @@ const OffersDemands = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Updated Date">
+          {/* <FormItem label="Updated Date">
             <Controller
               name="updatedDateRange"
               control={filterFormMethods.control}
@@ -3110,7 +3155,7 @@ const OffersDemands = () => {
                 />
               )}
             />
-          </FormItem>
+          </FormItem> */}
         </Form>
       </Drawer>
       <OfferDemandModals

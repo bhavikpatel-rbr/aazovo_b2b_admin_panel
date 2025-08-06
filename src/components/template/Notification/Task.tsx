@@ -14,6 +14,7 @@ import {
     updateTaskStatusAPI,
     getEmployeesAction,
     getAllCompany,
+    getAllUsersAction,
 } from '@/reduxtool/master/middleware'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 
@@ -369,7 +370,7 @@ const TaskViewModal = ({ task, isOpen, onClose }: { task: Task | null; isOpen: b
                         <p className="text-sm whitespace-pre-wrap">{task.description}</p>
                     </div>
                 )}
-                
+
                 {!task.description && (
                     <p className="text-sm text-gray-500 text-center py-4">
                         No additional details provided for this task.
@@ -384,9 +385,9 @@ const TaskViewModal = ({ task, isOpen, onClose }: { task: Task | null; isOpen: b
 const TaskSummaryCards = ({ counts, activeFilter, onCardClick }: { counts: Record<FilterStatus | 'total', number>, activeFilter: FilterStatus, onCardClick: (status: FilterStatus) => void }) => {
     const cardData = [
         { key: 'all', title: 'Total Tasks', count: counts.total, icon: <BiTask size={24} />, color: 'indigo' },
-        { key: 'Pending', title: 'Pending', count: counts.Pending, icon: <BiTimeFive size={24}/>, color: 'amber' },
-        { key: 'in_progress', title: 'In Progress', count: counts.in_progress, icon: <BiHourglass size={24}/>, color: 'blue' },
-        { key: 'Completed', title: 'Completed', count: counts.Completed, icon: <BiCheckCircle size={24}/>, color: 'emerald' },
+        { key: 'Pending', title: 'Pending', count: counts.Pending, icon: <BiTimeFive size={24} />, color: 'amber' },
+        { key: 'in_progress', title: 'In Progress', count: counts.in_progress, icon: <BiHourglass size={24} />, color: 'blue' },
+        { key: 'Completed', title: 'Completed', count: counts.Completed, icon: <BiCheckCircle size={24} />, color: 'emerald' },
     ];
 
     return (
@@ -482,9 +483,10 @@ const DeleteConfirmationDialog = ({ isOpen, onClose, onConfirm, task, isDeleting
 // --- Main Component Logic ---
 const _Tasks = ({ className }: { className?: string }) => {
     const dispatch = useAppDispatch();
-    const { AllTaskData = [], Employees = [], status: loadingStatus, isSubmitting, AllCompanyData = [] } = useSelector(masterSelector, shallowEqual);
+    const { AllTaskData = [], Employees = [], getAllUserData, status: loadingStatus, isSubmitting, AllCompanyData = [] } = useSelector(masterSelector, shallowEqual);
     useEffect(() => {
-        dispatch(getAllCompany())
+        dispatch(getAllUsersAction()),
+            dispatch(getAllCompany())
     }, [dispatch])
     const [drawerIsOpen, setDrawerIsOpen] = useState(false);
     const [viewModalIsOpen, setViewModalIsOpen] = useState(false);
@@ -494,7 +496,19 @@ const _Tasks = ({ className }: { className?: string }) => {
     const [deleteConfirmIsOpen, setDeleteConfirmIsOpen] = useState(false);
     const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
-    const employeeOptions: EmployeeOption[] = useMemo(() => Array.isArray(Employees) ? Employees.map((emp: GeneralListItem) => ({ value: String(emp.id), label: emp.name })) : [], [Employees]);
+    const employeeOptions = useMemo(
+        () =>
+            Array.isArray(getAllUserData)
+                ? getAllUserData.map((user: any) => ({
+                    value: String(user.id),
+                    label: `(${user.employee_id}) - ${user.name || 'N/A'}`,
+                }))
+                : [],
+        [getAllUserData]
+
+    );
+
+    // const employeeOptions: EmployeeOption[] = useMemo(() => Array.isArray(Employees) ? Employees.map((emp: GeneralListItem) => ({ value: String(emp.id), label: emp.name })) : [], [Employees]);
     const companyOptions: CompanyOption[] = useMemo(() => Array.isArray(AllCompanyData) ? AllCompanyData.map((co: GeneralListItem) => ({ value: String(co.id), label: co.company_name })) : [], [AllCompanyData]);
 
     const onDrawerOpen = () => { if (!drawerIsOpen) { dispatch(getAllTaskAction()); dispatch(getEmployeesAction()); } setDrawerIsOpen(true); };

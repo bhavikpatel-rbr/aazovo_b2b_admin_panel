@@ -7,8 +7,10 @@ import React, {
   useMemo,
   useState,
 } from "react";
+
 import { Controller, useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import * as XLSX from 'xlsx'; // <-- ADD THIS IMPORT
 import { z } from "zod";
 
 // UI Components
@@ -27,27 +29,29 @@ import {
   Dialog,
   Drawer,
   Dropdown,
-  Form as UiForm,
-  FormItem as UiFormItem,
+  Form,
+  FormItem,
   Input,
-  Select as UiSelect,
+  Spinner,
   Table,
   Tag,
   Tooltip,
-  Spinner,
-  Form,
-  FormItem,
+  Form as UiForm,
+  FormItem as UiFormItem,
+  Select as UiSelect,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast";
 import Td from "@/components/ui/Table/Td";
 import Tr from "@/components/ui/Table/Tr";
+import toast from "@/components/ui/toast";
 
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  TbAlarm, TbBell, TbBellRinging, TbBrandWhatsapp, TbCalendarEvent, TbCalendarTime, TbChecks, TbCloudUpload, TbColumns, TbEye, TbFileSearch, TbFilter, TbInfoCircle, TbMail, TbNotesOff, TbPencil, TbPencilPlus, TbPlus, TbReceipt, TbReload, TbSearch, TbTagStarred, TbUser, TbUserCancel, TbUserCheck, TbUserCircle, TbUserExclamation, TbUsersGroup, TbX
+  TbAlarm, TbBell, TbBellRinging, TbBrandWhatsapp, TbCalendarEvent, TbCalendarTime, TbChecks, TbCloudUpload, TbColumns, TbEye, TbFileSearch, TbFilter, TbInfoCircle, TbMail, TbNotesOff, TbPencil, TbPencilPlus, TbPlus,
+  TbReload,
+  TbTagStarred, TbUser, TbUserCancel, TbUserCheck, TbUserCircle, TbUserExclamation, TbUsersGroup, TbX
 } from "react-icons/tb";
 
 // Types & Utils
@@ -61,19 +65,17 @@ import {
   addScheduleAction,
   addTaskAction,
   deleteAllMemberAction,
-  getAllUsersAction,
   getAlertsAction,
-  submitExportReasonAction,
+  getAllUsersAction,
   getMemberlistingAction,
+  submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 import { encryptStorage } from "@/utils/secureLocalStorage";
-import cloneDeep from "lodash/cloneDeep";
 import dayjs from "dayjs";
-import { useSelector } from "react-redux";
-import { isEmptyArray } from "formik";
 import { config } from "localforage";
+import { useSelector } from "react-redux";
 
 
 // --- START: Detailed Type Definitions (Matching API Response) ---
@@ -252,6 +254,161 @@ function exportToCsv(filename: string, rows: FormItem[]) {
   toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>); return false;
 }
 
+// --- START: NEW Excel Viewer Modal ---
+interface ExcelSheet {
+  name: string;
+  data: any[][];
+}
+
+// --- START: NEW Excel Viewer Modal (UPDATED with better error handling) ---
+interface ExcelSheet {
+  name: string;
+  data: any[][];
+}
+
+// --- START: NEW Excel Viewer Modal (UPDATED - Lenient Content-Type) ---
+interface ExcelSheet {
+  name: string;
+  data: any[][];
+}
+
+const ExcelViewerModal: React.FC<{ isOpen: boolean; onClose: () => void; fileUrl: string; title: string }> = ({ isOpen, onClose, fileUrl, title }) => {
+  const [sheets, setSheets] = useState<ExcelSheet[]>([]);
+  const [activeSheetIndex, setActiveSheetIndex] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      const loadExcelFile = async () => {
+        setIsLoading(true);
+        setError(null);
+        setSheets([]);
+        setActiveSheetIndex(0);
+
+        try {
+          const response = await fetch(fileUrl);
+
+          if (!response.ok) {
+            throw new Error(`Could not find the file at '${fileUrl}'. (HTTP Status: ${response.status}). Please ensure the file is in the 'public' directory and the dev server has been restarted.`);
+          }
+
+          // The strict content-type check has been removed.
+          // We will now rely on sheetjs to parse the binary data directly.
+
+          const arrayBuffer = await response.arrayBuffer();
+          const workbook = XLSX.read(arrayBuffer, { type: 'buffer' });
+
+          const parsedSheets: ExcelSheet[] = workbook.SheetNames.map(sheetName => {
+            const worksheet = workbook.Sheets[sheetName];
+            // Using { defval: "" } ensures that empty cells are represented as empty strings instead of being omitted.
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+            return { name: sheetName, data: jsonData as any[][] };
+          });
+
+          if (parsedSheets.length === 0 || workbook.SheetNames.length === 0) {
+            throw new Error("The Excel file is empty or could not be parsed. Please check if the file is a valid .xlsx file.");
+          }
+
+          setSheets(parsedSheets);
+        } catch (err: any) {
+          console.error("Error loading or parsing Excel file:", err);
+          setError(err.message || "An unknown error occurred while processing the file.");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      loadExcelFile();
+    }
+  }, [isOpen, fileUrl]);
+
+  const activeSheet = sheets[activeSheetIndex];
+  const headers = activeSheet?.data[0] || [];
+  const bodyRows = activeSheet?.data.slice(1) || [];
+
+  return (
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      width="95vw"
+      height="95vh"
+      contentClassName="flex flex-col p-0"
+    >
+      <div className="flex-shrink-0 flex items-center justify-between p-4 border-b dark:border-gray-700">
+        <h5 className="mb-0">{title}</h5>
+        <Button shape="circle" variant="plain" icon={<TbX />} onClick={onClose} />
+      </div>
+
+      <div className="flex-grow flex flex-col min-h-0">
+        {isLoading && (
+          <div className="flex-grow flex items-center justify-center">
+            <Spinner size="lg" />
+            <p className="ml-4">Loading Excel data...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="flex-grow flex flex-col items-center justify-center text-center p-8">
+            <TbFileSearch className="text-6xl text-red-400 mb-4" />
+            <h6 className="text-red-500">Error Loading File</h6>
+            <p className="max-w-md text-gray-600 dark:text-gray-300">{error}</p>
+            <p className="mt-4 text-xs text-gray-400">Please verify the file <code>{fileUrl}</code> in your project's <code>public</code> folder is a valid, uncorrupted Excel file.</p>
+          </div>
+        )}
+
+        {!isLoading && !error && sheets.length > 0 && (
+          <>
+            {sheets.length > 1 && (
+              <div className="flex-shrink-0 p-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm mr-2">Sheets:</span>
+                  {sheets.map((sheet, index) => (
+                    <Button
+                      key={sheet.name}
+                      size="xs"
+                      variant={index === activeSheetIndex ? 'solid' : 'default'}
+                      onClick={() => setActiveSheetIndex(index)}
+                    >
+                      {sheet.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="flex-grow overflow-auto">
+              <Table className="min-w-full">
+                <thead className="sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
+                  <Tr>
+                    {headers.map((header, index) => (
+                      <Td key={index} className="font-bold whitespace-nowrap">{header}</Td>
+                    ))}
+                  </Tr>
+                </thead>
+                <tbody>
+                  {bodyRows.length > 0 ? bodyRows.map((row, rowIndex) => (
+                    <Tr key={rowIndex} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                      {/* Using headers.length ensures we render a consistent number of cells per row, even if a row has missing data */}
+                      {Array.from({ length: headers.length }).map((_, cellIndex) => (
+                        <Td key={cellIndex} className="whitespace-nowrap">{row[cellIndex]}</Td>
+                      ))}
+                    </Tr>
+                  )) : (
+                    <Tr><Td colSpan={headers.length || 1} className="text-center py-8">No data found in this sheet.</Td></Tr>
+                  )}
+                </tbody>
+              </Table>
+            </div>
+          </>
+        )}
+      </div>
+    </Dialog>
+  );
+};
+// --- END: NEW Excel Viewer Modal ---
+// --- END: NEW Excel Viewer Modal ---
+// --- END: NEW Excel Viewer Modal ---
+
 // --- START: MODALS SECTION ---
 export type MemberModalType = "notification" | "task" | "calendar" | "viewDetail" | "alert" | "transaction" | "activity";
 export interface MemberModalState { isOpen: boolean; type: MemberModalType | null; data: FormItem | null; }
@@ -265,9 +422,13 @@ const AddNotificationDialog: React.FC<{ member: FormItem; onClose: () => void; u
 
 const AssignTaskDialog: React.FC<{ member: FormItem; onClose: () => void; userOptions: SelectOption[] }> = ({ member, onClose, userOptions }) => {
   const dispatch = useAppDispatch(); const [isLoading, setIsLoading] = useState(false);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({ resolver: zodResolver(taskValidationSchema), defaultValues: { task_title: `Follow up with ${member.name}`, assign_to: [], priority: 'Medium', }, mode: 'onChange' });
   const onAssignTask = async (data: TaskFormData) => { setIsLoading(true); const payload = { ...data, due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined, module_id: String(member.id), module_name: 'Member', }; try { await dispatch(addTaskAction(payload)).unwrap(); toast.push(<Notification type="success" title="Task Assigned!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message} />); } finally { setIsLoading(false); } };
-  return (<Dialog isOpen={true} onClose={onClose}> <h5 className="mb-4">Assign Task for {member.name}</h5> <UiForm onSubmit={handleSubmit(onAssignTask)}> <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></UiFormItem> </div> <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} /></UiFormItem> <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> <div className="text-right mt-6"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Assign Task</Button></div> </UiForm> </Dialog>);
+  return (<Dialog isOpen={true} onClose={onClose}> <h5 className="mb-4">Assign Task for {member.name}</h5> <UiForm onSubmit={handleSubmit(onAssignTask)}> <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></UiFormItem> </div> <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) =>
+    <DatePicker minDate={today} placeholder="Select date" value={field.value} onChange={field.onChange} />} />
+  </UiFormItem> <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> <div className="text-right mt-6"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Assign Task</Button></div> </UiForm> </Dialog>);
 };
 
 const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; onSubmit: (data: ScheduleFormData) => void; isLoading: boolean; }> = ({ member, onClose, onSubmit, isLoading }) => {
@@ -770,7 +931,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   useEffect(() => { filterFormMethods.reset(filterCriteria); }, [filterCriteria, filterFormMethods]);
 
   useEffect(() => {
-     setIsLoading(true);
+    setIsLoading(true);
     const timerId = setTimeout(() => {
       const fetchMembers = () => {
         const formatFilterForApi = (data: any[] | undefined) => {
@@ -837,20 +998,26 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   // Data for the table is now directly from the Redux store
   const pageData = useMemo(() => MemberData?.data?.data || [], [MemberData]);
   const total = useMemo(() => MemberData?.data?.total || 0, [MemberData]);
-
+  const navigate = useNavigate();
 
   const columns: ColumnDef<FormItem>[] = useMemo(() => [
+
     {
       header: "Member", accessorKey: "name", id: "member", size: 200, cell: ({ row }) => (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <Avatar src={row.original.full_profile_pic || undefined} shape="circle" size="sm" icon={<TbUserCircle />} />
-            <div className="text-xs">
+            {/* <Avatar src={row.original.full_profile_pic || undefined} shape="circle" size="sm" icon={<TbUserCircle />} /> */}
+            <Link
+              to={
+                `/business-entities/member-view/${row.original.id}`
+              }
+              className="text-xs">
               <b className="text-xs text-blue-500"><em>{row.original.customer_code}</em></b> <br />
               <b className="text-sm">{row.original.name}</b>
-            </div>
+            </Link>
           </div>
-          <div className="text-xs text-gray-500 pl-10">
+          <div className="text-xs text-gray-500 ">
+            <div>{row.original.number_code}{row.original.number}</div>
             <div>{row.original.email}</div>
             <div>{row.original.country?.name}</div>
           </div>
@@ -1019,11 +1186,12 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
           </Dropdown>
           <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onRefreshData} /></Tooltip>
           <Button icon={<TbFilter />} onClick={() => setFilterDrawerOpen(true)}>Filter{activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
-          <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={total === 0}>Export</Button>
+          <Button isExport={true} menuName="member"
+            icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={total === 0}>Export</Button>
         </div>
       </div>
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
-      <DataTable selectable columns={filteredColumns} data={pageData} noData={!isLoading && pageData.length === 0} loading={isLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
+      <DataTable menuName="member" selectable columns={filteredColumns} data={pageData} noData={!isLoading && pageData.length === 0} loading={isLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} width={500} onClose={() => setFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterMemberForm" type="submit">Apply</Button></div>}>
         <UiForm id="filterMemberForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
@@ -1107,6 +1275,7 @@ const FormListSelected = () => {
 const Member = () => {
   const navigate = useNavigate();
   const { MemberlistData: MemberData } = useSelector(masterSelector);
+  const [isExcelViewerOpen, setIsExcelViewerOpen] = useState(false); // <-- ADD THIS STATE
 
   const MEMBER_FILTER_STORAGE_KEY = 'memberFilterState';
 
@@ -1156,14 +1325,33 @@ const Member = () => {
     setAndPersistFilters(newFilters);
   }, [setAndPersistFilters]);
 
+  // MODIFIED: This function now opens the modal
+  const handleViewBitRouteClick = () => {
+    setIsExcelViewerOpen(true);
+  };
+
+
   return (
     <MemberListProvider>
       <Container>
         <AdaptiveCard>
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-0">
               <h5>Members</h5>
-              <Button variant="solid" icon={<TbPlus />} onClick={() => navigate("/business-entities/member-create")}>Add New</Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  icon={<TbEye />}
+                  onClick={handleViewBitRouteClick} // <-- MODIFIED
+                  clickFeedback={false}
+                  color="green-600"
+                >
+                  View Bit Route
+                </Button>
+                <Button menuName="member"
+                  isAdd={true} variant="solid" icon={<TbPlus />} onClick={() => navigate("/business-entities/member-create")}>Add New</Button>
+
+
+              </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 mb-4 gap-3">
               <Tooltip title="Click to show all members">
@@ -1192,6 +1380,13 @@ const Member = () => {
         </AdaptiveCard>
       </Container>
       <FormListSelected />
+      {/* ADD THIS MODAL RENDER */}
+      <ExcelViewerModal
+        isOpen={isExcelViewerOpen}
+        onClose={() => setIsExcelViewerOpen(false)}
+        fileUrl="/public/bit_route_rm_wise_data.xlsx"
+        title="Bit Route Data"
+      />
     </MemberListProvider>
   );
 };

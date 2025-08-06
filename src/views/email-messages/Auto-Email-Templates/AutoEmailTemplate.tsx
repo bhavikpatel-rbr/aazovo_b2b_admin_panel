@@ -265,7 +265,9 @@ const AutoEmailTemplatesTableTools = ({ onSearchChange, onFilter, onExport, onCl
         <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>
           Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
         </Button>
-        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
+        <Button
+              menuName="auto_email_templates" isExport={true}
+         icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
       </div>
     </div>
   );
@@ -294,7 +296,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
 };
 
 type AutoEmailTemplatesTableProps = { columns: ColumnDef<AutoEmailTemplateItem>[]; data: AutoEmailTemplateItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: AutoEmailTemplateItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: AutoEmailTemplateItem) => void; onAllRowSelect: (checked: boolean, rows: Row<AutoEmailTemplateItem>[]) => void; };
-const AutoEmailTemplatesTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: AutoEmailTemplatesTableProps) => (<DataTable columns={columns} data={data} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} noData={!loading && data.length === 0} />);
+const AutoEmailTemplatesTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: AutoEmailTemplatesTableProps) => (<DataTable menuName="auto_email_templates" columns={columns} data={data} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} noData={!loading && data.length === 0} />);
 type AutoEmailTemplatesSelectedFooterProps = { selectedItems: AutoEmailTemplateItem[]; onDeleteSelected: () => void; isDeleting: boolean; };
 const AutoEmailTemplatesSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: AutoEmailTemplatesSelectedFooterProps) => { const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false); if (selectedItems.length === 0) return null; return (<> <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"> <div className="flex items-center justify-between w-full px-4 sm:px-8"> <span className="flex items-center gap-2"> <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span> <span className="font-semibold"> {selectedItems.length} Template{selectedItems.length > 1 ? "s" : ""} selected </span> </span> <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={() => setDeleteConfirmOpen(true)} loading={isDeleting}>Delete Selected</Button> </div> </StickyFooter> <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title={`Delete ${selectedItems.length} Template(s)`} onClose={() => setDeleteConfirmOpen(false)} onRequestClose={() => setDeleteConfirmOpen(false)} onCancel={() => setDeleteConfirmOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteConfirmOpen(false); }}> <p>Are you sure you want to delete the selected template(s)?</p> </ConfirmDialog> </>); };
 
@@ -347,19 +349,19 @@ const AutoEmailTemplatesListing = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-        setInitialLoading(true);
-        try {
-            await Promise.all([
-                dispatch(getAutoEmailTemplatesAction()),
-                dispatch(getParentCategoriesAction()),
-                dispatch(getDepartmentsAction()),
-            ]);
-        } catch (error) {
-            console.error("Failed to load initial data", error);
-            toast.push(<Notification title="Data Load Failed" type="danger">Could not load necessary data.</Notification>)
-        } finally {
-            setInitialLoading(false);
-        }
+      setInitialLoading(true);
+      try {
+        await Promise.all([
+          dispatch(getAutoEmailTemplatesAction()),
+          dispatch(getParentCategoriesAction()),
+          dispatch(getDepartmentsAction()),
+        ]);
+      } catch (error) {
+        console.error("Failed to load initial data", error);
+        toast.push(<Notification title="Data Load Failed" type="danger">Could not load necessary data.</Notification>)
+      } finally {
+        setInitialLoading(false);
+      }
     };
     fetchData();
   }, [dispatch]);
@@ -624,7 +626,9 @@ const AutoEmailTemplatesListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Auto Email Templates</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button>
+            <Button
+              menuName="auto_email_templates" isAdd={true}
+              variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 mb-4 gap-2">
             <Tooltip title="Click to show all templates"><div onClick={() => handleCardClick('all')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbAlignBoxCenterBottom size={24} /></div><div><div className="text-blue-500">{renderCardContent((autoEmailTemplatesData as any)?.counts?.total)}</div><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>

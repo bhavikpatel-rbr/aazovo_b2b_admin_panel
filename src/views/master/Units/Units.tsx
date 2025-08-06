@@ -137,7 +137,7 @@ const Units = () => {
 
     const { unitData = { data: [] }, ParentCategories = [] } = useSelector(masterSelector, shallowEqual);
     const isDataReady = !initialLoading;
-    
+
     const categoryOptionsForSelect = useMemo(() => Array.isArray(ParentCategories) ? ParentCategories.map((cat: Category) => ({ value: cat.id, label: cat.name })) : [], [ParentCategories]);
     const unitNameOptionsForFilter = useMemo(() => Array.isArray(unitData?.data) ? [...new Set(unitData?.data.map(doc => doc.name))].sort().map(name => ({ value: name, label: name })) : [], [unitData?.data]);
 
@@ -180,35 +180,35 @@ const Units = () => {
         { header: "Unit Name", accessorKey: "name", enableSorting: true, size: 200 },
         { header: "Category", accessorKey: "categories", size: 250, cell: (props) => { const categories = props.row.original.categories || []; return (<div className="flex flex-wrap gap-1">{categories.map(cat => <Tag key={cat.id} className="bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 text-[11px] border-b border-emerald-300 dark:border-emerald-700">{cat.name}</Tag>)}</div>) } },
         {
-        header: "Updated Info",
-        accessorKey: "updated_at",
-        enableSorting: true,
-        size: 200,
-        cell: (props) => {
-          const { updated_at, updated_by_user } = props.row.original;
-          return (
-            <div className="flex items-center gap-2">
-              <Avatar
-                src={updated_by_user?.profile_pic_path}
-                shape="circle"
-                size="sm"
-                icon={<TbUserCircle />}
-                className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-                onClick={() =>
-                  openImageViewer(updated_by_user?.profile_pic_path)
-                }
-              />
-              <div>
-                <span>{updated_by_user?.name || "N/A"}</span>
-                <div className="text-xs">
-                  <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
-                </div>
-                <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
-              </div>
-            </div>
-          );
+            header: "Updated Info",
+            accessorKey: "updated_at",
+            enableSorting: true,
+            size: 200,
+            cell: (props) => {
+                const { updated_at, updated_by_user } = props.row.original;
+                return (
+                    <div className="flex items-center gap-2">
+                        <Avatar
+                            src={updated_by_user?.profile_pic_path}
+                            shape="circle"
+                            size="sm"
+                            icon={<TbUserCircle />}
+                            className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                            onClick={() =>
+                                openImageViewer(updated_by_user?.profile_pic_path)
+                            }
+                        />
+                        <div>
+                            <span>{updated_by_user?.name || "N/A"}</span>
+                            <div className="text-xs">
+                                <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
+                            </div>
+                            <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
+                        </div>
+                    </div>
+                );
+            },
         },
-      },
         { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
         { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip></div>) },
     ], [openEditDrawer]);
@@ -221,7 +221,7 @@ const Units = () => {
         if (activeFilters.names?.length) { const names = new Set(activeFilters.names.map(n => n.toLowerCase())); processedData = processedData.filter(item => names.has(item.name.toLowerCase())); }
         if (activeFilters.categoryIds?.length) { const catIds = new Set(activeFilters.categoryIds.map(id => Number(id))); processedData = processedData.filter(item => item.categories?.some(cat => catIds.has(cat.id))); }
         if (activeFilters.status?.length) { const statuses = new Set(activeFilters.status); processedData = processedData.filter(item => statuses.has(item.status)); }
-        
+
         if (tableData.query) {
             const query = tableData.query.toLowerCase().trim();
             processedData = processedData.filter(item =>
@@ -240,7 +240,7 @@ const Units = () => {
         const pageSize = tableData.pageSize as number;
         const startIndex = (pageIndex - 1) * pageSize;
         if (!Array.isArray(processedData)) {
-          processedData = Object.values(processedData); 
+            processedData = Object.values(processedData);
         }
         return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
     }, [unitData?.data, tableData, activeFilters]);
@@ -270,36 +270,36 @@ const Units = () => {
 
     const openAddDrawer = () => { formMethods.reset({ name: "", category_ids: [], status: 'Active' }); setIsAddDrawerOpen(true); };
     const closeAddDrawer = () => { setIsAddDrawerOpen(false); };
-    const onAddUnitSubmit = async (data: UnitFormData) => { 
-        setIsSubmitting(true); 
-        try { 
-            await dispatch(addUnitAction({ name: data.name, category_id: data.category_ids, status: data.status })).unwrap(); 
-            toast.push(<Notification title="Unit Added" type="success">{`Unit "${data.name}" was successfully added.`}</Notification>); 
-            closeAddDrawer(); 
-            refreshData(); 
-        } catch (error: any) { 
-            toast.push(<Notification title="Failed to Add Unit" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
-        } finally { 
-            setIsSubmitting(false); 
-        } 
+    const onAddUnitSubmit = async (data: UnitFormData) => {
+        setIsSubmitting(true);
+        try {
+            await dispatch(addUnitAction({ name: data.name, category_id: data.category_ids, status: data.status })).unwrap();
+            toast.push(<Notification title="Unit Added" type="success">{`Unit "${data.name}" was successfully added.`}</Notification>);
+            closeAddDrawer();
+            refreshData();
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Add Unit" type="danger">{error.message || "An unexpected error occurred."}</Notification>);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
-    
+
     const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingUnit(null); };
-    const onEditUnitSubmit = async (data: UnitFormData) => { 
-        if (!editingUnit?.id) return; 
-        setIsSubmitting(true); 
-        try { 
-            await dispatch(editUnitAction({ id: editingUnit.id, name: data.name, category_id: data.category_ids, status: data.status })).unwrap(); 
-            toast.push(<Notification title="Unit Updated" type="success">{`"${data.name}" was successfully updated.`}</Notification>); 
-            closeEditDrawer(); 
-            refreshData(); 
-        } catch (error: any) { 
-            toast.push(<Notification title="Failed to Update Unit" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
-        } finally { 
-            setIsSubmitting(false); 
-        } 
+    const onEditUnitSubmit = async (data: UnitFormData) => {
+        if (!editingUnit?.id) return;
+        setIsSubmitting(true);
+        try {
+            await dispatch(editUnitAction({ id: editingUnit.id, name: data.name, category_id: data.category_ids, status: data.status })).unwrap();
+            toast.push(<Notification title="Unit Updated" type="success">{`"${data.name}" was successfully updated.`}</Notification>);
+            closeEditDrawer();
+            refreshData();
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Update Unit" type="danger">{error.message || "An unexpected error occurred."}</Notification>);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
-    
+
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
         setIsSubmittingExportReason(true);
@@ -360,6 +360,7 @@ const Units = () => {
                     {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching unit.</div>}
                     <div className="flex-grow overflow-auto">
                         <DataTable
+                            menuName="unit"
                             columns={filteredColumns}
                             data={pageData}
                             noData={pageData.length <= 0}
@@ -381,68 +382,68 @@ const Units = () => {
                 </Form>
                 {isEditDrawerOpen && editingUnit && (
                     <div className=" grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-            <div>
-              <b className="mt-3 mb-3 font-semibold text-primary">
-                Latest Update:
-              </b>
-              <br />
-              <p className="text-sm font-semibold">
-                {editingUnit.updated_by_user?.name || "N/A"}
-              </p>
-              <p>
-                {editingUnit.updated_by_user?.roles[0]?.display_name ||
-                  "N/A"}
-              </p>
-            </div>
-            <div className="text-right">
-              <br />
-              <span className="font-semibold">Created At:</span>{" "}
-              <span>
-                {editingUnit.created_at
-                  ? `${new Date(
-                      editingUnit.created_at
-                    ).getDate()} ${new Date(
-                      editingUnit.created_at
-                    ).toLocaleString("en-US", {
-                      month: "short",
-                    })} ${new Date(
-                      editingUnit.created_at
-                    ).getFullYear()}, ${new Date(
-                      editingUnit.created_at
-                    ).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}`
-                  : "N/A"}
-              </span>
-              <br />
-              <span className="font-semibold">Updated At:</span>{" "}
-              <span>
-                {}
-                {editingUnit.updated_at
-                  ? `${new Date(
-                      editingUnit.updated_at
-                    ).getDate()} ${new Date(
-                      editingUnit.updated_at
-                    ).toLocaleString("en-US", {
-                      month: "short",
-                    })} ${new Date(
-                      editingUnit.updated_at
-                    ).getFullYear()}, ${new Date(
-                      editingUnit.updated_at
-                    ).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}`
-                  : "N/A"}
-              </span>
-            </div>
-          </div>
+                        <div>
+                            <b className="mt-3 mb-3 font-semibold text-primary">
+                                Latest Update:
+                            </b>
+                            <br />
+                            <p className="text-sm font-semibold">
+                                {editingUnit.updated_by_user?.name || "N/A"}
+                            </p>
+                            <p>
+                                {editingUnit.updated_by_user?.roles[0]?.display_name ||
+                                    "N/A"}
+                            </p>
+                        </div>
+                        <div className="text-right">
+                            <br />
+                            <span className="font-semibold">Created At:</span>{" "}
+                            <span>
+                                {editingUnit.created_at
+                                    ? `${new Date(
+                                        editingUnit.created_at
+                                    ).getDate()} ${new Date(
+                                        editingUnit.created_at
+                                    ).toLocaleString("en-US", {
+                                        month: "short",
+                                    })} ${new Date(
+                                        editingUnit.created_at
+                                    ).getFullYear()}, ${new Date(
+                                        editingUnit.created_at
+                                    ).toLocaleTimeString("en-US", {
+                                        hour: "numeric",
+                                        minute: "2-digit",
+                                        hour12: true,
+                                    })}`
+                                    : "N/A"}
+                            </span>
+                            <br />
+                            <span className="font-semibold">Updated At:</span>{" "}
+                            <span>
+                                { }
+                                {editingUnit.updated_at
+                                    ? `${new Date(
+                                        editingUnit.updated_at
+                                    ).getDate()} ${new Date(
+                                        editingUnit.updated_at
+                                    ).toLocaleString("en-US", {
+                                        month: "short",
+                                    })} ${new Date(
+                                        editingUnit.updated_at
+                                    ).getFullYear()}, ${new Date(
+                                        editingUnit.updated_at
+                                    ).toLocaleTimeString("en-US", {
+                                        hour: "numeric",
+                                        minute: "2-digit",
+                                        hour12: true,
+                                    })}`
+                                    : "N/A"}
+                            </span>
+                        </div>
+                    </div>
                 )}
             </Drawer>
-            
+
             <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
                 <Form id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
                     <FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem>

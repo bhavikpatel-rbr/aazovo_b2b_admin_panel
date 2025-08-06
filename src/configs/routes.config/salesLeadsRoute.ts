@@ -47,6 +47,37 @@ const salesLeadsRoute: Routes = [
     },
   },
   {
+    key: "salesLeads.wallListing",
+    path: `${SALES_LEADS_PREFIX_PATH}/wall-item/lead/add`,
+    component: lazy(() => import("@/views/sales-Leads/Wall-Listing/Components/AddLeadPage")),
+    authority: [ADMIN, USER],
+    meta: {
+      pageContainerType: "contained",
+    },
+  },
+  {
+    key: "salesLeads.wallListing",
+    path: `${SALES_LEADS_PREFIX_PATH}/wall-item/offers/create`,
+    component: lazy(
+      () => import("@/views/sales-Leads/Wall-Listing/Components/CreateOffer")
+    ),
+    authority: [ADMIN, USER],
+    meta: {
+      pageContainerType: "contained",
+    },
+  },
+  {
+    key: "salesLeads.wallListing",
+    path: `${SALES_LEADS_PREFIX_PATH}/wall-item/demands/create`,
+    component: lazy(
+      () => import("@/views/sales-Leads/Wall-Listing/Components/CreateDemand")
+    ),
+    authority: [ADMIN, USER],
+    meta: {
+      pageContainerType: "contained",
+    },
+  },
+  {
     key: "salesLeads.opportunities",
     path: `${SALES_LEADS_PREFIX_PATH}/opportunities`,
     component: lazy(() => import("@/views/sales-Leads/Opportunities")),
@@ -134,17 +165,6 @@ const salesLeadsRoute: Routes = [
       pageContainerType: "contained",
     },
   },
-  {
-    key: "salesLeads.offersDemands",
-    path: `${SALES_LEADS_PREFIX_PATH}/offers/edit/:id`,
-    component: lazy(
-      () => import("@/views/sales-Leads/Offers-Demands/OfferCreate/EditOffer")
-    ),
-    authority: [ADMIN, USER],
-    meta: {
-      pageContainerType: "contained",
-    },
-  },
 {
   key: "salesLeads.offersDemands",
   path: `${SALES_LEADS_PREFIX_PATH}/demands/create`,
@@ -157,17 +177,6 @@ const salesLeadsRoute: Routes = [
     pageContainerType: "contained",
   },
 },
-  {
-    key: "salesLeads.offersDemands",
-    path: `${SALES_LEADS_PREFIX_PATH}/demands/edit/:id`,
-    component: lazy(
-      () => import("@/views/sales-Leads/Offers-Demands/DemandCreate/EditDemand")
-    ),
-    authority: [ADMIN, USER],
-    meta: {
-      pageContainerType: "contained",
-    },
-  },
 {
     key: 'salesLeads.lead', // Distinct key
     path: `${SALES_LEADS_PREFIX_PATH}/lead/add`,

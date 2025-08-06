@@ -7,13 +7,7 @@ import dayjs from "dayjs";
 // UI Components
 import Input from "@/components/ui/Input";
 import { FormItem, FormContainer } from "@/components/ui/Form";
-import {
-  Select as UiSelect,
-  DatePicker,
-  Button,
-  Table,
-  Tooltip,
-} from "@/components/ui";
+import { Select as UiSelect, DatePicker, Button } from "@/components/ui";
 import InputNumber from "@/components/ui/Input/InputNumber";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
@@ -29,34 +23,21 @@ import { BiChevronRight } from "react-icons/bi";
 import type { LeadFormData } from "../types"; // Ensure this path is correct
 import {
   leadFormSchema,
-  leadStatusOptions,
-  enquiryTypeOptions,
   leadIntentOptions,
   deviceConditionOptions as baseDeviceConditionOptions,
 } from "../types"; // Ensure this path is correct
 
 // Redux
 import { useAppDispatch } from "@/reduxtool/store";
-import { shallowEqual } from "react-redux";
-import { useSelector } from "react-redux";
-
 import {
   getAllProductAction,
   getProductSpecificationsAction,
   getPaymentTermAction,
   addLeadAction,
   getMembersAction,
-  getSalesPersonAction,
-  getSuppliersAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
-
-type ApiLookupItem = {
-  id: string | number;
-  name: string;
-  term_name?: string;
-  [key: string]: any;
-};
+import { useSelector } from "react-redux";
 
 const productStatusOptions = [
   { value: "Non-active", label: "Non-active" },
@@ -66,7 +47,6 @@ const productStatusOptions = [
 const cartoonTypeOptions = [
   { value: 1, label: "Master Carton" },
   { value: 2, label: "Non - Master Carton" },
-
 ];
 
 const deviceConditionOptions = [
@@ -86,10 +66,8 @@ const AddLeadPage = () => {
     ProductSpecificationsData = [],
     PaymentTermsData = [],
     memberData = [],
-    salesPerson = [],
-    suppliers = [],
     status: masterLoadingStatus = "idle",
-  } = useSelector(masterSelector, shallowEqual);
+  } = useSelector(masterSelector);
 
   const {
     control,
@@ -101,14 +79,12 @@ const AddLeadPage = () => {
     resolver: zodResolver(leadFormSchema),
     defaultValues: {
       member_id: null,
-      enquiry_type: "",
       lead_intent: null,
       product_id: null,
       product_spec_id: null,
       qty: null,
       target_price: null,
-      lead_status: "New",
-      assigned_sales_person_id: null,
+      lead_status: "New", // Default status for new leads
       source_supplier_id: null,
       source_qty: null,
       source_price: null,
@@ -129,22 +105,16 @@ const AddLeadPage = () => {
   const leadIntentValue = watch("lead_intent");
 
   const leadMemberLabel = useMemo(() => {
-    if (leadIntentValue === "Buy") return <div>Lead Member (Buyer)<span className="text-red-500"> * </span></div>;
-    if (leadIntentValue === "Sell") return <div>Lead Member (Supplier)<span className="text-red-500"> * </span></div>;
-    return <div>Lead Member (Supplier/Buyer)<span className="text-red-500"> * </span></div>;
+    if (leadIntentValue === "Buy") return <div>Lead Member (Buyer)<span className="text-red-500"> *</span></div>;
+    if (leadIntentValue === "Sell") return <div>Lead Member (Supplier)<span className="text-red-500"> *</span></div>;
+    return <div>Lead Member (Supplier/Buyer)<span className="text-red-500"> *</span></div>;
   }, [leadIntentValue]);
 
   const sourceMemberLabel = useMemo(() => {
-    if (leadIntentValue === "Buy") return <div>Source Member (Supplier)<span className="text-red-500"> * </span></div>;
-    if (leadIntentValue === "Sell") return <div>Source Member (Buyer)<span className="text-red-500"> * </span></div>;
-    return <div>Source Member (Supplier)<span className="text-red-500"> * </span></div>;
+    if (leadIntentValue === "Buy") return <div>Source Member (Supplier)<span className="text-red-500"> *</span></div>;
+    if (leadIntentValue === "Sell") return <div>Source Member (Buyer)<span className="text-red-500"> *</span></div>;
+    return <div>Source Member (Supplier)<span className="text-red-500"> *</span></div>;
   }, [leadIntentValue]);
-
-  useEffect(() => {
-    if (Object.keys(errors).length > 0) {
-      console.log("Form Validation Errors: ", errors);
-    }
-  }, [errors]);
 
   useEffect(() => {
     const fetchDropdownData = async () => {
@@ -152,16 +122,11 @@ const AddLeadPage = () => {
         await Promise.all([
           dispatch(getAllProductAction()),
           dispatch(getProductSpecificationsAction()),
-          dispatch(getSalesPersonAction()),
           dispatch(getMembersAction()),
-          dispatch(getSuppliersAction()),
           dispatch(getPaymentTermAction()),
         ]);
       } catch (error) {
-        console.error(
-          "Failed to fetch dropdown data for Add Lead page:",
-          error
-        );
+        console.error("Failed to fetch dropdown data for Add Lead page:", error);
         toast.push(
           <Notification title="Data Load Error" type="danger">
             Could not load selection options.
@@ -176,7 +141,7 @@ const AddLeadPage = () => {
 
   const productOptions = useMemo(() => {
     if (!Array.isArray(productsMasterData)) return [];
-    return productsMasterData.map((product: ApiLookupItem) => ({
+    return productsMasterData.map((product) => ({
       value: product.id,
       label: product.name,
     }));
@@ -184,7 +149,7 @@ const AddLeadPage = () => {
 
   const productSpecOptions = useMemo(() => {
     if (!Array.isArray(ProductSpecificationsData)) return [];
-    return ProductSpecificationsData.map((spec: ApiLookupItem) => ({
+    return ProductSpecificationsData.map((spec) => ({
       value: spec.id,
       label: spec.name,
     }));
@@ -192,7 +157,7 @@ const AddLeadPage = () => {
 
   const paymentTermOptions = useMemo(() => {
     if (!Array.isArray(PaymentTermsData)) return [];
-    return PaymentTermsData.map((pt: ApiLookupItem) => ({
+    return PaymentTermsData.map((pt) => ({
       value: pt.id,
       label: pt.term_name || pt.name,
     }));
@@ -200,41 +165,28 @@ const AddLeadPage = () => {
 
   const leadMemberOptions = useMemo(() => {
     if (!Array.isArray(memberData)) return [];
-    return memberData.map((member: ApiLookupItem) => ({
+    return memberData.map((member) => ({
       value: member.id,
-      label: `(${member.customer_code}) - ${member.name || 'N/A'}`,
+      label: `(${member.customer_code}) - ${member.name || "N/A"}`,
     }));
   }, [memberData]);
-
-  const salesPersonOption = useMemo(() => {
-    if (!Array.isArray(salesPerson)) return [];
-    return salesPerson.map((product: ApiLookupItem) => ({
-      value: product.id,
-      label: `(${product.customer_code}) - ${product.name || 'N/A'}`,
-      // label: product.name,
-    }));
-  }, [salesPerson]);
 
   const onSubmit = async (data: LeadFormData) => {
     setIsSubmitting(true);
 
-    // Find the label for the cartoon type ID
     const cartoonTypeLabel =
       cartoonTypeOptions.find(
         (option) => option.value === data.source_cartoon_type_id
       )?.label || null;
 
-    // --- START: PAYLOAD TRANSFORMATION ---
-    // Transform the form data to match the required API payload structure
     const apiPayload = {
+      lead_type:'Manual lead',
       lead_intent: data.lead_intent,
       lead_member: data.member_id,
-      enquiry_type: data.enquiry_type,
       product_id: data.product_id,
       qty: data.qty,
       target_price: data.target_price,
       lead_status: data.lead_status,
-      assigned_saled_id: data.assigned_sales_person_id,
       product_spec_id: data.product_spec_id,
       source_member_id: data.source_supplier_id,
       source_qty: data.source_qty,
@@ -250,7 +202,6 @@ const AddLeadPage = () => {
       location: data.source_location,
       internal_remark: data.source_internal_remarks,
     };
-    // --- END: PAYLOAD TRANSFORMATION ---
 
     try {
       await dispatch(addLeadAction(apiPayload)).unwrap();
@@ -260,7 +211,7 @@ const AddLeadPage = () => {
         </Notification>
       );
       reset();
-      navigate("/sales-leads/lead");
+      navigate("/sales-leads/lead"); // Navigate to the leads list page
     } catch (error: any) {
       toast.push(
         <Notification title="Error" type="danger">
@@ -274,11 +225,10 @@ const AddLeadPage = () => {
 
   const handleCancel = () => {
     if (isDirty) setCancelConfirmOpen(true);
-    else navigate("/sales/leads");
+    else navigate("/sales-leads/lead");
   };
 
-  const isLoadingInitialData =
-    masterLoadingStatus === "loading" && !initialDataFetched;
+  const isLoadingInitialData = masterLoadingStatus === "loading" && !initialDataFetched;
 
   if (isLoadingInitialData) {
     return (
@@ -290,8 +240,8 @@ const AddLeadPage = () => {
 
   return (
     <Container className="h-full">
-      <div className="flex gap-1 items-end mb-3 ">
-        <NavLink to="/sales/leads">
+      <div className="flex gap-1 items-end mb-3">
+        <NavLink to="/sales-leads/lead">
           <h6 className="font-semibold hover:text-primary">Leads</h6>
         </NavLink>
         <BiChevronRight size={22} color="black" />
@@ -300,9 +250,8 @@ const AddLeadPage = () => {
       <FormContainer>
         <form onSubmit={handleSubmit(onSubmit)}>
           <AdaptableCard className="mb-4">
-           
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2">
-                            <FormItem
+              <FormItem
                 label="Lead Intent"
                 invalid={!!errors.lead_intent}
                 errorMessage={errors.lead_intent?.message}
@@ -314,9 +263,7 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Intent"
                       options={leadIntentOptions}
-                      value={leadIntentOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={leadIntentOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
                       isClearable
                     />
@@ -335,17 +282,14 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Member"
                       options={leadMemberOptions}
-                      value={leadMemberOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={leadMemberOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={false}
                     />
                   )}
                 />
               </FormItem>
 
-               <FormItem
+              <FormItem
                 label={sourceMemberLabel}
                 invalid={!!errors.source_supplier_id}
                 errorMessage={errors.source_supplier_id?.message}
@@ -355,41 +299,18 @@ const AddLeadPage = () => {
                   control={control}
                   render={({ field }) => (
                     <UiSelect
-                      placeholder="Select Supplier"
+                      placeholder="Select Source Member"
                       options={leadMemberOptions}
-                      value={leadMemberOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={leadMemberOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={false}
                       isClearable
                     />
                   )}
                 />
               </FormItem>
-              {/* <FormItem
-                label={<div>Enquiry Type<span className="text-red-500"> * </span></div>}
-                invalid={!!errors.enquiry_type}
-                errorMessage={errors.enquiry_type?.message}
-              >
-                <Controller
-                  name="enquiry_type"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Enquiry Type"
-                      options={enquiryTypeOptions}
-                      value={enquiryTypeOptions.find(
-                        (o) => o.value === field.value
-                      )}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                    />
-                  )}
-                />
-              </FormItem> */}
 
               <FormItem
-                label={<div>Product Name<span className="text-red-500"> * </span></div>}
+                label={<div>Product Name<span className="text-red-500"> *</span></div>}
                 invalid={!!errors.product_id}
                 errorMessage={errors.product_id?.message}
               >
@@ -400,21 +321,16 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Product"
                       options={productOptions}
-                      value={productOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={productOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={
-                        masterLoadingStatus === "loading" &&
-                        productOptions.length === 0
-                      }
+                      isLoading={masterLoadingStatus === "loading" && productOptions.length === 0}
                       isClearable
                     />
                   )}
                 />
               </FormItem>
               <FormItem
-                label={<div>Quantity<span className="text-red-500"> * </span></div>}
+                label={<div>Quantity<span className="text-red-500"> *</span></div>}
                 invalid={!!errors.qty}
                 errorMessage={errors.qty?.message}
               >
@@ -450,50 +366,8 @@ const AddLeadPage = () => {
                   )}
                 />
               </FormItem>
-              {/* <FormItem
-                label={<div>Lead Status<span className="text-red-500"> * </span></div>}
-                invalid={!!errors.lead_status}
-                errorMessage={errors.lead_status?.message}
-              >
-                <Controller
-                  name="lead_status"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Status"
-                      options={leadStatusOptions}
-                      value={leadStatusOptions.find(
-                        (o) => o.value === field.value
-                      )}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                    />
-                  )}
-                />
-              </FormItem> */}
-              {/* <FormItem
-                label="Assigned Sales Person"
-                invalid={!!errors.assigned_sales_person_id}
-                errorMessage={errors.assigned_sales_person_id?.message}
-              >
-                <Controller
-                  name="assigned_sales_person_id"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Sales Person"
-                      options={salesPersonOption}
-                      value={salesPersonOption.find(
-                        (o) => o.value === field.value
-                      )}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={false}
-                      isClearable
-                    />
-                  )}
-                />
-              </FormItem> */}
-                <FormItem
-                label="Product Status "
+              <FormItem
+                label="Product Status"
                 invalid={!!errors.source_product_status}
                 errorMessage={errors.source_product_status?.message}
               >
@@ -504,9 +378,7 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Product Status"
                       options={productStatusOptions}
-                      value={productStatusOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={productStatusOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
                       isClearable
                     />
@@ -525,39 +397,14 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Specification"
                       options={productSpecOptions}
-                      value={productSpecOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={productSpecOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={
-                        masterLoadingStatus === "loading" &&
-                        productSpecOptions.length === 0
-                      }
+                      isLoading={masterLoadingStatus === "loading" && productSpecOptions.length === 0}
                       isClearable
                     />
                   )}
                 />
               </FormItem>
-
-                <FormItem
-                label="Device Type"
-                invalid={!!errors.source_device_type}
-                errorMessage={errors.source_device_type?.message}
-              >
-                <Controller
-                  name="source_device_type"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="e.g., Mobile Phone, Laptop"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  )}
-                />
-              </FormItem>
-           
-            
               <FormItem
                 label="Device Condition"
                 invalid={!!errors.source_device_condition}
@@ -570,16 +417,13 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Condition"
                       options={deviceConditionOptions}
-                      value={deviceConditionOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={deviceConditionOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
                       isClearable
                     />
                   )}
                 />
               </FormItem>
-           
               <FormItem
                 label="Color"
                 invalid={!!errors.source_color}
@@ -609,11 +453,8 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Cartoon Type"
                       options={cartoonTypeOptions}
-                      value={cartoonTypeOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={cartoonTypeOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={false}
                       isClearable
                     />
                   )}
@@ -648,14 +489,9 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Payment Term"
                       options={paymentTermOptions}
-                      value={paymentTermOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={paymentTermOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={
-                        masterLoadingStatus === "loading" &&
-                        paymentTermOptions.length === 0
-                      }
+                      isLoading={masterLoadingStatus === "loading" && paymentTermOptions.length === 0}
                       isClearable
                     />
                   )}
@@ -672,13 +508,7 @@ const AddLeadPage = () => {
                   render={({ field }) => (
                     <DatePicker
                       placeholder="Select ETA"
-                      value={
-                        field.value
-                          ? dayjs(field.value).isValid()
-                            ? dayjs(field.value).toDate()
-                            : null
-                          : null
-                      }
+                      value={field.value ? (dayjs(field.value).isValid() ? dayjs(field.value).toDate() : null) : null}
                       onChange={(date) => field.onChange(date)}
                     />
                   )}
@@ -724,16 +554,8 @@ const AddLeadPage = () => {
             </div>
           </AdaptableCard>
 
-        
-              
-            
-
           <div className="mt-6 flex justify-end gap-2">
-            <Button
-              type="button"
-              onClick={handleCancel}
-              disabled={isSubmitting}
-            >
+            <Button type="button" onClick={handleCancel} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button
@@ -754,7 +576,7 @@ const AddLeadPage = () => {
         onClose={() => setCancelConfirmOpen(false)}
         onConfirm={() => {
           setCancelConfirmOpen(false);
-          navigate("/sales/leads");
+          navigate("/sales-leads/lead");
         }}
         onCancel={() => setCancelConfirmOpen(false)}
       >
@@ -763,4 +585,5 @@ const AddLeadPage = () => {
     </Container>
   );
 };
+
 export default AddLeadPage;

@@ -229,11 +229,19 @@ const INITIAL_STATE: any = {
   AllCountData: [],
   actualCompanyData: [],
 };
+const INITIAL_STATE_FORCATEGORY: any = {
+  subCategoriesForSelectedCategoryData: []
+};
 
 const masterSlice = createSlice({
   name: "master",
   initialState: INITIAL_STATE,
-  reducers: { resetMasterState: () => INITIAL_STATE, },
+  reducers: {
+    resetMasterState: () => INITIAL_STATE,
+     clearSubcategories: (state) => {
+      state.subCategoriesForSelectedCategoryData = [];
+    },
+  },
   extraReducers: (builder) => {
     builder.addCase(getUnitAction.fulfilled, (state, { payload }) => ({
       ...state,
@@ -819,7 +827,7 @@ const masterSlice = createSlice({
   },
 
 });
-export const { resetMasterState } = masterSlice.actions
+export const { resetMasterState ,clearSubcategories } = masterSlice.actions
 export const masterSelector = (state: RootState) => state?.Master;
 
 export default masterSlice.reducer;

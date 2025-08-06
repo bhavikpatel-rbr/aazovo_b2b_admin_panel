@@ -5,10 +5,17 @@ import isBetween from "dayjs/plugin/isBetween";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import cloneDeep from "lodash/cloneDeep";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
+import axiosInstance from "@/services/api/api"; // Added for done leads modal
 
 dayjs.extend(isBetween);
 dayjs.extend(isSameOrBefore);
@@ -35,6 +42,8 @@ import {
   Form as UiForm,
   FormItem as UiFormItem,
   Select as UiSelect,
+  Table,
+  Skeleton,
 } from "@/components/ui";
 import Button from "@/components/ui/Button";
 import Dropdown from "@/components/ui/Dropdown";
@@ -51,6 +60,7 @@ import {
   TbBellRinging,
   TbBrandGoogleDrive,
   TbBrandWhatsapp,
+  TbBuildingStore,
   TbCalendarClock,
   TbCalendarEvent,
   TbCheck,
@@ -64,6 +74,7 @@ import {
   TbFileCheck,
   TbFileDescription,
   TbFileExcel,
+  TbFilePlus,
   TbFilter,
   TbMailShare,
   TbNotesOff,
@@ -74,6 +85,7 @@ import {
   TbTagStarred,
   TbUser,
   TbX,
+  TbCircleCheck, // Icon for Verify button
 } from "react-icons/tb";
 
 // Types
@@ -93,9 +105,9 @@ import {
 // Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addaccountdocAction,
   addAllActionAction,
   addAllAlertsAction,
-  addaccountdocAction,
   addNotificationAction,
   addScheduleAction,
   addTaskAction,
@@ -105,17 +117,475 @@ import {
   getAllCompany,
   getAllUsersAction,
   getbyIDaccountdocAction,
-  getDocumentTypeAction,
+  getDocumentListAction,
   getEmployeesListingAction,
+  getFillUpFormAction, // IMPORTED from FillUpForm
+  getFilledFormAction, // IMPORTED from FillUpForm
   getFormBuilderAction,
   getfromIDcompanymemberAction,
   submitExportReasonAction,
-  getDocumentListAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
 import { shallowEqual, useSelector } from "react-redux";
+
+
+// --- START: Copied types and constants from LeadsListing for PendingLeadsModal ---
+export type LeadStatus =
+  | "New"
+  | "Contacted"
+  | "Assignment sent"
+  | "Assigned"
+  | "Accepted"
+  | "In Process"
+  | "For Approval"
+  | "Qualified"
+  | "Proposal Sent"
+  | "Negotiation"
+  | "Follow Up"
+  | "Won"
+  | "Lost"
+  | "Cancelled"
+  | "Completed"
+  | "Deal Done"
+  | "Approved"
+  | "Rejected";
+
+const leadStatusColor: Record<LeadStatus | "default" | string, string> = {
+  New: "bg-sky-100 text-sky-700 dark:bg-sky-700/30 dark:text-sky-200",
+  Contacted: "bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-200",
+  "Assignment sent":
+    "bg-orange-100 text-orange-700 dark:bg-orange-700/30 dark:text-orange-200",
+  Assigned:
+    "bg-orange-100 text-orange-700 dark:bg-orange-700/30 dark:text-orange-200",
+  Accepted:
+    "bg-lime-100 text-lime-700 dark:bg-lime-700/30 dark:text-lime-200",
+  "In Process":
+    "bg-cyan-100 text-cyan-700 dark:bg-cyan-700/30 dark:text-cyan-200",
+  "For Approval":
+    "bg-yellow-100 text-yellow-700 dark:bg-yellow-700/30 dark:text-yellow-200",
+  Qualified:
+    "bg-indigo-100 text-indigo-700 dark:bg-indigo-700/30 dark:text-indigo-200",
+  "Proposal Sent":
+    "bg-purple-100 text-purple-700 dark:bg-purple-700/30 dark:text-purple-200",
+  Negotiation:
+    "bg-violet-100 text-violet-700 dark:bg-violet-700/30 dark:text-violet-200",
+  "Follow Up":
+    "bg-amber-100 text-amber-700 dark:bg-amber-700/30 dark:text-amber-200",
+  Won: "bg-emerald-100 text-emerald-700 dark:bg-emerald-700/30 dark:text-emerald-200",
+  Approved:
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-700/30 dark:text-emerald-200",
+  Lost: "bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-200",
+  Rejected: "bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-200",
+  Cancelled:
+    "bg-gray-100 text-gray-500 dark:bg-gray-700/30 dark:text-gray-400",
+  Completed:
+    "bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-200",
+  "Deal Done":
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-700/30 dark:text-emerald-200",
+  default: "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200",
+};
+// --- END: Copied types and constants ---
+
+// --- START: NEW TYPES FOR VERIFIED LEAD MODAL ---
+export type LeadMemberInfo = {
+  id: number;
+  name: string;
+  member_code: string;
+};
+export type VerifiedLead = {
+  id: number;
+  lead_number: string | null;
+  qty: number;
+  target_price: number;
+  color: string | null;
+  device_condition: string | null;
+  lead_status: string;
+  product: {
+    id: number;
+    name: string;
+  };
+  product_spec: {
+    id: number;
+    name: string;
+  } | null;
+  lead_info: {
+    buyer: LeadMemberInfo | null;
+    seller: LeadMemberInfo | null;
+  };
+  customer: {
+    company_actual: string | null;
+  };
+};
+// Note: SalesFormItem type appears to be inconsistent with usage, so it is being corrected at the component level
+export type SalesFormItem = {
+  id: number; // This is the sales_form_id
+  lead: VerifiedLead;
+};
+// --- END: NEW TYPES ---
+
+
+// --- START: NEW REFACTORED COMPONENT FOR PENDING LEAD DETAILS VIEW MODAL ---
+const StatBox: React.FC<{
+  value: React.ReactNode;
+  label: string;
+  className?: string;
+}> = ({ value, label, className }) => (
+  <div className={`text-center px-4 py-2 border-dashed border-gray-200 dark:border-gray-600 ${className}`}>
+    <h4 className="font-bold">{value}</h4>
+    <p className="text-gray-500 text-sm">{label}</p>
+  </div>
+);
+
+const InfoRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div className="flex justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+    <span className="font-semibold text-gray-700 dark:text-gray-200">{label}</span>
+    <span className="text-gray-900 dark:text-gray-50 text-right">{children || '—'}</span>
+  </div>
+);
+
+const HeaderCard: React.FC<{ lead: VerifiedLead }> = ({ lead }) => (
+  <Card>
+    <div className="flex flex-col md:flex-row items-center gap-4">
+      <div className="flex-grow grid grid-cols-2 sm:grid-cols-5 gap-1 w-full">
+        <StatBox value={lead?.qty} label="Quantity" />
+        <StatBox value={`$${lead?.target_price || '0.00'}`} label="Target Price" className="sm:border-l" />
+        <StatBox
+          value={<Tag className="bg-emerald-100 text-emerald-600">{lead?.lead_status}</Tag>}
+          label="Lead Status"
+          className="sm:border-l"
+        />
+        <StatBox value={lead?.lead_number || `LD-${lead?.id}`} label="Lead #" className="col-span-2 sm:col-span-1 sm:border-l" />
+        <StatBox value={<div className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-md">
+          <TbBuildingStore className="text-gray-500 dark:text-gray-400" />
+          <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">
+            {lead.customer.company_actual || 'N/A'}
+          </span>
+        </div>} label="Actual Company" className="col-span-2 sm:col-span-1 sm:border-l" />
+
+      </div>
+    </div>
+  </Card>
+);
+
+const ProductDetailsTab: React.FC<{ lead: VerifiedLead }> = ({ lead }) => (
+  <Card>
+    <h5 className="font-semibold mb-4">Product Details</h5>
+    <InfoRow label="Product Name">{lead?.product.name}</InfoRow>
+    <InfoRow label="Quantity">{lead?.qty}</InfoRow>
+    <InfoRow label="Target Price">{`$${lead?.target_price || 'N/A'}`}</InfoRow>
+    <InfoRow label="Color">{lead?.color}</InfoRow>
+    <InfoRow label="Device Condition">{lead?.device_condition}</InfoRow>
+    <InfoRow label="Product Spec">{lead?.product_spec?.name}</InfoRow>
+
+  </Card>
+);
+
+const MemberDetailsTab: React.FC<{ title: string; member: LeadMemberInfo | null }> = ({ title, member }) => (
+  <Card>
+    <h5 className="font-semibold mb-4">{title}</h5>
+    {member ? (
+      <>
+        <InfoRow label="Name">{member?.name}</InfoRow>
+        <InfoRow label="Member ID">{member?.member_code}</InfoRow>
+      </>
+    ) : (
+      <p className="text-gray-500">No details available.</p>
+    )}
+  </Card>
+);
+
+const PendingLeadViewModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onend: () => void;
+  leadData: VerifiedLead | null; // MODIFIED: Corrected type from SalesFormItem to VerifiedLead
+  onNavigateAway: (path: string) => void;
+  handleOpenAddDrawer: (leadNumber?: string) => void; // MODIFIED: Changed signature
+}> = ({
+  isOpen,
+  onClose,
+  onend,
+  leadData,
+  onNavigateAway,
+  handleOpenAddDrawer,
+}) => {
+    const [activeTab, setActiveTab] = useState('product_details');
+
+    useEffect(() => {
+      if (isOpen) {
+        setActiveTab('product_details'); // Reset to first tab on open
+      }
+    }, [isOpen]);
+
+    if (!isOpen || !leadData) {
+      return null;
+    }
+
+
+    const tabList = [
+      { key: 'product_details', label: 'Product Details' },
+      { key: 'seller_details', label: 'Seller Details (From)' },
+      { key: 'buyer_details', label: 'Buyer Details (To)' },
+    ];
+
+    const renderActiveTabContent = () => {
+      switch (activeTab) {
+        case 'product_details':
+          return <ProductDetailsTab lead={leadData} />;
+        case 'seller_details':
+          return <MemberDetailsTab title="Purchase From (Supplier)" member={leadData?.lead_info?.seller} />;
+        case 'buyer_details':
+          return <MemberDetailsTab title="Sale To (Buyer)" member={leadData?.lead_info?.buyer} />;
+        default:
+          return <ProductDetailsTab lead={leadData} />;
+      }
+    };
+
+    return (
+      <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width={800}>
+        <div className="mb-4">
+          <h5 className="mb-1">Verify Done Lead</h5>
+          <p>Review the details of the completed lead before final processing.</p>
+        </div>
+
+        <div className="mb-6">
+          <HeaderCard lead={leadData} />
+        </div>
+
+        <div className="flex flex-row items-center border-b border-gray-200 dark:border-gray-600 mb-3 flex-wrap">
+          {tabList.map((tab) => (
+            <button
+              type="button"
+              key={tab.key}
+              className={classNames('px-4 py-3 -mb-px font-semibold focus:outline-none whitespace-nowrap', {
+                'text-indigo-600 border-b-2 border-indigo-600': activeTab === tab.key,
+                'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200': activeTab !== tab.key,
+              })}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="min-h-[200px]">
+          {renderActiveTabContent()}
+        </div>
+
+        <div className="flex justify-between items-center mt-2">
+          <div>
+            <Button
+              variant="plain"
+              icon={<TbX />}
+              onClick={onClose}
+            >
+              Close
+            </Button>
+          </div>
+          <div className="flex items-center gap-4">
+            {!leadData?.customer?.company_actual ? (
+              <Button
+                variant="twoTone"
+                icon={<TbBuildingStore />}
+                onClick={() => onNavigateAway('/business-entities/company-create')}
+              >
+                Create Company Member
+              </Button>
+            ) : null}
+            <Button
+              variant="solid"
+              icon={<TbFilePlus />}
+              onClick={() => {
+                onClose(); // Close the detail modal
+                onend(); // Close the list modal
+                const leadNum = leadData.lead_number || `LD-${leadData.id}`;
+                handleOpenAddDrawer(leadNum); // Call with lead number
+              }}
+            >
+              Create Account Document
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+    );
+  };
+// --- END: NEW REFACTORED COMPONENT ---
+
+
+// --- START: MODIFIED COMPONENT FOR "Deal Done" LEADS MODAL ---
+const PendingLeadsModal = ({
+  isOpen,
+  onClose,
+  onActionSuccess,
+  handleOpenAddDrawer,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onActionSuccess: () => void;
+  handleOpenAddDrawer: (leadNumber?: string) => void;
+}) => {
+  const navigate = useNavigate();
+  const { getaccountdoc } = useSelector(masterSelector);
+  const [pendingLeads, setPendingLeads] = useState<VerifiedLead[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<VerifiedLead | null>(null);
+
+  const existingDocNumbers = useMemo(() => {
+    if (!getaccountdoc?.data || !Array.isArray(getaccountdoc.data)) {
+      return new Set<string>();
+    }
+    return new Set(
+      getaccountdoc.data
+        .map((doc: any) => doc.document_number)
+        .filter(Boolean)
+    );
+  }, [getaccountdoc]);
+
+
+  const fetchPendingLeads = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await axiosInstance.get(
+        "/lead/lead?per_page=99999&status=Deal Done"
+      );
+      const allPendingLeads = response.data?.data?.data || [];
+
+      // Filter out leads that already have an account document
+      const filteredLeads = allPendingLeads.filter((lead: VerifiedLead) => {
+        const leadNum = lead.lead_number || `LD-${lead.id}`;
+        return !existingDocNumbers.has(leadNum);
+      });
+
+      setPendingLeads(filteredLeads);
+
+    } catch (error) {
+      toast.push(
+        <Notification type="danger" title="Error">
+          Failed to fetch done leads.
+        </Notification>
+      );
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [existingDocNumbers]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchPendingLeads();
+    }
+  }, [isOpen, fetchPendingLeads]);
+
+  const handleViewClick = (leadData: VerifiedLead) => {
+    setSelectedLead(leadData);
+    setIsViewModalOpen(true);
+  };
+
+  const handleNavigateAway = (path: string) => {
+    setIsViewModalOpen(false);
+    onClose();
+    navigate(path);
+  };
+
+
+  return (
+    <>
+      <Dialog
+        isOpen={isOpen}
+        onClose={onClose}
+        onRequestClose={onClose}
+        width={1000}
+        bodyOpenClassName="overflow-hidden"
+      >
+        <div className="flex flex-col h-full max-h-[80vh]">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h5 className="mb-0">Done Leads for Verification</h5>
+          </div>
+          <div className="flex-grow overflow-y-auto px-6 py-4">
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <Spinner size={40} />
+              </div>
+            ) : pendingLeads.length > 0 ? (
+              <Table>
+                <Table.THead>
+                  <Table.Tr>
+                    <Table.Th>Lead Info</Table.Th>
+                    <Table.Th>Product</Table.Th>
+                    <Table.Th>Members (Buyer/Seller)</Table.Th>
+                    <Table.Th>Details</Table.Th>
+                    <Table.Th>Actions</Table.Th>
+                  </Table.Tr>
+                </Table.THead>
+                <Table.TBody>
+                  {pendingLeads.map((item) => (
+                    <Table.Tr key={item.id}>
+                      <Table.Td>
+                        {item?.lead_number || `LD-${item?.id}`}
+                      </Table.Td>
+                      <Table.Td>{item?.product?.name || "N/A"}</Table.Td>
+                      <Table.Td>
+                        <div className="text-xs">
+                          <p>
+                            <strong>B:</strong>{" "}
+                            {item?.lead_info?.buyer?.name || "N/A"}
+                          </p>
+                          <p>
+                            <strong>S:</strong>{" "}
+                            {item?.lead_info?.seller?.name || "N/A"}
+                          </p>
+                        </div>
+                      </Table.Td>
+                      <Table.Td>
+                        Qty: {item?.qty || "-"} | Price: $
+                        {item?.target_price || "-"}
+                      </Table.Td>
+                      <Table.Td>
+                        <div className="flex items-center gap-2">
+                          <Tooltip title="View Details">
+                            <Button
+                              shape="circle"
+                              size="xs"
+                              icon={<TbEye />}
+                              onClick={() => handleViewClick(item)}
+                            />
+                          </Tooltip>
+                        </div>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.TBody>
+              </Table>
+            ) : (
+              <div className="text-center p-10 text-gray-500">
+                <p>No done leads found to be processed.</p>
+              </div>
+            )}
+          </div>
+          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
+            <Button variant="solid" onClick={onClose}>
+              Close
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <PendingLeadViewModal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        leadData={selectedLead}
+        onend={onClose}
+        onNavigateAway={handleNavigateAway}
+        handleOpenAddDrawer={handleOpenAddDrawer}
+      />
+    </>
+  );
+};
+// --- END: MODIFIED COMPONENT ---
+
 
 // --- Define Types ---
 export type SelectOption = { value: any; label: string };
@@ -140,14 +610,31 @@ type FilterFormData = {
   doc_type?: SelectOption[];
   comp_doc?: SelectOption[];
 };
-// START: Alert Note Type Definition
 interface AlertNote {
   id: number;
   note: string; // HTML content from RichTextEditor
   created_by_user: { name: string };
   created_at: string; // ISO date string
 }
-// END: Alert Note Type Definition
+// --- START: Types from FillUpForm ---
+interface FormField {
+  name: string;
+  label: string;
+  type: 'text' | 'textarea' | 'file' | 'date' | 'checkbox' | 'multi_checkbox';
+  options?: { label: string, name: string }[];
+  required: boolean;
+}
+interface FormSection {
+  id: string;
+  label: string;
+  fields: FormField[];
+}
+interface FormStructure {
+  form_title: string;
+  sections: FormSection[];
+}
+// --- END: Types from FillUpForm ---
+
 
 // --- Zod Schemas ---
 const scheduleSchema = z.object({
@@ -170,6 +657,7 @@ const exportReasonSchema = z.object({
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 const addEditDocumentSchema = z.object({
+  lead_number: z.string().optional().nullable(),
   company_document: z
     .string({ required_error: "Company Document is required." })
     .min(1, "Company Document is required."),
@@ -340,9 +828,13 @@ const eventTypeOptions = [
   { value: "ProjectKickoff", label: "Project Kick-off" },
 ];
 
-const accountDocumentStatusColor: Record<AccountDocumentStatus, string> = {
+const accountDocumentStatusColor: Record<
+  AccountDocumentStatus | "verified",
+  string
+> = {
   approved:
     "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
+  verified: "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-100",
   pending:
     "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100",
   rejected: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
@@ -351,7 +843,7 @@ const accountDocumentStatusColor: Record<AccountDocumentStatus, string> = {
   not_uploaded:
     "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-100",
   completed:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
+    "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-200",
   active: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-100",
   force_completed:
     "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-100",
@@ -366,6 +858,29 @@ const enquiryTypeColor: Record<EnquiryType | "default", string> = {
   default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300",
 };
 
+
+// --- START: Helper Functions from FillUpForm ---
+const sanitizeForName = (str: string): string => str.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/_$/, '');
+
+const transformApiDataToFormStructure = (apiData: any): FormStructure | null => {
+  if (!apiData || !apiData.section) return null;
+  const transformedSections: FormSection[] = apiData.section.map((apiSection: any, sectionIndex: number) => {
+    const sectionId = sanitizeForName(apiSection.title || `section_${sectionIndex}`);
+    const transformedFields: FormField[] = apiSection.questions.flatMap((question: any) => {
+      const baseFieldName = sanitizeForName(question.question);
+      if (question.question_type === 'checkbox' && question.question_label) {
+        const labels = question.question_label.split(',');
+        return [{ name: `${sectionId}.${baseFieldName}`, label: question.question, type: 'multi_checkbox', required: question.required, options: labels.map((label: string) => ({ label: label.trim(), name: `${sectionId}.${baseFieldName}.${sanitizeForName(label)}` })) }] as FormField;
+      }
+      return [{ name: `${sectionId}.${baseFieldName}`, label: question.question, type: question.question_type, required: question.required }] as FormField;
+    });
+    return { id: sectionId, label: apiSection.title, fields: transformedFields };
+  });
+  return { form_title: apiData.form_name || 'Dynamic Form', sections: transformedSections };
+};
+// --- END: Helper Functions from FillUpForm ---
+
+
 // --- Helper Components ---
 const AccountDocumentActionColumn = ({
   onOpenModal,
@@ -376,7 +891,7 @@ const AccountDocumentActionColumn = ({
   const navigate = useNavigate();
 
   const handleFillUpClick = () => {
-    if (rowData.formId) {
+    if (rowData.formId && rowData.formId !== 'N/A') {
       navigate(`/fill-up-form/${rowData.id}/${rowData.formId}`);
     } else {
       toast.push(
@@ -452,9 +967,9 @@ const AccountDocumentActionColumn = ({
           className="flex items-center gap-2"
           onClick={() => onOpenModal("activity", rowData)}
         >
-          <TbTagStarred size={18} /> <span className="text-xs">Add Activity</span>
+          <TbTagStarred size={18} />{" "}
+          <span className="text-xs">Add Activity</span>
         </Dropdown.Item>
-        
       </Dropdown>
     </div>
   );
@@ -482,13 +997,11 @@ const AddNotificationDialog = ({
   } = useForm<NotificationFormData>({
     resolver: zodResolver(notificationSchema),
     defaultValues: {
-      notification_title: `Regarding Document: ${
-        document.documentNumber || document.document_number
-      }`,
+      notification_title: `Regarding Document: ${document.documentNumber || document.document_number
+        }`,
       send_users: [],
-      message: `This is a notification for document number "${
-        document.documentNumber || document.document_number
-      }" for company "${document.companyName || document.company?.company_name}".`,
+      message: `This is a notification for document number "${document.documentNumber || document.document_number
+        }" for company "${document.companyName || document.company?.company_name}".`,
     },
     mode: "onChange",
   });
@@ -603,15 +1116,13 @@ const AddScheduleDialog: React.FC<any> = ({ document, onClose }) => {
   } = useForm<ScheduleFormData>({
     resolver: zodResolver(scheduleSchema),
     defaultValues: {
-      event_title: `Follow-up on Document ${
-        document.documentNumber || document.document_number
-      }`,
+      event_title: `Follow-up on Document ${document.documentNumber || document.document_number
+        }`,
       event_type: undefined,
       date_time: null as any,
       remind_from: null,
-      notes: `Regarding document for ${
-        document.companyName || document.company?.company_name
-      } (Lead: ${document.leadNumber || "N/A"})`,
+      notes: `Regarding document for ${document.companyName || document.company?.company_name
+        } (Lead: ${document.leadNumber || "N/A"})`,
     },
     mode: "onChange",
   });
@@ -634,9 +1145,8 @@ const AddScheduleDialog: React.FC<any> = ({ document, onClose }) => {
         <Notification
           type="success"
           title="Event Scheduled"
-          children={`Successfully scheduled event for document ${
-            document.documentNumber || document.document_number
-          }.`}
+          children={`Successfully scheduled event for document ${document.documentNumber || document.document_number
+            }.`}
         />
       );
       onClose();
@@ -809,13 +1319,145 @@ const InfoItem = ({
   );
 };
 
+// --- NEW: Filled Form Viewer Component ---
+const FilledFormViewer = ({
+  formStructure,
+  filledData,
+}: {
+  formStructure: FormStructure;
+  filledData: any;
+}) => {
+  // Helper to get value from nested filledData object
+  const getFieldValue = (field: FormField, sectionId: string) => {
+    const questionKey = field.name.split('.').pop() || '';
+    return filledData?.[sectionId]?.[questionKey];
+  };
+
+  return (
+    <div className='mt-6 space-y-6'>
+      {formStructure.sections.map((section) => (
+        <div key={section.id}>
+          <h6 className="font-semibold text-base mb-4 border-b dark:border-gray-700 pb-3">
+            {section.label}
+          </h6>
+          <div className="space-y-4">
+            {section.fields.map((field) => {
+              const value = getFieldValue(field, section.id);
+              if (value === undefined || value === null || value === '') {
+                return (
+                  <DetailItem key={field.name} label={field.label} value="N/A" />
+                );
+              }
+
+              switch (field.type) {
+                case 'file':
+                  return (
+                    <DetailItem key={field.name} label={field.label}>
+                      {value ? (
+                        <a href={value} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          View/Download File
+                        </a>
+                      ) : ('N/A')}
+                    </DetailItem>
+                  );
+                case 'multi_checkbox':
+                  return (
+                    <DetailItem key={field.name} label={field.label}>
+                      {(Array.isArray(value) && value.length > 0) ? value.join(', ') : 'No selection'}
+                    </DetailItem>
+                  );
+                case 'checkbox':
+                  return (
+                    <DetailItem key={field.name} label={field.label} value={value ? 'Yes' : 'No'} />
+                  );
+                case 'date':
+                  return (
+                    <DetailItem key={field.name} label={field.label} value={dayjs(value).format('DD MMM YYYY')} />
+                  );
+                case 'textarea':
+                  return (
+                    <DetailItem key={field.name} label={field.label}>
+                      <p className="whitespace-pre-wrap">{value}</p>
+                    </DetailItem>
+                  );
+                default:
+                  return (
+                    <DetailItem key={field.name} label={field.label} value={value} />
+                  );
+              }
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+
+// --- MODIFIED: ViewDocumentDialog with Form Viewer and Verify Button ---
 const ViewDocumentDialog = ({
   document,
   onClose,
+  onActionSuccess,
 }: {
   document: any;
   onClose: () => void;
+  onActionSuccess: () => void;
 }) => {
+  const dispatch = useAppDispatch();
+
+  // State for form data
+  const [isFormLoading, setIsFormLoading] = useState(false);
+  const [formStructure, setFormStructure] = useState<FormStructure | null>(null);
+  const [filledData, setFilledData] = useState<any>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  useEffect(() => {
+    if (!document?.form?.id || !document?.id) {
+      return; // No form associated with this document
+    }
+
+    const fetchFormData = async () => {
+      setIsFormLoading(true);
+      try {
+        const structurePromise = dispatch(getFillUpFormAction(document.form.id)).unwrap();
+        const dataPromise = dispatch(getFilledFormAction(document.id)).unwrap();
+
+        const [structureResponse, dataResponse] = await Promise.all([structurePromise, dataPromise]);
+
+        const uiStructure = transformApiDataToFormStructure(structureResponse);
+        if (uiStructure) {
+          setFormStructure(uiStructure);
+          setFilledData(dataResponse?.form_data || {});
+        }
+      } catch (error: any) {
+        toast.push(
+          <Notification type="danger" title="Form Load Error" children={error.message || 'Could not load form data.'} />
+        );
+      } finally {
+        setIsFormLoading(false);
+      }
+    };
+
+    fetchFormData();
+  }, [document, dispatch]);
+
+  const handleVerify = async () => {
+    setIsVerifying(true);
+    try {
+      // axiosInstance.post(`/account_doc/status/${document.id}`, { status: "Verified" });
+      await dispatch(editaccountdocAction({ ...document, id: document.id,company_id: String(document.company_id), status: "Verified" })).unwrap()
+
+      toast.push(<Notification type="success" title="Document Verified!" />);
+      onActionSuccess(); // Refresh the main table
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Verification Failed" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   if (!document) return null;
 
   const {
@@ -838,12 +1480,14 @@ const ViewDocumentDialog = ({
   const statusColor = accountDocumentStatusColor[statusKey] || "bg-gray-100";
   const statusLabel = status?.replace(/_/g, " ") || "N/A";
 
+  const canVerify = status && status !== 'approved' && status !== 'rejected';
+
   return (
     <Dialog
       isOpen={true}
       onClose={onClose}
       onRequestClose={onClose}
-      width={900}
+      width={1000} // Increased width for better form view
       bodyOpenClassName="overflow-y-hidden"
     >
       <div className="flex flex-col h-full">
@@ -867,14 +1511,14 @@ const ViewDocumentDialog = ({
         </div>
 
         {/* --- Dialog Body --- */}
-        <div className="p-6 max-h-[75vh] overflow-y-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="p-6 max-h-[65vh] overflow-y-auto">
           {/* Main Content (2/3 width) */}
-          <div className="lg:col-span-2 flex flex-col gap-6">
+          <div className="flex flex-col gap-6">
             <Card bodyClass="p-4">
               <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
                 Document Information
               </h6>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <InfoItem
                   icon={<TbFileCertificate size={20} />}
                   label="Document Type"
@@ -897,126 +1541,75 @@ const ViewDocumentDialog = ({
                     value={form.form_name}
                   />
                 )}
-              </div>
-            </Card>
-
-            {/* Client Details Card */}
-            {(company || member) && (
-              <Card bodyClass="p-4">
-                <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
-                  Client Information
-                </h6>
-                <div className="flex flex-col gap-6">
-                  {company && (
-                    <div>
-                      <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                        <TbBrandGoogleDrive size={18} /> Company Details
-                      </h6>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                        <DetailItem label="Name" value={company.company_name} />
-                        <DetailItem
-                          label="Email"
-                          value={company.primary_email_id}
-                        />
-                        <DetailItem
-                          label="Phone"
-                          value={`${
-                            company.primary_contact_number_code || ""
-                          } ${company.primary_contact_number || ""}`.trim()}
-                        />
-                        <DetailItem label="GST" value={company.gst_number} />
-                      </div>
-                    </div>
-                  )}
-                  {company && member && (
-                    <div className="border-t dark:border-gray-600 -mx-4 my-2"></div>
-                  )}
-                  {member && (
-                    <div className={company ? "pt-0" : ""}>
-                      <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                        <TbUser size={18} /> Member Details
-                      </h6>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                        <DetailItem label="Name" value={member.name} />
-                        <DetailItem label="Email" value={member.email} />
-                        <DetailItem
-                          label="Phone"
-                          value={`${member.customer_code || ""} ${
-                            member.number || ""
-                          }`.trim()}
-                        />
-                        <DetailItem
-                          label="Business Type"
-                          value={member.business_type}
-                        />
-                        <DetailItem
-                          label="Interested In"
-                          value={member.interested_in}
-                        />
-                        {!company && (
-                          <DetailItem
-                            label="Company Name"
-                            value={
-                              member?.company_actual || member?.company_temp
-                            }
-                          />
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Card>
-            )}
-          </div>
-
-          {/* Sidebar (1/3 width) */}
-          <div className="lg:col-span-1 flex flex-col gap-6">
-            <Card bodyClass="p-4">
-              <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
-                Ownership & History
-              </h6>
-              <div className="flex flex-col gap-5">
                 <InfoItem
-                  icon={<TbUser size={20} />}
-                  label="Assigned To"
-                  value={created_by_user?.name}
+                  icon={<TbCalendarClock size={20} />}
+                  label="Created On"
+                  value={dayjs(created_at).format("DD MMM YYYY, hh:mm A")}
                 />
                 <InfoItem
                   icon={<TbUser size={20} />}
                   label="Created By"
                   value={created_by_user?.name}
                 />
-                <InfoItem
-                  icon={<TbCalendarClock size={20} />}
-                  label="Created On"
-                >
-                  {dayjs(created_at).format("DD MMM YYYY, hh:mm A")}
-                </InfoItem>
-                <InfoItem
-                  icon={<TbPencil size={20} />}
-                  label="Last Updated By"
-                  value={updated_by_user?.name}
-                />
-                <InfoItem
-                  icon={<TbCalendarClock size={20} />}
-                  label="Last Updated On"
-                >
-                  {dayjs(updated_at).format("DD MMM YYYY, hh:mm A")}
-                </InfoItem>
               </div>
             </Card>
+
+            {/* --- NEW: Filled Form Data Viewer --- */}
+            {form?.id && (
+              <Card bodyClass="p-4">
+                {isFormLoading ? (
+                  <div className="text-center p-8">
+                    <Spinner />
+                    <p className="mt-2 text-sm text-gray-500">Loading form data...</p>
+                  </div>
+                ) : formStructure && filledData ? (
+                  <FilledFormViewer formStructure={formStructure} filledData={filledData} />
+                ) : (
+                  <div className="text-center p-8">
+                    <p className="text-sm text-gray-500">No filled form data found for this document.</p>
+                  </div>
+                )}
+              </Card>
+            )}
+
           </div>
+        </div>
+        {/* --- Dialog Footer --- */}
+        <div className="flex justify-between items-center p-4 border-t dark:border-gray-700">
+          <Button
+            type="button"
+            onClick={onClose}
+            disabled={isVerifying}
+          >
+            Close
+          </Button>
+          {canVerify && form?.id && (
+            <Button
+              variant="solid"
+              color="emerald"
+              icon={<TbCircleCheck />}
+              onClick={handleVerify}
+              loading={isVerifying}
+            >
+              {isVerifying ? 'Verifying...' : 'Verify & Approve'}
+            </Button>
+          )}
         </div>
       </div>
     </Dialog>
   );
 };
 
-const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
+
+const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, prefilledLeadNumber }: any) => {
   const dispatch = useAppDispatch();
   const title = editingId ? "Edit Document" : "Add New Document";
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
+  const [selectedCompanyStatus, setSelectedCompanyStatus] = useState<{
+    kyc: boolean;
+    enable_billing: boolean;
+  } | null>(null);
 
   const {
     control,
@@ -1047,19 +1640,21 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
     getfromIDcompanymemberData = [],
   } = useSelector(masterSelector);
 
-  console.log("DocumentListData",DocumentListData);
-  
   const DocumentListDataOptions =
-   DocumentListData.length > 0 && DocumentListData.map((p: any) => ({
-      value: p.id,
-      label: p.name,
-    }));
+    DocumentListData.length > 0
+      ? DocumentListData.map((p: any) => ({
+        value: p.id,
+        label: p.name,
+      }))
+      : [];
 
   const tokenFormDataOptions =
-    tokenForm.length > 0 && tokenForm?.map((p: any) => ({
-      value: p.id,
-      label: p.form_title,
-    }));
+    tokenForm.length > 0
+      ? tokenForm?.map((p: any) => ({
+        value: p.id,
+        label: p.form_title,
+      }))
+      : [];
 
   const EmployyDataOptions =
     EmployeesList?.data?.map((p: any) => ({
@@ -1098,7 +1693,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
           const companyId = data?.data?.company_id;
           const formData = {
             company_document: data?.data?.company_document,
-            document_type:parseInt(data?.data?.document_type),
+            document_type: parseInt(data?.data?.document_type),
             document_number: data?.data?.document_number,
             invoice_number: data?.data?.invoice_number,
             form_id: data?.data?.form_id,
@@ -1110,6 +1705,17 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
 
           if (companyId) {
             dispatch(getfromIDcompanymemberAction(companyId));
+            const company = AllCompanyData.find(
+              (c: any) => String(c.id) === String(companyId)
+            );
+            if (company) {
+              setSelectedCompanyStatus({
+                kyc: company.kyc_verified,
+                enable_billing: company.enable_billing,
+              });
+            }
+          } else {
+            setSelectedCompanyStatus(null);
           }
         })
         .catch((err: any) => {
@@ -1127,6 +1733,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
         });
     } else if (isOpen && !editingId) {
       reset({
+        lead_number: prefilledLeadNumber || "",
         company_document: undefined,
         document_type: undefined,
         document_number: "",
@@ -1136,8 +1743,9 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
         member_id: undefined,
         company_id: undefined,
       });
+      setSelectedCompanyStatus(null);
     }
-  }, [isOpen, editingId, dispatch, reset]);
+  }, [isOpen, editingId, dispatch, reset, AllCompanyData, prefilledLeadNumber]);
 
   const onSave = async (data: AddEditDocumentFormData) => {
     setIsSubmitting(true);
@@ -1246,13 +1854,39 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
                     field.onChange(opt?.value);
                     if (opt?.value) {
                       dispatch(getfromIDcompanymemberAction(opt.value));
+                      const company = AllCompanyData.find(
+                        (c: any) => String(c.id) === opt.value
+                      );
+                      if (company) {
+                        setSelectedCompanyStatus({
+                          kyc: company.kyc_verified,
+                          enable_billing: company.enable_billing,
+                        });
+                      }
+                    } else {
+                      setSelectedCompanyStatus(null);
                     }
-                    setValue("member_id", 0 as any, { shouldValidate: true });
+                    setValue("member_id", undefined, { shouldValidate: true });
                   }}
                 />
               )}
             />
           </UiFormItem>
+
+          {selectedCompanyStatus &&
+            (!selectedCompanyStatus.kyc ||
+              !selectedCompanyStatus.enable_billing) && (
+              <Notification type="warning" className="my-4">
+                <div className="font-semibold mb-1">Company Status Alert</div>
+                {!selectedCompanyStatus.kyc && (
+                  <p className="text-sm">- Company KYC is pending.</p>
+                )}
+                {!selectedCompanyStatus.enable_billing && (
+                  <p className="text-sm">- Company is not enable billing.</p>
+                )}
+              </Notification>
+            )}
+
           <UiFormItem
             label="Document Type"
             invalid={!!errors.document_type}
@@ -1267,9 +1901,9 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
                   placeholder="Select Document Type"
                   options={DocumentListDataOptions}
                   value={DocumentListDataOptions?.find(
-                    (o) => o.label == field.value
+                    (o) => o.value === field.value
                   )}
-                  onChange={(opt: any) => field.onChange(opt?.label)}
+                  onChange={(opt: any) => field.onChange(opt?.value)}
                 />
               )}
             />
@@ -1381,11 +2015,16 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
 
 // --- START: MODALS & ACTIONS ---
 
-const SendEmailAction = ({ document, onClose }: { document: any; onClose: () => void }) => {
+const SendEmailAction = ({
+  document,
+  onClose,
+}: {
+  document: any;
+  onClose: () => void;
+}) => {
   useEffect(() => {
-    console.log("document?.company?",document);
-    
-    const email = document?.company?.primary_email_id || document?.member?.email;
+    const email =
+      document?.company?.primary_email_id || document?.member?.email;
     if (!email) {
       toast.push(
         <Notification type="warning" title="Missing Email" duration={4000}>
@@ -1397,22 +2036,37 @@ const SendEmailAction = ({ document, onClose }: { document: any; onClose: () => 
     }
     const subject = `Regarding Document: ${document.document_number}`;
     const body = `Hello,\n\nThis is regarding your document (Ref: ${document.document_number}).`;
-    window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+    window.open(
+      `mailto:${email}?subject=${encodeURIComponent(
+        subject
+      )}&body=${encodeURIComponent(body)}`
+    );
     onClose();
   }, [document, onClose]);
 
   return null;
 };
 
-const SendWhatsAppAction = ({ document, onClose }: { document: any; onClose: () => void }) => {
+const SendWhatsAppAction = ({
+  document,
+  onClose,
+}: {
+  document: any;
+  onClose: () => void;
+}) => {
   useEffect(() => {
-    const phone = document?.company?.primary_contact_number?.replace(/\D/g, '') || document?.member?.number?.replace(/\D/g, '');
-    const countryCode = document?.company?.primary_contact_number_code?.replace(/\D/g, '') || document?.member?.customer_code?.replace(/\D/g, '');
+    const phone =
+      document?.company?.primary_contact_number?.replace(/\D/g, "") ||
+      document?.member?.number?.replace(/\D/g, "");
+    const countryCode =
+      document?.company?.primary_contact_number_code?.replace(/\D/g, "") ||
+      document?.member?.customer_code?.replace(/\D/g, "");
 
     if (!phone || !countryCode) {
       toast.push(
         <Notification type="warning" title="Missing Number" duration={4000}>
-          Primary contact number is not available for the associated company or member.
+          Primary contact number is not available for the associated company or
+          member.
         </Notification>
       );
       onClose();
@@ -1420,14 +2074,25 @@ const SendWhatsAppAction = ({ document, onClose }: { document: any; onClose: () 
     }
     const fullPhoneNumber = `${countryCode}${phone}`;
     const message = `Hello,\n\nThis is regarding your document (Ref: ${document.document_number}).`;
-    window.open(`https://wa.me/${fullPhoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(
+      `https://wa.me/${fullPhoneNumber}?text=${encodeURIComponent(message)}`,
+      "_blank"
+    );
     onClose();
   }, [document, onClose]);
 
   return null;
 };
 
-const AssignTaskDialog = ({ document, onClose, userOptions }: { document: any, onClose: () => void, userOptions: SelectOption[] }) => {
+const AssignTaskDialog = ({
+  document,
+  onClose,
+  userOptions,
+}: {
+  document: any;
+  onClose: () => void;
+  userOptions: SelectOption[];
+}) => {
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -1440,9 +2105,9 @@ const AssignTaskDialog = ({ document, onClose, userOptions }: { document: any, o
     defaultValues: {
       task_title: `Follow up on document ${document.document_number}`,
       assign_to: [],
-      priority: 'Medium',
+      priority: "Medium",
     },
-    mode: 'onChange',
+    mode: "onChange",
   });
 
   const onAssignTask = async (data: TaskFormData) => {
@@ -1450,10 +2115,10 @@ const AssignTaskDialog = ({ document, onClose, userOptions }: { document: any, o
     const payload = {
       ...data,
       due_date: data.due_date
-        ? dayjs(data.due_date).format('YYYY-MM-DD')
+        ? dayjs(data.due_date).format("YYYY-MM-DD")
         : undefined,
       module_id: String(document.id),
-      module_name: 'AccountDocument',
+      module_name: "AccountDocument",
     };
 
     try {
@@ -1502,8 +2167,12 @@ const AssignTaskDialog = ({ document, onClose, userOptions }: { document: any, o
                   isMulti
                   placeholder="Select User(s)"
                   options={userOptions}
-                  value={userOptions.filter((o) => field.value?.includes(o.value))}
-                  onChange={(opts) => field.onChange(opts?.map((o) => o.value) || [])}
+                  value={userOptions.filter((o) =>
+                    field.value?.includes(o.value)
+                  )}
+                  onChange={(opts) =>
+                    field.onChange(opts?.map((o) => o.value) || [])
+                  }
                 />
               )}
             />
@@ -1520,7 +2189,9 @@ const AssignTaskDialog = ({ document, onClose, userOptions }: { document: any, o
                 <UiSelect
                   placeholder="Select Priority"
                   options={taskPriorityOptions}
-                  value={taskPriorityOptions.find((p) => p.value === field.value)}
+                  value={taskPriorityOptions.find(
+                    (p) => p.value === field.value
+                  )}
                   onChange={(opt) => field.onChange(opt?.value)}
                 />
               )}
@@ -1574,7 +2245,15 @@ const AssignTaskDialog = ({ document, onClose, userOptions }: { document: any, o
   );
 };
 
-const AddActivityDialog = ({ document, onClose, user }: { document: any, onClose: () => void, user: any }) => {
+const AddActivityDialog = ({
+  document,
+  onClose,
+  user,
+}: {
+  document: any;
+  onClose: () => void;
+  user: any;
+}) => {
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const {
@@ -1585,22 +2264,27 @@ const AddActivityDialog = ({ document, onClose, user }: { document: any, onClose
     resolver: zodResolver(activitySchema),
     defaultValues: {
       item: `Follow up on doc ${document.document_number}`,
-      notes: '',
+      notes: "",
     },
-    mode: 'onChange',
+    mode: "onChange",
   });
 
   const onAddActivity = async (data: ActivityFormData) => {
     if (!user?.id) {
-        toast.push(<Notification type="danger" title="User not found. Please log in again." />);
-        return;
+      toast.push(
+        <Notification
+          type="danger"
+          title="User not found. Please log in again."
+        />
+      );
+      return;
     }
     setIsLoading(true);
     const payload = {
       item: data.item,
-      notes: data.notes || '',
+      notes: data.notes || "",
       module_id: String(document.id),
-      module_name: 'AccountDocument',
+      module_name: "AccountDocument",
       user_id: user.id,
     };
     try {
@@ -1612,7 +2296,7 @@ const AddActivityDialog = ({ document, onClose, user }: { document: any, onClose
         <Notification
           type="danger"
           title="Failed to Add Activity"
-          children={error?.message || 'An unknown error occurred.'}
+          children={error?.message || "An unknown error occurred."}
         />
       );
     } finally {
@@ -1622,7 +2306,9 @@ const AddActivityDialog = ({ document, onClose, user }: { document: any, onClose
 
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Add Activity Log for Doc "{document.document_number}"</h5>
+      <h5 className="mb-4">
+        Add Activity Log for Doc "{document.document_number}"
+      </h5>
       <UiForm onSubmit={handleSubmit(onAddActivity)}>
         <UiFormItem
           label="Activity"
@@ -1646,7 +2332,11 @@ const AddActivityDialog = ({ document, onClose, user }: { document: any, onClose
             name="notes"
             control={control}
             render={({ field }) => (
-              <Input textArea {...field} placeholder="Add relevant details..." />
+              <Input
+                textArea
+                {...field}
+                placeholder="Add relevant details..."
+              />
             )}
           />
         </UiFormItem>
@@ -1674,227 +2364,309 @@ const AddActivityDialog = ({ document, onClose, user }: { document: any, onClose
   );
 };
 
-const AccountDocumentAlertModal = ({ document, onClose }: { document: any, onClose: () => void }) => {
-    const [alerts, setAlerts] = useState<AlertNote[]>([]);
-    const [isFetching, setIsFetching] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const dispatch = useAppDispatch();
-    const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
-        resolver: zodResolver(alertNoteSchema),
-        defaultValues: { newNote: '' },
-        mode: 'onChange'
-    });
+const AccountDocumentAlertModal = ({
+  document,
+  onClose,
+}: {
+  document: any;
+  onClose: () => void;
+}) => {
+  const [alerts, setAlerts] = useState<AlertNote[]>([]);
+  const [isFetching, setIsFetching] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const dispatch = useAppDispatch();
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isValid },
+    reset,
+  } = useForm<AlertNoteFormData>({
+    resolver: zodResolver(alertNoteSchema),
+    defaultValues: { newNote: "" },
+    mode: "onChange",
+  });
 
-    const stringToColor = (str: string) => {
-        let hash = 0;
-        if (!str) return '#cccccc';
-        for (let i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        let color = '#';
-        for (let i = 0; i < 3; i++) {
-            const value = (hash >> (i * 8)) & 0xFF;
-            color += ('00' + value.toString(16)).substr(-2);
-        }
-        return color;
-    };
+  const stringToColor = (str: string) => {
+    let hash = 0;
+    if (!str) return "#cccccc";
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    let color = "#";
+    for (let i = 0; i < 3; i++) {
+      const value = (hash >> (i * 8)) & 0xff;
+      color += ("00" + value.toString(16)).substr(-2);
+    }
+    return color;
+  };
 
-    const fetchAlerts = useCallback(() => {
-        setIsFetching(true);
-        dispatch(getAlertsAction({ module_id: document.id, module_name: 'AccountDocument' }))
-            .unwrap()
-            .then((data) => setAlerts(data.data || []))
-            .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
-            .finally(() => setIsFetching(false));
-    }, [document.id, dispatch]);
+  const fetchAlerts = useCallback(() => {
+    setIsFetching(true);
+    dispatch(
+      getAlertsAction({
+        module_id: document.id,
+        module_name: "AccountDocument",
+      })
+    )
+      .unwrap()
+      .then((data) => setAlerts(data.data || []))
+      .catch(() =>
+        toast.push(<Notification type="danger" title="Failed to fetch alerts." />)
+      )
+      .finally(() => setIsFetching(false));
+  }, [document.id, dispatch]);
 
-    useEffect(() => {
-        fetchAlerts();
-    }, [fetchAlerts]);
+  useEffect(() => {
+    fetchAlerts();
+  }, [fetchAlerts]);
 
-    const onAddNote = async (data: AlertNoteFormData) => {
-        setIsSubmitting(true);
-        try {
-            await dispatch(addAllAlertsAction({ note: data.newNote, module_id: document.id, module_name: 'AccountDocument' })).unwrap();
-            toast.push(<Notification type="success" title="Alert Note Added" />);
-            reset({ newNote: '' });
-            fetchAlerts(); // Refresh the list
-        } catch (error: any) {
-            toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+  const onAddNote = async (data: AlertNoteFormData) => {
+    setIsSubmitting(true);
+    try {
+      await dispatch(
+        addAllAlertsAction({
+          note: data.newNote,
+          module_id: document.id,
+          module_name: "AccountDocument",
+        })
+      ).unwrap();
+      toast.push(<Notification type="success" title="Alert Note Added" />);
+      reset({ newNote: "" });
+      fetchAlerts(); // Refresh the list
+    } catch (error: any) {
+      toast.push(
+        <Notification
+          type="danger"
+          title="Failed to Add Note"
+          children={error?.message}
+        />
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    return (
-        <Dialog
-            isOpen={true}
-            onClose={onClose}
-            onRequestClose={onClose}
-            width={1200}
-            contentClassName="p-0 flex flex-col max-h-[90vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
-        >
-            <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 flex-shrink-0 rounded-t-lg">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <TbBellRinging className="text-2xl text-white" />
-                        <h5 className="mb-0 text-white font-bold text-base sm:text-xl">Alerts for: {document.document_number}</h5>
-                    </div>
-                    <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
-                        <TbX className="h-6 w-6" />
-                    </button>
-                </div>
-            </header>
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={1200}
+      contentClassName="p-0 flex flex-col max-h-[90vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
+    >
+      <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 flex-shrink-0 rounded-t-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <TbBellRinging className="text-2xl text-white" />
+            <h5 className="mb-0 text-white font-bold text-base sm:text-xl">
+              Alerts for: {document.document_number}
+            </h5>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white hover:bg-white/20 rounded-full p-1"
+          >
+            <TbX className="h-6 w-6" />
+          </button>
+        </div>
+      </header>
 
-            <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-hidden">
-                <div className="relative flex flex-col h-full overflow-hidden">
-                    <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
-                        Activity Timeline
-                    </h6>
-                    <div className="flex-grow overflow-y-auto lg:pr-4 lg:-mr-4">
-                        {isFetching ? (
-                            <div className="flex justify-center items-center h-full"><Spinner size="lg"/></div>
-                        ) : alerts.length > 0 ? (
-                            <div className="space-y-8">
-                                {alerts.map((alert, index) => {
-                                    const userName = alert?.created_by_user?.name || 'N/A';
-                                    const userInitial = userName.charAt(0).toUpperCase();
-                                    return (
-                                        <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
-                                            <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
-                                                <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>
-                                                    {userInitial}
-                                                </Avatar>
-                                                {index < alerts.length - 1 && (
-                                                    <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
-                                                )}
-                                            </div>
-                                            <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                                                <div className="p-4">
-                                                    <header className="flex justify-between items-center mb-2">
-                                                        <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
-                                                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                                            <TbCalendarEvent />
-                                                            <span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span>
-                                                        </div>
-                                                    </header>
-                                                    <div
-                                                        className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300"
-                                                        dangerouslySetInnerHTML={{ __html: alert.note }}
-                                                    />
-                                                </div>
-                                            </Card>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
-                                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
-                                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">No Alerts Yet</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Be the first to add a note.</p>
-                            </div>
+      <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-hidden">
+        <div className="relative flex flex-col h-full overflow-hidden">
+          <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
+            Activity Timeline
+          </h6>
+          <div className="flex-grow overflow-y-auto lg:pr-4 lg:-mr-4">
+            {isFetching ? (
+              <div className="flex justify-center items-center h-full">
+                <Spinner size="lg" />
+              </div>
+            ) : alerts.length > 0 ? (
+              <div className="space-y-8">
+                {alerts.map((alert, index) => {
+                  const userName = alert?.created_by_user?.name || "N/A";
+                  const userInitial = userName.charAt(0).toUpperCase();
+                  return (
+                    <div
+                      key={`${alert.id}-${index}`}
+                      className="relative flex items-start gap-4 pl-12"
+                    >
+                      <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
+                        <Avatar
+                          shape="circle"
+                          size="md"
+                          style={{ backgroundColor: stringToColor(userName) }}
+                        >
+                          {userInitial}
+                        </Avatar>
+                        {index < alerts.length - 1 && (
+                          <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
                         )}
-                    </div>
-                </div>
-
-                <div className="flex flex-col mt-8 lg:mt-0 h-full">
-                    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
-                        <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
-                            <div className="flex items-center gap-2">
-                                <TbPencilPlus className="text-xl text-red-600 dark:text-red-400" />
-                                <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Alert Note</h6>
+                      </div>
+                      <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                        <div className="p-4">
+                          <header className="flex justify-between items-center mb-2">
+                            <p className="font-bold text-gray-800 dark:text-gray-100">
+                              {userName}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                              <TbCalendarEvent />
+                              <span>
+                                {dayjs(alert.created_at).format(
+                                  "DD MMM YYYY, h:mm A"
+                                )}
+                              </span>
                             </div>
-                        </header>
-                        <UiForm onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
-                            <UiFormItem invalid={!!errors.newNote} errorMessage={errors.newNote?.message} className="flex-grow flex flex-col">
-                                <Controller
-                                    name="newNote"
-                                    control={control}
-                                    render={({ field }) => (
-                                        <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
-                                            <RichTextEditor
-                                                value={field.value}
-                                                onChange={(val) => field.onChange(val.html)}
-                                                className="flex-grow min-h-[150px] sm:min-h-[200px]"
-                                            />
-                                        </div>
-                                    )}
-                                />
-                            </UiFormItem>
-                            <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
-                                <Button type="button" className="mr-3" onClick={onClose} disabled={isSubmitting}>
-                                    Cancel
-                                </Button>
-                                <Button variant="solid" color="red" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>
-                                    Submit Note
-                                </Button>
-                            </footer>
-                        </UiForm>
-                    </Card>
-                </div>
-            </main>
-        </Dialog>
-    );
-};
-
-const DownloadDocumentsDialog = ({ document, onClose }: { document: any, onClose: () => void }) => {
-    const documents = useMemo(() => {
-        // This is a hypothetical structure. You need to adjust this based on the actual
-        // API response from `getbyIDaccountdocAction`.
-        // Let's assume the full document object has an array `document_files`.
-        const allDocs: { name: string; url: string }[] = [];
-        if (Array.isArray(document.document_files)) {
-            document.document_files.forEach((file: any) => {
-                if (file.name && file.url) {
-                    allDocs.push({ name: file.name, url: file.url });
-                }
-            });
-        }
-        // Add other potential single file fields if they exist
-        if(document.file_path) {
-            allDocs.push({name: "Primary Document", url: document.file_path});
-        }
-        return allDocs;
-    }, [document]);
-
-    return (
-        <Dialog isOpen={true} onClose={onClose} width={600}>
-            <h5 className="mb-4">Download Documents for {document.document_number}</h5>
-            <div className="max-h-96 overflow-y-auto">
-                {documents.length > 0 ? (
-                    <div className="space-y-2">
-                        {documents.map((doc, index) => (
-                            <a
-                                key={index}
-                                href={doc.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600 transition-colors"
-                            >
-                                <span className="flex items-center gap-2">
-                                    <TbFileDescription className="text-lg text-gray-500" />
-                                    {doc.name}
-                                </span>
-                                <TbCloudDownload className="text-lg text-blue-500" />
-                            </a>
-                        ))}
+                          </header>
+                          <div
+                            className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300"
+                            dangerouslySetInnerHTML={{ __html: alert.note }}
+                          />
+                        </div>
+                      </Card>
                     </div>
-                ) : (
-                    <p className="text-center py-4 text-gray-500">No documents available for download.</p>
-                )}
-            </div>
-            <div className="text-right mt-6">
-                <Button variant="solid" onClick={onClose}>Close</Button>
-            </div>
-        </Dialog>
-    );
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
+                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
+                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">
+                  No Alerts Yet
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Be the first to add a note.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col mt-8 lg:mt-0 h-full">
+          <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
+            <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <TbPencilPlus className="text-xl text-red-600 dark:text-red-400" />
+                <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">
+                  Add New Alert Note
+                </h6>
+              </div>
+            </header>
+            <UiForm
+              onSubmit={handleSubmit(onAddNote)}
+              className="p-4 flex-grow flex flex-col"
+            >
+              <UiFormItem
+                invalid={!!errors.newNote}
+                errorMessage={errors.newNote?.message}
+                className="flex-grow flex flex-col"
+              >
+                <Controller
+                  name="newNote"
+                  control={control}
+                  render={({ field }) => (
+                    <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
+                      <RichTextEditor
+                        value={field.value}
+                        onChange={(val) => field.onChange(val.html)}
+                        className="flex-grow min-h-[150px] sm:min-h-[200px]"
+                      />
+                    </div>
+                  )}
+                />
+              </UiFormItem>
+              <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
+                <Button
+                  type="button"
+                  className="mr-3"
+                  onClick={onClose}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="solid"
+                  color="red"
+                  type="submit"
+                  loading={isSubmitting}
+                  disabled={!isValid || isSubmitting}
+                >
+                  Submit Note
+                </Button>
+              </footer>
+            </UiForm>
+          </Card>
+        </div>
+      </main>
+    </Dialog>
+  );
 };
 
+const DownloadDocumentsDialog = ({
+  document,
+  onClose,
+}: {
+  document: any;
+  onClose: () => void;
+}) => {
+  const documents = useMemo(() => {
+    const allDocs: { name: string; url: string }[] = [];
+    if (Array.isArray(document.document_files)) {
+      document.document_files.forEach((file: any) => {
+        if (file.name && file.url) {
+          allDocs.push({ name: file.name, url: file.url });
+        }
+      });
+    }
+    if (document.file_path) {
+      allDocs.push({ name: "Primary Document", url: document.file_path });
+    }
+    return allDocs;
+  }, [document]);
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} width={600}>
+      <h5 className="mb-4">
+        Download Documents for {document.document_number}
+      </h5>
+      <div className="max-h-96 overflow-y-auto">
+        {documents.length > 0 ? (
+          <div className="space-y-2">
+            {documents.map((doc, index) => (
+              <a
+                key={index}
+                href={doc.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <TbFileDescription className="text-lg text-gray-500" />
+                  {doc.name}
+                </span>
+                <TbCloudDownload className="text-lg text-blue-500" />
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center py-4 text-gray-500">
+            No documents available for download.
+          </p>
+        )}
+      </div>
+      <div className="text-right mt-6">
+        <Button variant="solid" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
 
 const AccountDocumentModals = ({
   modalState,
   onClose,
+  onActionSuccess, // Pass this prop down
   getAllUserDataOptions,
   user,
 }: any) => {
@@ -1912,7 +2684,8 @@ const AccountDocumentModals = ({
     case "schedule":
       return <AddScheduleDialog document={document} onClose={onClose} />;
     case "view":
-      return <ViewDocumentDialog document={document} onClose={onClose} />;
+      // Pass the onActionSuccess callback to the View dialog
+      return <ViewDocumentDialog document={document} onClose={onClose} onActionSuccess={onActionSuccess} />;
     case "email":
       return <SendEmailAction document={document} onClose={onClose} />;
     case "whatsapp":
@@ -1926,11 +2699,13 @@ const AccountDocumentModals = ({
         />
       );
     case "alert":
-        return <AccountDocumentAlertModal document={document} onClose={onClose} />;
+      return <AccountDocumentAlertModal document={document} onClose={onClose} />;
     case "activity":
-        return <AddActivityDialog document={document} onClose={onClose} user={user} />;
+      return (
+        <AddActivityDialog document={document} onClose={onClose} user={user} />
+      );
     case "document":
-        return <DownloadDocumentsDialog document={document} onClose={onClose} />;
+      return <DownloadDocumentsDialog document={document} onClose={onClose} />;
     default:
       return null;
   }
@@ -1950,6 +2725,7 @@ const AccountDocumentTableTools = ({
   filteredColumns,
   setFilteredColumns,
   activeFilterCount,
+  searchInputRef,
 }: any) => {
   const isColumnVisible = (colId: string) =>
     filteredColumns.some((c: any) => (c.id || c.accessorKey) === colId);
@@ -1983,6 +2759,7 @@ const AccountDocumentTableTools = ({
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
       <div className="flex-grow">
         <AccountDocumentSearch
+          ref={searchInputRef}
           onChange={onSearchChange}
           placeholder="Quick Search..."
         />
@@ -2025,7 +2802,9 @@ const AccountDocumentTableTools = ({
             </span>
           )}
         </Button>
-        <Button icon={<TbCloudUpload />} onClick={onExport}>
+        <Button
+          menuName="account_documents" isExport={true}
+          icon={<TbCloudUpload />} onClick={onExport}>
           Export
         </Button>
       </div>
@@ -2131,14 +2910,17 @@ const AccountDocument = () => {
     shallowEqual
   );
 
-  const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] =
-    useState<boolean>(false);
+  const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [prefilledLeadNumber, setPrefilledLeadNumber] = useState<string | null>(null);
+
+  const searchInputRef = useRef<any>(null);
 
   const filterForm = useForm<FilterFormData>();
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false);
   const [isProcessingDelete, setIsProcessingDelete] = useState(false);
-  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] =
+    useState(false);
   const [itemToDelete, setItemToDelete] =
     useState<AccountDocumentListItem | null>(null);
   const [tableData, setTableData] = useState<TableQueries>({
@@ -2147,19 +2929,24 @@ const AccountDocument = () => {
     sort: { order: "desc", key: "createdAt" },
     query: "",
   });
-  const [selectedItems, setSelectedItems] = useState<AccountDocumentListItem[]>(
-    []
-  );
+  const [selectedItems, setSelectedItems] = useState<
+    AccountDocumentListItem[]
+  >([]);
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
     type: null,
     data: null,
   });
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
-  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] =
+    useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
   const [userData, setUserData] = useState<any>(null);
+  const [activeShortcut, setActiveShortcut] = useState("Total");
+
+  const [isPendingLeadsModalOpen, setIsPendingLeadsModalOpen] =
+    useState(false);
 
   const exportReasonFormMethods = useForm<ExportReasonFormData>({
     resolver: zodResolver(exportReasonSchema),
@@ -2172,36 +2959,78 @@ const AccountDocument = () => {
     dispatch(getaccountdocAction());
     try {
       const { useEncryptApplicationStorage } = config;
-      setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage));
+      setUserData(
+        encryptStorage.getItem("UserData", !useEncryptApplicationStorage)
+      );
     } catch (error) {
       console.error("Error getting UserData:", error);
     }
   }, [dispatch]);
 
+  // Handler to refresh table data, passed to modals
+  const handleActionSuccess = useCallback(() => {
+    dispatch(getaccountdocAction());
+  }, [dispatch]);
+
+  const handleSetTableData = useCallback(
+    (data: Partial<TableQueries>) =>
+      setTableData((prev) => ({ ...prev, ...data })),
+    []
+  );
+
+  const handleShortcutClick = (shortcut: string) => {
+    setActiveShortcut(shortcut);
+    setFilterCriteria({});
+    filterForm.reset({});
+    if (searchInputRef.current) {
+      searchInputRef.current.value = "";
+    }
+    handleSetTableData({ query: "", pageIndex: 1 });
+  };
+
+  const onClearFilters = () => {
+    handleShortcutClick("Total");
+  };
+
   const getAllUserDataOptions = useMemo(
     () =>
       Array.isArray(getAllUserData)
-        ? getAllUserData.map((b: any) => ({ value: b.id, label: `(${b.employee_id}) - ${b.name || 'N/A'}`}))
+        ? getAllUserData.map((b: any) => ({
+          value: b.id,
+          label: `(${b.employee_id}) - ${b.name || "N/A"}`,
+        }))
         : [],
     [getAllUserData]
   );
   const handleOpenModal = useCallback(
     (type: ModalType, itemData: AccountDocumentListItem) => {
-      const typesRequiringFullData: ModalType[] = ['view', 'email', 'whatsapp', 'task', 'alert', 'activity', 'document'];
-      
+      const typesRequiringFullData: ModalType[] = [
+        "view",
+        "email",
+        "whatsapp",
+        "task",
+        "alert",
+        "activity",
+        "document",
+      ];
+
       if (typesRequiringFullData.includes(type)) {
-        
-          dispatch(getbyIDaccountdocAction(itemData.id))
-              .unwrap()
-              .then((result) => {
-                  setModalState({ isOpen: true, type, data: result.data });
-              })
-              .catch((err) => {
-                   toast.push(<Notification title="Error" type="danger" children={err?.message || "Could not fetch document details."}/>);
-              });
+        dispatch(getbyIDaccountdocAction(itemData.id))
+          .unwrap()
+          .then((result) => {
+            setModalState({ isOpen: true, type, data: result.data });
+          })
+          .catch((err) => {
+            toast.push(
+              <Notification
+                title="Error"
+                type="danger"
+                children={err?.message || "Could not fetch document details."}
+              />
+            );
+          });
       } else {
-          // For simple modals like notification and schedule that have enough data in the list item
-          setModalState({ isOpen: true, type, data: itemData });
+        setModalState({ isOpen: true, type, data: itemData });
       }
     },
     [dispatch]
@@ -2210,10 +3039,12 @@ const AccountDocument = () => {
     setModalState({ isOpen: false, type: null, data: null });
   }, []);
 
-  const handleOpenAddDrawer = () => {
+  const handleOpenAddDrawer = (leadNumber?: string) => {
     setEditingId(null);
+    setPrefilledLeadNumber(leadNumber || null);
     setIsAddEditDrawerOpen(true);
   };
+
 
   const handleOpenEditDrawer = (rowData: AccountDocumentListItem) => {
     setEditingId(rowData.id);
@@ -2223,6 +3054,7 @@ const AccountDocument = () => {
   const handleDrawerClose = () => {
     setIsAddEditDrawerOpen(false);
     setEditingId(null);
+    setPrefilledLeadNumber(null);
   };
 
   const filterOptions = useMemo(() => {
@@ -2273,7 +3105,7 @@ const AccountDocument = () => {
       id: String(item.id),
       status: (item.status?.toLowerCase() ||
         "pending") as AccountDocumentStatus,
-      leadNumber: item.lead_id ? `LD-${item.lead_id}` : "N/A",
+      leadNumber: item.lead_id ? `LD-${item.lead_id}` : (item.document_number?.startsWith("LD-") ? item.document_number : "N/A"),
       enquiryType: item.member?.interested_in?.toLowerCase().includes("sell")
         ? "sales"
         : "purchase",
@@ -2301,38 +3133,88 @@ const AccountDocument = () => {
 
     let processedData: AccountDocumentListItem[] = cloneDeep(mappedData);
 
-    if (tableData.query) {
-      const query = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter((item) =>
-        Object.values(item).some((val) =>
-          String(val).toLowerCase().includes(query)
-        )
-      );
-    }
+    if (activeShortcut && activeShortcut !== "Total") {
+      switch (activeShortcut) {
+        case "Today":
+          processedData = processedData.filter((item) =>
+            dayjs(item.createdAt).isSame(dayjs(), "day")
+          );
+          break;
+        case "Active":
+          processedData = processedData.filter(
+            (item) => item.status === "active"
+          );
+          break;
+        case "Purchase":
+          processedData = processedData.filter(
+            (item) => item.enquiryType === "purchase"
+          );
+          break;
+        case "Sales":
+          processedData = processedData.filter(
+            (item) => item.enquiryType === "sales"
+          );
+          break;
+        case "Completed":
+          processedData = processedData.filter(
+            (item) => item.status === "completed"
+          );
+          break;
+        case "Verified":
+          processedData = processedData.filter(
+            (item) => item.status === "approved"
+          );
+          break;
+        case "Pending":
+          processedData = processedData.filter(
+            (item) => item.status === "pending"
+          );
+          break;
+        case "Aazovo Docs":
+          processedData = processedData.filter(
+            (item) => item.companyDocumentType === "Aazovo"
+          );
+          break;
+        case "OMC Docs":
+          processedData = processedData.filter(
+            (item) => item.companyDocumentType === "OMC"
+          );
+          break;
+      }
+    } else {
+      if (tableData.query) {
+        const query = tableData.query.toLowerCase().trim();
+        processedData = processedData.filter((item) =>
+          Object.values(item).some((val) =>
+            String(val).toLowerCase().includes(query)
+          )
+        );
+      }
 
-    if (filterCriteria.filterStatus?.length) {
-      const selectedStatuses = new Set(
-        filterCriteria.filterStatus.map((s: SelectOption) => s.value)
-      );
-      processedData = processedData.filter((item) =>
-        selectedStatuses.has(item.status)
-      );
-    }
-    if (filterCriteria.comp_doc?.length) {
-      const selectedCompDocs = new Set(
-        filterCriteria.comp_doc.map((s: SelectOption) => s.value)
-      );
-      processedData = processedData.filter((item) =>
-        selectedCompDocs.has(item.companyDocumentType)
-      );
-    }
-    if (filterCriteria.doc_type?.length) {
-      const selectedDocTypes = new Set(
-        filterCriteria.doc_type.map((s: SelectOption) => s.value)
-      );
-      processedData = processedData.filter((item) =>
-        selectedDocTypes.has(item.formType)
-      );
+      if (filterCriteria.filterStatus?.length) {
+        const selectedStatuses = new Set(
+          filterCriteria.filterStatus.map((s: SelectOption) => s.value)
+        );
+        processedData = processedData.filter((item) =>
+          selectedStatuses.has(item.status)
+        );
+      }
+      if (filterCriteria.comp_doc?.length) {
+        const selectedCompDocs = new Set(
+          filterCriteria.comp_doc.map((s: SelectOption) => s.value)
+        );
+        processedData = processedData.filter((item) =>
+          selectedCompDocs.has(item.companyDocumentType)
+        );
+      }
+      if (filterCriteria.doc_type?.length) {
+        const selectedDocTypes = new Set(
+          filterCriteria.doc_type.map((s: SelectOption) => s.value)
+        );
+        processedData = processedData.filter((item) =>
+          selectedDocTypes.has(item.formType)
+        );
+      }
     }
 
     const { order, key } = tableData.sort as OnSortParam;
@@ -2363,7 +3245,7 @@ const AccountDocument = () => {
       total: currentTotal,
       allFilteredAndSortedData: processedData,
     };
-  }, [getaccountdoc, tableData, filterCriteria]);
+  }, [getaccountdoc, tableData, filterCriteria, activeShortcut]);
 
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
@@ -2411,11 +3293,6 @@ const AccountDocument = () => {
     }
   };
 
-  const handleSetTableData = useCallback(
-    (data: Partial<TableQueries>) =>
-      setTableData((prev) => ({ ...prev, ...data })),
-    []
-  );
   const handleDeleteClick = useCallback((item: AccountDocumentListItem) => {
     setItemToDelete(item);
     setSingleDeleteConfirmOpen(true);
@@ -2435,11 +3312,16 @@ const AccountDocument = () => {
     (sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }),
     [handleSetTableData]
   );
+
   const handleSearchChange = useCallback(
-    (query: string) =>
-      handleSetTableData({ query: query.target.value, pageIndex: 1 }),
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const query = e.target.value;
+      setActiveShortcut(""); // Deactivate shortcuts when user types in search
+      handleSetTableData({ query: query, pageIndex: 1 });
+    },
     [handleSetTableData]
   );
+
   const handleRowSelect = useCallback(
     (checked: boolean, row: AccountDocumentListItem) =>
       setSelectedItems((prev) =>
@@ -2467,9 +3349,13 @@ const AccountDocument = () => {
     []
   );
   const openFilterDrawer = useCallback(() => setIsFilterDrawerOpen(true), []);
-  const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
+  const closeFilterDrawer = useCallback(
+    () => setIsFilterDrawerOpen(false),
+    []
+  );
 
   const onApplyFilters = (data: FilterFormData) => {
+    setActiveShortcut(""); // Deactivate shortcuts when using advanced filters
     const newCriteria = Object.entries(data).reduce((acc, [key, value]) => {
       if (value && (!Array.isArray(value) || value.length > 0)) {
         acc[key as keyof FilterFormData] = value;
@@ -2480,25 +3366,6 @@ const AccountDocument = () => {
     setFilterCriteria(newCriteria);
     handleSetTableData({ pageIndex: 1 });
     closeFilterDrawer();
-  };
-
-  const onClearFilters = () => {
-    setFilterCriteria({});
-    filterForm.reset({});
-    handleSetTableData({ pageIndex: 1, query: "" });
-  };
-
-  const handleCardClick = (status: AccountDocumentStatus) => {
-    const statusOption: SelectOption[] = [
-      {
-        value: status,
-        label: status.charAt(0).toUpperCase() + status.slice(1),
-      },
-    ];
-    const newCriteria: FilterFormData = { filterStatus: statusOption };
-    setFilterCriteria(newCriteria);
-    filterForm.reset(newCriteria);
-    handleSetTableData({ pageIndex: 1, query: "" });
   };
 
   const handleRemoveFilter = (
@@ -2533,55 +3400,44 @@ const AccountDocument = () => {
         size: 120,
         cell: (props: CellContext<AccountDocumentListItem, any>) => (
           <Tag
-            className={`${
-              accountDocumentStatusColor[
-                props.row.original
-                  .status as keyof typeof accountDocumentStatusColor
-              ] || "bg-gray-100"
-            } capitalize px-2 py-1 text-xs`}
+            className={`${accountDocumentStatusColor[
+              props.row.original
+                .status as keyof typeof accountDocumentStatusColor
+            ] || "bg-gray-100"
+              } capitalize px-2 py-1 text-xs`}
           >
             {props.row.original.status.replace(/_/g, " ")}
           </Tag>
         ),
       },
-      // {
-      //   header: "Enquiry",
-      //   accessorKey: "leadNumber",
-      //   size: 130,
-      //   cell: (props) => {
-      //     const { leadNumber, enquiryType } = props.row.original;
-      //     return (
-      //       <div className="flex flex-col gap-0.5 text-xs">
-      //         <div>
-      //           <Tag
-      //             className={`${
-      //               enquiryTypeColor[
-      //                 enquiryType as keyof typeof enquiryTypeColor
-      //               ] || enquiryTypeColor.default
-      //             } capitalize px-2 py-1 text-xs`}
-      //           >
-      //             {enquiryType}
-      //           </Tag>
-      //         </div>
-      //       </div>
-      //     );
-      //   },
-      // },
       {
-        header: "Company",
-        accessorKey: "memberName",
-        size: 220,
+        header: "Document Type",
+        accessorKey: "formType",
+        size: 180,
+        cell: (props) => {
+          const { formType } = props.row.original;
+          return (
+            <span className="text-xs font-semibold">{formType || "N/A"}</span>
+          );
+        },
+      },
+      {
+        header: "Deal Details",
+        accessorKey: "companyName",
+        size: 250,
         cell: (props: CellContext<AccountDocumentListItem, any>) => {
-          const { companyName, memberName, userName, companyDocumentType } =
+          const { leadNumber, companyId, companyName, userName } =
             props.row.original;
           return (
-            <div className="flex flex-col gap-0.5 text-xs">
-              <b>{companyName}</b>
-              <span>Member: {memberName}</span>
-              <span>Assigned To: {userName}</span>
+            <div className="flex flex-col gap-1 text-xs">
               <div>
-                <b>Company Document: </b>
-                <span>{companyDocumentType}</span>
+                <b>Lead:</b> {leadNumber}
+              </div>
+              <div>
+                <b>Firm:</b> {companyName} {companyId ? `(${companyId})` : ""}
+              </div>
+              <div>
+                <b>Sales Person:</b> {userName}
               </div>
             </div>
           );
@@ -2589,21 +3445,13 @@ const AccountDocument = () => {
       },
       {
         header: "Document Details",
+        accessorKey: "documentNumber",
         size: 220,
         cell: (props) => {
-          const {
-            documentType,
-            documentNumber,
-            invoiceNumber,
-            formType,
-            createdAt,
-          } = props.row.original;
+          const { documentNumber, invoiceNumber, formType, createdAt } =
+            props.row.original;
           return (
-            <div className="flex flex-col gap-0.5 text-xs">
-              <div>
-                <b>Doc Type ID: </b>
-                <span>{documentType}</span>
-              </div>
+            <div className="flex flex-col gap-1 text-xs">
               <div>
                 <b>Doc No: </b>
                 <span>{documentNumber}</span>
@@ -2613,10 +3461,13 @@ const AccountDocument = () => {
                 <span>{invoiceNumber}</span>
               </div>
               <div>
-                <b>Form: </b>
+                <b>Form Type: </b>
                 <span>{formType}</span>
               </div>
-              <b>{dayjs(createdAt).format("DD MMM, YYYY HH:mm")}</b>
+              <div>
+                <b>Created: </b>
+                <span>{dayjs(createdAt).format("DD MMM, YYYY")}</span>
+              </div>
             </div>
           );
         },
@@ -2630,7 +3481,7 @@ const AccountDocument = () => {
           <AccountDocumentActionColumn
             onOpenModal={handleOpenModal}
             onEdit={() => handleOpenEditDrawer(props.row.original)}
-            onView={() => handleOpenModal('view', props.row.original)}
+            onView={() => handleOpenModal("view", props.row.original)}
             rowData={props.row.original}
           />
         ),
@@ -2639,9 +3490,9 @@ const AccountDocument = () => {
     [handleOpenModal, handleOpenEditDrawer]
   );
 
-  const [filteredColumns, setFilteredColumns] =
-    useState<ColumnDef<AccountDocumentListItem>[]>(columns);
-
+  const [filteredColumns, setFilteredColumns] = useState<
+    ColumnDef<AccountDocumentListItem>[]
+  >(columns);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -2663,6 +3514,19 @@ const AccountDocument = () => {
     };
   }, [getaccountdoc]);
 
+  const shortcutButtons = [
+    { label: "Total", key: "Total" },
+    { label: "Today", key: "Today" },
+    { label: "Active", key: "Active" },
+    { label: "Purchase", key: "Purchase" },
+    { label: "Sales", key: "Sales" },
+    { label: "Completed", key: "Completed" },
+    { label: "Verified", key: "Verified" },
+    { label: "Pending", key: "Pending" },
+    { label: "Aazovo Docs", key: "Aazovo Docs" },
+    { label: "OMC Docs", key: "OMC Docs" },
+  ];
+
   const cardClass =
     "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-2";
@@ -2673,18 +3537,28 @@ const AccountDocument = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Account Document</h5>
-            <Button
-              variant="solid"
-              icon={<TbPlus />}
-              className="px-5"
-              onClick={handleOpenAddDrawer}
-            >
-              Add New
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="solid"
+                color="blue-600"
+                onClick={() => setIsPendingLeadsModalOpen(true)}
+              >
+                Done Leads
+              </Button>
+              <Button
+                menuName="account_documents" isAdd={true}
+                variant="solid"
+                icon={<TbPlus />}
+                className="px-5"
+                onClick={() => handleOpenAddDrawer()}
+              >
+                Add New
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
             <Tooltip title="Click to show all documents">
-              <div onClick={onClearFilters}>
+              <div onClick={() => handleShortcutClick("Total")}>
                 <Card
                   bodyClass={cardBodyClass}
                   className={classNames(
@@ -2705,7 +3579,7 @@ const AccountDocument = () => {
               </div>
             </Tooltip>
             <Tooltip title="Click to show pending documents">
-              <div onClick={() => handleCardClick("pending")}>
+              <div onClick={() => handleShortcutClick("Pending")}>
                 <Card
                   bodyClass={cardBodyClass}
                   className={classNames(cardClass, "border-orange-200")}
@@ -2721,7 +3595,7 @@ const AccountDocument = () => {
               </div>
             </Tooltip>
             <Tooltip title="Click to show completed documents">
-              <div onClick={() => handleCardClick("completed")}>
+              <div onClick={() => handleShortcutClick("Completed")}>
                 <Card
                   bodyClass={cardBodyClass}
                   className={classNames(cardClass, "border-green-300")}
@@ -2737,7 +3611,7 @@ const AccountDocument = () => {
               </div>
             </Tooltip>
             <Tooltip title="Click to show active documents">
-              <div onClick={() => handleCardClick("active")}>
+              <div onClick={() => handleShortcutClick("Active")}>
                 <Card
                   bodyClass={cardBodyClass}
                   className={classNames(cardClass, "border-blue-200")}
@@ -2752,40 +3626,53 @@ const AccountDocument = () => {
                 </Card>
               </div>
             </Tooltip>
-            {/* <Tooltip title="Total Aazovo documents"> */}
-              <div className="cursor-default">
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(cardClass, "border-violet-300")}
-                >
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                    <TbFileCheck size={24} />
-                  </div>
-                  <div>
-                    <h6 className="text-violet-500">{counts.aazovo}</h6>
-                    <span className="font-semibold text-xs">Aazovo Docs</span>
-                  </div>
-                </Card>
-              </div>
-            {/* </Tooltip> */}
-            {/* <Tooltip title="Total OMC documents"> */}
-              <div className="cursor-default">
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(cardClass, "border-pink-200")}
-                >
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
-                    <TbFileExcel size={24} />
-                  </div>
-                  <div>
-                    <h6 className="text-pink-500">{counts.omc}</h6>
-                    <span className="font-semibold text-xs">OMC Docs</span>
-                  </div>
-                </Card>
-              </div>
-            {/* </Tooltip> */}
+            <div className="cursor-default">
+              <Card
+                bodyClass={cardBodyClass}
+                className={classNames(cardClass, "border-violet-300")}
+              >
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                  <TbFileCheck size={24} />
+                </div>
+                <div>
+                  <h6 className="text-violet-500">{counts.aazovo}</h6>
+                  <span className="font-semibold text-xs">Aazovo Docs</span>
+                </div>
+              </Card>
+            </div>
+            <div className="cursor-default">
+              <Card
+                bodyClass={cardBodyClass}
+                className={classNames(cardClass, "border-pink-200")}
+              >
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                  <TbFileExcel size={24} />
+                </div>
+                <div>
+                  <h6 className="text-pink-500">{counts.omc}</h6>
+                  <span className="font-semibold text-xs">OMC Docs</span>
+                </div>
+              </Card>
+            </div>
           </div>
+
+          {/* --- START: Header Filter Shortcuts --- */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            {shortcutButtons.map((s) => (
+              <Button
+                key={s.key}
+                size="sm"
+                variant={activeShortcut === s.key ? "solid" : "default"}
+                onClick={() => handleShortcutClick(s.key)}
+              >
+                {s.label}
+              </Button>
+            ))}
+          </div>
+          {/* --- END: Header Filter Shortcuts --- */}
+
           <AccountDocumentTableTools
+            searchInputRef={searchInputRef}
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
             onExport={handleOpenExportReasonModal}
@@ -2916,14 +3803,24 @@ const AccountDocument = () => {
         isOpen={isAddEditDrawerOpen}
         onClose={handleDrawerClose}
         editingId={editingId}
+        prefilledLeadNumber={prefilledLeadNumber}
       />
 
       <AccountDocumentModals
         modalState={modalState}
         onClose={handleCloseModal}
+        onActionSuccess={handleActionSuccess} // Pass callback here
         getAllUserDataOptions={getAllUserDataOptions}
         user={userData}
       />
+
+      <PendingLeadsModal
+        isOpen={isPendingLeadsModalOpen}
+        onClose={() => setIsPendingLeadsModalOpen(false)}
+        onActionSuccess={handleActionSuccess}
+        handleOpenAddDrawer={handleOpenAddDrawer}
+      />
+
       <ConfirmDialog
         isOpen={isExportReasonModalOpen}
         type="info"

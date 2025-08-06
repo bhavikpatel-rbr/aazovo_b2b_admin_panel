@@ -918,12 +918,12 @@ export const addProductAction = createAsyncThunk<any, any>(
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addProductAsync(data)
-      if (response?.status === true || response?.status === 200) {
+      if (response?.data?.status === true) {
         dispatch(getProductsAction())
         return response?.data
       } else {
         return rejectWithValue({
-          message: response?.message || 'Failed to edit company.'
+          message: response?.data?.message || 'Failed to edit Product.'
         });
       } // Uses Brand service
       // if (response?.data?.status === true) {
@@ -953,7 +953,7 @@ export const editProductAction = createAsyncThunk<
         return response?.data
       } else {
         return rejectWithValue({
-          message: response?.message || 'Failed to edit company.'
+          message: response?.message || 'Failed to edit Product.'
         });
       }
     } catch (error: unknown) {
@@ -3780,7 +3780,7 @@ export const addMemberAction = createAsyncThunk<any, any>("auth/addMember",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addMemberAsync(data)
-      if (response?.status === true || response?.status === 200) {
+      if (response?.data?.status === true) {
         dispatch(getMemberAction())
         return response?.data
       } else {
@@ -3798,7 +3798,7 @@ export const addPageAction = createAsyncThunk<any, any>("auth/pageadd",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addPageAsync(data)
-      if (response?.status === true || response?.status === 200) {
+      if (response?.data?.status === true) {
         dispatch(getPageAction())
         return response?.data
       } else {
@@ -3816,12 +3816,14 @@ export const editMemberAction = createAsyncThunk<any, any>("auth/editMember",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await editMemberAsync(data)
-      if (response?.status === true || response?.status === 200) {
+      console.log("response?.data?.status ", response?.data?.status);
+
+      if (response?.data?.status === true) {
         dispatch(getMemberAction())
         return response?.data
       } else {
         return rejectWithValue({
-          message: response?.message || 'Failed to edit company.'
+          message: response?.data?.message || 'Failed to edit member.'
         });
       }
     } catch (error: unknown) {
@@ -4999,7 +5001,9 @@ export const addEmployeesAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addEmployeeListAsync(payload);
 
-      if (response?.status === true) {
+      console.log("response?.status", response?.status);
+
+      if (response?.status == true || response?.status == 200) {
         dispatch(getEmployeesListingAction())
         return response?.data
       } else {

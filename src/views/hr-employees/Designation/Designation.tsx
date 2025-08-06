@@ -190,11 +190,11 @@ function exportDesignationsToCsv(filename: string, rows: DesignationItem[]) {
           let cell: any = row[k as keyof DesignationExportItem];
           if (cell === null || cell === undefined) cell = "";
           else {
-              let strCell = String(cell);
-              if (strCell.includes(separator) || strCell.includes('"') || strCell.includes('\n')) {
-                strCell = `"${strCell.replace(/"/g, '""')}"`;
-              }
-              cell = strCell;
+            let strCell = String(cell);
+            if (strCell.includes(separator) || strCell.includes('"') || strCell.includes('\n')) {
+              strCell = `"${strCell.replace(/"/g, '""')}"`;
+            }
+            cell = strCell;
           }
           return cell;
         }).join(separator)
@@ -280,55 +280,57 @@ const DesignationsTableTools = ({ onSearchChange, onFilter, onExport, onClearFil
   setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<DesignationItem>[]>>;
   activeFilterCount: number;
 }) => {
-    const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
-    const toggleColumn = (checked: boolean, colId: string) => {
-      if (checked) {
-          const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
-          if (originalColumn) {
-              setFilteredColumns(prev => {
-                  const newCols = [...prev, originalColumn];
-                  newCols.sort((a, b) => {
-                      const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
-                      const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
-                      return indexA - indexB;
-                  });
-                  return newCols;
-              });
-          }
-      } else {
-          setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+  const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+  const toggleColumn = (checked: boolean, colId: string) => {
+    if (checked) {
+      const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+      if (originalColumn) {
+        setFilteredColumns(prev => {
+          const newCols = [...prev, originalColumn];
+          newCols.sort((a, b) => {
+            const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+            const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+            return indexA - indexB;
+          });
+          return newCols;
+        });
       }
-    };
+    } else {
+      setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+    }
+  };
 
-    return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-            <div className="flex-grow">
-                <DesignationsSearch onInputChange={onSearchChange} />
-            </div>
-            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
-                    <div className="flex flex-col p-2">
-                        <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-                        {columns.map((col) => {
-                            const id = col.id || col.accessorKey as string;
-                            return col.header && (
-                                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
-                                    <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
-                                        {col.header as string}
-                                    </Checkbox>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </Dropdown>
-                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload" />
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
-                    Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
-                </Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
-            </div>
-        </div>
-    );
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+      <div className="flex-grow">
+        <DesignationsSearch onInputChange={onSearchChange} />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+        <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+          <div className="flex flex-col p-2">
+            <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+            {columns.map((col) => {
+              const id = col.id || col.accessorKey as string;
+              return col.header && (
+                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                  <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
+                    {col.header as string}
+                  </Checkbox>
+                </div>
+              );
+            })}
+          </div>
+        </Dropdown>
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload" />
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+          Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
+        </Button>
+        <Button
+          menuName="designation" isExport={true}
+          icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+      </div>
+    </div>
+  );
 };
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
@@ -336,17 +338,17 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
   onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
   onClearAll: () => void;
 }) => {
-    const { filterNames, filterStatuses } = filterData;
-    if (!filterNames?.length && !filterStatuses?.length) return null;
+  const { filterNames, filterStatuses } = filterData;
+  if (!filterNames?.length && !filterStatuses?.length) return null;
 
-    return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {filterNames?.map(item => <Tag key={`name-${item.value}`} prefix>Name: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterNames', item.value)} /></Tag>)}
-            {filterStatuses?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatuses', item.value)} /></Tag>)}
-            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-        </div>
-    );
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {filterNames?.map(item => <Tag key={`name-${item.value}`} prefix>Name: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterNames', item.value)} /></Tag>)}
+      {filterStatuses?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatuses', item.value)} /></Tag>)}
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+    </div>
+  );
 };
 
 const DesignationsSelectedFooter = ({
@@ -398,9 +400,8 @@ const DesignationsSelectedFooter = ({
       <ConfirmDialog
         isOpen={deleteConfirmationOpen}
         type="danger"
-        title={`Delete ${selectedItems.length} Designation${
-          selectedItems.length > 1 ? "s" : ""
-        }`}
+        title={`Delete ${selectedItems.length} Designation${selectedItems.length > 1 ? "s" : ""
+          }`}
         onClose={handleCancelDelete}
         onRequestClose={handleCancelDelete}
         onCancel={handleCancelDelete}
@@ -447,21 +448,21 @@ const DesignationListing = () => {
     query: "",
   });
   const [selectedItems, setSelectedItems] = useState<DesignationItem[]>([]);
-  
+
   // --- MODIFIED: Standardized image viewer state and handlers ---
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [viewerImageSrc, setViewerImageSrc] = useState<string | null>(null);
-  
+
   const openImageViewer = useCallback((src?: string) => {
     if (src) {
-        setViewerImageSrc(src);
-        setIsImageViewerOpen(true);
+      setViewerImageSrc(src);
+      setIsImageViewerOpen(true);
     }
   }, []);
 
   const closeImageViewer = useCallback(() => {
-      setIsImageViewerOpen(false);
-      setViewerImageSrc(null);
+    setIsImageViewerOpen(false);
+    setViewerImageSrc(null);
   }, []);
   // --- END MODIFICATION ---
 
@@ -475,9 +476,9 @@ const DesignationListing = () => {
     () =>
       Array.isArray(departmentsData?.data)
         ? departmentsData?.data.map((dep: GeneralListItem) => ({
-            value: String(dep.id),
-            label: dep.name,
-          }))
+          value: String(dep.id),
+          label: dep.name,
+        }))
         : [],
     [departmentsData?.data]
   );
@@ -487,34 +488,34 @@ const DesignationListing = () => {
     if (!Array.isArray(data)) return [];
 
     const departmentMap = new Map(departmentOptions.map(opt => [opt.value, opt.label]));
-    
+
     return data.map((item: any): DesignationItem => {
-        let departments: { id: number; name: string }[] = [];
-        if (typeof item.department_id === 'string') {
-            try {
-                const parsedIds: string[] = JSON.parse(item.department_id);
-                if (Array.isArray(parsedIds)) {
-                    departments = parsedIds.map(id => ({
-                        id: Number(id),
-                        name: departmentMap.get(id) || 'Unknown Department'
-                    })).filter(d => d.name !== 'Unknown Department');
-                }
-            } catch (e) {
-                console.error("Failed to parse department_id:", item.department_id, e);
-            }
-        } else if (Array.isArray(item.department)) {
-             departments = item.department;
+      let departments: { id: number; name: string }[] = [];
+      if (typeof item.department_id === 'string') {
+        try {
+          const parsedIds: string[] = JSON.parse(item.department_id);
+          if (Array.isArray(parsedIds)) {
+            departments = parsedIds.map(id => ({
+              id: Number(id),
+              name: departmentMap.get(id) || 'Unknown Department'
+            })).filter(d => d.name !== 'Unknown Department');
+          }
+        } catch (e) {
+          console.error("Failed to parse department_id:", item.department_id, e);
         }
+      } else if (Array.isArray(item.department)) {
+        departments = item.department;
+      }
 
-        const reportingManager = item.reporting_manager_user 
-          ? { id: item.reporting_manager_user.id, name: item.reporting_manager_user.name }
-          : null;
+      const reportingManager = item.reporting_manager_user
+        ? { id: item.reporting_manager_user.id, name: item.reporting_manager_user.name }
+        : null;
 
-        return {
-            ...item,
-            department: departments,
-            reporting_manager: reportingManager,
-        };
+      return {
+        ...item,
+        department: departments,
+        reporting_manager: reportingManager,
+      };
     });
   }, [rawDesignationsData?.data, departmentOptions]);
 
@@ -522,9 +523,9 @@ const DesignationListing = () => {
     () =>
       Array.isArray(Employees)
         ? Employees?.map((emp: GeneralListItem) => ({
-            value: String(emp.id),
-            label: emp.name,
-          }))
+          value: String(emp.id),
+          label: emp.name,
+        }))
         : [],
     [Employees]
   );
@@ -565,9 +566,9 @@ const DesignationListing = () => {
     (item: DesignationItem) => {
       setEditingItem(item);
       const departmentIds = item.department.map(d => String(d.id));
-      console.log("item.reporting_manager?.id",item.reporting_manager?.id);
-      console.log("departmentIds",departmentIds);
-      
+      console.log("item.reporting_manager?.id", item.reporting_manager?.id);
+      console.log("departmentIds", departmentIds);
+
       formMethods.reset({
         name: item.name,
         department_id: departmentIds,
@@ -674,24 +675,24 @@ const DesignationListing = () => {
   }, [filterFormMethods, dispatch, handleSetTableData]);
 
   const handleCardClick = useCallback((status: 'Active' | 'Inactive' | 'all') => {
-      onClearFilters();
-      if(status !== 'all') {
-          const statusOption = STATUS_OPTIONS.find(opt => opt.value === status);
-          if(statusOption) {
-            setFilterCriteria({ ...filterCriteria, filterStatuses: [statusOption] });
-          }
+    onClearFilters();
+    if (status !== 'all') {
+      const statusOption = STATUS_OPTIONS.find(opt => opt.value === status);
+      if (statusOption) {
+        setFilterCriteria({ ...filterCriteria, filterStatuses: [statusOption] });
       }
+    }
   }, [onClearFilters, filterCriteria]);
 
   const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: string) => {
     setFilterCriteria(prev => {
-        const newFilters = { ...prev };
-        const currentValues = prev[key] as { value: string; label: string }[] | undefined;
-        if (currentValues) {
-            const newValues = currentValues.filter(item => item.value !== value);
-            (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
-        }
-        return newFilters;
+      const newFilters = { ...prev };
+      const currentValues = prev[key] as { value: string; label: string }[] | undefined;
+      if (currentValues) {
+        const newValues = currentValues.filter(item => item.value !== value);
+        (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
+      }
+      return newFilters;
     });
     setTableData(prev => ({ ...prev, pageIndex: 1 }));
   }, []);
@@ -714,7 +715,7 @@ const DesignationListing = () => {
         selectedNames.includes(item.name.toLowerCase())
       );
     }
-     if (filterCriteria.filterStatuses?.length) {
+    if (filterCriteria.filterStatuses?.length) {
       const selectedStatuses = filterCriteria.filterStatuses.map(opt => opt.value);
       processedData = processedData.filter(item => item.status && selectedStatuses.includes(item.status));
     }
@@ -742,8 +743,8 @@ const DesignationListing = () => {
         if (typeof aVal === "number" && typeof bVal === "number")
           return order === "asc" ? aVal - bVal : bVal - aVal;
         if (key === 'reporting_manager') {
-            aVal = a.reporting_manager?.name || '';
-            bVal = b.reporting_manager?.name || '';
+          aVal = a.reporting_manager?.name || '';
+          bVal = b.reporting_manager?.name || '';
         }
         return order === "asc"
           ? String(aVal).localeCompare(String(bVal))
@@ -806,7 +807,7 @@ const DesignationListing = () => {
       {
         header: "Department",
         accessorKey: "department",
-        enableSorting: false, 
+        enableSorting: false,
         cell: (props) => {
           const depts = props.getValue() as DesignationItem['department'];
           if (Array.isArray(depts) && depts.length > 0) {
@@ -838,27 +839,27 @@ const DesignationListing = () => {
         enableSorting: true,
         size: 220,
         cell: (props) => {
-            const { updated_at, updated_by_user } = props.row.original;
-            const formattedDate = updated_at ? formatCustomDateTime(updated_at) : "N/A";
-            
-            return (
-                <div className="flex items-center gap-2">
-                    <Avatar 
-                        src={updated_by_user?.profile_pic_path} 
-                        shape="circle" 
-                        size="sm" 
-                        icon={<TbUserCircle />} 
-                        className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-                        // --- MODIFIED: Call correct handler ---
-                        onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
-                    />
-                    <div>
-                        <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
-                        <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
-                        <div className="text-xs text-gray-500">{formattedDate}</div>
-                    </div>
-                </div>
-            );
+          const { updated_at, updated_by_user } = props.row.original;
+          const formattedDate = updated_at ? formatCustomDateTime(updated_at) : "N/A";
+
+          return (
+            <div className="flex items-center gap-2">
+              <Avatar
+                src={updated_by_user?.profile_pic_path}
+                shape="circle"
+                size="sm"
+                icon={<TbUserCircle />}
+                className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                // --- MODIFIED: Call correct handler ---
+                onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
+              />
+              <div>
+                <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
+                <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
+                <div className="text-xs text-gray-500">{formattedDate}</div>
+              </div>
+            </div>
+          );
         },
       },
       {
@@ -895,26 +896,26 @@ const DesignationListing = () => {
       </FormItem>
       <FormItem label={<div>Reporting To</div>} invalid={!!currentFormMethods.formState.errors.reporting_manager} errorMessage={currentFormMethods.formState.errors.reporting_manager?.message}>
         <Controller name="reporting_manager" control={currentFormMethods.control} render={({ field }) => (
-            <Select
-                ref={field.ref}
-                placeholder="Select Reporting Person"
-                options={employeeOptions}
-                value={employeeOptions.find((o) => o.value === field.value) || null}
-                onChange={(opt) => field.onChange(opt?.value)}
-                onBlur={field.onBlur}
-            />
+          <Select
+            ref={field.ref}
+            placeholder="Select Reporting Person"
+            options={employeeOptions}
+            value={employeeOptions.find((o) => o.value === field.value) || null}
+            onChange={(opt) => field.onChange(opt?.value)}
+            onBlur={field.onBlur}
+          />
         )} />
       </FormItem>
       <FormItem label={<div>Status<span className="text-red-500"> *</span></div>} invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}>
         <Controller name="status" control={currentFormMethods.control} render={({ field }) => (
-            <Select
-                ref={field.ref}
-                placeholder="Select Status"
-                options={STATUS_OPTIONS}
-                value={STATUS_OPTIONS.find((o) => o.value === field.value) || null}
-                onChange={(opt) => field.onChange(opt?.value)}
-                onBlur={field.onBlur}
-            />
+          <Select
+            ref={field.ref}
+            placeholder="Select Status"
+            options={STATUS_OPTIONS}
+            value={STATUS_OPTIONS.find((o) => o.value === field.value) || null}
+            onChange={(opt) => field.onChange(opt?.value)}
+            onBlur={field.onBlur}
+          />
         )} />
       </FormItem>
     </>
@@ -931,7 +932,10 @@ const DesignationListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Designations</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableIsLoading}>Add New</Button>
+            <Button
+              menuName="designation" isAdd={true}
+
+              variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableIsLoading}>Add New</Button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
             <Tooltip title="Click to show all designations"><div onClick={() => handleCardClick('all')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbPresentation size={24} /></div><div><h6 className="text-blue-500">{counts.total ?? "..."}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
@@ -946,12 +950,12 @@ const DesignationListing = () => {
           </div>
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="mt-4 flex-grow overflow-auto">
-            <DataTable columns={filteredColumns} data={pageData} loading={tableIsLoading} pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }} selectable checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} noData={!tableIsLoading && pageData.length === 0} />
+            <DataTable menuName="designation" columns={filteredColumns} data={pageData} loading={tableIsLoading} pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }} selectable checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} noData={!tableIsLoading && pageData.length === 0} />
           </div>
         </AdaptiveCard>
       </Container>
       <DesignationsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} disabled={tableIsLoading} />
-      
+
       {/* --- MODIFIED: Replaced frameless dialog with a proper one --- */}
       <Dialog
         isOpen={isImageViewerOpen}
@@ -962,24 +966,24 @@ const DesignationListing = () => {
         width={600}
         bodyOpenClassName="overflow-hidden"
       >
-          <div className="flex justify-center items-center p-4">
-              {viewerImageSrc ? (
-                  <img
-                      src={viewerImageSrc}
-                      alt="Profile View"
-                      style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
-                  />
-              ) : (
-                  <p>No image to display.</p>
-              )}
-          </div>
+        <div className="flex justify-center items-center p-4">
+          {viewerImageSrc ? (
+            <img
+              src={viewerImageSrc}
+              alt="Profile View"
+              style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
+            />
+          ) : (
+            <p>No image to display.</p>
+          )}
+        </div>
       </Dialog>
       {/* --- END MODIFICATION --- */}
-      
+
       <Drawer title="Add Designation" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="designationForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Adding..." : "Save"}</Button></div>}>
         <Form id="designationForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-y-6">{renderDrawerForm(formMethods)}</Form>
       </Drawer>
-      <Drawer title="Edit Designation" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} width={480} onRequestClose={closeEditDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="editDesignationForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting }>{isSubmitting ? "Saving..." : "Save"}</Button></div>}>
+      <Drawer title="Edit Designation" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} width={480} onRequestClose={closeEditDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="editDesignationForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</Button></div>}>
         <Form id="editDesignationForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-y-6 relative pb-28">{renderDrawerForm(formMethods)}
           {editingItem && (<div className="absolute bottom-0 w-full"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="font-semibold text-primary">Latest Update:</b><br /><p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p><p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p></div><div className="text-right"><br /><span className="font-semibold">Created At:</span> <span>{editingItem.created_at ? formatCustomDateTime(editingItem.created_at) : "N/A"}</span><br /><span className="font-semibold">Updated At:</span> <span>{editingItem.updated_at ? formatCustomDateTime(editingItem.updated_at) : "N/A"}</span></div></div></div>)}
         </Form>

@@ -16,11 +16,12 @@ import {
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
 import Container from '@/components/shared/Container'
-import { Avatar, Button, Card, Spinner, Tag, Input, Select, Dialog } from '@/components/ui'
+import { Avatar, Button, Card, Spinner, Tag, Input, Select, Dialog, Tooltip } from '@/components/ui'
 import { DatePicker, Table, Pagination } from '@/components/ui'
 import Notification from '@/components/ui/Notification'
 import Tabs from '@/components/ui/Tabs'
 import toast from '@/components/ui/toast'
+// Make sure THead and TBody are imported
 const { TabNav, TabList, TabContent } = Tabs
 const { Tr, Th, Td, THead, TBody } = Table
 
@@ -41,6 +42,7 @@ import {
     TbTag,
     TbUsers,
     TbBuildingStore,
+    TbInfoCircle,
 } from 'react-icons/tb'
 
 // Redux
@@ -48,9 +50,12 @@ import {
     getMemberByIdAction,
     getDemandsAction,
     getOffersAction,
-    getOfferByIdAction, // Assumed action, replace with your actual action
-    getDemandByIdAction, // Assumed action, replace with your actual action
 } from '@/reduxtool/master/middleware'
+
+
+// --- All placeholder components and helper functions remain the same ---
+// (DataTable, DetailItem, ListAsTags, formatDate, renderPermission, renderLink, etc.)
+// ... (I've omitted them here for brevity, but they are unchanged in your file)
 
 // --- START: Reusable and Placeholder Components ---
 
@@ -292,12 +297,12 @@ const WallInquiryTab = ({ data, loading }: { data: any[], loading: boolean }) =>
         </Card>
     );
 };
+// --- Offer/Demand Components are unchanged ---
 
-const OfferDemandTab = ({ data, loading, onRowClick }: { data: any[], loading: boolean, onRowClick: (item: any) => void }) => {
+const OfferDemandTab = ({ data, loading, onRowClick, type }: { data: any[], loading: boolean, onRowClick: (item: any) => void, type: string }) => {
     const [sort, setSort] = useState<SortingState>([]);
-
     const columns = useMemo(() => [
-        { header: 'Offer/Demand Name', accessorKey: 'offer_name' },
+        { header: `${type} Name`, accessorKey: 'offer_name' },
         { header: 'Product Name', accessorKey: 'product' },
         { header: 'Product ID', accessorKey: 'product_id' },
         {
@@ -309,7 +314,7 @@ const OfferDemandTab = ({ data, loading, onRowClick }: { data: any[], loading: b
                 </Button>
             )
         },
-    ], [onRowClick]);
+    ], [onRowClick, type]);
 
     return (
         <Card bordered>
@@ -330,10 +335,10 @@ const OfferDemandDetailDialog = ({ item, type, isOpen, onClose }: { item: any, t
             setIsLoading(true);
             setDetailedData(null);
             try {
-                const action = type == 'Offer'
+                const action = type === 'Offer'
                     ? getOffersAction()
                     // @ts-ignore
-                    : getDemandsAction(); // Assuming demand also uses offer_id
+                    : getDemandsAction();
 
                 const response = await dispatch(action).unwrap();
                 const Result = response?.data || response || [];
@@ -448,6 +453,9 @@ const MemberViewPage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [viewingOfferDemand, setViewingOfferDemand] = useState<{ item: any, type: 'Offer' | 'Demand' } | null>(null);
 
+    // --- STEP 1: Add state for the dynamic profile dialog ---
+    const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+
     useEffect(() => {
         if (!id) {
             toast.push(<Notification type="danger" title="Error">No member ID provided.</Notification>);
@@ -493,6 +501,7 @@ const MemberViewPage = () => {
 
     return (
         <Container>
+            {/* Header and Member Info Card remain the same */}
             <div className="flex gap-1 items-center mb-3">
                 <NavLink to="/business-entities/member"><h6 className="font-semibold hover:text-primary-600">Members</h6></NavLink>
                 <BiChevronRight size={22} />
@@ -500,25 +509,34 @@ const MemberViewPage = () => {
             </div>
 
             <Card className="mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div className="flex items-center gap-4 md:col-span-1">
-                        <Avatar size={90} shape="circle" src={memberData.full_profile_pic} icon={<TbUserCircle />} />
                         <div>
-                            <h5 className="font-bold">{memberData.name || 'N/A'}</h5>
+                            <h5 className="font-bold">{memberData.customer_code || 'N/A'} - {memberData.name || 'N/A'}</h5>
                             <Tag className={`mt-2 ${statusColorMap[currentStatus] || ''} capitalize`}>{memberData.status}</Tag>
                             <div className="text-sm mt-2 space-y-1">
                                 <div className="flex items-center gap-2"><TbMail className="text-gray-400" /><p>{memberData.email || 'N/A'}</p></div>
-                                <div className="flex items-center gap-2"><TbPhone className="text-gray-400" /><p>{memberData.customer_code} {memberData.number}</p></div>
+                                <div className="flex items-center gap-2"><TbPhone className="text-gray-400" /><p>{memberData.number_code}{memberData.number}</p></div>
                                 <div className="flex items-center gap-2"><TbGlobe className="text-gray-400" /><p>{memberData.country?.name || 'N/A'}</p></div>
                             </div>
                         </div>
                     </div>
-                    <div className="text-xs space-y-1.5 md:col-span-1">
+                    <div className="text-xs space-y-1.5 md:col-span-1 mt-5">
                         <p><b>Temp. Company:</b> {memberData.company_temp || 'N/A'}</p>
                         <p><b>Actual Company:</b> {memberData.company_actual || 'N/A'}</p>
                         <p><b>Business Type:</b> {memberData.business_type || 'N/A'}</p>
-                        <p><b>Manager:</b> {memberData.relationship_manager?.name || 'N/A'}</p>
+                        <p><b>RM:</b> {memberData.relationship_manager?.name || 'N/A'}</p>
+                        
+                    </div>
+                     <div className="text-xs space-y-1.5 md:col-span-1">
+                       
                         <p><b>Business Opportunity:</b> <ListAsTags list={memberData.business_opportunity} /></p>
+                        <p> {memberData.category?.split(',').map(s => s.trim())}{memberData.subcategory ?? '/' + memberData.subcategory?.split(',').map(s => s.trim())}</p>
+
+                         <span className="flex items-center gap-1 ">
+                                      <Tooltip title="View Dynamic Profiles"><TbInfoCircle size={16} className="text-blue-500 cursor-pointer flex-shrink-0" onClick={() => setIsProfileDialogOpen(true)} /></Tooltip>
+                                      <b>View Dynamic Profiles</b>
+                                    </span>
                     </div>
                     <div className="flex flex-col md:items-end md:col-span-1 gap-2">
                         <div className="flex flex-row md:flex-col lg:flex-row gap-2 w-full">
@@ -529,6 +547,7 @@ const MemberViewPage = () => {
                 </div>
             </Card>
 
+
             <AdaptiveCard>
                 <Tabs defaultValue="member-details">
                     <TabList>
@@ -538,9 +557,10 @@ const MemberViewPage = () => {
                         <TabNav value="wall-inquiry">Wall Inquiry</TabNav>
                         <TabNav value="leads">Leads</TabNav>
                         <TabNav value="favorite-products">Favorite Products</TabNav>
-                        <TabNav value="assign-brand">Assign Brand</TabNav>
+                        {/* <TabNav value="assign-brand">Assign Brand</TabNav> */}
                     </TabList>
                     <div className="mt-6">
+                        {/* Member Details Tab remains the same */}
                         <TabContent value="member-details">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <Card bordered>
@@ -578,12 +598,14 @@ const MemberViewPage = () => {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
                                         <DetailItem label="Product Upload" value={renderPermission(memberData.product_upload_permission)} />
                                         <DetailItem label="Wall Enquiry" value={renderPermission(memberData.wall_enquiry_permission)} />
-                                        <DetailItem label="General Enquiry" value={renderPermission(memberData.enquiry_permission)} />
+                                       
                                         <DetailItem label="Trade Inquiry" value={renderPermission(memberData.trade_inquiry_allowed)} />
                                     </div>
                                 </Card>
                             </div>
                         </TabContent>
+                        
+                        {/* Other tabs remain the same */}
                         <TabContent value="offers">
                             <OfferDemandTab data={memberData.offer_demands?.offers || []} loading={isLoading} type="Offers" onRowClick={(item) => setViewingOfferDemand({ item, type: 'Offer' })} />
                         </TabContent>
@@ -613,27 +635,14 @@ const MemberViewPage = () => {
                                 ) : <p className="text-sm text-gray-500">No favourite products listed.</p>}
                             </Card>
                         </TabContent>
-                        <TabContent value="assign-brand">
-                            <Card bordered>
-                                <h5 className="mb-4">Assigned Brands & Categories</h5>
-                                {memberData.dynamic_member_profiles?.length > 0 ? (
-                                    <div className="flex flex-col gap-6">
-                                        {memberData.dynamic_member_profiles.map((profile: any, index: number) => (
-                                            <div key={profile.id || index} className="p-4 border rounded-md dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                                                <h6 className="font-semibold mb-3">{profile.member_type?.name || `Profile ${index + 1}`}</h6>
-                                                <DetailItem label="Brands" value={<ListAsTags list={profile.brand_names} />} />
-                                                <div className="mt-2"><DetailItem label="Categories" value={<ListAsTags list={profile.category_names} />} /></div>
-                                                <div className="mt-2"><DetailItem label="Sub-Categories" value={<ListAsTags list={profile.sub_category_names} />} /></div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : <p className="text-sm text-gray-500">No assigned brands or dynamic profiles found.</p>}
-                            </Card>
-                        </TabContent>
+
+                        {/* --- STEP 3: Replace the "Assign Brand" tab content --- */}
+                       
                     </div>
                 </Tabs>
             </AdaptiveCard>
 
+            {/* Other dialogs remain */}
             {viewingOfferDemand && (
                 <OfferDemandDetailDialog
                     isOpen={!!viewingOfferDemand}
@@ -641,6 +650,53 @@ const MemberViewPage = () => {
                     item={viewingOfferDemand.item}
                     type={viewingOfferDemand.type}
                 />
+            )}
+
+            {/* --- STEP 2: Add the new Dynamic Profiles Dialog --- */}
+            {isProfileDialogOpen && (
+                 <Dialog
+                    width={800}
+                    isOpen={isProfileDialogOpen}
+                    onClose={() => setIsProfileDialogOpen(false)}
+                    onRequestClose={() => setIsProfileDialogOpen(false)}
+                 >
+                    <h5 className="mb-4">Dynamic Profiles for {memberData.name}</h5>
+                    <div className="max-h-[60vh] overflow-y-auto">
+                        <Table>
+                            <THead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
+                                <Tr>
+                                    <Th>Member Type</Th>
+                                    <Th>Brands</Th>
+                                
+                                    <Th>Sub Categories</Th>
+                                </Tr>
+                            </THead>
+                            <TBody>
+                                {memberData.dynamic_member_profiles?.length > 0 ? (
+                                    memberData.dynamic_member_profiles.map((p: any) => (
+                                        <Tr key={p.id}>
+                                            <Td>{p.member_type?.name || 'N/A'}</Td>
+                                            <Td><ListAsTags list={p.brand_names} /></Td>
+                                            
+                                            <Td><ListAsTags list={p.sub_category_names} /></Td>
+                                        </Tr>
+                                    ))
+                                ) : (
+                                    <Tr>
+                                        <Td colSpan={4} className="text-center py-8">
+                                            No dynamic profiles available.
+                                        </Td>
+                                    </Tr>
+                                )}
+                            </TBody>
+                        </Table>
+                    </div>
+                    <div className="text-right mt-6">
+                        <Button variant="solid" onClick={() => setIsProfileDialogOpen(false)}>
+                            Close
+                        </Button>
+                    </div>
+                </Dialog>
             )}
         </Container>
     )

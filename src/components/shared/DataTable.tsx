@@ -29,6 +29,8 @@ import type { TableProps } from '@/components/ui/Table'
 import type { SkeletonProps } from '@/components/ui/Skeleton'
 import type { Ref, ChangeEvent, ReactNode } from 'react'
 import type { CheckboxProps } from '@/components/ui/Checkbox'
+import { getMenuRights } from '@/utils/getMenuRights'
+import { LuShieldAlert } from 'react-icons/lu'
 
 export type OnSortParam = { order: 'asc' | 'desc' | ''; key: string | number }
 
@@ -133,6 +135,7 @@ function DataTable<T>(props: DataTableProps<T>) {
         indeterminateCheckboxChecked,
         instanceId = 'data-table',
         ref,
+        menuName = "",
         ...rest
     } = props
 
@@ -226,131 +229,160 @@ function DataTable<T>(props: DataTableProps<T>) {
         }
     }
 
+
+
+    const NoAccessUI = () => {
+        return (
+            <div className="flex flex-col items-center justify-center h-full bg-gray-50 p-4">
+                <div className="text-center">
+                    <LuShieldAlert className="mx-auto h-12 w-12 text-red-500" />
+                    <h1 className="mt-4 text-2xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+                        Access Denied
+                    </h1>
+                    <p className="mt-2 text-base text-gray-600">
+                        You do not have the necessary permissions to view this page.
+                    </p>
+                    <div className="mt-6">
+                        <button
+                            onClick={() => window.history.back()}
+                            className="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                        >
+                            Go Back
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    console.log(getMenuRights(menuName)?.is_view, "getMenuRights(menuName)?.is_view", menuName, getMenuRights()?.useRights);
+
     return (
         <>
             {/* // <Loading loading={Boolean(loading && data.length !== 0)} type="cover"> */}
-            <Table {...rest}>
-                <THead>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                        <Tr key={headerGroup.id}>
-                            {headerGroup.headers.map((header) => {
-                                return (
-                                    <Th
-                                        key={header.id}
-                                        colSpan={header.colSpan}
-                                    >
-                                        {header.isPlaceholder ? null : (
-                                            <div
-                                                className={classNames(
-                                                    header.column.getCanSort() &&
-                                                    'cursor-pointer select-none point',
-                                                    loading &&
-                                                    'pointer-events-none',
-                                                    header.column.columnDef.meta?.HeaderClass
-                                                )}
-                                                onClick={header.column.getToggleSortingHandler()}
-                                            >
-                                                {flexRender(
-                                                    header.column.columnDef
-                                                        .header,
-                                                    header.getContext(),
-                                                )}
-                                                {header.column.getCanSort() && (
-                                                    <Sorter
-                                                        sort={header.column.getIsSorted()}
-                                                    />
-                                                )}
-                                            </div>
-                                        )}
-                                    </Th>
-                                )
-                            })}
-                        </Tr>
-                    ))}
-                </THead>
-                {loading && data.length === 0 ? (
-                    <TableRowSkeleton
-                        columns={(finalColumns as Array<T>).length}
-                        rows={pagingData.pageSize}
-                        avatarInColumns={skeletonAvatarColumns}
-                        avatarProps={skeletonAvatarProps}
-                    />
-                ) : (
-                    <TBody>
-                        {noData ? (
-                            <Tr>
-                                <Td
-                                    className="hover:bg-transparent"
-                                    colSpan={finalColumns.length}
-                                >
-                                    <div className="flex flex-col items-center gap-4">
-                                        {customNoDataIcon ? (
-                                            customNoDataIcon
-                                        ) : (
-                                            <>
-                                                <FileNotFound />
-                                                <span className="font-semibold">
-                                                    No data found!
-                                                </span>
-                                            </>
-                                        )}
-                                    </div>
-                                </Td>
-                            </Tr>
-                        ) : (
-                            table
-                                .getRowModel()
-                                .rows.slice(0, pageSize)
-                                .map((row) => {
+            {
+                (getMenuRights(menuName)?.is_view) ? (<><Table {...rest}>
+                    <THead>
+                        {table.getHeaderGroups().map((headerGroup) => (
+                            <Tr key={headerGroup.id}>
+                                {headerGroup.headers.map((header) => {
                                     return (
-                                        <Tr key={row.id}>
-                                            {row
-                                                .getVisibleCells()
-                                                .map((cell) => {
-                                                    return (
-                                                        <Td
-                                                            key={cell.id}
-                                                            style={{
-                                                                width: cell.column.getSize(),
-                                                            }}
-                                                        >
-                                                            {flexRender(
-                                                                cell.column
-                                                                    .columnDef
-                                                                    .cell,
-                                                                cell.getContext(),
-                                                            )}
-                                                        </Td>
-                                                    )
-                                                })}
-                                        </Tr>
+                                        <Th
+                                            key={header.id}
+                                            colSpan={header.colSpan}
+                                        >
+                                            {header.isPlaceholder ? null : (
+                                                <div
+                                                    className={classNames(
+                                                        header.column.getCanSort() &&
+                                                        'cursor-pointer select-none point',
+                                                        loading &&
+                                                        'pointer-events-none',
+                                                        header.column.columnDef.meta?.HeaderClass
+                                                    )}
+                                                    onClick={header.column.getToggleSortingHandler()}
+                                                >
+                                                    {flexRender(
+                                                        header.column.columnDef
+                                                            .header,
+                                                        header.getContext(),
+                                                    )}
+                                                    {header.column.getCanSort() && (
+                                                        <Sorter
+                                                            sort={header.column.getIsSorted()}
+                                                        />
+                                                    )}
+                                                </div>
+                                            )}
+                                        </Th>
                                     )
-                                })
-                        )}
-                    </TBody>
-                )}
-            </Table>
-            <div className="flex items-center justify-between mt-4">
-                <Pagination
-                    pageSize={pageSize}
-                    currentPage={pageIndex}
-                    total={total}
-                    onChange={handlePaginationChange}
-                />
-                <div style={{ minWidth: 130 }}>
-                    <Select
-                        instanceId={instanceId}
-                        size="sm"
-                        menuPlacement="top"
-                        isSearchable={false}
-                        value={pageSizeOption.filter(
-                            (option) => option.value === pageSize,
-                        )}
-                        options={pageSizeOption}
-                        onChange={(option) => handleSelectChange(option?.value)}
-                    />
-                </div>
-            </div>
+                                })}
+                            </Tr>
+                        ))}
+                    </THead>
+                    {loading && data.length === 0 ? (
+                        <TableRowSkeleton
+                            columns={(finalColumns as Array<T>).length}
+                            rows={pagingData.pageSize}
+                            avatarInColumns={skeletonAvatarColumns}
+                            avatarProps={skeletonAvatarProps}
+                        />
+                    ) : (
+                        <TBody>
+                            {noData ? (
+                                <Tr>
+                                    <Td
+                                        className="hover:bg-transparent"
+                                        colSpan={finalColumns.length}
+                                    >
+                                        <div className="flex flex-col items-center gap-4">
+                                            {customNoDataIcon ? (
+                                                customNoDataIcon
+                                            ) : (
+                                                <>
+                                                    <FileNotFound />
+                                                    <span className="font-semibold">
+                                                        No data found!
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </Td>
+                                </Tr>
+                            ) : (
+                                table
+                                    .getRowModel()
+                                    .rows.slice(0, pageSize)
+                                    .map((row) => {
+                                        return (
+                                            <Tr key={row.id}>
+                                                {row
+                                                    .getVisibleCells()
+                                                    .map((cell) => {
+                                                        return (
+                                                            <Td
+                                                                key={cell.id}
+                                                                style={{
+                                                                    width: cell.column.getSize(),
+                                                                }}
+                                                            >
+                                                                {flexRender(
+                                                                    cell.column
+                                                                        .columnDef
+                                                                        .cell,
+                                                                    cell.getContext(),
+                                                                )}
+                                                            </Td>
+                                                        )
+                                                    })}
+                                            </Tr>
+                                        )
+                                    })
+                            )}
+                        </TBody>
+                    )}
+                </Table>
+                    <div className="flex items-center justify-between mt-4">
+                        <Pagination
+                            pageSize={pageSize}
+                            currentPage={pageIndex}
+                            total={total}
+                            onChange={handlePaginationChange}
+                        />
+                        <div style={{ minWidth: 130 }}>
+                            <Select
+                                instanceId={instanceId}
+                                size="sm"
+                                menuPlacement="top"
+                                isSearchable={false}
+                                value={pageSizeOption.filter(
+                                    (option) => option.value === pageSize,
+                                )}
+                                options={pageSizeOption}
+                                onChange={(option) => handleSelectChange(option?.value)}
+                            />
+                        </div>
+                    </div></>) : < NoAccessUI />}
             {/* // </Loading> */}
         </>
     )
