@@ -29,7 +29,6 @@ import {
 } from '@/reduxtool/master/middleware';
 
 
-// --- Helper Components for Document Viewing ---
 interface ImageViewerProps {
     images: { src: string; alt: string }[];
     startIndex: number;
@@ -200,7 +199,7 @@ interface EquipmentItemFE {
 interface EmployeeFormSchema {
     id?: string;
     registration: { fullName: string; dateOfJoining: Date | null; mobileNumber: string; mobileNumberCode: { label: string, value: string }; email: string; experience: string; password?: string; status: { label: string, value: string }; jobStatus: { label: string, value: string } | null; };
-    personalInformation: { dateOfBirth: Date | null; age: number | string; gender: { label: string, value: string } | null; nationalityId: { label: string, value: string } | null; bloodGroup: { label: string, value: string } | null; permanentAddress: string; localAddress: string; maritual_status: { label: string, value: string } | null; };
+    personalInformation: { dateOfBirth: Date | null; age: number | string; gender: { label: string, value: string } | null; nationalityId: { label: string, value: string } | null; bloodGroup: { label: string, value: string } | null; permanentAddress: string; localAddress: string; marital_status: { label: string, value: string } | null; }; 
     roleResponsibility: { roleId: { label: string, value: string } | null; departmentId: { label: string, value: string }[]; designationId: { label: string, value: string } | null; countryId: { label: string, value: string }[]; categoryId: { label: string, value: string }[]; subcategoryId: { label: string, value: string }[]; brandId: { label: string, value: string }[]; productServiceId: { label: string, value: string }[]; reportingHrId: { label: string, value: string }[]; reportingHeadId: { label: string, value: string } | null; };
     training: { inductionDateCompletion: Date | null; inductionRemarks: string; departmentTrainingDateCompletion: Date | null; departmentTrainingRemarks: string; };
     offBoarding: { exit_interview_conducted: 'yes' | 'no' | ''; exit_interview_remark: string; resignation_letter_received: 'yes' | 'no' | ''; resignation_letter_remark: string; company_assets_returned: 'all' | 'partial' | 'none' | ''; assets_returned_remarks: string; full_and_final_settlement: 'yes' | 'no' | ''; fnf_remarks: string; notice_period_status: 'served' | 'waived' | ''; notice_period_remarks: string; };
@@ -219,9 +218,8 @@ const employeeFormValidationSchema = z.object({
         dateOfJoining: z.date({ required_error: "Date of joining is required." }),
         mobileNumber: z.string().min(1, 'Mobile number is required'),
         email: z.string().min(1, 'Email is required').email('Invalid email format'),
-    }).passthrough(), // Use passthrough to allow other (non-validated) fields
+    }).passthrough(), 
 
-    // All other sections are completely optional and will not be validated.
     personalInformation: z.any().optional(),
     roleResponsibility: z.any().optional(),
     training: z.any().optional(),
@@ -261,26 +259,22 @@ const RegistrationSection = ({ control, errors }: FormSectionBaseProps) => {
     const { CountriesData = [] } = useSelector(masterSelector);
     useEffect(() => { if (!Array.isArray(CountriesData) || CountriesData.length === 0) dispatch(getCountriesAction()); }, [dispatch, CountriesData]);
 
-    // const countryCodeOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData
-    //     .filter((c: any) => c.phone_code)
-    //     .map((c: any) => ({ value: `+${c.phone_code}`, label: `+${c.phone_code} (${c.name})` }))
-    //     .sort((a, b) => a.label.localeCompare(b.label)) : [], [CountriesData]);
     const countryCodeOptions = useMemo(() => {
-    const uniqueCountriesMap = new Map();
-    (CountriesData || []).forEach((country: any) => {
-      uniqueCountriesMap.set(country.id, country);
-    });
-    return Array.from(uniqueCountriesMap.values()).map((value: any) => ({
-      value: value.phone_code,
-      label: value.phone_code,
-    }));
-  }, [CountriesData]);
+        const uniqueCountriesMap = new Map();
+        (CountriesData || []).forEach((country: any) => {
+            uniqueCountriesMap.set(country.id, country);
+        });
+        return Array.from(uniqueCountriesMap.values()).map((value: any) => ({
+            value: value.phone_code,
+            label: value.phone_code,
+        }));
+    }, [CountriesData]);
     const statusOptions = [
         { value: "Active", label: "Active" },
         { value: "Disabled", label: "Disabled" },
         { value: "Blocked", label: "Blocked" },
     ];
-    
+
     const jobStatusOptions = [
         { value: 'Probation', label: 'Probation' },
         { value: 'On notice', label: 'On notice' },
@@ -301,24 +295,51 @@ const RegistrationSection = ({ control, errors }: FormSectionBaseProps) => {
         </div></Card>
     );
 };
-const PersonalInformationSection = ({ control, errors }: FormSectionBaseProps) => {
+const PersonalInformationSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
     const dispatch = useAppDispatch();
     const { CountriesData = [] } = useSelector(masterSelector);
+
+    const { watch, setValue } = formMethods;
+    const dob = watch('personalInformation.dateOfBirth');
+    const permanentAddress = watch('personalInformation.permanentAddress');
+    const [isSameAddress, setIsSameAddress] = useState(false);
+
+    useEffect(() => {
+        if (dob) {
+            const age = dayjs().diff(dayjs(dob), 'year');
+            setValue('personalInformation.age', age, { shouldValidate: false });
+        }
+    }, [dob, setValue]);
+
+    useEffect(() => {
+        if (isSameAddress) {
+            setValue('personalInformation.localAddress', permanentAddress, { shouldValidate: true });
+        }
+    }, [isSameAddress, permanentAddress, setValue]);
+
     useEffect(() => { if (!Array.isArray(CountriesData) || CountriesData.length === 0) dispatch(getCountriesAction()); }, [dispatch, CountriesData]);
+
     const nationalityOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData.map((c: any) => ({ value: String(c.id), label: c.name })) : [], [CountriesData]);
     const genderOptions = [{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }, { value: 'Other', label: 'Other' }];
     const bloodGroupOptions = [{ value: 'A+', label: 'A+' }, { value: 'B+', label: 'B+' }, { value: 'O+', label: 'O+' }, { value: 'A-', label: 'A-' }, { value: 'B-', label: 'B-' }, { value: 'O-', label: 'O-' }, { value: 'AB+', label: 'AB+' }, { value: 'AB-', label: 'AB-' }, { value: 'Other', label: 'Other' }];
     const maritalStatusOptions = [{ value: 'single', label: 'Single' }, { value: 'married', label: 'Married' }];
+
     return (
         <Card id="personalInformation"><h4 className="mb-6">Personal Information</h4><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <FormItem label="Date of Birth" invalid={!!errors.personalInformation?.dateOfBirth} errorMessage={errors.personalInformation?.dateOfBirth?.message}><Controller name="personalInformation.dateOfBirth" control={control} render={({ field }) => <DatePicker placeholder="Select Date" value={field.value} onChange={field.onChange} />} /></FormItem>
-            <FormItem label="Age" invalid={!!errors.personalInformation?.age} errorMessage={errors.personalInformation?.age?.message}><Controller name="personalInformation.age" control={control} render={({ field }) => <Input type="number" placeholder="Enter Age" {...field} onChange={e => field.onChange(parseInt(e.target.value) || '')} />} /></FormItem>
+            <FormItem label="Age" invalid={!!errors.personalInformation?.age} errorMessage={errors.personalInformation?.age?.message}><Controller name="personalInformation.age" control={control} render={({ field }) => <Input type="number" placeholder="Age" {...field} readOnly />} /></FormItem>
             <FormItem label="Gender" invalid={!!errors.personalInformation?.gender} errorMessage={(errors.personalInformation?.gender as any)?.message}><Controller name="personalInformation.gender" control={control} render={({ field }) => <Select placeholder="Select Gender" options={genderOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
-            <FormItem label="Marital Status" invalid={!!errors.personalInformation?.maritual_status} errorMessage={(errors.personalInformation?.maritual_status as any)?.message}><Controller name="personalInformation.maritual_status" control={control} render={({ field }) => <Select placeholder="Select Marital Status" options={maritalStatusOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
+            <FormItem label="Marital Status" invalid={!!errors.personalInformation?.marital_status} errorMessage={(errors.personalInformation?.marital_status as any)?.message}><Controller name="personalInformation.marital_status" control={control} render={({ field }) => <Select placeholder="Select Marital Status" options={maritalStatusOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Nationality" invalid={!!errors.personalInformation?.nationalityId} errorMessage={(errors.personalInformation?.nationalityId as any)?.message}><Controller name="personalInformation.nationalityId" control={control} render={({ field }) => <Select placeholder="Select Nationality" options={nationalityOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Blood Group" invalid={!!errors.personalInformation?.bloodGroup} errorMessage={(errors.personalInformation?.bloodGroup as any)?.message}><Controller name="personalInformation.bloodGroup" control={control} render={({ field }) => <Select placeholder="Select Blood Group" options={bloodGroupOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
-            <FormItem label="Permanent Address" invalid={!!errors.personalInformation?.permanentAddress} errorMessage={errors.personalInformation?.permanentAddress?.message} className="md:col-span-2 lg:col-span-2"><Controller name="personalInformation.permanentAddress" control={control} render={({ field }) => <Input textArea placeholder="Enter Permanent Address" {...field} />} /></FormItem>
-            <FormItem label="Local Address" invalid={!!errors.personalInformation?.localAddress} errorMessage={errors.personalInformation?.localAddress?.message} className="md:col-span-2 lg:col-span-1"><Controller name="personalInformation.localAddress" control={control} render={({ field }) => <Input textArea placeholder="Enter Local Address" {...field} />} /></FormItem>
+
+            <FormItem label="Permanent Address" invalid={!!errors.personalInformation?.permanentAddress} errorMessage={errors.personalInformation?.permanentAddress?.message} className="md:col-span-2 lg:col-span-3"><Controller name="personalInformation.permanentAddress" control={control} render={({ field }) => <Input textArea placeholder="Enter Permanent Address" {...field} />} /></FormItem>
+
+            <div className="md:col-span-2 lg:col-span-3">
+                <Checkbox checked={isSameAddress} onChange={setIsSameAddress}>Same as Permanent Address</Checkbox>
+            </div>
+
+            <FormItem label="Local Address" invalid={!!errors.personalInformation?.localAddress} errorMessage={errors.personalInformation?.localAddress?.message} className="md:col-span-2 lg:col-span-3"><Controller name="personalInformation.localAddress" control={control} render={({ field }) => <Input textArea placeholder="Enter Local Address" {...field} />} /></FormItem>
         </div></Card>
     );
 };
@@ -332,12 +353,12 @@ const DocumentSubmissionSection = ({ control, errors, formMethods }: FormSection
         { name: 'profile_pic' as const, label: "Profile Picture", accept: ".jpg,.jpeg,.png" },
         { name: 'identity_proof' as const, label: "Identity Proof", accept: ".pdf,.jpg,.jpeg,.png" },
         { name: 'address_proof' as const, label: "Address Proof", accept: ".pdf,.jpg,.jpeg,.png" },
-        { name: 'educational_certificates' as const, label: "Educational Certificates", accept: ".pdf,.zip" },
+        { name: 'educational_certificates' as const, label: "Educational Certificates", accept: ".pdf,.zip,.jpg,.jpeg,.png" },
         { name: 'experience_certificates' as const, label: "Experience Certificates", accept: ".pdf,.zip" },
         { name: 'offer_letter' as const, label: "Offer Letter", accept: ".pdf" },
         { name: 'past_offer_letter' as const, label: "Past Offer Letter(s)", accept: ".pdf,.zip" },
         { name: 'relieving_letter' as const, label: "Relieving Letter", accept: ".pdf" },
-        { name: 'designation_letter' as const, label: "Designation Letter", accept: ".pdf" },
+        { name: 'designation_letter' as const, label: "Resignation Letter", accept: ".pdf" },
         { name: 'salary_slips' as const, label: "Salary Slips", accept: ".pdf,.zip" },
         { name: 'bank_account_proof' as const, label: "Bank Account Proof", accept: ".pdf,.jpg,.jpeg,.png" },
         { name: 'pan_card' as const, label: "PAN Card", accept: ".pdf,.jpg,.jpeg,.png" },
@@ -386,7 +407,6 @@ const DocumentSubmissionSection = ({ control, errors, formMethods }: FormSection
                         <FileInputPreview
                             key={doc.name}
                             label={doc.label}
-                            required={doc.required}
                             control={control}
                             name={`documentSubmission.${doc.name}`}
                             errors={errors}
@@ -404,8 +424,7 @@ const DocumentSubmissionSection = ({ control, errors, formMethods }: FormSection
 
 const RoleResponsibilitySection = ({ control, errors }: FormSectionBaseProps) => {
     const { Roles, departmentsData, designationsData, BrandData, ParentCategories, ProductsData, EmployeesList, CountriesData } = useSelector(masterSelector);
-console.log("productOptions",EmployeesList);
-console.log("productOptions",EmployeesList);
+    console.log("productOptions", EmployeesList);
 
 
     const toOptions = (data: any, labelKey = 'name', valueKey = 'id') => Array.isArray(data) ? data.map((item) => ({ value: String(item[valueKey]), label: item[labelKey] })) : [];
@@ -416,7 +435,7 @@ console.log("productOptions",EmployeesList);
     const categoryOptions = useMemo(() => toOptions(ParentCategories), [ParentCategories]);
     const brandOptions = useMemo(() => toOptions(BrandData), [BrandData]);
     const productOptions = useMemo(() => toOptions(ProductsData), [ProductsData]);
-    
+
     const reportingHrOptions = useMemo(() => toOptions(EmployeesList?.data), [EmployeesList]);
     const reportingHeadOptions = useMemo(() => toOptions(EmployeesList?.data), [EmployeesList]);
     return (
@@ -434,7 +453,7 @@ console.log("productOptions",EmployeesList);
     );
 };
 
-const EquipmentsAssetsSection = ({ control, formMethods, errors  }: FormSectionBaseProps) => {
+const EquipmentsAssetsSection = ({ control, formMethods, errors }: FormSectionBaseProps) => {
     const { fields, append, remove } = useFieldArray({ control, name: 'equipmentsAssetsProvided.items' });
     const { watch } = formMethods;
     const [viewingFile, setViewingFile] = useState<File | string | null>(null);
@@ -443,16 +462,31 @@ const EquipmentsAssetsSection = ({ control, formMethods, errors  }: FormSectionB
         if (fileValue) setViewingFile(fileValue);
     };
 
+    const addAssetButton = (
+        <Button
+            type="button"
+            size="sm"
+            variant="solid"
+            icon={<TbPlus />}
+            onClick={() => append({ name: '', serial_no: '', remark: '', provided: true, attachment: null })}
+        >
+            Add Asset
+        </Button>
+    );
+
+
     return (
         <>
             <Card id="equipmentsAssetsProvided">
-                <div className="flex justify-between items-center mb-6"><h4>Equipments & Assets Issued</h4><Button type="button" size="sm" icon={<TbPlus />} onClick={() => append({ name: '', serial_no: '', remark: '', provided: true, attachment: null })}>Add Asset</Button></div>
+                <div className="flex justify-between items-center mb-6">
+                    <h4>Equipments & Assets Issued</h4>
+                </div>
                 <div className="flex flex-col gap-y-6">
                     {fields.map((item, index) => {
                         const attachmentValue = watch(`equipmentsAssetsProvided.items.${index}.attachment`);
                         return (
                             <div key={item.id} className="p-4 border rounded-md relative">
-                                <Button shape="circle" size="sm" icon={<HiOutlineTrash />} className="absolute top-2 right-2 text-red-500 hover:text-red-700" type="button" onClick={() => remove(index)} />
+                                <Button shape="circle" size="sm" icon={<HiOutlineTrash />} className="absolute top-2 right-2 z-10 text-red-500 hover:text-red-700" type="button" onClick={() => remove(index)} />
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormItem label="Asset Name"><Controller name={`equipmentsAssetsProvided.items.${index}.name`} control={control} render={({ field }) => <Input placeholder="e.g., Laptop" {...field} />} /></FormItem>
                                     <FormItem label="Serial Number"><Controller name={`equipmentsAssetsProvided.items.${index}.serial_no`} control={control} render={({ field }) => <Input placeholder="e.g., DL12345XYZ" {...field} />} /></FormItem>
@@ -474,6 +508,9 @@ const EquipmentsAssetsSection = ({ control, formMethods, errors  }: FormSectionB
                         );
                     })}
                     {fields.length === 0 && <p className="text-center text-gray-500">No assets added.</p>}
+                </div>
+                <div className="mt-6 flex justify-center">
+                    {addAssetButton}
                 </div>
             </Card>
             {viewingFile && <GenericFileViewer file={viewingFile} onClose={() => setViewingFile(null)} />}
@@ -551,7 +588,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         if (values.registration.password) formData.append('password', values.registration.password);
         formData.append('status', objToValue(values.registration?.status));
         formData.append('job_status', objToValue(values.registration?.jobStatus));
-        
+
         formData.append('date_of_birth', formatDate(values.personalInformation?.dateOfBirth));
         formData.append('age', String(values.personalInformation?.age || ''));
         formData.append('gender', objToValue(values.personalInformation?.gender));
@@ -559,7 +596,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('blood_group', objToValue(values.personalInformation?.bloodGroup));
         formData.append('permanent_address', values.personalInformation?.permanentAddress || '');
         formData.append('local_address', values.personalInformation?.localAddress || '');
-        formData.append('maritual_status', objToValue(values.personalInformation?.maritual_status));
+        formData.append('marital_status', objToValue(values.personalInformation?.marital_status));
         formData.append('role_id', objToValue(values.roleResponsibility?.roleId));
         formData.append('department_id', arrayToCommaString(values.roleResponsibility?.departmentId));
         formData.append('designation_id', objToValue(values.roleResponsibility?.designationId));
@@ -592,7 +629,6 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('training_remark', values.training?.inductionRemarks || '');
         formData.append('specific_training_date_of_completion', formatDate(values.training?.departmentTrainingDateCompletion));
         formData.append('specific_training_remark', values.training?.departmentTrainingRemarks || '');
-
         const yesNoToBoolString = (value: 'yes' | 'no' | '') => value === 'yes' ? '1' : value === 'no' ? '0' : '';
         formData.append('exit_interview_conducted', yesNoToBoolString(values.offBoarding?.exit_interview_conducted));
         formData.append('resignation_letter_received', yesNoToBoolString(values.offBoarding?.resignation_letter_received));
@@ -612,7 +648,6 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
                 if (item.attachment instanceof File) formData.append(`equipments_assets_issued[${index}]`, item.attachment);
             });
         }
-
         onFormSubmit(formData, defaultValues?.id);
     };
 
@@ -749,7 +784,7 @@ const EmployeeFormPage = () => {
                 bloodGroup: apiData.blood_group ? { value: apiData.blood_group, label: apiData.blood_group } : null,
                 permanentAddress: apiData.permanent_address || '',
                 localAddress: apiData.local_address || '',
-                maritual_status: apiData.maritual_status ? { value: apiData.maritual_status, label: apiData.maritual_status } : null,
+                marital_status: apiData.marital_status ? { value: apiData.marital_status, label: apiData.marital_status } : null,
             },
             roleResponsibility: {
                 roleId: findOption(roleOptions, apiData.role_id),
