@@ -255,8 +255,6 @@ function DataTable<T>(props: DataTableProps<T>) {
         );
     };
 
-    console.log(getMenuRights(menuName)?.is_view, "getMenuRights(menuName)?.is_view", menuName, getMenuRights()?.useRights);
-
     return (
         <>
             {/* // <Loading loading={Boolean(loading && data.length !== 0)} type="cover"> */}
