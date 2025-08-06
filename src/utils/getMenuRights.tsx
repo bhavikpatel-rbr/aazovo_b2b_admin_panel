@@ -6,8 +6,8 @@ export const getMenuRights = (menu: string) => {
     return {
         is_add: userData?.role?.guard_name == 'admin' ? true : (rights.is_add || false),
         is_delete: userData?.role?.guard_name == 'admin' ? true : (rights.is_delete || false),
-        is_edit: false,
-        is_export: false,
+        is_edit: userData?.role?.guard_name == 'admin' ? true : (rights.is_edit || false),
+        is_export: userData?.role?.guard_name == 'admin' ? true : (rights.is_export || false),
         is_view: userData?.role?.guard_name == 'admin' ? true : (rights.is_view || false),
         useRights: useRights,
         userData: userData
