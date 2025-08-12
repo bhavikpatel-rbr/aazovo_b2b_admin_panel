@@ -1390,6 +1390,7 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
             setInitialLoading(true);
             try {
                 await dispatch(getAllTaskAction());
+                await dispatch(getAllUsersAction());
             } catch (error) {
                 console.error("Failed to fetch tasks", error);
                 toast.push(<Notification title="Error" type="danger">Could not load tasks.</Notification>);
@@ -1550,11 +1551,13 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
     )
 
     const handleClearAllFilters = useCallback(() => {
-        const defaultFilters = filterValidationSchema.parse({})
-        setFilterData(defaultFilters)
-        handleSetTableData({ pageIndex: 1, query: '' })
-        setSelectedTasks([])
-    }, [handleSetTableData])
+        const defaultFilters = filterValidationSchema.parse({});
+        setFilterData(defaultFilters);
+        handleSetTableData({ pageIndex: 1, query: '' });
+        setSelectedTasks([]);
+        dispatch(getAllTaskAction());
+        toast.push(<Notification title="Data Refreshed" type="success" duration={3000}>Filters cleared and data reloaded.</Notification>);
+    }, [handleSetTableData, dispatch]);
 
     const handleRowSelect = useCallback((checked: boolean, row: TaskItem) => {
         setSelectedTasks((prev) =>
@@ -1569,7 +1572,7 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
             setSelectedTasks(checked ? rows.map((r) => r.original) : [])
         },
         [],
-    )
+    );
 
     const handleEdit = useCallback(
         (task: TaskItem) => {
@@ -1598,7 +1601,7 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
                     Task "{taskToDelete.note}" has been deleted.
                 </Notification>,
             );
-            dispatch(getAllTaskAction()); // Re-fetch data
+            dispatch(getAllTaskAction());
             setSelectedTasks((prev) => prev.filter((t) => t.id !== taskToDelete.id));
         } catch (error: any) {
             toast.push(<Notification title="Delete Failed" type="danger" children={error.message || 'An error occurred.'} />);
@@ -1620,7 +1623,7 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
                         Task "{taskToUpdate.note}" marked as {newStatus.replace(/_/g, ' ')}.
                     </Notification>,
                 );
-                dispatch(getAllTaskAction()); // Re-fetch data
+                dispatch(getAllTaskAction());
             } catch (error: any) {
                 toast.push(<Notification title="Update Failed" type="danger" children={error.message || 'An error occurred.'} />);
             } finally {
@@ -1636,7 +1639,7 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
 
         setIsDeleting(true);
         try {
-            // await dispatch(deleteAllTasksAction({ ids: idsToDelete })).unwrap();
+            await dispatch(deleteAllTasksAction({ ids: idsToDelete })).unwrap();
             toast.push(
                 <Notification title="Tasks Deleted" type="success">
                     {idsToDelete.length} task(s) have been deleted.
