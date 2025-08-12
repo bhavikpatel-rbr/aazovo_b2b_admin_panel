@@ -118,20 +118,20 @@ const AddLeadPage = () => {
   useEffect(() => {
     const prefillData = location.state;
     if (prefillData && initialDataFetched) {
-        setValue('member_id', Number(prefillData.buyerId) || null);
-        setValue('source_supplier_id', Number(prefillData.supplierId) || null);
-        setValue('product_id', Number(prefillData.productId) || null);
-        setValue('lead_intent', prefillData.want_to === 'Sell' ? 'Sell' : 'Buy');
-        setValue('qty', Number(prefillData.qty) || null);
-        setValue('target_price', Number(prefillData.price) || null);
-        setValue('source_qty', Number(prefillData.qty) || null);
-        setValue('source_price', Number(prefillData.price) || null);
-        setValue('source_product_status', prefillData.product_status);
-        setValue('source_device_condition', prefillData.device_condition);
-        setValue('source_color', prefillData.color);
-        setValue('source_location', prefillData.location);
-        setValue('product_spec_id', prefillData.product_spec_id || null);
-        setValue('source_payment_term_id', prefillData.payment_term || null);
+      setValue('member_id', Number(prefillData.buyerId) || null);
+      setValue('source_supplier_id', Number(prefillData.supplierId) || null);
+      setValue('product_id', Number(prefillData.productId) || null);
+      setValue('lead_intent', prefillData.want_to === 'Sell' ? 'Sell' : 'Buy');
+      setValue('qty', Number(prefillData.qty) || null);
+      setValue('target_price', Number(prefillData.price) || null);
+      setValue('source_qty', Number(prefillData.qty) || null);
+      setValue('source_price', Number(prefillData.price) || null);
+      setValue('source_product_status', prefillData.product_status);
+      setValue('source_device_condition', prefillData.device_condition);
+      setValue('source_color', prefillData.color);
+      setValue('source_location', prefillData.location);
+      setValue('product_spec_id', prefillData.product_spec_id || null);
+      setValue('source_payment_term_id', prefillData.payment_term || null);
     }
   }, [location.state, setValue, initialDataFetched]);
 
@@ -145,6 +145,7 @@ const AddLeadPage = () => {
     const cartoonTypeLabel = cartoonTypeOptions.find(option => option.value === data.source_cartoon_type_id)?.label || null;
 
     const apiPayload = {
+      lead_type: 'Manual lead',
       lead_intent: data.lead_intent,
       lead_member: data.member_id,
       product_id: data.product_id,
@@ -202,55 +203,55 @@ const AddLeadPage = () => {
           <AdaptableCard className="mb-4">
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2">
               <FormItem label="Lead Intent" invalid={!!errors.lead_intent} errorMessage={errors.lead_intent?.message}>
-                <Controller name="lead_intent" control={control} render={({ field }) => ( <UiSelect placeholder="Select Intent" options={leadIntentOptions} value={leadIntentOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable /> )} />
+                <Controller name="lead_intent" control={control} render={({ field }) => (<UiSelect placeholder="Select Intent" options={leadIntentOptions} value={leadIntentOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />)} />
               </FormItem>
               <FormItem label={leadMemberLabel} invalid={!!errors.member_id} errorMessage={errors.member_id?.message}>
-                <Controller name="member_id" control={control} render={({ field }) => ( <UiSelect placeholder="Select Member" options={leadMemberOptions} value={leadMemberOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} /> )} />
+                <Controller name="member_id" control={control} render={({ field }) => (<UiSelect placeholder="Select Member" options={leadMemberOptions} value={leadMemberOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} />
               </FormItem>
               <FormItem label={sourceMemberLabel} invalid={!!errors.source_supplier_id} errorMessage={errors.source_supplier_id?.message}>
-                <Controller name="source_supplier_id" control={control} render={({ field }) => ( <UiSelect placeholder="Select Source Member" options={leadMemberOptions} value={leadMemberOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable /> )} />
+                <Controller name="source_supplier_id" control={control} render={({ field }) => (<UiSelect placeholder="Select Source Member" options={leadMemberOptions} value={leadMemberOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />)} />
               </FormItem>
               <FormItem label={<div>Product Name<span className="text-red-500"> *</span></div>} invalid={!!errors.product_id} errorMessage={errors.product_id?.message}>
-                <Controller name="product_id" control={control} render={({ field }) => ( <UiSelect placeholder="Select Product" options={productOptions} value={productOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isLoading={isLoadingInitialData} isClearable /> )} />
+                <Controller name="product_id" control={control} render={({ field }) => (<UiSelect placeholder="Select Product" options={productOptions} value={productOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isLoading={isLoadingInitialData} isClearable />)} />
               </FormItem>
               <FormItem label={<div>Quantity<span className="text-red-500"> *</span></div>} invalid={!!errors.qty} errorMessage={errors.qty?.message}>
-                <Controller name="qty" control={control} render={({ field }) => ( <InputNumber placeholder="Enter quantity" {...field} value={field.value ?? undefined} onChange={(val) => field.onChange(val ?? null)} /> )} />
+                <Controller name="qty" control={control} render={({ field }) => (<InputNumber placeholder="Enter quantity" {...field} value={field.value ?? undefined} onChange={(val) => field.onChange(val ?? null)} />)} />
               </FormItem>
               <FormItem label="Target Price ($)" invalid={!!errors.target_price} errorMessage={errors.target_price?.message}>
-                <Controller name="target_price" control={control} render={({ field }) => ( <InputNumber placeholder="Enter target price" {...field} value={field.value ?? undefined} onChange={(val) => field.onChange(val ?? null)} step={0.01} /> )} />
+                <Controller name="target_price" control={control} render={({ field }) => (<InputNumber placeholder="Enter target price" {...field} value={field.value ?? undefined} onChange={(val) => field.onChange(val ?? null)} step={0.01} />)} />
               </FormItem>
               <FormItem label="Product Status" invalid={!!errors.source_product_status} errorMessage={errors.source_product_status?.message}>
-                <Controller name="source_product_status" control={control} render={({ field }) => ( <UiSelect placeholder="Select Product Status" options={productStatusOptions} value={productStatusOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable /> )} />
+                <Controller name="source_product_status" control={control} render={({ field }) => (<UiSelect placeholder="Select Product Status" options={productStatusOptions} value={productStatusOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />)} />
               </FormItem>
               <FormItem label="Product Spec" invalid={!!errors.product_spec_id} errorMessage={errors.product_spec_id?.message}>
-                <Controller name="product_spec_id" control={control} render={({ field }) => ( <UiSelect placeholder="Select Specification" options={productSpecOptions} value={productSpecOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isLoading={isLoadingInitialData} isClearable /> )} />
+                <Controller name="product_spec_id" control={control} render={({ field }) => (<UiSelect placeholder="Select Specification" options={productSpecOptions} value={productSpecOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isLoading={isLoadingInitialData} isClearable />)} />
               </FormItem>
               <FormItem label="Device Type" invalid={!!errors.source_device_type} errorMessage={errors.source_device_type?.message}>
-                <Controller name="source_device_type" control={control} render={({ field }) => ( <Input placeholder="e.g., Mobile Phone, Laptop" {...field} value={field.value ?? ""} /> )} />
+                <Controller name="source_device_type" control={control} render={({ field }) => (<Input placeholder="e.g., Mobile Phone, Laptop" {...field} value={field.value ?? ""} />)} />
               </FormItem>
               <FormItem label="Device Condition" invalid={!!errors.source_device_condition} errorMessage={errors.source_device_condition?.message}>
-                <Controller name="source_device_condition" control={control} render={({ field }) => ( <UiSelect placeholder="Select Condition" options={deviceConditionOptions} value={deviceConditionOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable /> )} />
+                <Controller name="source_device_condition" control={control} render={({ field }) => (<UiSelect placeholder="Select Condition" options={deviceConditionOptions} value={deviceConditionOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />)} />
               </FormItem>
               <FormItem label="Color" invalid={!!errors.source_color} errorMessage={errors.source_color?.message}>
-                <Controller name="source_color" control={control} render={({ field }) => ( <Input placeholder="e.g., Space Gray" {...field} value={field.value ?? ""} /> )} />
+                <Controller name="source_color" control={control} render={({ field }) => (<Input placeholder="e.g., Space Gray" {...field} value={field.value ?? ""} />)} />
               </FormItem>
               <FormItem label="Cartoon Type" invalid={!!errors.source_cartoon_type_id} errorMessage={errors.source_cartoon_type_id?.message}>
-                <Controller name="source_cartoon_type_id" control={control} render={({ field }) => ( <UiSelect placeholder="Select Cartoon Type" options={cartoonTypeOptions} value={cartoonTypeOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable /> )} />
+                <Controller name="source_cartoon_type_id" control={control} render={({ field }) => (<UiSelect placeholder="Select Cartoon Type" options={cartoonTypeOptions} value={cartoonTypeOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />)} />
               </FormItem>
               <FormItem label="Dispatch Status" invalid={!!errors.source_dispatch_status} errorMessage={errors.source_dispatch_status?.message}>
-                <Controller name="source_dispatch_status" control={control} render={({ field }) => ( <Input placeholder="e.g., Ready to Ship" {...field} value={field.value ?? ""} /> )} />
+                <Controller name="source_dispatch_status" control={control} render={({ field }) => (<Input placeholder="e.g., Ready to Ship" {...field} value={field.value ?? ""} />)} />
               </FormItem>
               <FormItem label="Payment Term" invalid={!!errors.source_payment_term_id} errorMessage={errors.source_payment_term_id?.message}>
-                <Controller name="source_payment_term_id" control={control} render={({ field }) => ( <UiSelect placeholder="Select Payment Term" options={paymentTermOptions} value={paymentTermOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isLoading={isLoadingInitialData} isClearable /> )} />
+                <Controller name="source_payment_term_id" control={control} render={({ field }) => (<UiSelect placeholder="Select Payment Term" options={paymentTermOptions} value={paymentTermOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isLoading={isLoadingInitialData} isClearable />)} />
               </FormItem>
               <FormItem label="ETA" invalid={!!errors.source_eta} errorMessage={errors.source_eta?.message as string}>
-                <Controller name="source_eta" control={control} render={({ field }) => ( <DatePicker placeholder="Select ETA" value={ field.value ? dayjs(field.value).toDate() : null } onChange={(date) => field.onChange(date)} /> )} />
+                <Controller name="source_eta" control={control} render={({ field }) => (<DatePicker placeholder="Select ETA" value={field.value ? dayjs(field.value).toDate() : null} onChange={(date) => field.onChange(date)} />)} />
               </FormItem>
               <FormItem label="Location" invalid={!!errors.source_location} errorMessage={errors.source_location?.message}>
-                <Controller name="source_location" control={control} render={({ field }) => ( <Input placeholder="e.g., Warehouse A" {...field} value={field.value ?? ""} /> )} />
+                <Controller name="source_location" control={control} render={({ field }) => (<Input placeholder="e.g., Warehouse A" {...field} value={field.value ?? ""} />)} />
               </FormItem>
               <FormItem label="Internal Remarks" invalid={!!errors.source_internal_remarks} errorMessage={errors.source_internal_remarks?.message} className="md:col-span-2 lg:col-span-4">
-                <Controller name="source_internal_remarks" control={control} render={({ field }) => ( <Input textArea rows={3} placeholder="Internal notes..." {...field} value={field.value ?? ""} /> )} />
+                <Controller name="source_internal_remarks" control={control} render={({ field }) => (<Input textArea rows={3} placeholder="Internal notes..." {...field} value={field.value ?? ""} />)} />
               </FormItem>
             </div>
           </AdaptableCard>
