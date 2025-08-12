@@ -7,7 +7,7 @@ import isBetween from "dayjs/plugin/isBetween";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import cloneDeep from "lodash/cloneDeep";
-import React, { ChangeEvent, Ref, useCallback, useEffect, useMemo, useState } from "react";
+import React, { ChangeEvent, Ref, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -467,7 +467,7 @@ const SubscriberSearch = React.forwardRef<HTMLInputElement, SubscriberSearchProp
 ));
 SubscriberSearch.displayName = "SubscriberSearch";
 
-const SubscriberTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDataReady }: {
+const SubscriberTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDataReady, searchInputRef }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
@@ -478,6 +478,7 @@ const SubscriberTableTools = ({ onSearchChange, onFilter, onExport, onImport, on
   setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<SubscriberItem>[]>>;
   activeFilterCount: number;
   isDataReady: boolean;
+  searchInputRef: React.Ref<HTMLInputElement>;
 }) => {
   const isColumnVisible = (colId: string) => filteredColumns.some((c) => (c.id || c.accessorKey) === colId);
   const toggleColumn = (checked: boolean, colId: string) => {
@@ -501,7 +502,7 @@ const SubscriberTableTools = ({ onSearchChange, onFilter, onExport, onImport, on
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
       <div className="flex-grow">
-        <SubscriberSearch onInputChange={onSearchChange} />
+        <SubscriberSearch ref={searchInputRef} onInputChange={onSearchChange} />
       </div>
       <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
         <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
@@ -578,6 +579,7 @@ const SubscribersListing = () => {
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<(string | number)[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const isDataReady = !initialLoading;
   const tableLoading = initialLoading || isSubmitting || isDeleting;
@@ -694,13 +696,27 @@ const SubscribersListing = () => {
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); }, []);
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
+  
   const onClearFilters = useCallback(() => {
     const defaultFilters = filterFormSchema.parse({});
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     setSelectedRows([]);
+    if (searchInputRef.current) {
+        searchInputRef.current.value = '';
+    }
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
-  }, [filterFormMethods]);
+    
+    // Re-fetch data from the server
+    dispatch(getSubscribersAction());
+
+    // Provide user feedback
+    toast.push(
+        <Notification title="Data Refreshed" type="success" duration={3000}>
+            All filters cleared and data updated.
+        </Notification>
+    );
+  }, [filterFormMethods, dispatch]);
 
   const handleCardClick = (status: string) => { onClearFilters(); setFilterCriteria({ status: status }); };
   const handleRemoveFilter = (key: keyof FilterFormData) => { setFilterCriteria((prev) => ({ ...prev, [key]: undefined })); };
@@ -925,7 +941,7 @@ const SubscribersListing = () => {
               <div className="flex gap-2"><Button size="sm" icon={<TbMail />} onClick={handleBulkEmail}>Send Email</Button><Button size="sm" icon={<TbBrandWhatsapp />} onClick={handleBulkWhatsApp}>Send WhatsApp</Button></div>
             </div>
           ) : (
-            <SubscriberTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onImport={() => setIsImportModalOpen(true)} onExport={handleOpenExportReasonModal} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady} />
+            <SubscriberTableTools searchInputRef={searchInputRef} onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onImport={() => setIsImportModalOpen(true)} onExport={handleOpenExportReasonModal} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady} />
           )}
 
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />

@@ -261,7 +261,7 @@ const HeaderCard: React.FC<{ lead: VerifiedLead }> = ({ lead }) => (
         <StatBox value={<div className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-md">
           <TbBuildingStore className="text-gray-500 dark:text-gray-400" />
           <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">
-            {lead.customer.company_actual || 'N/A'}
+            {lead?.customer?.company_actual || 'N/A'}
           </span>
         </div>} label="Actual Company" className="col-span-2 sm:col-span-1 sm:border-l" />
 
@@ -1508,7 +1508,7 @@ const ViewDocumentDialog = ({
               </span>
             </p>
           </div>
-          <Button shape="circle" size="sm" icon={<TbX />} onClick={onClose} />
+          {/* <Button shape="circle" size="sm" icon={<TbX />} onClick={onClose} /> */}
         </div>
 
         {/* --- Dialog Body --- */}
@@ -1582,7 +1582,7 @@ const ViewDocumentDialog = ({
             onClick={onClose}
             disabled={isVerifying}
           >
-            Close
+            {/* Close */}
           </Button>
           {canVerify && form?.id && (
             <Button
