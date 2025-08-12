@@ -924,19 +924,19 @@ const AccountDocumentActionColumn = ({
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
-        <Dropdown.Item
+        {/* <Dropdown.Item
           className="flex items-center gap-2"
           onClick={() => onOpenModal("email", rowData)}
         >
           <TbMailShare size={18} /> <span className="text-xs">Send Email</span>
-        </Dropdown.Item>
-        <Dropdown.Item
+        </Dropdown.Item> */}
+        {/* <Dropdown.Item
           className="flex items-center gap-2"
           onClick={() => onOpenModal("whatsapp", rowData)}
         >
           <TbBrandWhatsapp size={18} />
           <span className="text-xs">Send Whatsapp</span>
-        </Dropdown.Item>
+        </Dropdown.Item> */}
         <Dropdown.Item
           className="flex items-center gap-2"
           onClick={() => onOpenModal("notification", rowData)}
@@ -3780,7 +3780,7 @@ const AccountDocument = () => {
               )}
             />
           </UiFormItem>
-          <UiFormItem label="Document Type">
+          <UiFormItem label="Form Type">
             <Controller
               control={filterForm.control}
               name="doc_type"
