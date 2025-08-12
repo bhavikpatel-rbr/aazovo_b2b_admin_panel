@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   Control,
   Controller,
@@ -54,13 +54,13 @@ interface ImageViewerProps {
 const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }) => {
   const [currentIndex, setCurrentIndex] = useState(startIndex);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
-  };
+  }, [images.length]);
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
     setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
-  };
+  }, [images.length]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -72,7 +72,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [handleNext, handlePrev, onClose]);
 
   if (!images || images.length === 0) {
     return null;
@@ -178,17 +178,14 @@ const DocumentPlaceholder = ({ fileName, fileUrl }: { fileName: string; fileUrl:
   };
 
   return (
-    <a
-      href={fileUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="w-full h-24 border rounded-md p-2 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+    <div
+      className="w-full h-full p-2 flex flex-col items-center justify-center text-center"
     >
       {getFileIcon()}
-      <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 break-all truncate">
+      <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 break-all">
         {fileName}
       </p>
-    </a>
+    </div>
   );
 };
 // --- END: New DocumentPlaceholder Component ---
@@ -752,19 +749,34 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
     CountriesData = [],
     ContinentsData = [],
   } = useSelector(masterSelector);
-  const { watch } = formMethods;
+  const { watch, setValue } = formMethods;
 
   const watchedCountry = watch("country_id");
   const isIndiaSelected = String(watchedCountry?.value) === '101';
+
+  useEffect(() => {
+    // When country changes, clear the irrelevant trade info fields
+    if (watchedCountry) {
+        if (isIndiaSelected) {
+            setValue('trn_number', '', { shouldValidate: true });
+            setValue('tan_number', '', { shouldValidate: true });
+        } else {
+            setValue('gst_number', '', { shouldValidate: true });
+            setValue('pan_number', '', { shouldValidate: true });
+        }
+    }
+  }, [isIndiaSelected, watchedCountry, setValue]);
+
 
   const countryOptions = CountriesData.map((value: any) => ({
     value: value.id,
     label: value.name,
   }));
   const countryCodeOptions = CountriesData.map((c: any) => ({
-    value: `${c.phone_code}`,
-    label: `${c.phone_code}`,
-  }));
+    value: `+${c.phone_code}`,
+    label: `+${c.phone_code}`,
+  })).filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i);
+
   const continentOptions = ContinentsData.map((value: any) => ({
     value: value.id,
     label: value.name,
@@ -809,7 +821,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
     append: appendBranch,
     remove: removeBranch,
   } = useFieldArray({ control, name: "partner_offices" });
-  const companyLogoBrochureValue = watch("partner_logo");
+  const partnerLogoValue = watch("partner_logo");
   return (
     <Card id="companyDetails">
       <h4 className="mb-4">Primary Information</h4>
@@ -1122,58 +1134,65 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
 
       <hr className="my-6" /> <h4 className="mb-4">Trade Information</h4>
       <div className="grid md:grid-cols-4 gap-3">
-        <FormItem
-          label={<div>GST Number{isIndiaSelected && <span className="text-red-500"> * </span>}</div>}
-          invalid={!!errors.gst_number}
-          errorMessage={errors.gst_number?.message as string}
-        >
-          <Controller
-            name="gst_number"
-            control={control}
-            render={({ field }) => (
-              <Input placeholder="GST Number" {...field} />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label={<div>PAN Number{isIndiaSelected && <span className="text-red-500"> * </span>}</div>}
-          invalid={!!errors.pan_number}
-          errorMessage={errors.pan_number?.message as string}
-        >
-          <Controller
-            name="pan_number"
-            control={control}
-            render={({ field }) => (
-              <Input placeholder="PAN Number" {...field} />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="TRN Number"
-          invalid={!!errors.trn_number}
-          errorMessage={errors.trn_number?.message as string}
-        >
-          <Controller
-            name="trn_number"
-            control={control}
-            render={({ field }) => (
-              <Input placeholder="TRN Number" {...field} />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="TAN Number"
-          invalid={!!errors.tan_number}
-          errorMessage={errors.tan_number?.message as string}
-        >
-          <Controller
-            name="tan_number"
-            control={control}
-            render={({ field }) => (
-              <Input placeholder="TAN Number" {...field} />
-            )}
-          />
-        </FormItem>
+        {isIndiaSelected ? (
+          <>
+            <FormItem
+              label={<div>GST Number<span className="text-red-500"> * </span></div>}
+              invalid={!!errors.gst_number}
+              errorMessage={errors.gst_number?.message as string}
+            >
+              <Controller
+                name="gst_number"
+                control={control}
+                render={({ field }) => (
+                  <Input placeholder="GST Number" {...field} />
+                )}
+              />
+            </FormItem>
+            <FormItem
+              label={<div>PAN Number<span className="text-red-500"> * </span></div>}
+              invalid={!!errors.pan_number}
+              errorMessage={errors.pan_number?.message as string}
+            >
+              <Controller
+                name="pan_number"
+                control={control}
+                render={({ field }) => (
+                  <Input placeholder="PAN Number" {...field} />
+                )}
+              />
+            </FormItem>
+          </>
+        ) : (
+          <>
+            <FormItem
+              label="TRN Number"
+              invalid={!!errors.trn_number}
+              errorMessage={errors.trn_number?.message as string}
+            >
+              <Controller
+                name="trn_number"
+                control={control}
+                render={({ field }) => (
+                  <Input placeholder="TRN Number" {...field} />
+                )}
+              />
+            </FormItem>
+            <FormItem
+              label="TAN Number"
+              invalid={!!errors.tan_number}
+              errorMessage={errors.tan_number?.message as string}
+            >
+              <Controller
+                name="tan_number"
+                control={control}
+                render={({ field }) => (
+                  <Input placeholder="TAN Number" {...field} />
+                )}
+              />
+            </FormItem>
+          </>
+        )}
       </div>
       <hr className="my-6" /> <h4 className="mb-4">Company Information</h4>
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -1186,7 +1205,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
             name="establishment_year"
             control={control}
             render={({ field }) => (
-              <Input placeholder="YYYY" maxLength={4} {...field} />
+              <NumericInput placeholder="YYYY" maxLength={4} {...field} onChange={field.onChange} />
             )}
           />
         </FormItem>
@@ -1212,22 +1231,34 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
           <Controller
             name="partner_logo"
             control={control}
-            render={({ field: { onChange, ref } }) => (
+            render={({ field: { onChange, ref, value, ...rest } }) => (
               <Input
                 type="file"
                 ref={ref}
+                {...rest}
                 onChange={(e) => onChange(e.target.files?.[0])}
               />
             )}
           />
-          {companyLogoBrochureValue && (
-            <div className="mt-2 h-20 w-20">
-              <img
-                src={typeof companyLogoBrochureValue === 'string' ? companyLogoBrochureValue : URL.createObjectURL(companyLogoBrochureValue)}
-                alt="logo preview"
-                className="h-full w-full object-contain"
-              />
-            </div>
+          {partnerLogoValue && (
+             <div className="mt-2 group relative w-24 h-24">
+               <img
+                 src={typeof partnerLogoValue === 'string' ? partnerLogoValue : URL.createObjectURL(partnerLogoValue)}
+                 alt="logo preview"
+                 className="h-full w-full object-contain border rounded-md"
+               />
+               <Button
+                type="button"
+                shape="circle"
+                size="sm"
+                icon={<TbTrash />}
+                onClick={() => setValue('partner_logo', null, { shouldDirty: true })}
+                variant="solid"
+                color="red-500"
+                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Remove Logo"
+               />
+             </div>
           )}
         </FormItem>
         <FormItem
@@ -1267,13 +1298,13 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
         </Button>
       </div>
       {certFields.map((item, index) => {
-        const uploadCertificateValue = watch(`partner_certificate[${index}][upload_certificate]`);
+        const uploadCertificateValue = watch(`partner_certificate.${index}.upload_certificate`);
         return (
           <Card key={item.id} className="mb-4 rounded-md border border-black" bodyClass="p-4">
             <div className="grid md:grid-cols-10 gap-3 items-center">
               <FormItem label="Certificate ID" className="col-span-3">
                 <Controller
-                  name={`partner_certificate[${index}][certificate_id]`}
+                  name={`partner_certificate.${index}.certificate_id]`}
                   control={control}
                   render={({ field }) => (
                     <Input placeholder="e.g., 12345" {...field} />
@@ -1282,7 +1313,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
               </FormItem>
               <FormItem label="Certificate Name" className="col-span-3">
                 <Controller
-                  name={`partner_certificate[${index}][certificate_name]`}
+                  name={`partner_certificate.${index}.certificate_name]`}
                   control={control}
                   render={({ field }) => (
                     <Input placeholder="e.g., ISO 9001" {...field} />
@@ -1291,7 +1322,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
               </FormItem>
               <FormItem label="Upload Certificate" className="col-span-3">
                 <Controller
-                  name={`partner_certificate[${index}][upload_certificate]`}
+                  name={`partner_certificate.${index}.upload_certificate]`}
                   control={control}
                   render={({ field: { onChange, ref } }) => (
                     <Input
@@ -1302,8 +1333,19 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
                   )}
                 />
                 {uploadCertificateValue && (
-                  <div className="mt-2">
+                  <div className="mt-2 group relative w-24 h-24">
                     <a href={typeof uploadCertificateValue === 'string' ? uploadCertificateValue : URL.createObjectURL(uploadCertificateValue)} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">View Uploaded Document</a>
+                    <Button
+                      type="button"
+                      shape="circle"
+                      size="sm"
+                      icon={<TbTrash />}
+                      onClick={() => setValue(`partner_certificate.${index}.upload_certificate`, null, { shouldDirty: true })}
+                      variant="solid"
+                      color="red-500"
+                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Remove Certificate"
+                    />
                   </div>
                 )}
               </FormItem>
@@ -1447,7 +1489,7 @@ const GenericFileViewer = ({ file, onClose }: { file: File | string; onClose: ()
 };
 // --- KYCDetailSection ---
 const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
-  const { watch } = formMethods;
+  const { watch, setValue } = formMethods;
   const [viewerIsOpen, setViewerIsOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [viewingFile, setViewingFile] = useState<File | string | null>(null);
@@ -1560,7 +1602,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
               </FormItem>
 
               {fileValue && (
-                <div className="mt-2">
+                <div className="mt-2 group relative">
                   <button
                     type="button"
                     onClick={() => handlePreviewClick(fileValue, doc.label)}
@@ -1579,6 +1621,17 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                       />
                     )}
                   </button>
+                  <Button
+                    type="button"
+                    shape="circle"
+                    size="sm"
+                    icon={<TbTrash />}
+                    onClick={() => setValue(doc.name, null, { shouldDirty: true })}
+                    variant="solid"
+                    color="red-500"
+                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title={`Remove ${doc.label}`}
+                  />
                 </div>
               )}
 
@@ -1619,7 +1672,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
 
 // --- BankDetailsSection ---
 const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
-  const { watch } = formMethods;
+  const { watch, setValue } = formMethods;
   const bankTypeOptions = [
     { value: "Primary", label: "Primary" },
     { value: "Secondary", label: "Secondary" },
@@ -1631,6 +1684,32 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
   });
   const primaryBankPhotoValue = watch("primary_bank_verification_photo");
   const secondaryBankPhotoValue = watch("secondary_bank_verification_photo");
+
+  const renderPreviewWithRemove = (fileValue: File | string | null, onRemove: () => void) => {
+    if (!fileValue) return null;
+    const isFileObject = fileValue instanceof File;
+    return(
+        <div className="mt-2 group relative w-24 h-24">
+            {isImageUrl(fileValue) || (isFileObject && fileValue.type.startsWith('image/')) ? (
+                <img src={isFileObject ? URL.createObjectURL(fileValue) : String(fileValue)} alt="Bank photo" className="h-full w-full object-contain border rounded-md" />
+            ) : (
+                <DocumentPlaceholder fileName={isFileObject ? fileValue.name : 'document'} fileUrl={isFileObject ? URL.createObjectURL(fileValue) : String(fileValue)} />
+            )}
+            <Button
+                type="button"
+                shape="circle"
+                size="sm"
+                icon={<TbTrash />}
+                onClick={onRemove}
+                variant="solid"
+                color="red-500"
+                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Remove Photo"
+            />
+        </div>
+    );
+  }
+
   return (
     <Card id="bankDetails">
       <h4 className="mb-6">Bank Details (Primary)</h4>
@@ -1685,15 +1764,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
               />
             )}
           />
-          {primaryBankPhotoValue && (
-            <div className="mt-2 h-20">
-              {isImageUrl(primaryBankPhotoValue) ? (
-                <img src={typeof primaryBankPhotoValue === 'string' ? primaryBankPhotoValue : URL.createObjectURL(primaryBankPhotoValue)} alt="Primary bank photo" className="h-full w-auto" />
-              ) : (
-                <DocumentPlaceholder fileName={primaryBankPhotoValue instanceof File ? primaryBankPhotoValue.name : 'document'} fileUrl={typeof primaryBankPhotoValue === 'string' ? primaryBankPhotoValue : URL.createObjectURL(primaryBankPhotoValue)} />
-              )}
-            </div>
-          )}
+          {renderPreviewWithRemove(primaryBankPhotoValue, () => setValue('primary_bank_verification_photo', null, { shouldDirty: true }))}
         </FormItem>
       </div>
       <hr className="my-3" /> <h4 className="mb-6">Bank Details (Secondary)</h4>
@@ -1748,15 +1819,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
               />
             )}
           />
-          {secondaryBankPhotoValue && (
-            <div className="mt-2 h-20">
-              {isImageUrl(secondaryBankPhotoValue) ? (
-                <img src={typeof secondaryBankPhotoValue === 'string' ? secondaryBankPhotoValue : URL.createObjectURL(secondaryBankPhotoValue)} alt="Secondary bank photo" className="h-full w-auto" />
-              ) : (
-                <DocumentPlaceholder fileName={secondaryBankPhotoValue instanceof File ? secondaryBankPhotoValue.name : 'document'} fileUrl={typeof secondaryBankPhotoValue === 'string' ? secondaryBankPhotoValue : URL.createObjectURL(secondaryBankPhotoValue)} />
-              )}
-            </div>
-          )}
+          {renderPreviewWithRemove(secondaryBankPhotoValue, () => setValue('secondary_bank_verification_photo', null, { shouldDirty: true }))}
         </FormItem>
       </div>
       <hr className="my-6" />
@@ -1842,15 +1905,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
                     />
                   )}
                 />
-                {bankPhotoValue && (
-                  <div className="mt-2 h-20">
-                    {isImageUrl(bankPhotoValue) ? (
-                      <img src={typeof bankPhotoValue === 'string' ? bankPhotoValue : URL.createObjectURL(bankPhotoValue)} alt={`Bank ${index + 1} photo`} className="h-full w-auto" />
-                    ) : (
-                      <DocumentPlaceholder fileName={bankPhotoValue instanceof File ? bankPhotoValue.name : 'document'} fileUrl={typeof bankPhotoValue === 'string' ? bankPhotoValue : URL.createObjectURL(bankPhotoValue)} />
-                    )}
-                  </div>
-                )}
+                {renderPreviewWithRemove(bankPhotoValue, () => setValue(`partner_bank_details.${index}.verification_photo`, null, { shouldDirty: true }))}
               </FormItem>
               <div className="flex absolute justify-center right-0 top-2">
                 <Button
@@ -1912,7 +1967,7 @@ const ReferenceSection = ({ control }: FormSectionBaseProps) => {
 
 // --- AccessibilitySection ---
 const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) => {
-  const { watch } = formMethods;
+  const { watch, setValue } = formMethods;
   const { fields, append, remove } = useFieldArray({
     control,
     name: "billing_documents",
@@ -1958,7 +2013,7 @@ const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) =>
                     />
                   </FormItem>
                   {documentValue && (
-                    <div className="mt-2 w-32 h-24 col-span-1">
+                    <div className="mt-2 group relative w-24 h-24">
                       {isImageUrl(documentValue) || (isFileObject && documentValue.type.startsWith('image/')) ? (
                         <img
                           src={isFileObject ? URL.createObjectURL(documentValue) : String(documentValue)}
@@ -1971,6 +2026,17 @@ const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) =>
                           fileUrl={isFileObject ? URL.createObjectURL(documentValue) : String(documentValue)}
                         />
                       )}
+                      <Button
+                        type="button"
+                        shape="circle"
+                        size="sm"
+                        icon={<TbTrash />}
+                        onClick={() => setValue(`billing_documents.${index}.document`, null, { shouldDirty: true })}
+                        variant="solid"
+                        color="red-500"
+                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Remove Document"
+                      />
                     </div>
                   )}
                 </div>
@@ -2032,8 +2098,8 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   const { onFormSubmit, defaultValues, isEditMode, onDelete, isSubmitting } = props;
   const [activeSection, setActiveSection] = useState<string>(companyNavigationList[0].link);
 
-  const phoneRegex = /^\d{10}$/;
-  const optionalPhoneValidation = z.string().optional().or(z.literal('')).refine(val => !val || phoneRegex.test(val), { message: "Must be exactly 10 digits if provided" });
+  const phoneRegex = /^\d{7,15}$/;
+  const optionalPhoneValidation = z.string().optional().or(z.literal('')).refine(val => !val || phoneRegex.test(val), { message: "Must be 7-15 digits if provided" });
   const selectObjectSchema = z.object({ value: z.any(), label: z.any() }).nullable().optional();
 
   // Refined Zod Schema for perfect validation
@@ -2046,31 +2112,19 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     join_us_as: selectObjectSchema.refine(val => val?.value, "Join us as is required"),
     country_id: selectObjectSchema.refine(val => val?.value, "Country is required"),
     primary_email_id: z.string().trim().min(1, "Primary Email is required").email("Invalid email format"),
-    primary_contact_number: z.string().trim().min(1, "Primary contact is required").regex(phoneRegex, "Must be exactly 10 digits"),
+    primary_contact_number: z.string().trim().min(1, "Primary contact is required").regex(phoneRegex, "Must be 7-15 digits"),
     primary_contact_number_code: selectObjectSchema.refine(val => val?.value, "Country code is required"),
-
-
-    // // Statically required documents
-    // gst_certificate_file: z.any().refine(file => file, { message: "GST Certificate is required." }),
-    // office_photo_file: z.any().refine(file => file, { message: "Office Photo is required." }),
-    // cancel_cheque_file: z.any().refine(file => file, { message: "Cancel Cheque is required." }),
-
+    establishment_year: z.string().trim().regex(/^\d{4}$/, "Invalid year format (YYYY).").optional().or(z.literal("")).nullable(),
   }).passthrough().superRefine((data, ctx) => {
     // Dynamic validation based on country
     const isIndia = String(data.country_id?.value) === '101';
     if (isIndia) {
-      // if(!data.gst_number || data.gst_number.trim() === '') {
-      //     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "GST Number is required for India.", path: ["gst_number"] });
-      // }
-      // if(!data.pan_number || data.pan_number.trim() === '') {
-      //     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Number is required for India.", path: ["pan_number"] });
-      // }
-      // if(!data.aadhar_card_file) {
-      //     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Aadhar Card is required for India.", path: ["aadhar_card_file"] });
-      // }
-      // if(!data.pan_card_file) {
-      //     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Card is required for India.", path: ["pan_card_file"] });
-      // }
+        if(!data.gst_number || data.gst_number.trim() === '') {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "GST Number is required for India.", path: ["gst_number"] });
+        }
+        if(!data.pan_number || data.pan_number.trim() === '') {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Number is required for India.", path: ["pan_number"] });
+        }
     }
   });
 
@@ -2088,8 +2142,6 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       trigger([
         'gst_number',
         'pan_number',
-        'aadhar_card_file',
-        'pan_card_file'
       ]);
     }
   }, [watchedCountry, trigger]);
@@ -2272,7 +2324,8 @@ const CreatePartner = () => {
           onRequestClose={() => setDeleteConfirmationOpen(false)}
           onCancel={() => setDeleteConfirmationOpen(false)}
           onConfirm={handleConfirmDelete}
-          confirmButtonColor="red-600">
+          confirmButtonColor="red-600"
+        >
           <p>Are you sure you want to delete this partner? This action cannot be undone.</p>
         </ConfirmDialog>
       </Form>
