@@ -4403,7 +4403,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
               <DataTableComponent
                 menuName="opportunity"
 
-                selectable={!isDashboard}
+                // selectable={!isDashboard}
                 columns={columns}
                 data={pageData}
                 loading={isLoading && !initialLoading}
@@ -4415,13 +4415,13 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                 onPaginationChange={handlePaginationChange}
                 onSelectChange={handleSelectChange}
                 onSort={handleSort}
-                onCheckBoxChange={handleRowSelect}
+                // onCheckBoxChange={handleRowSelect}
                 onIndeterminateCheckBoxChange={handleAllRowSelect}
-                checkboxChecked={(row: OpportunityItem) =>
-                  currentSelectedItems.some(
-                    (selected: OpportunityItem) => selected.id === row.id
-                  )
-                }
+                // checkboxChecked={(row: OpportunityItem) =>
+                //   currentSelectedItems.some(
+                //     (selected: OpportunityItem) => selected.id === row.id
+                //   )
+                // }
                 state={{ expanded, columnVisibility }}
                 onExpandedChange={setExpanded}
                 onColumnVisibilityChange={setColumnVisibility}
