@@ -2990,7 +2990,18 @@ const AccountDocument = () => {
   };
 
   const onClearFilters = () => {
+    // Reset all client-side filters
     handleShortcutClick("Total");
+    
+    // Re-fetch data from the server
+    dispatch(getaccountdocAction());
+
+    // Provide user feedback
+    toast.push(
+      <Notification title="Data Refreshed" type="success" duration={3000}>
+        All filters cleared and data updated.
+      </Notification>
+    );
   };
 
   const getAllUserDataOptions = useMemo(
