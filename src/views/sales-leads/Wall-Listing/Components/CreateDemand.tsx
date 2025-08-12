@@ -129,7 +129,7 @@ const CreateDemand = () => {
   const dispatchStatusOptions: OptionType[] = [ { value: "Pending", label: "Pending" }, { value: "Ready to Ship", label: "Ready to Ship" }, { value: "Shipped", label: "Shipped" }, { value: "Delivered", label: "Delivered" } ];
   const dummyCartoonTypes: OptionType[] = [{ value: "Master Cartoon", label: "Master Cartoon" }, { value: "Non Masster Cartoon", label: "Non Masster Cartoon" }];
   const deviceConditionOptions: OptionType[] = [{ value: "New", label: "New" }, { value: "Old", label: "Old" }];
-
+  
   const {
     control,
     handleSubmit,
@@ -164,7 +164,8 @@ const CreateDemand = () => {
     const prefillData = location.state;
     if (prefillData && prefillData.productId && initialDataLoaded && !isEdit) {
         setValue('name', `Demand for ${prefillData.product_name || 'Product'}`);
-        setValue('product_data.0.buyer_ids', [Number(prefillData.buyerId)]);
+        if(prefillData.seller_ids) setValue('product_data.0.seller_ids', prefillData.seller_ids);
+        if(prefillData.buyer_ids) setValue('product_data.0.buyer_ids', prefillData.buyer_ids);
         setValue('product_data.0.spec_id', prefillData.product_spec_id || null);
         setValue('product_data.0.product_status', prefillData.product_status?.toLowerCase() === 'non-active' ? 'non-active' : 'active');
         handleProductChange(0, Number(prefillData.productId));
@@ -187,6 +188,7 @@ const CreateDemand = () => {
 
   useEffect(() => {
     const demandDataFromState = location.state?.originalApiItem;
+    
     if (isEdit && demandDataFromState) {
         const reconstructedProductData = (demandDataFromState.demand_products || []).map((productInfo: any) => ({
             ...defaultProductGroup,
@@ -300,10 +302,10 @@ const CreateDemand = () => {
                     <Controller name={`product_data.${index}.product_id`} control={control} render={({ field: { value }}) =>  <UiSelect placeholder="Select Product..." options={productOptions} value={productOptions.find(opt => opt.value === value)} onChange={(option) => handleProductChange(index, option ? option.value as number : null)} isLoading={isLoading} /> } />
                 </FormItem>
                 <FormItem label="Sellers">
-                    <Controller name={`product_data.${index}.seller_ids`} control={control} render={({ field: { onChange, value }}) =>  <UiSelect isMulti placeholder="Select Sellers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} /> } />
+                    <Controller name={`product_data.${index}.seller_ids`} control={control} render={({ field: { onChange, value }}) =>  <UiSelect isMulti placeholder="Select Sellers..." options={memberOptions} value={memberOptions.filter(opt => value?.find((f)=> f == opt.value))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} /> } />
                 </FormItem>
                 <FormItem label="Buyers">
-                    <Controller name={`product_data.${index}.buyer_ids`} control={control} render={({ field: { onChange, value }}) =>  <UiSelect isMulti placeholder="Select Buyers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} /> } />
+                    <Controller name={`product_data.${index}.buyer_ids`} control={control} render={({ field: { onChange, value }}) =>  <UiSelect isMulti placeholder="Select Buyers..." options={memberOptions} value={memberOptions.filter(opt => value?.find((f)=> f == opt.value))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} /> } />
                 </FormItem>
             </div>
 
