@@ -3823,7 +3823,7 @@ export const editMemberAction = createAsyncThunk<any, any>("auth/editMember",
         return response?.data
       } else {
         return rejectWithValue({
-          message: response?.data?.message || 'Failed to edit member.'
+          message: response?.message || 'Failed to edit member.'
         });
       }
     } catch (error: unknown) {

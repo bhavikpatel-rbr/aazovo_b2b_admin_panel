@@ -1,5 +1,3 @@
-// src/views/members/MemberFormPage.tsx
-
 import { useAppDispatch } from "@/reduxtool/store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
@@ -1941,96 +1939,114 @@ const NavigatorComponent = (props: {
 };
 
 // --- Section Components (Updated) ---
-const MemberProfileComponent = ({ control, errors, formMethods }: FormSectionBaseProps) => {
-  // Assuming these are fetched from Redux. You must implement the respective actions and reducers.
+const MemberProfileComponent = ({ control, errors, formMethods, isEditMode }: FormSectionBaseProps) => {
+  // Assuming these are fetched from Redux.
   const {
     BrandData = [],
     ParentCategories = [],
     subCategoriesForSelectedCategoryData = [],
-    ProductsData = [],
-    usersData = [],
     productsMasterData = [],
+    usersData = [],
     MemberTypeData = []
-
   } = useSelector(masterSelector);
 
   const { fields, append, remove } = useFieldArray({
     control,
     name: "dynamic_member_profiles" as "dynamic_member_profiles",
   });
-  const { watch } = formMethods;
+  
+  const { watch, setValue } = formMethods;
   const dispatch = useAppDispatch();
+  
   const selectedCat = watch("interested_category_ids");
+  const selectedSubCat = watch("interested_subcategory_ids");
+
+  // Effect 1 (MODIFIED): Fetch sub-categories on selection AND clear downstream fields on deselection.
   useEffect(() => {
     dispatch(clearSubcategories());
     if (selectedCat && selectedCat.length > 0) {
-      dispatch(getSubcategoriesByCategoryIdAction(selectedCat ? selectedCat.map((c: any) => c.value).toString() : ""));
+      const categoryIds = selectedCat.map((c: any) => c.value).join(',');
+      dispatch(getSubcategoriesByCategoryIdAction(categoryIds));
     } else {
+      // If categories are cleared, also clear sub-categories and products from the form.
+      setValue('interested_subcategory_ids', [], { shouldValidate: true });
+      setValue('favourite_product_id', [], { shouldValidate: true });
       dispatch(getSubcategoriesByCategoryIdAction(""));
     }
-  }, [selectedCat])
-  // Mock options if data not available, replace with real data from selectors
-  const productOptions = ProductsData?.data?.map((p: any) => ({
-    value: String(p.id),
-    label: p.name,
-  }));
-  const brandOptions = BrandData.map((b: any) => ({
-    value: b.id,
-    label: b.name,
-  }));
-  const categoryOptions = ParentCategories.map((c: any) => ({
-    value: c.id,
-    label: c.name,
-  }));
-  const subCategoryOptions = subCategoriesForSelectedCategoryData.map((sc: any) => ({ // Assuming subCategoriesForSelectedCategoryData is structured like ParentCategories
-    value: sc.id,
-    label: sc.name,
-  }));
+  }, [selectedCat, dispatch, setValue]);
 
+  // Effect 2 (Unchanged): Set the default FIRST category in "Add New" mode.
+  useEffect(() => {
+    if (!isEditMode && ParentCategories.length > 0) {
+        const alreadySet = watch('interested_category_ids');
+        if (!alreadySet || alreadySet.length === 0) {
+            const defaultCategory = ParentCategories[0];
+            const defaultCategoryOption = { value: defaultCategory.id, label: defaultCategory.name };
+            setValue('interested_category_ids', [defaultCategoryOption], { shouldValidate: true });
+        }
+    }
+  }, [isEditMode, ParentCategories, setValue, watch]);
 
-  const allproductOptions = productsMasterData?.length > 0 && productsMasterData?.map((sc: any) => ({
-    value: parseInt(sc.id),
-    label: sc.name,
-  })) || [];
+  // Effect 3 (Unchanged): Set the default FIRST sub-category in "Add New" mode.
+  useEffect(() => {
+    if (!isEditMode && subCategoriesForSelectedCategoryData.length > 0) {
+        const alreadySet = watch('interested_subcategory_ids');
+        if (!alreadySet || alreadySet.length === 0) {
+            const defaultSubCategory = subCategoriesForSelectedCategoryData[0];
+            const defaultSubCategoryOption = { value: defaultSubCategory.id, label: defaultSubCategory.name };
+            setValue('interested_subcategory_ids', [defaultSubCategoryOption], { shouldValidate: true });
+        }
+    }
+  }, [isEditMode, subCategoriesForSelectedCategoryData, setValue, watch]);
 
+  // Effect 4 (Unchanged): Set the default FIRST product in "Add New" mode.
+  useEffect(() => {
+    if (!isEditMode && productsMasterData.length > 0 && selectedCat?.length > 0 && selectedSubCat?.length > 0) {
+        const alreadySet = watch('favourite_product_id');
+        if (!alreadySet || alreadySet.length === 0) {
+            const selectedCategoryId = selectedCat[0].value;
+            const selectedSubCategoryId = selectedSubCat[0].value;
+            const matchingProduct = productsMasterData.find((p: any) => 
+                String(p.category_id) === String(selectedCategoryId) && 
+                String(p.sub_category_id) === String(selectedSubCategoryId)
+            );
+            if (matchingProduct) {
+                const productOption = { value: matchingProduct.id, label: matchingProduct.name };
+                setValue('favourite_product_id', [productOption], { shouldValidate: true });
+            }
+        }
+    }
+  }, [isEditMode, productsMasterData, selectedCat, selectedSubCat, setValue, watch]);
 
+  // Effect 5 (NEW): Handle clearing of sub-categories to also clear products.
+  useEffect(() => {
+      if (!selectedSubCat || selectedSubCat.length === 0) {
+          setValue('favourite_product_id', [], { shouldValidate: true });
+      }
+  }, [selectedSubCat, setValue]);
 
-
+  // Options for dropdowns
+  const brandOptions = BrandData.map((b: any) => ({ value: b.id, label: b.name }));
+  const categoryOptions = ParentCategories.map((c: any) => ({ value: c.id, label: c.name }));
+  const subCategoryOptions = subCategoriesForSelectedCategoryData.map((sc: any) => ({ value: sc.id, label: sc.name }));
+  const allproductOptions = productsMasterData?.length > 0 && productsMasterData?.map((sc: any) => ({ value: parseInt(sc.id), label: sc.name })) || [];
   const opportunityOptions = [
     { value: "Indian Supplier", label: "Indian Supplier" },
     { value: "Indian Buyer", label: "Indian Buyer" },
     { value: "Global Supplier", label: "Global Supplier" },
     { value: "Global Buyer", label: "Global Buyer" },
   ];
-  const gradeOptions = [
-    { value: "A", label: "A" },
-    { value: "B", label: "B" },
-    { value: "C", label: "C" },
-    { value: "D", label: "D" },
-  ];
-  const managerOptions = usersData.map((m: any) => ({
-    value: String(m.id),
-    label: `(${m.employee_id}) ${m.name}`,
-  }));
-  const yesNoOptions = [
-    { value: "Yes", label: "Yes" },
-    { value: "No", label: "No" },
-  ];
-  const interestedinOption = [
-    { value: "For Sell", label: "For Sell" },
-    { value: "For Buy", label: "For Buy" },
-    { value: "Both", label: "Both" },
-  ];
-  const memberTypeOptions = MemberTypeData.map((m: any) => ({
-    value: m.id,
-    label: m.name,
-  }));
+  const gradeOptions = [ { value: "A", label: "A" }, { value: "B", label: "B" }, { value: "C", label: "C" }, { value: "D", label: "D" } ];
+  const managerOptions = usersData.map((m: any) => ({ value: String(m.id), label: `(${m.employee_id}) ${m.name}` }));
+  const interestedinOption = [ { value: "For Sell", label: "For Sell" }, { value: "For Buy", label: "For Buy" }, { value: "Both", label: "Both" }];
+  const memberTypeOptions = MemberTypeData.map((m: any) => ({ value: m.id, label: m.name }));
+  
   return (
     <Card id="memberProfile">
       <h4 className="mb-6">Additional Member Profile</h4>
       <div className="grid md:grid-cols-3 gap-4">
         <FormItem
-          label={<div>Interested Categories</div>}
+          label={<div>Interested Categories<span className="text-red-500"> * </span></div>}
           invalid={!!errors.interested_category_ids}
           errorMessage={errors.interested_category_ids?.message as string}
         >
@@ -2038,13 +2054,7 @@ const MemberProfileComponent = ({ control, errors, formMethods }: FormSectionBas
             name="interested_category_ids"
             control={control}
             render={({ field }) => (
-              <Select
-                {...field}
-                isMulti
-                placeholder="Select interested categories"
-                options={categoryOptions}
-                isClearable
-              />
+              <Select {...field} isMulti placeholder="Select interested categories" options={categoryOptions} isClearable />
             )}
           />
         </FormItem>
@@ -2057,13 +2067,7 @@ const MemberProfileComponent = ({ control, errors, formMethods }: FormSectionBas
             name="interested_subcategory_ids"
             control={control}
             render={({ field }) => (
-              <Select
-                {...field}
-                isMulti
-                placeholder="Select interested sub categories"
-                options={subCategoryOptions}
-                isClearable
-              />
+              <Select {...field} isMulti placeholder="Select interested sub categories" options={subCategoryOptions} isClearable />
             )}
           />
         </FormItem>
@@ -2100,12 +2104,7 @@ const MemberProfileComponent = ({ control, errors, formMethods }: FormSectionBas
             name="interested_in"
             control={control}
             render={({ field }) => (
-              <Select
-                {...field}
-                placeholder="Select interested categories"
-                options={interestedinOption}
-                isClearable
-              />
+              <Select {...field} placeholder="Select interested categories" options={interestedinOption} isClearable />
             )}
           />
         </FormItem>
@@ -2134,13 +2133,7 @@ const MemberProfileComponent = ({ control, errors, formMethods }: FormSectionBas
             name="business_opportunity"
             control={control}
             render={({ field }) => (
-              <Select
-                {...field}
-                placeholder="Select opportunity"
-                options={opportunityOptions}
-                isClearable
-                isMulti
-              />
+              <Select {...field} placeholder="Select opportunity" options={opportunityOptions} isClearable isMulti />
             )}
           />
         </FormItem>
@@ -2153,13 +2146,7 @@ const MemberProfileComponent = ({ control, errors, formMethods }: FormSectionBas
             name="favourite_product_id"
             control={control}
             render={({ field }) => (
-              <Select
-                {...field}
-                isMulti
-                placeholder="Select favourite products"
-                options={allproductOptions}
-                isClearable
-              />
+              <Select {...field} isMulti placeholder="Select favourite products" options={allproductOptions} isClearable />
             )}
           />
         </FormItem>
@@ -2172,12 +2159,7 @@ const MemberProfileComponent = ({ control, errors, formMethods }: FormSectionBas
             name="member_grade"
             control={control}
             render={({ field }) => (
-              <Select
-                {...field}
-                placeholder="Select grade"
-                options={gradeOptions}
-                isClearable
-              />
+              <Select {...field} placeholder="Select grade" options={gradeOptions} isClearable />
             )}
           />
         </FormItem>
@@ -2190,13 +2172,7 @@ const MemberProfileComponent = ({ control, errors, formMethods }: FormSectionBas
             name="relationship_manager_id"
             control={control}
             render={({ field }) => (
-              <Select
-                {...field}
-                placeholder="Select RM"
-                // value={managerOptions.find((o) => o.value === field.value)}
-                options={managerOptions}
-                isClearable
-              />
+              <Select {...field} placeholder="Select RM" options={managerOptions} isClearable />
             )}
           />
         </FormItem>
@@ -2222,13 +2198,11 @@ const MemberProfileComponent = ({ control, errors, formMethods }: FormSectionBas
           type="button"
           icon={<HiPlus />}
           size="sm"
-          onClick={() =>
-            append({ member_type: undefined, brands: [], sub_categories: [] })
-          }
+          onClick={() => append({ member_type: undefined, brands: [], sub_categories: [] })}
         >
           Add Profile Section
         </Button>
-      </div>{" "}
+      </div>
       <div className="flex flex-col gap-y-6">
         {fields.map((item, index) => (
           <Card key={item.id} className="border-black rounded-md" bodyClass="relative">
@@ -2247,86 +2221,39 @@ const MemberProfileComponent = ({ control, errors, formMethods }: FormSectionBas
               <FormItem
                 label={`Member Type ${index + 1}`}
                 invalid={!!errors.dynamic_member_profiles?.[index]?.member_type}
-                errorMessage={
-                  errors.dynamic_member_profiles?.[index]?.member_type
-                    ?.message as string
-                }
+                errorMessage={errors.dynamic_member_profiles?.[index]?.member_type?.message as string}
               >
                 <Controller
                   name={`dynamic_member_profiles.${index}.member_type`}
                   control={control}
                   render={({ field }) => (
-                    <Select
-                      {...field}
-                      placeholder="Select Member Type"
-                      options={memberTypeOptions}
-                      isClearable
-                    />
+                    <Select {...field} placeholder="Select Member Type" options={memberTypeOptions} isClearable />
                   )}
                 />
               </FormItem>
               <FormItem
                 label="Select Brand(s)"
                 invalid={!!errors.dynamic_member_profiles?.[index]?.brands}
-                errorMessage={
-                  errors.dynamic_member_profiles?.[index]?.brands?.message as string
-                }
+                errorMessage={errors.dynamic_member_profiles?.[index]?.brands?.message as string}
               >
                 <Controller
                   name={`dynamic_member_profiles.${index}.brands`}
                   control={control}
                   render={({ field }) => (
-                    <Select
-                      {...field}
-                      isMulti
-                      placeholder="Select brands"
-                      options={brandOptions}
-                      isClearable
-                    />
+                    <Select {...field} isMulti placeholder="Select brands" options={brandOptions} isClearable />
                   )}
                 />
               </FormItem>
-              {/* <FormItem
-                label="Select Category(s)"
-                invalid={!!errors.dynamic_member_profiles?.[index]?.categories}
-                errorMessage={
-                  errors.dynamic_member_profiles?.[index]?.categories
-                    ?.message as string
-                }
-              >
-                <Controller
-                  name={`dynamic_member_profiles.${index}.categories`}
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...field}
-                      isMulti
-                      placeholder="Select categories"
-                      options={categoryOptions}
-                      isClearable
-                    />
-                  )}
-                />
-              </FormItem> */}
               <FormItem
                 label="Select Sub Category(s)"
                 invalid={!!errors.dynamic_member_profiles?.[index]?.sub_categories}
-                errorMessage={
-                  errors.dynamic_member_profiles?.[index]?.sub_categories
-                    ?.message as string
-                }
+                errorMessage={errors.dynamic_member_profiles?.[index]?.sub_categories?.message as string}
               >
                 <Controller
                   name={`dynamic_member_profiles.${index}.sub_categories`}
                   control={control}
                   render={({ field }) => (
-                    <Select
-                      {...field}
-                      isMulti
-                      placeholder="Select sub categories"
-                      options={subCategoryOptions}
-                      isClearable
-                    />
+                    <Select {...field} isMulti placeholder="Select sub categories" options={subCategoryOptions} isClearable />
                   )}
                 />
               </FormItem>
@@ -2447,7 +2374,7 @@ const PersonalDetailsComponent = ({
           </div>
         </FormItem>
         <FormItem
-          label={<div>Email</div>}
+          label={<div>Email<span className="text-red-500"> * </span></div>}
           invalid={!!errors.email}
           errorMessage={errors.email?.message}
         >
@@ -2955,6 +2882,17 @@ const MemberFormComponent = (props: {
           message: "Password must be at least 6 characters if provided",
         }),
       mobile_no: z.string().trim().min(1, "Mobile number is required"),
+      contact_country_code: z
+        .union([
+          z.string(),
+          z.object({ value: z.string().min(1), label: z.string() }),
+        ])
+        .refine(
+          (val) =>
+            (typeof val === "string" && val.trim() !== "") ||
+            (typeof val === "object" && !!val?.value),
+          { message: "Country code is required" }
+        ),
       country_id: z
         .union([
           z.string(),
