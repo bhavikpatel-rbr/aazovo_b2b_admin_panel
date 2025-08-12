@@ -1,32 +1,29 @@
-import React, { useState, useMemo, useEffect } from 'react'
-import { NavLink, useParams, useNavigate } from 'react-router-dom'
-import dayjs from 'dayjs'
 import classNames from 'classnames'
+import dayjs from 'dayjs'
+import React, { useEffect, useMemo, useState } from 'react'
+import { NavLink, useNavigate, useParams } from 'react-router-dom'
 
 // --- UI Components ---
 import Container from '@/components/shared/Container'
-import Card from '@/components/ui/Card'
-import Tag from '@/components/ui/Tag'
-import Button from '@/components/ui/Button'
-import DataTable from '@/components/shared/DataTable'
-import Skeleton from '@/components/ui/Skeleton'
 import type { ColumnDef } from '@/components/shared/DataTable'
+import DataTable from '@/components/shared/DataTable'
+import Button from '@/components/ui/Button'
+import Card from '@/components/ui/Card'
+import Skeleton from '@/components/ui/Skeleton'
+import Tag from '@/components/ui/Tag'
 
 // --- Icons ---
 import {
-    TbFileText,
-    TbBuildingStore,
-    TbUser,
-    TbListDetails,
-    TbClock,
     TbAlertCircle,
     TbArrowLeft,
-    TbChevronRight,
-    TbCurrencyDollar,
+    TbChevronRight
 } from 'react-icons/tb'
 
 // --- Redux & API ---
+import { masterSelector } from '@/reduxtool/master/masterSlice'
+import { getLeadById } from '@/reduxtool/master/middleware'
 import { useAppDispatch } from '@/reduxtool/store'
+import { useSelector } from 'react-redux'
 
 // --- TYPE DEFINITIONS ---
 type SimpleUser = {
@@ -77,7 +74,7 @@ type LeadData = {
 const apiGetLeadById = (id: string) => async (dispatch: any) => {
     console.log(`Fetching lead with id: ${id}`)
     // This is a placeholder for your actual large JSON data.
-    const mockLeadData = { 
+    const mockLeadData = {
         id: 1,
         lead_intent: "Buy",
         qty: 100,
@@ -220,8 +217,7 @@ const LeadView = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
-
-    const [lead, setLead] = useState<LeadData | null>(null);
+    const { currentLead : lead } = useSelector(masterSelector);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState('product_details');
@@ -246,14 +242,10 @@ const LeadView = () => {
             try {
                 // QUICK FIX APPLIED HERE:
                 // We await the dispatch call directly, as it's a manual thunk.
-                // The .unwrap() method is removed.
-                const response = await dispatch(apiGetLeadById(id));
-                
-                if (response && response.data) {
-                    setLead(response.data);
-                } else {
-                    setError('Lead data could not be loaded.');
-                }
+                // The .unwrap() method is removed
+
+                dispatch(getLeadById(id))
+
             } catch (err: any) {
                 setError(err.message || 'An unexpected error occurred.');
             } finally {
