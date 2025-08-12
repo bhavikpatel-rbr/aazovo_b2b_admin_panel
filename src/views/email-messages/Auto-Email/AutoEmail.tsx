@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
 import dayjs from "dayjs";
 import cloneDeep from "lodash/cloneDeep";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -486,7 +486,13 @@ const AutoEmailListing = () => {
     const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }), [handleSetTableData]);
     const handleSearchChange = useCallback((query: string) => handleSetTableData({ query, pageIndex: 1 }), [handleSetTableData]);
 
-    const onClearFilters = useCallback(() => { filterFormMethods.reset({}); setFilterCriteria({}); handleSetTableData({ pageIndex: 1, query: '' }); }, [filterFormMethods, handleSetTableData]);
+    const onClearFilters = useCallback(() => {
+        filterFormMethods.reset({});
+        setFilterCriteria({});
+        handleSetTableData({ pageIndex: 1, query: '' });
+        dispatch(getAutoEmailsAction());
+        toast.push(<Notification title="Data Refreshed" type="success">Filters cleared and data reloaded.</Notification>);
+    }, [filterFormMethods, handleSetTableData, dispatch]);
 
     const handleCardClick = (status: 'Active' | 'Inactive' | 'all') => {
         const newFilters: FilterFormData = {};
