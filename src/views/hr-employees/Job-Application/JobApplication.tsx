@@ -308,7 +308,18 @@ const JobApplicationListing = () => {
     const handleSendWhatsapp = useCallback((app: JobApplicationItemInternal) => { const phone = app.mobileNo?.replace(/\D/g, ''); if (!phone) { toast.push(<Notification type="warning" title="No Mobile Number" />); return; } const message = `Hi ${app.name}, ...`; window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank'); }, []);
 
     const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterStatus: data.filterStatus || [], filterDepartment: data.filterDepartment || [] }); handleSetTableData({ pageIndex: 1 }); setShowOnlyScheduled(false); setShowOnlyToday(false); setIsFilterDrawerOpen(false); }, [handleSetTableData]);
-    const onClearFilters = useCallback(() => { const defaults = { filterStatus: [], filterDepartment: [] }; filterFormMethods.reset(defaults); setFilterCriteria(defaults); handleSetTableData({ pageIndex: 1, query: '' }); setShowOnlyScheduled(false); setShowOnlyToday(false); }, [filterFormMethods, handleSetTableData]);
+    
+    const onClearFilters = useCallback(() => {
+        const defaults = { filterStatus: [], filterDepartment: [] };
+        filterFormMethods.reset(defaults);
+        setFilterCriteria(defaults);
+        handleSetTableData({ pageIndex: 1, query: "" });
+        dispatch(getJobApplicationsAction());
+        setShowOnlyScheduled(false);
+        setShowOnlyToday(false);
+        toast.push(<Notification title="Data Refreshed" type="success" duration={3000}>Filters cleared and data reloaded.</Notification>)
+    }, [filterFormMethods, handleSetTableData, dispatch]);
+    
     const handleRemoveFilter = (key: keyof FilterFormData, valueToRemove: string) => { setFilterCriteria(prev => { const newCriteria = { ...prev }; const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined; if (currentFilterArray) { (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove); } return newCriteria; }); handleSetTableData({ pageIndex: 1 }); };
     const handleCardClick = useCallback((status?: ApplicationStatus) => { onClearFilters(); if (status) { const statusOption = appStatusOptionsConst.find(s => s.value === status); if (statusOption) { setFilterCriteria({ ...filterCriteria, filterStatus: [statusOption] }); } } }, [onClearFilters, filterCriteria]);
     const clearSpecialFilters = () => { const defaults = { filterStatus: [], filterDepartment: [] }; filterFormMethods.reset(defaults); setFilterCriteria(defaults); handleSetTableData({ pageIndex: 1, query: '' }); }
