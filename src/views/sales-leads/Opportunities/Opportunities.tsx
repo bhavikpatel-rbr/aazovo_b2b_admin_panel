@@ -3571,8 +3571,8 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
 
     const matchRow: OpportunityItem = {
       id: `spb-match-${groupId}`,
-      opportunity_id: `ASPB-${autospbNumber}-${groupId}`,
-      product_name: productName,
+      opportunity_id: productName,
+      product_name: autospbNumber,
       status: "active",
       opportunity_status: "Shortlisted",
       match_score: 88, // Assuming this is a default/placeholder value
