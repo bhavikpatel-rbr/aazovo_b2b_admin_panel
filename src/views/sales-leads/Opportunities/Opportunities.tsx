@@ -372,9 +372,9 @@ interface OpportunityModalsProps {
 }
 
 const priorityOptions = [
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
+  { value: "Low", label: "Low" },
+  { value: "Medium", label: "Medium" },
+  { value: "High", label: "High" },
 ];
 const eventTypeOptions = [
   { value: "Meeting", label: "Meeting" },
@@ -2503,30 +2503,30 @@ const MainRowActionColumn = ({
           {" "}
           <TbUser size={18} /> <span className="text-xs">Assign to Task</span>{" "}
         </Dropdown.Item>{" "}
-        <Dropdown.Item
+        {/* <Dropdown.Item
           onClick={() => onOpenModal("alert", item)}
           className="flex items-center gap-2"
         >
           {" "}
           <TbAlarm size={18} /> <span className="text-xs">View Alert</span>{" "}
-        </Dropdown.Item>{" "}
-        <Dropdown.Item
+        </Dropdown.Item>{" "} */}
+        {/* <Dropdown.Item
           onClick={() => onOpenModal("Opportunity", item)}
           className="flex items-center gap-2"
         >
           {" "}
           <TbBulb size={18} /> <span className="text-xs">View Opportunity</span>{" "}
-        </Dropdown.Item>{" "}
-        <Dropdown.Item
+        </Dropdown.Item>{" "} */}
+        {/* <Dropdown.Item
           onClick={() => onOpenModal("alert", item)}
           className="flex items-center gap-2"
         >
           {" "}
           <TbDiscount size={18} />{" "}
           <span className="text-xs">Create Offer/Demand</span>{" "}
-        </Dropdown.Item>{" "}
+        </Dropdown.Item>{" "} */}
 
-        <Dropdown.Item
+        {/* <Dropdown.Item
           onClick={() => onOpenModal("email", item)}
           className="flex items-center gap-2"
         >
@@ -2540,8 +2540,8 @@ const MainRowActionColumn = ({
           {" "}
           <TbBrandWhatsapp size={18} />{" "}
           <span className="text-xs">Send on Whatsapp</span>{" "}
-        </Dropdown.Item>{" "}
-      </Dropdown>{" "}
+        </Dropdown.Item>{" "}*/}
+      </Dropdown>{" "} 
     </div>
   );
 };
@@ -4010,27 +4010,6 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                   title={`Condition: ${item.device_condition}`}
                 />
               </Tooltip>
-              {" "}
-              {item.product_status_listing && (
-                <Tooltip title="Product Status">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-gray-400 dark:text-gray-500 flex-shrink-0">
-                      <TbChecklist size={14} />
-                    </span>
-                    <Tag
-                      className={classNames(
-                        "capitalize",
-                        productListingStatusTagColor[
-                        item.product_status_listing.toLowerCase()
-                        ] || productListingStatusTagColor.default
-                      )}
-                    >
-                      {" "}
-                      {item.product_status_listing}{" "}
-                    </Tag>{" "}
-                  </div>
-                </Tooltip>
-              )}{" "}
 
               {item.opportunity_status && (
                 <Tooltip title="Opportunity Status">
