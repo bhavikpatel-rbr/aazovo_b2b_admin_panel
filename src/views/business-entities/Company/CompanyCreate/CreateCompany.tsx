@@ -983,7 +983,9 @@ const CompanyDetailsSection = ({
   const companyLogoValue = watch("company_logo");
 
   const selectedCountry = watch("country_id");
-  const isIndiaSelected = selectedCountry?.value === '101';
+  console.log("selectedCountry?.value");
+  
+  const isIndiaSelected = selectedCountry?.value === '1';
 
   useEffect(() => {
     // When country changes, clear the irrelevant trade info fields
