@@ -357,9 +357,7 @@ const companyFilterFormSchema = z.object({
   filterCity: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
-  filterKycVerified: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
+  filterKycVerified:z.object({ value: z.string(), label: z.string() }).optional(),
   filterEnableBilling: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
@@ -3041,7 +3039,7 @@ const CompanyListTable = () => {
       filterCountry: [],
       filterState: [],
       filterCity: [],
-      filterKycVerified: [],
+      filterKycVerified: null,
       filterEnableBilling: [],
     };
     setFilterCriteria(defaultFilters);
@@ -3102,7 +3100,7 @@ const CompanyListTable = () => {
       filterCountry: [],
       filterState: [],
       filterCity: [],
-      filterKycVerified: [],
+      filterKycVerified: null,
       filterEnableBilling: [],
       customFilter: undefined,
     };
@@ -3121,13 +3119,13 @@ const CompanyListTable = () => {
         newCriteria.filterStatus = [{ value: "disabled", label: "Disabled" }];
         break;
       case "verified":
-        newCriteria.filterKycVerified = [{ value: "Yes", label: "Yes" }];
+        newCriteria.filterKycVerified = { value: "Yes", label: "Yes" };
         break;
       case "non_verified":
-        newCriteria.filterKycVerified = [{ value: "No", label: "No" }];
+        newCriteria.filterKycVerified = { value: "No", label: "No" };
         break;
       case "eligible":
-        newCriteria.filterKycVerified = [{ value: "Yes", label: "Yes" }];
+        newCriteria.filterKycVerified = { value: "Yes", label: "Yes" };
         newCriteria.filterEnableBilling = [{ value: "Yes", label: "Yes" }];
         break;
       case "not_eligible":
@@ -3212,15 +3210,13 @@ const CompanyListTable = () => {
             selectedCities.includes(company.city)
           );
         }
+        
         if (
-          filterCriteria.filterKycVerified &&
-          filterCriteria.filterKycVerified.length > 0
+          filterCriteria.filterKycVerified 
         ) {
-          const selectedKycValues = filterCriteria.filterKycVerified.map(
-            (k) => k.value === "Yes"
-          );
+          const selectedKycValues = filterCriteria.filterKycVerified.value === "Yes";
           filteredData = filteredData.filter((company) =>
-            selectedKycValues.includes(company.kyc_verified)
+            [selectedKycValues].includes(company.kyc_verified)
           );
         }
         if (
@@ -3282,7 +3278,7 @@ const CompanyListTable = () => {
       count += (filterCriteria.filterCountry?.length ?? 0) > 0 ? 1 : 0;
       count += (filterCriteria.filterState?.length ?? 0) > 0 ? 1 : 0;
       count += (filterCriteria.filterCity?.length ?? 0) > 0 ? 1 : 0;
-      count += (filterCriteria.filterKycVerified?.length ?? 0) > 0 ? 1 : 0;
+      count += (filterCriteria.filterKycVerified ? 1 : 0 ) > 0 ? 1 : 0;
       count += (filterCriteria.filterEnableBilling?.length ?? 0) > 0 ? 1 : 0;
       count +=
         filterCriteria.filterCreatedDate?.[0] &&

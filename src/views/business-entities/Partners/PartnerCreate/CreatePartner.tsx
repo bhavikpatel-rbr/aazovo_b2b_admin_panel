@@ -2272,8 +2272,7 @@ const CreatePartner = () => {
           onRequestClose={() => setDeleteConfirmationOpen(false)}
           onCancel={() => setDeleteConfirmationOpen(false)}
           onConfirm={handleConfirmDelete}
-          confirmButtonColor="red-600"
-        >
+          confirmButtonColor="red-600">
           <p>Are you sure you want to delete this partner? This action cannot be undone.</p>
         </ConfirmDialog>
       </Form>
