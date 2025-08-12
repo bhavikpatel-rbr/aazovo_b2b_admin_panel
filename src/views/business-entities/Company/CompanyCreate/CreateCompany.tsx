@@ -918,7 +918,7 @@ const CompanyDetailsSection = ({
 
   const countryCodeOptions = CountriesData
     .map((c: any) => ({
-      value: `+${c.phone_code}`,
+      value: `${c.phone_code}`,
       label: `${c.phone_code}`,
     })).filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i); // Unique phone codes
 
