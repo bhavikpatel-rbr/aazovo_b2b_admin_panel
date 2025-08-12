@@ -88,6 +88,7 @@ type MatchingOpportunityItem = {
   device_condition: string;
   color: string;
   member_name: string;
+  member_code: string; // ADDED
   member_email: string;
   member_phone: string;
 };
@@ -112,10 +113,6 @@ const recordStatusColor: Record<WallRecordStatus, string> = {
   Inactive: "bg-gray-100 text-gray-700 dark:bg-gray-600/20 dark:text-gray-100",
   Pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100",
   Rejected: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
-
-  //  Approved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
-  // Expired: "bg-gray-100 text-gray-700 dark:bg-gray-600/20 dark:text-gray-100", 
-  // Fulfilled: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100", 
 };
 const recordStatusOptions = Object.keys(recordStatusColor).map((s) => ({ value: s, label: s, }));
 const intentTagColor: Record<WallIntent, string> = { Sell: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100", Buy: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100", Exchange: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100", };
@@ -308,6 +305,7 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
             device_condition: item.device_condition,
             color: item.color,
             member_name: item.member.name,
+            member_code: item.member.customer_code,
             member_email: item.member.email,
             member_phone: item.member.number
           }));
@@ -340,9 +338,6 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
       case 'offer_demand':
         if (wallItem.want_to === 'Buy') {
           navigate('/sales-leads/wall-item/demands/create', { state: { buyerId: firstOp.member_id, productId: firstOp.product_id, ...firstOp } });
-
-
-
         } else {
           navigate('/sales-leads/wall-item/offers/create', { state: { supplierId: firstOp.member_id, productId: firstOp.product_id, ...firstOp } });
         }
@@ -368,8 +363,8 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
 
       case 'copy':
         const textToCopy = selectedOps.map(op =>
-          `Member: ${op.member_name}\nQuantity: ${op.qty}\nPrice: ${op.price || 'N/A'}\nCondition: ${op.device_condition}, ${op.color}\nContact: ${op.member_email}, ${op.member_phone}`
-        ).join('\n\n---\n\n');
+          `${op.member_code} ${op.want_to === 'Buy' ? 'Buyer' : 'Supplier'} - Qty: ${op.qty} - Contact: ${op.member_phone}`
+        ).join('\n');
         navigator.clipboard.writeText(textToCopy).then(() => toast.push(<Notification title="Copied!" type="success" />));
         break;
     }
@@ -377,7 +372,7 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
 
   const columns: ColumnDef<MatchingOpportunityItem>[] = [
     { id: 'select', header: ({ table }) => <Checkbox checked={table.getIsAllRowsSelected()} indeterminate={table.getIsSomeRowsSelected()} onChange={e => handleSelectAll(e)} />, cell: ({ row }) => <Checkbox checked={selected.includes(row.original.id)} onChange={e => handleSelect(row.original.id, e)} />, size: 40 },
-    { header: 'Supplier/Buyer', accessorKey: 'member_name' },
+    { header: 'Supplier/Buyer', cell: ({row}) => <div><span className="font-semibold">{row.original.member_name}</span><br /><span className="text-xs text-gray-500">{row.original.member_code}</span></div> },
     {
       header: 'Details', cell: ({ row }) => (
         <div className="flex flex-col text-xs">
@@ -409,9 +404,11 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-semibold">{selected.length} selected</span>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" icon={<TbHandGrab />} onClick={() => handleAction('offer_demand')}>Create {wallItem.want_to === 'Buy' ? 'Demand' : 'Offer'}</Button>
-
-                <Button size="sm" icon={<TbUserPlus />} onClick={() => handleAction('lead')}>Create Lead</Button>
+                   <>
+                    <Button size="sm" icon={<TbHandGrab />} onClick={() => handleAction('offer_demand')}>Create {wallItem.want_to === 'Buy' ? 'Demand' : 'Offer'}</Button>
+                    <Button size="sm" icon={<TbUserPlus />} onClick={() => handleAction('lead')}>Create Lead</Button>
+                  </>
+               
                 <Button size="sm" icon={<TbMailForward />} onClick={() => handleAction('email')}>Email</Button>
                 <Button size="sm" icon={<TbBrandWhatsapp />} onClick={() => handleAction('whatsapp')}>WhatsApp</Button>
                 <Button size="sm" icon={<TbCopy />} onClick={() => handleAction('copy')}>Copy</Button>

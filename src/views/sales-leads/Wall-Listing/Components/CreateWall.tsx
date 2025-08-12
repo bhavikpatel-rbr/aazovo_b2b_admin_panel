@@ -1,11 +1,3 @@
-// src/views/your-path/business-entities/WallItemForm.tsx
-// FINAL VERSION:
-// - "Status" field is hidden and defaults to "Active".
-// - "Assigned Team" field has been removed entirely.
-// - The form UI is restructured into "Common Information" and "Product Information" sections.
-// - All other functionality, including the split UI for Add mode and the full form for Edit mode, is preserved.
-// - Validation messages now appear correctly for all required fields.
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
@@ -66,7 +58,6 @@ const singleWallItemSchema = z.object({
   location: z.string().max(100, "Location too long.").nullable().optional(),
   deviceCondition: z.string().nullable().optional(),
   remarks: z.string().nullable().optional(),
-  // assignedTeamId is removed
 });
 const wallItemFormSchema = z.object({
   wallItems: z.array(singleWallItemSchema).min(1, "At least one item is required."),
@@ -80,12 +71,12 @@ const intentOptions: OptionType<WallIntent>[] = [{ value: "Buy", label: "Buy" },
 const productStatusOptions: OptionType[] = [{ value: "Active", label: "Active" }, { value: "Non-active", label: "Non-active" }];
 const dummyCartoonTypes: OptionType[] = [{ value: "Master Cartoon", label: "Master Cartoon" }, { value: "Non Masster Cartoon", label: "Non Masster Cartoon" }];
 const deviceConditionRadioOptions: OptionType[] = [{ value: "New", label: "New" }, { value: "Old", label: "Old" }];
-const dispatchStatusOptions: OptionType[] = [ { value: "Pending", label: "Pending" }, { value: "Ready to Ship", label: "Ready to Ship" }, { value: "Shipped", label: "Shipped" }, { value: "Delivered", label: "Delivered" }, ];
-
-const defaultItem: SingleWallItemFormData = { status: "Active", productId: 0, member_id: 0, qty: 1, intent: "Sell", productStatus: "Active", activeHours: "", productSpecId: null, price: null, color: "", cartoonTypeId: null, dispatchStatus: "Pending", paymentTermId: null, eta: null, location: "", deviceCondition: null, remarks: "" };
+// MODIFIED: Updated dispatch status options per user request
+const dispatchStatusOptions: OptionType[] = [ { value: "Pending", label: "Pending" },{ value: "Booking", label: "Booking" }, { value: "Ready Stock", label: "Ready Stock" }, { value: "Ready to Ship", label: "Ready to Ship" }, { value: "Shipped", label: "Shipped" }, { value: "Delivered", label: "Delivered" }];
+const defaultItem: SingleWallItemFormData = { status: "Active", productId: 0, member_id: 0, qty: 1, intent: "Sell", productStatus: "Active", activeHours: "", productSpecId: null, price: null, color: "", cartoonTypeId: null, dispatchStatus: "Booking", paymentTermId: null, eta: null, location: "", deviceCondition: null, remarks: "" };
 
 // Helper Functions (Updated)
-const transformApiDataToSingleFormItem = (apiData: any): SingleWallItemFormData => ({ status: apiData?.status || "Active", productId: Number(apiData?.product_id), member_id: Number(apiData?.customer_id), qty: Number(apiData?.qty) || 1, intent: apiData?.want_to || "Sell", productStatus: apiData?.product_status || "Active", activeHours: String(apiData?.active_hrs) || "", productSpecId: apiData?.product_spec_id ? Number(apiData.product_spec_id) : null, price: apiData?.price ? Number(apiData.price) : null, color: apiData?.color || null, cartoonTypeId: apiData?.cartoon_type || null, dispatchStatus: apiData?.dispatch_status || "Pending", paymentTermId: apiData?.payment_term ? Number(apiData.payment_term) : null, eta: apiData?.eta_details ? dayjs(apiData.eta_details).toDate() : null, location: apiData?.location || null, deviceCondition: apiData?.device_condition || null, remarks: apiData?.warranty_info || apiData?.internal_remarks || null });
+const transformApiDataToSingleFormItem = (apiData: any): SingleWallItemFormData => ({ status: apiData?.status || "Active", productId: Number(apiData?.product_id), member_id: Number(apiData?.customer_id), qty: Number(apiData?.qty) || 1, intent: apiData?.want_to || "Sell", productStatus: apiData?.product_status || "Active", activeHours: String(apiData?.active_hrs) || "", productSpecId: apiData?.product_spec_id ? Number(apiData.product_spec_id) : null, price: apiData?.price ? Number(apiData.price) : null, color: apiData?.color || null, cartoonTypeId: apiData?.cartoon_type || null, dispatchStatus: apiData?.dispatch_status || "Booking", paymentTermId: apiData?.payment_term ? Number(apiData.payment_term) : null, eta: apiData?.eta_details ? dayjs(apiData.eta_details).toDate() : null, location: apiData?.location || null, deviceCondition: apiData?.device_condition || null, remarks: apiData?.warranty_info || apiData?.internal_remarks || null });
 const transformSingleItemToApiPayload = (formData: SingleWallItemFormData, initialData: any | null) => { const payload = { status: formData.status, product_id: String(formData.productId), customer_id: String(formData.member_id), qty: String(formData.qty), want_to: formData.intent, product_status: formData.productStatus, active_hrs: formData.activeHours, product_spec_id: formData.productSpecId ? String(formData.productSpecId) : null, price: formData.price != null ? String(formData.price) : null, color: formData.color || null, cartoon_type: formData.cartoonTypeId || null, dispatch_status: formData.dispatchStatus || null, payment_term: formData.paymentTermId ? String(formData.paymentTermId) : null, eta_details: formData.eta ? dayjs(formData.eta).format("YYYY-MM-DD") : null, location: formData.location || null, device_condition: formData.deviceCondition || null, warranty_info: formData.remarks || null, }; if (initialData) { return { ...payload, id: initialData.id, }; } return payload; };
 
 
@@ -168,19 +159,13 @@ const WallItemForm = () => {
   const handleAddNewProduct = () => {
     const commonData = formMethods.getValues("wallItems.0");
     append({
-        ...defaultItem, // Start with all pristine defaults (e.g., status: 'Active', productStatus: 'Active')
-        
-        // Overwrite with the common values from the first item
+        ...defaultItem,
         member_id: commonData.member_id,
         intent: commonData.intent,
         location: commonData.location,
         paymentTermId: commonData.paymentTermId,
         eta: commonData.eta,
         dispatchStatus: commonData.dispatchStatus,
-        deviceCondition: commonData.deviceCondition,
-
-        // The rest of the fields (productId, qty, price, productStatus, etc.) will
-        // retain their default values from `defaultItem`, which is what we want.
       });
   };
 
@@ -218,7 +203,6 @@ const WallItemForm = () => {
                           <FormItem label="Payment Term"><Controller name="wallItems.0.paymentTermId" control={formMethods.control} render={({ field }) => (<UiSelect isLoading={isLoadingPageData} options={paymentTermsOption} value={paymentTermsOption.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
                           <FormItem label="ETA"><Controller name="wallItems.0.eta" control={formMethods.control} render={({ field }) => <DatePicker {...field} value={field.value} onChange={date => field.onChange(date)} inputFormat="YYYY-MM-DD" /> } /></FormItem>
                           <FormItem label="Dispatch Status"><Controller name="wallItems.0.dispatchStatus" control={formMethods.control} render={({ field }) => (<UiSelect options={dispatchStatusOptions} value={dispatchStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
-                          <FormItem label="Device Condition" className="md:col-span-2"><Controller name="wallItems.0.deviceCondition" control={formMethods.control} render={({ field }) => (<Radio.Group value={field.value} onChange={field.onChange}> {deviceConditionRadioOptions.map(opt => <Radio key={opt.value} value={opt.value}>{opt.label}</Radio>)} </Radio.Group>)} /></FormItem>
                       </div>
                   </div>
                   <div>
@@ -244,6 +228,7 @@ const WallItemForm = () => {
                           <FormItem label="Color"><Controller name="wallItems.0.color" control={formMethods.control} render={({ field }) => <Input {...field} value={field.value || ''} /> } /></FormItem>
                           <FormItem label="Cartoon Type"><Controller name="wallItems.0.cartoonTypeId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyCartoonTypes} value={dummyCartoonTypes.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
                           <FormItem label="Product Spec"><Controller name="wallItems.0.productSpecId" control={formMethods.control} render={({ field }) => (<UiSelect isLoading={isLoadingPageData} options={productSpecOptionsForSelect} value={productSpecOptionsForSelect.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
+                          <FormItem label="Device Condition" className="md:col-span-2"><Controller name="wallItems.0.deviceCondition" control={formMethods.control} render={({ field }) => (<Radio.Group value={field.value} onChange={field.onChange}> {deviceConditionRadioOptions.map(opt => <Radio key={opt.value} value={opt.value}>{opt.label}</Radio>)} </Radio.Group>)} /></FormItem>
                           <FormItem label="Remarks" className="md:col-span-4"><Controller name="wallItems.0.remarks" control={formMethods.control} render={({ field }) => <Input textArea {...field} value={field.value || ''} rows={3} /> } /></FormItem>
                       </div>
                   </div>
@@ -266,7 +251,6 @@ const WallItemForm = () => {
                             <FormItem label="Payment Term"><Controller name="wallItems.0.paymentTermId" control={formMethods.control} render={({ field }) => (<UiSelect isLoading={isLoadingPageData} options={paymentTermsOption} value={paymentTermsOption.find(opt => opt.value === field.value)} onChange={opt => syncCommonField('paymentTermId', opt?.value)} isClearable />)}/></FormItem>
                             <FormItem label="ETA"><Controller name="wallItems.0.eta" control={formMethods.control} render={({ field }) => <DatePicker {...field} value={field.value} onChange={date => syncCommonField('eta', date)} inputFormat="YYYY-MM-DD" /> }/></FormItem>
                             <FormItem label="Dispatch Status"><Controller name="wallItems.0.dispatchStatus" control={formMethods.control} render={({ field }) => (<UiSelect options={dispatchStatusOptions} value={dispatchStatusOptions.find(opt => opt.value === field.value)} onChange={opt => syncCommonField('dispatchStatus', opt?.value)} isClearable />)}/></FormItem>
-                            <FormItem label="Device Condition" className="md:col-span-2"><Controller name="wallItems.0.deviceCondition" control={formMethods.control} render={({ field }) => (<Radio.Group value={field.value} onChange={val => syncCommonField('deviceCondition', val)}> {deviceConditionRadioOptions.map(opt => <Radio key={opt.value} value={opt.value}>{opt.label}</Radio>)} </Radio.Group>)}/></FormItem>
                         </div>
                     </div>
 
@@ -300,6 +284,8 @@ const WallItemForm = () => {
                                         <FormItem label="Color"><Controller name={`wallItems.${index}.color`} control={formMethods.control} render={({ field }) => <Input {...field} value={field.value || ''} /> } /></FormItem>
                                         <FormItem label="Cartoon Type"><Controller name={`wallItems.${index}.cartoonTypeId`} control={formMethods.control} render={({ field }) => (<UiSelect options={dummyCartoonTypes} value={dummyCartoonTypes.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
                                         <FormItem label="Product Spec"><Controller name={`wallItems.${index}.productSpecId`} control={formMethods.control} render={({ field }) => (<UiSelect isLoading={isLoadingPageData} options={productSpecOptionsForSelect} value={productSpecOptionsForSelect.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
+                                        {/* MODIFIED: Moved Device Condition here */}
+                                        <FormItem label="Device Condition" className="lg:col-span-2"><Controller name={`wallItems.${index}.deviceCondition`} control={formMethods.control} render={({ field }) => (<Radio.Group value={field.value} onChange={field.onChange}> {deviceConditionRadioOptions.map(opt => <Radio key={opt.value} value={opt.value}>{opt.label}</Radio>)} </Radio.Group>)} /></FormItem>
                                         <FormItem label="Remarks" className="lg:col-span-full"><Controller name={`wallItems.${index}.remarks`} control={formMethods.control} render={({ field }) => <Input textArea {...field} value={field.value || ''} /> } /></FormItem>
                                     </div>
                                 </div>
