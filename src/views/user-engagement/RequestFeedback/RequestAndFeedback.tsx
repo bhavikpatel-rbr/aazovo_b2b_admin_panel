@@ -1,9 +1,9 @@
 // src/views/your-path/MergedTaskList.tsx
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
+import React, { useState, useMemo, useCallback, Ref, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import cloneDeep from "lodash/cloneDeep";
 import classNames from "classnames";
-import { useForm, Controller, useWatch } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import dayjs from "dayjs";
@@ -98,7 +98,6 @@ import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Define Types & Constants ---
 export type SelectOption = { value: any; label: string };
-export type ApiLookupItem = { id: string | number; name: string };
 
 export type RequestFeedbackType = "Request" | "Feedback";
 
@@ -118,19 +117,17 @@ export type RequestFeedbackItem = {
   attachment?: string | null;
   icon_full_path?: string | null;
   type: RequestFeedbackType;
-  category_id: string | null; // MODIFIED: Can be a string name now
+  category_id: string | null;
   department_id: string | number;
   status: RequestFeedbackStatus;
   rating?: number | string | null;
   created_at: string;
   updated_at: string;
   department?: { id: number; name: string };
-  category?: { id: number; name: string; } | null; // Can be null
-  // UI Display helpers
+  category?: { id: number; name: string; } | null;
   categoryName?: string;
 };
 
-// --- NEW CONDITIONAL CATEGORY OPTIONS ---
 const REQUEST_CATEGORY_OPTIONS: SelectOption[] = [
   { value: "New Product Request", label: "New Product Request" },
   { value: "Account Statement Request", label: "Account Statement Request" },
@@ -179,7 +176,6 @@ const statusColors: Record<RequestFeedbackStatus, string> = {
   Rejected: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
 };
 
-// --- Zod Schemas ---
 const requestFeedbackFormSchema = z.object({
   name: z.string().min(1, "Name is required.").max(100),
   email: z
@@ -295,7 +291,6 @@ const ItemActionColumn = ({
   </div>
 );
 
-// --- Table Tools & Search ---
 const ItemSearch = React.forwardRef<
   HTMLInputElement,
   { onInputChange: (value: string) => void }
@@ -309,6 +304,7 @@ const ItemSearch = React.forwardRef<
   />
 ));
 ItemSearch.displayName = "ItemSearch";
+
 const ItemTableTools = ({
   onSearchChange,
   onFilter,
@@ -318,6 +314,7 @@ const ItemTableTools = ({
   setFilteredColumns,
   activeFilterCount,
   isDataReady,
+  searchInputRef,
 }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
@@ -329,6 +326,7 @@ const ItemTableTools = ({
   >;
   activeFilterCount: number;
   isDataReady: boolean;
+  searchInputRef: Ref<HTMLInputElement>;
 }) => {
   const isColumnVisible = (colId: string) =>
     filteredColumns.some((c) => (c.id || c.accessorKey) === colId);
@@ -358,7 +356,7 @@ const ItemTableTools = ({
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
       <div className="flex-grow">
-        <ItemSearch onInputChange={onSearchChange} />
+        <ItemSearch ref={searchInputRef} onInputChange={onSearchChange} />
       </div>
       <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
         <Dropdown
@@ -414,7 +412,6 @@ const ItemTableTools = ({
   );
 };
 
-// --- Active Filter Display ---
 const ActiveFiltersDisplay = ({
   filterData,
   onRemoveFilter,
@@ -464,7 +461,6 @@ const ActiveFiltersDisplay = ({
   );
 };
 
-// --- Selected Footer ---
 const RequestFeedbacksSelectedFooter = ({
   selectedItems,
   onDeleteSelected,
@@ -562,6 +558,7 @@ const RequestAndFeedbackListing = () => {
   const [departmentOptions, setDepartmentOptions] = useState<SelectOption[]>(
     []
   );
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const isDataReady = !initialLoading;
   const tableLoading = initialLoading || isSubmitting || isDeleting;
@@ -820,12 +817,19 @@ const RequestAndFeedbackListing = () => {
     setTableData((prev) => ({ ...prev, pageIndex: 1 }));
     setIsFilterDrawerOpen(false);
   }, []);
+  
   const onClearFilters = useCallback(() => {
     filterFormMethods.reset({});
     setFilterCriteria({});
+    if (searchInputRef.current) {
+        searchInputRef.current.value = '';
+    }
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
-  }, [filterFormMethods]);
-  const handleCardClick = useCallback(
+    dispatch(getRequestFeedbacksAction());
+    toast.push(<Notification title="Data Refreshed" type="success" duration={3000}>Filters cleared and data updated.</Notification>);
+  }, [filterFormMethods, dispatch]);
+
+const handleCardClick = useCallback(
     (status?: RequestFeedbackStatus | "all") => {
       onClearFilters();
       if (status && status !== "all") {
@@ -937,7 +941,6 @@ const RequestAndFeedbackListing = () => {
           </div>
         ),
       },
-
       {
         header: "Type",
         accessorKey: "type",
@@ -991,13 +994,6 @@ const RequestAndFeedbackListing = () => {
             onViewDetail={() => openViewDialog(props.row.original)}
             onSendEmail={() => handleSendEmail(props.row.original)}
             onSendWhatsapp={() => handleSendWhatsapp(props.row.original)}
-            onAddNotification={() =>
-              openActionModal(props.row.original, "notification")
-            }
-            onAssignTask={() => openActionModal(props.row.original, "task")}
-            onAddSchedule={() =>
-              openActionModal(props.row.original, "schedule")
-            }
           />
         ),
       },
@@ -1007,6 +1003,10 @@ const RequestAndFeedbackListing = () => {
 
   const [filteredColumns, setFilteredColumns] =
     useState<ColumnDef<RequestFeedbackItem>[]>(columns);
+
+  useEffect(() => {
+    setFilteredColumns(columns);
+  }, [columns]);
 
   const DrawerFormContent = () => {
     const conditionalCategoryOptions = useMemo(() => {
@@ -1184,7 +1184,7 @@ const RequestAndFeedbackListing = () => {
             </Tooltip>
           </div>
           <div className="mb-4">
-            <ItemTableTools onClearFilters={onClearFilters} onSearchChange={(q) => setTableData((p) => ({ ...p, query: q, pageIndex: 1 }))} onFilter={() => setIsFilterDrawerOpen(true)} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady} />
+            <ItemTableTools searchInputRef={searchInputRef} onClearFilters={onClearFilters} onSearchChange={(q) => setTableData((p) => ({ ...p, query: q, pageIndex: 1 }))} onFilter={() => setIsFilterDrawerOpen(true)} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady} />
           </div>
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="mt-4">
