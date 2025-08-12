@@ -296,7 +296,7 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
         const actionResult = await dispatch(getMatchingOpportunitiesAction(wallItem.id)).unwrap();
         if (actionResult?.data) {
           const formattedData = actionResult.data.map((item: any) => ({
-            ListData:wallItem,
+            ListData: wallItem,
             id: item.id,
             member_id: item.member.id,
             product_id: item.product_id,
@@ -340,11 +340,11 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
         const firstOpForTemplate = selectedOps[0];
         const navigationState = { ...firstOpForTemplate, ListData: wallItem, productId: firstOpForTemplate.product_id };
         if (wallItem.want_to === 'Buy') {
-            const sellerMemberIds = selectedOps.map(op => op.member_id);
-            navigate('/sales-leads/wall-item/demands/create', { state: { ...navigationState, seller_ids: sellerMemberIds, buyer_ids: [wallItem.memberId] }});
+          const sellerMemberIds = selectedOps.map(op => op.member_id);
+          navigate('/sales-leads/wall-item/demands/create', { state: { ...navigationState, seller_ids: sellerMemberIds, buyer_ids: [wallItem.memberId] } });
         } else {
-            const buyerMemberIds = selectedOps.map(op => Number(op.member_id));
-            navigate('/sales-leads/wall-item/offers/create', { state: { ...navigationState, buyer_ids: buyerMemberIds, seller_ids: [wallItem.memberId] }});
+          const buyerMemberIds = selectedOps.map(op => Number(op.member_id));
+          navigate('/sales-leads/wall-item/offers/create', { state: { ...navigationState, buyer_ids: buyerMemberIds, seller_ids: [wallItem.memberId] } });
         }
         break;
       case 'lead':
@@ -381,7 +381,7 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
 
   const columns: ColumnDef<MatchingOpportunityItem>[] = [
     { id: 'select', header: ({ table }) => <Checkbox checked={table.getIsAllRowsSelected()} indeterminate={table.getIsSomeRowsSelected()} onChange={e => handleSelectAll(e)} />, cell: ({ row }) => <Checkbox checked={selected.includes(row.original.id)} onChange={e => handleSelect(row.original.id, e)} />, size: 40 },
-    { header: 'Supplier/Buyer', cell: ({row}) => <div><span className="font-semibold">{row.original.member_name}</span><br /><span className="text-xs text-gray-500">{row.original.member_code}</span></div> },
+    { header: 'Supplier/Buyer', cell: ({ row }) => <div><span className="font-semibold">{row.original.member_name}</span><br /><span className="text-xs text-gray-500">{row.original.member_code}</span></div> },
     {
       header: 'Details', cell: ({ row }) => (
         <div className="flex flex-col text-xs">
@@ -400,23 +400,24 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
     },
   ];
 
+  const [Pagesize, setPagesize] = useState(10);
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={1000} bodyOpenClassName="overflow-hidden">
       <div className="flex flex-col h-full max-h-[80vh]">
         <div className="px-6 py-4 border-b"><h5>Matching Opportunities for "{wallItem.product_name}"</h5></div>
         <div className="flex-grow overflow-y-auto px-6 py-4">
-          {isLoading ? <div className="flex justify-center items-center h-64"><Spinner size={40} /></div> : <DataTable columns={columns} data={data} noData={data.length === 0} />}
+          {isLoading ? <div className="flex justify-center items-center h-64"><Spinner size={40} /></div> : <DataTable columns={columns} data={data} noData={data.length === 0} pagingData={{ total: data.length, pageIndex: 1, pageSize: Pagesize }} onSelectChange={(e)=> setPagesize(e)}/>}
         </div>
         <div className="px-6 py-4 border-t">
           {selected.length > 0 ? (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-semibold">{selected.length} selected</span>
               <div className="flex flex-wrap gap-2">
-                   <>
-                    <Button size="sm" icon={<TbHandGrab />} onClick={() => handleAction('offer_demand')}>Create {wallItem.want_to === 'Buy' ? 'Demand' : 'Offer'}</Button>
-                    {selected.length === 1 && <Button size="sm" icon={<TbUserPlus />} onClick={() => handleAction('lead')}>Create Lead</Button>}
-                  </>
-               
+                <>
+                  <Button size="sm" icon={<TbHandGrab />} onClick={() => handleAction('offer_demand')}>Create {wallItem.want_to === 'Buy' ? 'Demand' : 'Offer'}</Button>
+                  {selected.length === 1 && <Button size="sm" icon={<TbUserPlus />} onClick={() => handleAction('lead')}>Create Lead</Button>}
+                </>
+
                 <Button size="sm" icon={<TbMailForward />} onClick={() => handleAction('email')}>Email</Button>
                 <Button size="sm" icon={<TbBrandWhatsapp />} onClick={() => handleAction('whatsapp')}>WhatsApp</Button>
                 <Button size="sm" icon={<TbCopy />} onClick={() => handleAction('copy')}>Copy</Button>
