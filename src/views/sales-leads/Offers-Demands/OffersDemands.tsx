@@ -1412,8 +1412,7 @@ const transformApiOffer = (apiOffer: ActualApiOfferShape): OfferDemandItem => {
     const buyerItems = apiOffer.buyer_section_data
       .map((user) => user.name)
       .filter(Boolean);
-    if (buyerItems.length > 0)
-      offerGroups.push({ groupName: "Buyer Section", items: buyerItems });
+    // if (buyerItems.length > 0) offerGroups.push({ groupName: "Buyer Section", items: buyerItems });
   }
   if (apiOffer.groupA)
     offerGroups.push({ groupName: "Group A", items: [apiOffer.groupA] });
@@ -1470,8 +1469,7 @@ const transformApiDemand = (
           if (q?.question) i.push(q.question);
         });
     });
-    if (i.length > 0)
-      demandGroups.push({ groupName: "Buyer Section", items: i });
+    // if (i.length > 0)demandGroups.push({ groupName: "Buyer Section", items: i });
   }
   if (apiDemand.groupA)
     demandGroups.push({ groupName: "Group A", items: [apiDemand.groupA] });
