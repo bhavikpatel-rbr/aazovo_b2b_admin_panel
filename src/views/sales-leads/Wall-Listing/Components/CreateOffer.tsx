@@ -91,16 +91,24 @@ const CreateOffer = () => {
     const isEdit = !!id;
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+
 
     useEffect(() => {
-        dispatch(getAllProductAction());
-        dispatch(getMembersAction());
-        dispatch(getProductsAction());
-        dispatch(getProductSpecificationsAction());
-        dispatch(getPaymentTermAction());
-        if (isEdit) {
-            dispatch(getOfferById(id));
-        }
+        const fetchData = async () => {
+            await Promise.all([
+                dispatch(getAllProductAction()),
+                dispatch(getMembersAction()),
+                dispatch(getProductsAction()),
+                dispatch(getProductSpecificationsAction()),
+                dispatch(getPaymentTermAction())
+            ]);
+            if (isEdit) {
+                await dispatch(getOfferById(id));
+            }
+            setInitialDataLoaded(true);
+        };
+        fetchData();
     }, [dispatch, id, isEdit]);
 
     const {
@@ -129,6 +137,7 @@ const CreateOffer = () => {
 
     const { fields, append, remove } = useFieldArray({ control, name: "product_data" });
     const watchedProductGroups = watch("product_data");
+    const watchedItems = watch('product_data.0.items');
 
     useEffect(() => {
         const offerDataFromState = location.state?.originalApiItem;
@@ -176,6 +185,32 @@ const CreateOffer = () => {
 
         setValue(`product_data.${groupIndex}.items`, newItems, { shouldValidate: true });
     }, [dispatch, setValue, ProductsData]);
+    
+    useEffect(() => {
+        const prefillData = location.state;
+        if (prefillData && prefillData.productId && initialDataLoaded && !isEdit) {
+            setValue('name', `Offer for ${prefillData.product_name || 'Product'}`);
+            if(prefillData.seller_ids) setValue('product_data.0.seller_ids', prefillData.seller_ids);
+            if(prefillData.buyer_ids) setValue('product_data.0.buyer_ids', prefillData.buyer_ids);
+            setValue('product_data.0.spec_id', prefillData.product_spec_id || null);
+            setValue('product_data.0.product_status', prefillData.product_status?.toLowerCase() === 'non-active' ? 'non-active' : 'active');
+            handleProductChange(0, Number(prefillData.productId));
+        }
+    }, [location.state, setValue, handleProductChange, initialDataLoaded, isEdit]);
+
+    useEffect(() => {
+        const prefillData = location.state;
+        if (prefillData && watchedItems && watchedItems.length > 0) {
+            const itemIndex = watchedItems.findIndex(item => item.color.toLowerCase() === (prefillData.color?.toLowerCase() || ''));
+            if (itemIndex !== -1) {
+                setValue(`product_data.0.items.${itemIndex}.qty`, Number(prefillData.qty) || undefined);
+                setValue(`product_data.0.items.${itemIndex}.price`, Number(prefillData.price) || undefined);
+            } else if (watchedItems.length > 0) {
+                setValue(`product_data.0.items.0.qty`, Number(prefillData.qty) || undefined);
+                setValue(`product_data.0.items.0.price`, Number(prefillData.price) || undefined);
+            }
+        }
+    }, [watchedItems, location.state, setValue]);
 
     const handleGenerateAndCopyNotes = () => {
         const relevantGroups = watchedProductGroups.filter(g => g.product_id && g.items.some(i => i.qty && i.qty > 0));
@@ -244,12 +279,12 @@ const CreateOffer = () => {
     }, [dispatch, navigate, isEdit, id]);
 
     const handleCancel = () => navigate("/sales-leads/offers-demands");
-    const isLoading = masterLoadingStatus === "loading";
+    const isLoading = masterLoadingStatus === "loading" && !initialDataLoaded;
 
     return (
         <Form id="offerForm" onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
             <Card>
-                {isLoading && !isEdit ? (
+                {isLoading ? (
                     <div className="flex justify-center p-10"><Spinner size="lg" /></div>
                 ) : (
                     <div className="p-4">
@@ -283,12 +318,12 @@ const CreateOffer = () => {
                         </FormItem>
                         <FormItem label="Sellers">
                             <Controller name={`product_data.${index}.seller_ids`} control={control} render={({ field: { onChange, value }}) => 
-                                <UiSelect isMulti placeholder="Select Sellers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} />
+                                <UiSelect isMulti placeholder="Select Sellers..." options={memberOptions} value={memberOptions.filter(opt => value?.find((f)=> f == opt.value))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} />
                             } />
                         </FormItem>
                         <FormItem label="Buyers">
                             <Controller name={`product_data.${index}.buyer_ids`} control={control} render={({ field: { onChange, value }}) => 
-                                <UiSelect isMulti placeholder="Select Buyers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} />
+                                <UiSelect isMulti placeholder="Select Buyers..." options={memberOptions} value={memberOptions.filter(opt => value?.find((f)=> f == opt.value))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} />
                             } />
                         </FormItem>
                     </div>
