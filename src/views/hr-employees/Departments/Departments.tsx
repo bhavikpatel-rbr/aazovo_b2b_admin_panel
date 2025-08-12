@@ -36,6 +36,11 @@ import {
   TbUserCircle,
   TbFileLike,
   TbBriefcase,
+  TbDotsVertical,
+  TbMailForward,
+  TbAlignBoxCenterBottom,
+  TbMailbox,
+  TbSend,
 } from "react-icons/tb";
 
 // Types
@@ -551,8 +556,10 @@ const DepartmentListing = () => {
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1, query: "" });
+    dispatch(getDepartmentsAction());
+    toast.push(<Notification title="Data Refreshed" type="success">Filters cleared and data reloaded.</Notification>)
     setIsFilterDrawerOpen(false);
-  }, [filterFormMethods, handleSetTableData]);
+}, [filterFormMethods, handleSetTableData, dispatch]);
 
   const handleCardClick = (status: 'Active' | 'Inactive' | 'all') => {
     onClearFilters();
