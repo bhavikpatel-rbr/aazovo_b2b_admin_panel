@@ -3527,27 +3527,43 @@ const CompanyListTable = () => {
         id: "legal",
         size: 180,
         cell: ({ row }) => {
-          const { gst_number, pan_number, status } = row.original;
+          const { gst_number, pan_number, trn_number, tan_number, status, country } = row.original;
+          const isIndia = country?.name === 'India';
+
           return (
             <div className="flex flex-col gap-0.5 text-[11px]">
-              {" "}
-              {gst_number && (
-                <div>
-                  <b>GST:</b> <span className="break-all">{gst_number}</span>
-                </div>
-              )}{" "}
-              {pan_number && (
-                <div>
-                  <b>PAN:</b> <span className="break-all">{pan_number}</span>
-                </div>
-              )}{" "}
+              {isIndia ? (
+                <>
+                  {gst_number && (
+                    <div>
+                      <b>GST:</b> <span className="break-all">{gst_number}</span>
+                    </div>
+                  )}
+                  {pan_number && (
+                    <div>
+                      <b>PAN:</b> <span className="break-all">{pan_number}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {trn_number && (
+                    <div>
+                      <b>TRN:</b> <span className="break-all">{trn_number}</span>
+                    </div>
+                  )}
+                  {tan_number && (
+                    <div>
+                      <b>TAN:</b> <span className="break-all">{tan_number}</span>
+                    </div>
+                  )}
+                </>
+              )}
               <Tag
-                className={`${getCompanyStatusClass(
-                  status
-                )} capitalize mt-1 self-start !text-[11px] px-2 py-1`}
+                className={`${getCompanyStatusClass(status)} capitalize mt-1 self-start !text-[11px] px-2 py-1`}
               >
                 {status}
-              </Tag>{" "}
+              </Tag>
             </div>
           );
         },

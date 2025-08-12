@@ -903,7 +903,7 @@ const CompanyDetailsSection = ({
     CountriesData = [],
     ContinentsData = [],
   } = useSelector(masterSelector);
-  const { watch } = formMethods;
+  const { watch, setValue } = formMethods;
 
   const countryOptions = useMemo(() => {
     const uniqueCountriesMap = new Map();
@@ -985,6 +985,19 @@ const CompanyDetailsSection = ({
   const selectedCountry = watch("country_id");
   const isIndiaSelected = selectedCountry?.value === '101';
 
+  useEffect(() => {
+    // When country changes, clear the irrelevant trade info fields
+    if (selectedCountry) {
+        if (isIndiaSelected) {
+            setValue('trn_number', '', { shouldValidate: true });
+            setValue('tan_number', '', { shouldValidate: true });
+        } else {
+            setValue('gst_number', '', { shouldValidate: true });
+            setValue('pan_number', '', { shouldValidate: true });
+        }
+    }
+  }, [isIndiaSelected, selectedCountry, setValue]);
+
   const isViewableImage = (file: unknown): boolean => {
     if (file instanceof File) return file.type.startsWith('image/');
     if (typeof file === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(file);
@@ -1040,7 +1053,7 @@ const CompanyDetailsSection = ({
           <Controller name="alternate_email_id" control={control} render={({ field }) => (<Input type="email" placeholder="Alternate Email" {...field} />)} />
         </FormItem>
 
-        <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>Primary Contact Number</div>} invalid={!!errors.primary_contact_number || !!errors.primary_contact_number_code} errorMessage={(errors.primary_contact_number?.message || (errors.primary_contact_number_code as any)?.message) as string}>
+        <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>Primary Contact Number <span className="text-red-500">*</span></div>} invalid={!!errors.primary_contact_number || !!errors.primary_contact_number_code} errorMessage={(errors.primary_contact_number?.message || (errors.primary_contact_number_code as any)?.message) as string}>
           <div className="flex items-start gap-2">
             <div className="w-2/6"> <Controller name="primary_contact_number_code" control={control} render={({ field }) => (<Select options={countryCodeOptions} placeholder="Code" {...field} />)} /> </div>
             <div className="w-3/5"> <Controller name="primary_contact_number" control={control} render={({ field }) => (<Input placeholder="Primary Contact" {...field} />)} /> </div>
@@ -1062,23 +1075,28 @@ const CompanyDetailsSection = ({
       <hr className="my-6" />
       <h4 className="mb-4">Trade Information</h4>
       <div className="grid md:grid-cols-4 gap-3">
-
-        <FormItem label={<div>GST Number{isIndiaSelected && <span className="text-red-500"> *</span>}</div>} invalid={!!errors.gst_number} errorMessage={errors.gst_number?.message as string}><Controller name="gst_number" control={control} render={({ field }) => (<Input placeholder="GST Number" {...field} />)} /></FormItem>
-        <FormItem label={<div>PAN Number{isIndiaSelected && <span className="text-red-500"> *</span>}</div>} invalid={!!errors.pan_number} errorMessage={errors.pan_number?.message as string}><Controller name="pan_number" control={control} render={({ field }) => (<Input placeholder="PAN Number" {...field} />)} /></FormItem>
-
-        <FormItem label={<div>TRN Number</div>} invalid={!!errors.trn_number} errorMessage={errors.trn_number?.message as string}>
-          <Controller name="trn_number" control={control} render={({ field }) => (<Input placeholder="TRN Number" {...field} />)} />
-        </FormItem>
-        <FormItem label={<div>TAN Number</div>} invalid={!!errors.tan_number} errorMessage={errors.tan_number?.message as string}>
-          <Controller name="tan_number" control={control} render={({ field }) => (<Input placeholder="TAN Number" {...field} />)} />
-        </FormItem>
+        {isIndiaSelected ? (
+            <>
+                <FormItem label={<div>GST Number<span className="text-red-500"> *</span></div>} invalid={!!errors.gst_number} errorMessage={errors.gst_number?.message as string}><Controller name="gst_number" control={control} render={({ field }) => (<Input placeholder="GST Number" {...field} />)} /></FormItem>
+                <FormItem label={<div>PAN Number<span className="text-red-500"> *</span></div>} invalid={!!errors.pan_number} errorMessage={errors.pan_number?.message as string}><Controller name="pan_number" control={control} render={({ field }) => (<Input placeholder="PAN Number" {...field} />)} /></FormItem>
+            </>
+        ) : (
+            <>
+                <FormItem label={<div>TRN Number</div>} invalid={!!errors.trn_number} errorMessage={errors.trn_number?.message as string}>
+                  <Controller name="trn_number" control={control} render={({ field }) => (<Input placeholder="TRN Number" {...field} />)} />
+                </FormItem>
+                <FormItem label={<div>TAN Number</div>} invalid={!!errors.tan_number} errorMessage={errors.tan_number?.message as string}>
+                  <Controller name="tan_number" control={control} render={({ field }) => (<Input placeholder="TAN Number" {...field} />)} />
+                </FormItem>
+            </>
+        )}
       </div>
 
       <hr className="my-6" />
       <h4 className="mb-4">Company Information</h4>
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
         <FormItem label="Establishment Year" invalid={!!errors.establishment_year} errorMessage={errors.establishment_year?.message as string}>
-          <Controller name="establishment_year" control={control} render={({ field }) => (<Input placeholder="YYYY" maxLength={4} {...field} />)} />
+            <Controller name="establishment_year" control={control} render={({ field }) => (<NumericInput placeholder="YYYY" maxLength={4} {...field} onChange={(value) => field.onChange(value)} />)} />
         </FormItem>
         <FormItem label="No. of Employees" invalid={!!errors.no_of_employees} errorMessage={errors.no_of_employees?.message as string}>
           <Controller name="no_of_employees" control={control} render={({ field }) => (<NumericInput placeholder="e.g., 100" {...field} onChange={(value) => field.onChange(value)} />)} />
@@ -1096,7 +1114,7 @@ const CompanyDetailsSection = ({
               />
             )} />
           {companyLogoValue && (
-            <div className="mt-2">
+            <div className="mt-2 group relative">
               <button
                 type="button"
                 onClick={() => handlePreviewClick(companyLogoValue, 'Company Logo')}
@@ -1115,6 +1133,7 @@ const CompanyDetailsSection = ({
                   />
                 )}
               </button>
+              <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => setValue('company_logo', null, { shouldDirty: true })} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title="Remove Logo"/>
             </div>
           )}
         </FormItem>
@@ -1153,7 +1172,7 @@ const CompanyDetailsSection = ({
                     />
                   )} />
                 {uploadCertificateValue && (
-                  <div className="mt-2">
+                  <div className="mt-2 group relative">
                     <button
                       type="button"
                       onClick={() => handlePreviewClick(uploadCertificateValue, certificateName || `Certificate ${index + 1}`)}
@@ -1172,6 +1191,7 @@ const CompanyDetailsSection = ({
                         />
                       )}
                     </button>
+                    <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => setValue(`company_certificate.${index}.upload_certificate`, null, { shouldDirty: true })} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title="Remove Certificate"/>
                   </div>
                 )}
               </FormItem>
@@ -1240,7 +1260,7 @@ const CompanyDetailsSection = ({
 
 // --- KYCDetailSection ---
 const KYCDetailSection = ({ control, errors, formMethods, handlePreviewClick }: FormSectionBaseProps) => {
-  const { watch, getValues } = formMethods;
+  const { watch, getValues, setValue } = formMethods;
   const selectedCountry = watch("country_id");
   const isIndiaSelected = selectedCountry?.value === '101';
 
@@ -1356,7 +1376,7 @@ const KYCDetailSection = ({ control, errors, formMethods, handlePreviewClick }: 
               </FormItem>
 
               {fileValue && (
-                <div className="mt-2">
+                <div className="mt-2 group relative">
                   <button
                     type="button"
                     onClick={() => handlePreviewClick(fileValue, doc.label)}
@@ -1375,6 +1395,8 @@ const KYCDetailSection = ({ control, errors, formMethods, handlePreviewClick }: 
                       />
                     )}
                   </button>
+                   <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => setValue(doc.name, null, { shouldDirty: true })} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title={`Remove ${doc.label}`}/>
+
                   {doc.name === 'cancel_cheque_file' && (
                     <div className="mt-2 flex items-center justify-end gap-2">
                       <Button
@@ -1480,27 +1502,30 @@ const BankDetailsSection = ({ control, errors, formMethods, handlePreviewClick }
     setValue('company_bank_details', updatedAdditionalBanks, { shouldDirty: true, shouldTouch: true });
   }, [getValues, setValue]);
 
-  const renderPreview = (fileValue: File | string | null, label: string) => {
+  const renderPreviewWithRemove = (fileValue: File | string | null, label: string, onRemove: () => void) => {
     if (!fileValue) return null;
     return (
-      <button
-        type="button"
-        onClick={() => handlePreviewClick(fileValue, label)}
-        className="w-24 h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
-      >
-        {isViewableImage(fileValue) ? (
-          <img
-            src={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
-            alt={label}
-            className="max-h-full max-w-full object-contain"
-          />
-        ) : (
-          <DocumentPlaceholder
-            fileName={fileValue instanceof File ? fileValue.name : fileValue.split('/').pop() || 'Document'}
-            fileUrl={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
-          />
-        )}
-      </button>
+      <div className="group relative w-24 h-24">
+        <button
+          type="button"
+          onClick={() => handlePreviewClick(fileValue, label)}
+          className="w-full h-full border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+        >
+          {isViewableImage(fileValue) ? (
+            <img
+              src={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
+              alt={label}
+              className="max-h-full max-w-full object-contain"
+            />
+          ) : (
+            <DocumentPlaceholder
+              fileName={fileValue instanceof File ? fileValue.name : fileValue.split('/').pop() || 'Document'}
+              fileUrl={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
+            />
+          )}
+        </button>
+        <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={onRemove} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title={`Remove ${label}`}/>
+      </div>
     )
   }
 
@@ -1529,7 +1554,7 @@ const BankDetailsSection = ({ control, errors, formMethods, handlePreviewClick }
             )} />
           {primaryBankPhotoValue && (
             <div className="mt-2 flex items-start gap-4">
-              {renderPreview(primaryBankPhotoValue, 'Primary Bank Verification Photo')}
+              {renderPreviewWithRemove(primaryBankPhotoValue, 'Primary Bank Verification Photo', () => setValue('primary_bank_verification_photo', null))}
               <div className="flex flex-col gap-2">
                 <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', primaryBankPhotoValue, 'Primary Bank Verification Photo')}>Email</Button>
                 <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', primaryBankPhotoValue, 'Primary Bank Verification Photo')}>WhatsApp</Button>
@@ -1570,7 +1595,7 @@ const BankDetailsSection = ({ control, errors, formMethods, handlePreviewClick }
             )} />
           {secondaryBankPhotoValue && (
             <div className="mt-2 flex items-start gap-4">
-              {renderPreview(secondaryBankPhotoValue, 'Secondary Bank Verification Photo')}
+              {renderPreviewWithRemove(secondaryBankPhotoValue, 'Secondary Bank Verification Photo', () => setValue('secondary_bank_verification_photo', null))}
               <div className="flex flex-col gap-2">
                 <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', secondaryBankPhotoValue, 'Secondary Bank Verification Photo')}>Email</Button>
                 <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', secondaryBankPhotoValue, 'Secondary Bank Verification Photo')}>WhatsApp</Button>
@@ -1622,7 +1647,7 @@ const BankDetailsSection = ({ control, errors, formMethods, handlePreviewClick }
                   )} />
                 {bankPhotoValue && (
                   <div className="mt-2 flex items-start gap-4">
-                    {renderPreview(bankPhotoValue, photoLabel)}
+                    {renderPreviewWithRemove(bankPhotoValue, photoLabel, () => setValue(`company_bank_details.${index}.verification_photo`, null))}
                     <div className="flex flex-col gap-2">
                       <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', bankPhotoValue, photoLabel)}>Email</Button>
                       <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', bankPhotoValue, photoLabel)}>WhatsApp</Button>
@@ -1643,7 +1668,7 @@ const BankDetailsSection = ({ control, errors, formMethods, handlePreviewClick }
 
 // --- SpotVerificationSection ---
 const SpotVerificationSection = ({ control, errors, formMethods, handlePreviewClick }: FormSectionBaseProps) => {
-  const { watch } = formMethods;
+  const { watch, setValue } = formMethods;
   const { fields, append, remove } = useFieldArray({ control, name: "company_spot_verification" });
   const { EmployeesList } = useSelector(masterSelector);
 
@@ -1690,7 +1715,7 @@ const SpotVerificationSection = ({ control, errors, formMethods, handlePreviewCl
                     <Input {...rest} type="file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onChange={(e) => onChange(e.target.files?.[0] || null)} />
                   )} />
                 {photoValue && (
-                  <div className="mt-2">
+                  <div className="mt-2 group relative">
                     <button
                       type="button"
                       onClick={() => handlePreviewClick(photoValue, photoLabel)}
@@ -1709,6 +1734,7 @@ const SpotVerificationSection = ({ control, errors, formMethods, handlePreviewCl
                         />
                       )}
                     </button>
+                    <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => setValue(`company_spot_verification.${index}.photo_upload`, null, { shouldDirty: true })} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title={`Remove ${photoLabel}`}/>
                   </div>
                 )}
               </FormItem>
@@ -1775,7 +1801,7 @@ const ReferenceSection = ({ control, errors, formMethods, handlePreviewClick }: 
 
 // --- AccessibilitySection ---
 const AccessibilitySection = ({ control, errors, formMethods, handlePreviewClick }: FormSectionBaseProps) => {
-  const { watch } = formMethods;
+  const { watch, setValue } = formMethods;
 
   const { fields, append, remove } = useFieldArray({ control, name: "billing_documents" });
   const { fields: enabledFields, append: appendEnabled, remove: removeEnabled } = useFieldArray({ control, name: "enabled_billing_docs" });
@@ -1791,21 +1817,19 @@ const AccessibilitySection = ({ control, errors, formMethods, handlePreviewClick
     return false;
   }
 
-  const renderPreview = (fileValue: File | string | null, label: string, index: number, fieldName: 'billing_documents' | 'enabled_billing_docs') => {
-    const docName = watch(`${fieldName}.${index}.document_name`)?.label;
-    const finalLabel = `${label}: ${docName || `File ${index + 1}`}`;
+  const renderPreviewWithRemove = (fileValue: File | string | null, label: string, onRemove: () => void) => {
     if (!fileValue) return null;
     return (
-      <div className="mt-2">
+      <div className="mt-2 group relative">
         <button
           type="button"
-          onClick={() => handlePreviewClick(fileValue, finalLabel)}
+          onClick={() => handlePreviewClick(fileValue, label)}
           className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
         >
           {isViewableImage(fileValue) ? (
             <img
               src={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
-              alt={finalLabel}
+              alt={label}
               className="max-h-full max-w-full object-contain"
             />
           ) : (
@@ -1815,6 +1839,7 @@ const AccessibilitySection = ({ control, errors, formMethods, handlePreviewClick
             />
           )}
         </button>
+        <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={onRemove} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title={`Remove ${label}`}/>
       </div>
     )
   }
@@ -1840,6 +1865,8 @@ const AccessibilitySection = ({ control, errors, formMethods, handlePreviewClick
         {/* Old Billing Docs */}
         {fields.map((item, index) => {
           const docFileValue = watch(`billing_documents.${index}.document`);
+          const docName = watch(`billing_documents.${index}.document_name`)?.label;
+          const finalLabel = `${docName || `Billing Document ${index + 1}`}`;
           return (
             <Card key={item.id} className="border dark:border-gray-600 rounded-md" bodyClass="p-4">
               <div className="md:grid grid-cols-1 md:grid-cols-9 gap-4 items-start">
@@ -1862,7 +1889,7 @@ const AccessibilitySection = ({ control, errors, formMethods, handlePreviewClick
                     render={({ field: { value, onChange, ...rest } }) => (
                       <Input {...rest} type="file" accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0] || null)} />
                     )} />
-                  {renderPreview(docFileValue, 'Billing Document', index, 'billing_documents')}
+                  {renderPreviewWithRemove(docFileValue, finalLabel, () => setValue(`billing_documents.${index}.document`, null))}
                 </FormItem>
                 <Button type="button" shape="circle" size="sm" className="mt-2 md:mt-0 md:self-center" icon={<TbTrash />} onClick={() => remove(index)} variant="plain" />
               </div>
@@ -1874,6 +1901,8 @@ const AccessibilitySection = ({ control, errors, formMethods, handlePreviewClick
         {enabledFields.length > 0 && <h6 className="mt-4 -mb-2">Enabled Billing Documents</h6>}
         {enabledFields.map((item, index) => {
           const docFileValue = watch(`enabled_billing_docs.${index}.document`);
+          const docName = watch(`enabled_billing_docs.${index}.document_name`)?.label;
+          const finalLabel = `${docName || `Enabled Billing Document ${index + 1}`}`;
           return (
             <Card key={item.id} className="border dark:border-gray-600 rounded-md" bodyClass="p-4">
               <div className="md:grid grid-cols-1 md:grid-cols-9 gap-4 items-start">
@@ -1896,7 +1925,7 @@ const AccessibilitySection = ({ control, errors, formMethods, handlePreviewClick
                     render={({ field: { value, onChange, ...rest } }) => (
                       <Input {...rest} type="file" accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0] || null)} />
                     )} />
-                  {renderPreview(docFileValue, 'Enabled Billing Document', index, 'enabled_billing_docs')}
+                  {renderPreviewWithRemove(docFileValue, finalLabel, () => setValue(`enabled_billing_docs.${index}.document`, null))}
                 </FormItem>
                 <Button type="button" shape="circle" size="sm" className="mt-2 md:mt-0 md:self-center" icon={<TbTrash />} onClick={() => removeEnabled(index)} variant="plain" />
               </div>
@@ -2244,6 +2273,10 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   const companySchema = z.object({
     id: z.union([z.string(), z.number()]).optional(),
     company_name: z.string().trim().min(1, "Company Name is required."),
+    
+    primary_contact_number: z.string().trim().regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits).").optional().or(z.literal("")).nullable(),
+    primary_contact_number_code: z.object({ value: z.string().min(1), label: z.string() }, { required_error: 'Country code is required.' }),
+
     alternate_contact_number: z.string().trim().regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits).").optional().or(z.literal("")).nullable(),
     alternate_contact_number_code: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
     alternate_email_id: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
@@ -2253,12 +2286,12 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     country_id: z.object({ label: z.string(), value: z.string().min(1, "Country is required.") }, { required_error: "Country is required." }),
     continent_id: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
 
-    // establishment_year: z.string().trim().regex(/^\d{4}$/, "Invalid year format (YYYY).").optional().or(z.literal("")).nullable(),
+    establishment_year: z.string().trim().regex(/^\d{4}$/, "Invalid year format (YYYY).").optional().or(z.literal("")).nullable(),
     // no_of_employees: z.union([z.number().int().positive().optional().nullable(), z.string().regex(/^\d*$/).optional().nullable(), z.literal("")]).optional().nullable(),
     // company_website: z.string().trim().url("Invalid website URL.").optional().or(z.literal("")).nullable(),
     // company_logo: z.any().optional().nullable(),
     // primary_business_type: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
-    // status: z.object({ label: z.string(), value: z.string().min(1, "Status is required.") }, { required_error: "Status is required." }),
+    status: z.object({ label: z.string(), value: z.string().min(1, "Status is required.") }, { required_error: "Status is required." }),
     // notification_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
 
     // company_certificate: z.array(z.object({
