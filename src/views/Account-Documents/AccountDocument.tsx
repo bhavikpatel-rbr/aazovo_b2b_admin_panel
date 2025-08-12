@@ -430,6 +430,8 @@ const PendingLeadsModal = ({
   const navigate = useNavigate();
   const { getaccountdoc } = useSelector(masterSelector);
   const [pendingLeads, setPendingLeads] = useState<VerifiedLead[]>([]);
+  console.log("pendingLeads",pendingLeads);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<VerifiedLead | null>(null);
@@ -514,7 +516,7 @@ const PendingLeadsModal = ({
               <Table>
                 <Table.THead>
                   <Table.Tr>
-                    <Table.Th>Lead Info</Table.Th>
+                    <Table.Th>Lead ID</Table.Th>
                     <Table.Th>Product</Table.Th>
                     <Table.Th>Members (Buyer/Seller)</Table.Th>
                     <Table.Th>Details</Table.Th>
@@ -524,8 +526,10 @@ const PendingLeadsModal = ({
                 <Table.TBody>
                   {pendingLeads.map((item) => (
                     <Table.Tr key={item.id}>
+                      
                       <Table.Td>
-                        {item?.lead_number || `LD-${item?.id}`}
+<span className="font-semibold">{item?.lead_type == "Manual lead" ? `ML-${item?.id?.toString().padStart(5, '0')}` : item.lead_type == "Product lead" ? `PL-${item?.id?.toString().padStart(5, '0')}` : item.lead_type == "Wall lead" ? `WL-${item?.id?.toString().padStart(5, '0')}` : null}</span>
+                        {/* {item?.lead_number || `LD-${item?.id}`} */}
                       </Table.Td>
                       <Table.Td>{item?.product?.name || "N/A"}</Table.Td>
                       <Table.Td>
