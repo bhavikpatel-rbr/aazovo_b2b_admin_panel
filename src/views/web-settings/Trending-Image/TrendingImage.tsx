@@ -277,9 +277,16 @@ const TrendingImages = () => {
     const activeFilterCount = useMemo(() => Object.values(activeFilters).flat().length, [activeFilters]);
     const tableLoading = masterLoadingStatus === 'loading' || isSubmitting || isDeleting;
 
-    // --- Handlers ---
     const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData(prev => ({ ...prev, ...data })); setSelectedItems([]); }, []);
-    const onClearAllFilters = useCallback(() => { setActiveFilters({}); filterFormMethods.reset({}); handleSetTableData({ query: '', pageIndex: 1 }); }, [handleSetTableData, filterFormMethods]);
+
+    const onClearAllFilters = useCallback(() => {
+        setActiveFilters({});
+        filterFormMethods.reset({});
+        handleSetTableData({ query: '', pageIndex: 1 });
+        dispatch(getTrendingImagesAction());
+        toast.push(<Notification title="Data Refreshed" type="success">Filters cleared and data reloaded.</Notification>);
+    }, [handleSetTableData, filterFormMethods, dispatch]);
+
     const handleCardClick = useCallback((status?: 'Active' | 'Inactive') => { handleSetTableData({ pageIndex: 1, query: '' }); if (!status) { setActiveFilters({}); } else { const option = apiStatusOptions.find(o => o.value === status); setActiveFilters(option ? { filterStatus: [option] } : {}); } }, [handleSetTableData]);
     const handleRemoveFilter = useCallback((key: keyof FilterFormData, valueToRemove: string) => { setActiveFilters(prev => { const newFilters = { ...prev }; const currentValues = (prev[key] || []) as { value: string }[]; const newValues = currentValues.filter(item => item.value !== valueToRemove); if (newValues.length > 0) (newFilters as any)[key] = newValues; else delete (newFilters as any)[key]; return newFilters; }); handleSetTableData({ pageIndex: 1 }); }, [handleSetTableData]);
     const openAddDrawer = () => { addFormMethods.reset({ page_name: pageNameValues[0], trendingProducts: [], status: 'Active' }); setIsAddDrawerOpen(true); }
