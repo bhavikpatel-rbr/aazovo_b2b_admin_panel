@@ -1699,11 +1699,13 @@ const ViewCompanyMembersDialog: React.FC<{
               className="p-3 border rounded-md dark:border-gray-600"
             >
         
+              
               <p className="font-semibold">{member.member_id} || {member.person_name}</p>
               <p className="text-sm text-gray-600 dark:text-gray-300">
                 {member.designation}
               </p>
               <p className="text-xs text-gray-500">{member.number}</p>
+              <p className="text-xs text-gray-500">{member.email}</p>
             </div>
           ))}
         </div>
@@ -1948,8 +1950,8 @@ const CompanyDocumentsModal: React.FC<{
   );
 
   return (
-    <Dialog isOpen={true} onClose={onClose} width={1200} contentClassName="flex flex-col h-[90vh]">
-      <h5 className="mb-4">Documents for {company.company_name}</h5>
+    <Dialog isOpen={true} onClose={onClose} width={1200} contentClassName="flex flex-col overflow-y-auto max-h-[60vh] pr-4">
+      <h5 className="mb-4 ">Documents for {company.company_name}</h5>
       <div className="border-b border-gray-200 dark:border-gray-700">
         <nav className="-mb-px flex space-x-4" aria-label="Tabs">
           <button onClick={() => setActiveTab('kyc')} className={tabButtonClass('kyc')}>
