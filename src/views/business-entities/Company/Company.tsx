@@ -1298,14 +1298,14 @@ const AddCompanyNotificationDialog: React.FC<{
       send_users: [],
       message: `This is a notification for company "${company.company_name}" (${company.company_code}). Please review the details.`,
     },
-    mode: "onChange",
+    mode: 'onChange',
   });
   const onSend = async (formData: any) => {
     setIsLoading(true);
     const payload = {
       ...formData,
       module_id: String(company.id),
-      module_name: "Company",
+      module_name: 'Company',
     };
     try {
       await dispatch(addNotificationAction(payload)).unwrap();
@@ -1321,55 +1321,59 @@ const AddCompanyNotificationDialog: React.FC<{
   };
   return (
     <Dialog isOpen={true} onClose={onClose}>
-      {" "}
-      <h5 className="mb-4">Notify User about: {company.company_name}</h5>{" "}
+      <h5 className="mb-4">Notify User about: {company.company_name}</h5>
       <UiForm onSubmit={handleSubmit(onSend)}>
-        {" "}
-        <UiFormItem
-          label="Title"
-          invalid={!!errors.notification_title}
-          errorMessage={errors.notification_title?.message}
-        >
-          <Controller
-            name="notification_title"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
-        </UiFormItem>{" "}
-        <UiFormItem
-          label="Send To"
-          invalid={!!errors.send_users}
-          errorMessage={errors.send_users?.message}
-        >
-          <Controller
-            name="send_users"
-            control={control}
-            render={({ field }) => (
-              <UiSelect
-                isMulti
-                placeholder="Select User(s)"
-                options={getAllUserDataOptions}
-                value={getAllUserDataOptions.filter((o) =>
-                  field.value?.includes(o.value)
-                )}
-                onChange={(options) =>
-                  field.onChange(options?.map((o) => o.value) || [])
-                }
-              />
-            )}
-          />
-        </UiFormItem>{" "}
-        <UiFormItem
-          label="Message"
-          invalid={!!errors.message}
-          errorMessage={errors.message?.message}
-        >
-          <Controller
-            name="message"
-            control={control}
-            render={({ field }) => <Input textArea {...field} rows={4} />}
-          />
-        </UiFormItem>{" "}
+        {/* START: Added a scrollable container for the form fields */}
+        <div className="overflow-y-auto max-h-[60vh] pr-4">
+          <UiFormItem
+            label="Title"
+            invalid={!!errors.notification_title}
+            errorMessage={errors.notification_title?.message}
+          >
+            <Controller
+              name="notification_title"
+              control={control}
+              render={({ field }) => <Input {...field} />}
+            />
+          </UiFormItem>
+          <UiFormItem
+            label="Send To"
+            invalid={!!errors.send_users}
+            errorMessage={errors.send_users?.message}
+          >
+            <Controller
+              name="send_users"
+              control={control}
+              render={({ field }) => (
+                <UiSelect
+                  isMulti
+                  placeholder="Select User(s)"
+                  options={getAllUserDataOptions}
+                  value={getAllUserDataOptions.filter((o) =>
+                    field.value?.includes(o.value)
+                  )}
+                  onChange={(options) =>
+                    field.onChange(options?.map((o) => o.value) || [])
+                  }
+                />
+              )}
+            />
+          </UiFormItem>
+          <UiFormItem
+            label="Message"
+            invalid={!!errors.message}
+            errorMessage={errors.message?.message}
+          >
+            <Controller
+              name="message"
+              control={control}
+              render={({ field }) => <Input textArea {...field} rows={4} />}
+            />
+          </UiFormItem>
+        </div>
+        {/* END: Scrollable container */}
+
+        {/* The buttons remain outside the scrollable area, so they are always visible */}
         <div className="text-right mt-6">
           <Button type="button" onClick={onClose} disabled={isLoading}>
             Cancel
@@ -1382,8 +1386,8 @@ const AddCompanyNotificationDialog: React.FC<{
           >
             Send
           </Button>
-        </div>{" "}
-      </UiForm>{" "}
+        </div>
+      </UiForm>
     </Dialog>
   );
 };
@@ -1497,6 +1501,7 @@ const AddCompanyScheduleDialog: React.FC<{
             Cancel
           </Button>
           <Button
+          style={{marginLeft:5}}
             variant="solid"
             type="submit"
             loading={isLoading}
@@ -1535,19 +1540,19 @@ const AssignCompanyTaskDialog: React.FC<{
     defaultValues: {
       task_title: `Follow up with ${company.company_name}`,
       assign_to: [],
-      priority: "Medium",
+      priority: 'Medium',
     },
-    mode: "onChange",
+    mode: 'onChange',
   });
   const onAssignTask = async (data: TaskFormData) => {
     setIsLoading(true);
     const payload = {
       ...data,
       due_date: data.due_date
-        ? dayjs(data.due_date).format("YYYY-MM-DD")
+        ? dayjs(data.due_date).format('YYYY-MM-DD')
         : undefined,
       module_id: String(company.id),
-      module_name: "Company",
+      module_name: 'Company',
     };
     try {
       await dispatch(addTaskAction(payload)).unwrap();
@@ -1567,100 +1572,104 @@ const AssignCompanyTaskDialog: React.FC<{
   };
   return (
     <Dialog isOpen={true} onClose={onClose}>
-      {" "}
-      <h5 className="mb-4">Assign Task for {company.company_name}</h5>{" "}
+      <h5 className="mb-4">Assign Task for {company.company_name}</h5>
       <UiForm onSubmit={handleSubmit(onAssignTask)}>
-        {" "}
-        <UiFormItem
-          label="Task Title"
-          invalid={!!errors.task_title}
-          errorMessage={errors.task_title?.message}
-        >
-          <Controller
-            name="task_title"
-            control={control}
-            render={({ field }) => <Input {...field} autoFocus />}
-          />
-        </UiFormItem>{" "}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {" "}
+        {/* START: Added a scrollable container for the form fields */}
+        <div className="overflow-y-auto max-h-[60vh] pr-4">
           <UiFormItem
-            label="Assign To"
-            invalid={!!errors.assign_to}
-            errorMessage={errors.assign_to?.message}
+            label="Task Title"
+            invalid={!!errors.task_title}
+            errorMessage={errors.task_title?.message}
           >
             <Controller
-              name="assign_to"
+              name="task_title"
               control={control}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder="Select User(s)"
-                  options={userOptions}
-                  value={userOptions.filter((o) =>
-                    field.value?.includes(o.value)
-                  )}
-                  onChange={(opts) =>
-                    field.onChange(opts?.map((o) => o.value) || [])
-                  }
-                />
-              )}
+              render={({ field }) => <Input {...field} autoFocus />}
             />
-          </UiFormItem>{" "}
-          <UiFormItem
-            label="Priority"
-            invalid={!!errors.priority}
-            errorMessage={errors.priority?.message}
-          >
-            <Controller
-              name="priority"
-              control={control}
-              render={({ field }) => (
-                <UiSelect
-                  placeholder="Select Priority"
-                  options={taskPriorityOptions}
-                  value={taskPriorityOptions.find(
-                    (p) => p.value === field.value
-                  )}
-                  onChange={(opt) => field.onChange(opt?.value)}
-                />
-              )}
-            />
-          </UiFormItem>{" "}
-        </div>{" "}
-        <UiFormItem
-          label="Due Date (Optional)"
-          invalid={!!errors.due_date}
-          errorMessage={errors.due_date?.message}
-        >
-          <Controller
-            name="due_date"
-            control={control}
-            render={({ field }) => (
-              <DatePicker
-                placeholder="Select date"
-                value={field.value}
-                onChange={field.onChange}
+          </UiFormItem>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <UiFormItem
+              label="Assign To"
+              invalid={!!errors.assign_to}
+              errorMessage={errors.assign_to?.message}
+            >
+              <Controller
+                name="assign_to"
+                control={control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select User(s)"
+                    options={userOptions}
+                    value={userOptions.filter((o) =>
+                      field.value?.includes(o.value)
+                    )}
+                    onChange={(opts) =>
+                      field.onChange(opts?.map((o) => o.value) || [])
+                    }
+                  />
+                )}
               />
-            )}
-          />
-        </UiFormItem>{" "}
-        <UiFormItem
-          label="Description"
-          invalid={!!errors.description}
-          errorMessage={errors.description?.message}
-        >
-          <Controller
-            name="description"
-            control={control}
-            render={({ field }) => <Input textArea {...field} rows={4} />}
-          />
-        </UiFormItem>{" "}
+            </UiFormItem>
+            <UiFormItem
+              label="Priority"
+              invalid={!!errors.priority}
+              errorMessage={errors.priority?.message}
+            >
+              <Controller
+                name="priority"
+                control={control}
+                render={({ field }) => (
+                  <UiSelect
+                    placeholder="Select Priority"
+                    options={taskPriorityOptions}
+                    value={taskPriorityOptions.find(
+                      (p) => p.value === field.value
+                    )}
+                    onChange={(opt) => field.onChange(opt?.value)}
+                  />
+                )}
+              />
+            </UiFormItem>
+          </div>
+          <UiFormItem
+            label="Due Date (Optional)"
+            invalid={!!errors.due_date}
+            errorMessage={errors.due_date?.message}
+          >
+            <Controller
+              name="due_date"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  placeholder="Select date"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </UiFormItem>
+          <UiFormItem
+            label="Description"
+            invalid={!!errors.description}
+            errorMessage={errors.description?.message}
+          >
+            <Controller
+              name="description"
+              control={control}
+              render={({ field }) => <Input textArea {...field} rows={4} />}
+            />
+          </UiFormItem>
+        </div>
+        {/* END: Scrollable container */}
+
+        {/* The buttons remain outside the scrollable area, so they are always visible */}
         <div className="text-right mt-6">
           <Button type="button" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
           <Button
+            style={{ marginLeft: 5 }}
             variant="solid"
             type="submit"
             loading={isLoading}
@@ -1668,8 +1677,8 @@ const AssignCompanyTaskDialog: React.FC<{
           >
             Assign Task
           </Button>
-        </div>{" "}
-      </UiForm>{" "}
+        </div>
+      </UiForm>
     </Dialog>
   );
 };
@@ -1689,7 +1698,8 @@ const ViewCompanyMembersDialog: React.FC<{
               key={member.id}
               className="p-3 border rounded-md dark:border-gray-600"
             >
-              <p className="font-semibold">{member.person_name}</p>
+        
+              <p className="font-semibold">{member.member_id} || {member.person_name}</p>
               <p className="text-sm text-gray-600 dark:text-gray-300">
                 {member.designation}
               </p>
@@ -2182,6 +2192,7 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({
       setIsSubmitting(false);
     }
   };
+console.log("company",company);
 
   if (!isOpen || !company) return null;
   switch (type) {
