@@ -584,7 +584,7 @@ BookmarkButton.displayName = 'BookmarkButton';
 // --- Main Component ---
 const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const navigate = useNavigate();
-  const dispatch = useOAppDispatch();
+  const dispatch = useAppDispatch();
   const { user } = useSelector(authSelector);
   const { wallListing, AllProductsData, ParentCategories, subCategoriesForSelectedCategoryData, BrandData, MemberTypeData, ProductSpecificationsData, Employees, AllCompanyData, getAllUserData, status: masterLoadingStatus } = useSelector(masterSelector, shallowEqual);
   const [initialLoading, setInitialLoading] = useState(true);
