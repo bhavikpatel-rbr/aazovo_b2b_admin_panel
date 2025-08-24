@@ -168,121 +168,130 @@ const AddTaskModal = ({
             onRequestClose={handleClose}
         >
             <h5 className="mb-4">Add New Task</h5>
-            <Form onSubmit={handleSubmit(onSubmit)}>
-                <FormItem
-                    label="Task Title"
-                    invalid={!!errors.task_title}
-                    errorMessage={errors.task_title?.message}
-                >
-                    <Controller
-                        name="task_title"
-                        control={control}
-                        render={({ field }) => (
-                            <Input
-                                {...field}
-                                autoFocus
-                                placeholder="e.g., Follow up on KYC"
+            {/* The scrollable area for the form */}
+            <ScrollBar autoHide className="max-h-[70vh] -mr-5 pr-5">
+                <Form onSubmit={handleSubmit(onSubmit)}>
+                    <div className="space-y-4">
+                        <FormItem
+                            label="Task Title"
+                            invalid={!!errors.task_title}
+                            errorMessage={errors.task_title?.message}
+                        >
+                            <Controller
+                                name="task_title"
+                                control={control}
+                                render={({ field }) => (
+                                    <Input
+                                        {...field}
+                                        autoFocus
+                                        placeholder="e.g., Follow up on KYC"
+                                    />
+                                )}
                             />
-                        )}
-                    />
-                </FormItem>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormItem
-                        label="Assign To"
-                        invalid={!!errors.assign_to}
-                        errorMessage={errors.assign_to?.message}
-                    >
-                        <Controller
-                            name="assign_to"
-                            control={control}
-                            render={({ field }) => (
-                                <Select
-                                    isMulti
-                                    placeholder="Select User(s)"
-                                    options={employeeOptions}
-                                    value={employeeOptions.filter((o) =>
-                                        field.value?.includes(o.value)
+                        </FormItem>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormItem
+                                label="Assign To"
+                                invalid={!!errors.assign_to}
+                                errorMessage={errors.assign_to?.message}
+                            >
+                                <Controller
+                                    name="assign_to"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Select
+                                            isMulti
+                                            placeholder="Select User(s)"
+                                            options={employeeOptions}
+                                            value={employeeOptions.filter((o) =>
+                                                field.value?.includes(o.value)
+                                            )}
+                                            onChange={(options) =>
+                                                field.onChange(
+                                                    options
+                                                        ? options.map(
+                                                              (o) => o.value
+                                                          )
+                                                        : []
+                                                )
+                                            }
+                                        />
                                     )}
-                                    onChange={(options) =>
-                                        field.onChange(
-                                            options
-                                                ? options.map((o) => o.value)
-                                                : []
-                                        )
-                                    }
                                 />
-                            )}
-                        />
-                    </FormItem>
-                    <FormItem
-                        label="Priority"
-                        invalid={!!errors.priority}
-                        errorMessage={errors.priority?.message}
-                    >
-                        <Controller
-                            name="priority"
-                            control={control}
-                            render={({ field }) => (
-                                <Select
-                                    placeholder="Select Priority"
-                                    options={priorityOptions}
-                                    value={priorityOptions.find(
-                                        (p) => p.value === field.value
+                            </FormItem>
+                            <FormItem
+                                label="Priority"
+                                invalid={!!errors.priority}
+                                errorMessage={errors.priority?.message}
+                            >
+                                <Controller
+                                    name="priority"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Select
+                                            placeholder="Select Priority"
+                                            options={priorityOptions}
+                                            value={priorityOptions.find(
+                                                (p) => p.value === field.value
+                                            )}
+                                            onChange={(opt) =>
+                                                field.onChange(opt?.value)
+                                            }
+                                        />
                                     )}
-                                    onChange={(opt) =>
-                                        field.onChange(opt?.value)
-                                    }
                                 />
-                            )}
-                        />
-                    </FormItem>
-                </div>
-                <FormItem
-                    label="Due Date (Optional)"
-                    invalid={!!errors.due_date}
-                    errorMessage={errors.due_date?.message}
-                >
-                    <Controller
-                        name="due_date"
-                        control={control}
-                        render={({ field }) => (
-                            <DatePicker
-                                placeholder="Select date"
-                                value={field.value}
-                                onChange={field.onChange}
+                            </FormItem>
+                        </div>
+                        <FormItem
+                            label="Due Date (Optional)"
+                            invalid={!!errors.due_date}
+                            errorMessage={errors.due_date?.message}
+                        >
+                            <Controller
+                                name="due_date"
+                                control={control}
+                                render={({ field }) => (
+                                    <DatePicker
+                                        placeholder="Select date"
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                    />
+                                )}
                             />
-                        )}
-                    />
-                </FormItem>
-                <FormItem
-                    label="Description (Optional)"
-                    invalid={!!errors.description}
-                    errorMessage={errors.description?.message}
-                >
-                    <Controller
-                        name="description"
-                        control={control}
-                        render={({ field }) => <Input textArea {...field} />}
-                    />
-                </FormItem>
-                <div className="text-right mt-6">
-                    <Button
-                        className="mr-2"
-                        type="button"
-                        onClick={handleClose}
-                        disabled={isLoading}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        variant="solid"
-                        type="submit"
-                        loading={isLoading}
-                    >
-                        Add Task
-                    </Button>
-                </div>
-            </Form>
+                        </FormItem>
+                        <FormItem
+                            label="Description (Optional)"
+                            invalid={!!errors.description}
+                            errorMessage={errors.description?.message}
+                        >
+                            <Controller
+                                name="description"
+                                control={control}
+                                render={({ field }) => (
+                                    <Input textArea {...field} />
+                                )}
+                            />
+                        </FormItem>
+                    </div>
+                    <div className="text-right mt-6">
+                        <Button
+                            className="mr-2"
+                            type="button"
+                            onClick={handleClose}
+                            disabled={isLoading}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="solid"
+                            type="submit"
+                            loading={isLoading}
+                        >
+                            Add Task
+                        </Button>
+                    </div>
+                </Form>
+            </ScrollBar>
         </Dialog>
     )
 }
