@@ -3466,7 +3466,7 @@ const CompanyListTable = () => {
       {
         header: "Company Info",
         accessorKey: "company_name",
-        id: "companyInfo",
+        id: "company_name", // FIX: Use the data property key as the ID for sorting
         size: 220,
         cell: ({ row }: { row: Row<CompanyItem> }) => {
           const {
@@ -3486,7 +3486,7 @@ const CompanyListTable = () => {
                     className="no-underline "
                   >
                     <h6 className="text-xs font-semibold text-blue-600">
-                      {company_code || "Company Code"}
+                      {company_code || "N/A"}
                     </h6>
                     <span className="text-xs font-semibold leading-1">
                       {company_name}
@@ -3507,7 +3507,7 @@ const CompanyListTable = () => {
       {
         header: "Contact",
         accessorKey: "owner_name",
-        id: "contact",
+        id: "owner_name", // FIX: Use the data property key as the ID for sorting
         size: 180,
         cell: (props) => {
           const {
@@ -3555,7 +3555,7 @@ const CompanyListTable = () => {
       {
         header: "Identity & Status",
         accessorKey: "status",
-        id: "legal",
+        id: "status", // FIX: Use the data property key as the ID for sorting
         size: 180,
         cell: ({ row }) => {
           const { gst_number, pan_number, trn_number, tan_number, status, country } = row.original;
@@ -3602,7 +3602,7 @@ const CompanyListTable = () => {
       {
         header: "Profile & Scores",
         accessorKey: "profile_completion",
-        id: "profile",
+        id: "profile_completion", // FIX: Use the data property key as the ID for sorting
         size: 190,
         cell: ({ row }) => {
           const {
