@@ -20,7 +20,7 @@ import {
   DatePicker,
   Drawer,
   Dropdown,
-  Form,
+  Form as UiForm, // Renamed to avoid conflict with native form
   FormItem,
   Input,
   Skeleton,
@@ -147,14 +147,23 @@ const AddNotificationDialog: React.FC<{ wallItem: WallItem; onClose: () => void;
     } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsLoading(false); }
   };
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Add Notification for "{wallItem.product_name}"</h5>
-      <Form onSubmit={handleSubmit(onSend)}>
-        <FormItem label="Notification Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-        <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select Users" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />)} /></FormItem>
-        <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
-        <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button></div>
-      </Form>
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} bodyOpenClassName="overflow-hidden">
+        <div className="flex flex-col h-full max-h-[90vh]">
+            <div className="px-6 py-4 border-b">
+                <h5 className="mb-0">Add Notification for "{wallItem.product_name}"</h5>
+            </div>
+            <form onSubmit={handleSubmit(onSend)} className="flex flex-col flex-grow overflow-hidden">
+                <div className="flex-grow overflow-y-auto p-6">
+                    <FormItem label="Notification Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+                    <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select Users" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />)} /></FormItem>
+                    <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={5} />} /></FormItem>
+                </div>
+                <div className="px-6 py-4 border-t text-right">
+                    <Button type="button" className="mr-2" onClick={onClose}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button>
+                </div>
+            </form>
+        </div>
     </Dialog>
   );
 };
@@ -193,35 +202,41 @@ const AssignTaskDialog: React.FC<{ wallItem: WallItem; onClose: () => void; getA
   };
 
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Assign Task for "{wallItem.product_name}"</h5>
-      <Form onSubmit={handleSubmit(onAssignTask)}>
-        <FormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}>
-          <Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} />
-        </FormItem>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}>
-            <Controller name="assign_to" control={control} render={({ field }) => (
-              <UiSelect isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])} />
-            )} />
-          </FormItem>
-          <FormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}>
-            <Controller name="priority" control={control} render={({ field }) => (
-              <UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />
-            )} />
-          </FormItem>
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} bodyOpenClassName="overflow-hidden">
+        <div className="flex flex-col h-full max-h-[90vh]">
+            <div className="px-6 py-4 border-b">
+                <h5 className="mb-0">Assign Task for "{wallItem.product_name}"</h5>
+            </div>
+            <form onSubmit={handleSubmit(onAssignTask)} className="flex flex-col flex-grow overflow-hidden">
+                <div className="flex-grow overflow-y-auto p-6">
+                    <FormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}>
+                        <Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} />
+                    </FormItem>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}>
+                            <Controller name="assign_to" control={control} render={({ field }) => (
+                                <UiSelect isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])} />
+                            )} />
+                        </FormItem>
+                        <FormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}>
+                            <Controller name="priority" control={control} render={({ field }) => (
+                                <UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />
+                            )} />
+                        </FormItem>
+                    </div>
+                    <FormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}>
+                        <Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value as Date} onChange={field.onChange} />} />
+                    </FormItem>
+                    <FormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}>
+                        <Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
+                    </FormItem>
+                </div>
+                <div className="px-6 py-4 border-t text-right">
+                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button>
+                </div>
+            </form>
         </div>
-        <FormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}>
-          <Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value as Date} onChange={field.onChange} />} />
-        </FormItem>
-        <FormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}>
-          <Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
-        </FormItem>
-        <div className="text-right mt-6">
-          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button>
-        </div>
-      </Form>
     </Dialog>
   );
 };
@@ -239,18 +254,27 @@ const AddScheduleDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> 
     } catch (error: any) { toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsLoading(false); }
   };
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Add Schedule for "{wallItem.product_name}"</h5>
-      <Form onSubmit={handleSubmit(onAddEvent)}>
-        <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></FormItem>
-          <FormItem label="Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} bodyOpenClassName="overflow-hidden">
+        <div className="flex flex-col h-full max-h-[90vh]">
+            <div className="px-6 py-4 border-b">
+                <h5 className="mb-0">Add Schedule for "{wallItem.product_name}"</h5>
+            </div>
+            <form onSubmit={handleSubmit(onAddEvent)} className="flex flex-col flex-grow overflow-hidden">
+                <div className="flex-grow overflow-y-auto p-6">
+                    <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></FormItem>
+                        <FormItem label="Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
+                    </div>
+                    <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}><Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
+                    <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
+                </div>
+                <div className="px-6 py-4 border-t text-right">
+                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
+                </div>
+            </form>
         </div>
-        <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}><Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
-        <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
-        <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button></div>
-      </Form>
     </Dialog>
   );
 };
@@ -270,13 +294,22 @@ const AddActivityDialog: React.FC<{ wallItem: WallItem; onClose: () => void; use
     } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsLoading(false); }
   };
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Add Activity Log for "{wallItem.product_name}"</h5>
-      <Form onSubmit={handleSubmit(onAddActivity)}>
-        <FormItem label="Activity" invalid={!!errors.item} errorMessage={errors.item?.message}><Controller name="item" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Followed up with member" />} /></FormItem>
-        <FormItem label="Notes (Optional)" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} placeholder="Add relevant details..." />} /></FormItem>
-        <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading} icon={<TbCheck />}>Save Activity</Button></div>
-      </Form>
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} bodyOpenClassName="overflow-hidden">
+        <div className="flex flex-col h-full max-h-[90vh]">
+            <div className="px-6 py-4 border-b">
+                <h5 className="mb-0">Add Activity Log for "{wallItem.product_name}"</h5>
+            </div>
+            <form onSubmit={handleSubmit(onAddActivity)} className="flex flex-col flex-grow overflow-hidden">
+                <div className="flex-grow overflow-y-auto p-6">
+                    <FormItem label="Activity" invalid={!!errors.item} errorMessage={errors.item?.message}><Controller name="item" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Followed up with member" />} /></FormItem>
+                    <FormItem label="Notes (Optional)" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} placeholder="Add relevant details..." />} /></FormItem>
+                </div>
+                <div className="px-6 py-4 border-t text-right">
+                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading} icon={<TbCheck />}>Save Activity</Button>
+                </div>
+            </form>
+        </div>
     </Dialog>
   );
 };
@@ -734,7 +767,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           </div>
         }
       >
-        <Form id="filterWallForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col h-full">
+        <UiForm id="filterWallForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col h-full">
           <div className="overflow-y-auto p-1 flex-grow">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormItem label="Status"><Controller name="filterRecordStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status..." options={recordStatusOptions} {...field} />)} /></FormItem>
@@ -751,7 +784,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               <FormItem label="Created By (Example)"><Controller name="createdBy" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Employee..." options={Employees?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
             </div>
           </div>
-        </Form>
+        </UiForm>
       </Drawer>
       <Dialog isOpen={importDialogOpen} onClose={() => setImportDialogOpen(false)} onRequestClose={() => setImportDialogOpen(false)} title="Import Wall Items">
         <div className="p-4">
@@ -761,11 +794,11 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         </div>
       </Dialog>
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
-        <Form id="exportReasonForm" onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4 mt-2">
+        <form id="exportReasonForm" onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4 mt-2">
           <FormItem label="Please provide a reason for exporting this data:" isRequired invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
             <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
           </FormItem>
-        </Form>
+        </form>
       </ConfirmDialog>
     </>
   );
