@@ -192,6 +192,7 @@ interface CompanyMemberManagement {
   id: number;
   company_id: number;
   member_id: number;
+  email?: string | null; // Added optional email
   designation: string;
   person_name: string;
   number: string;
@@ -210,6 +211,7 @@ interface AlertNote {
   id: number;
   note: string; // HTML content from RichTextEditor
   created_by: string;
+  created_by_user?: UserReference; // Added for user details
   created_at: string; // ISO date string
 }
 // END: Alert Note Type Definition
@@ -242,7 +244,8 @@ export type CompanyItem = {
   | "Pending"
   | "Inactive"
   | "active"
-  | "inactive";
+  | "inactive"
+  | "Disabled";
   primary_email_id: string;
   primary_contact_number: string;
   primary_contact_number_code: string;
@@ -357,7 +360,13 @@ const companyFilterFormSchema = z.object({
   filterCity: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
-  filterKycVerified:z.object({ value: z.string(), label: z.string() }).optional(),
+  // START: FIX for KYC Filter
+  // Changed schema to allow null when the select is cleared, preventing validation errors.
+  filterKycVerified: z
+    .object({ value: z.string(), label: z.string() })
+    .optional()
+    .nullable(),
+  // END: FIX for KYC Filter
   filterEnableBilling: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
@@ -366,6 +375,7 @@ const companyFilterFormSchema = z.object({
     .optional()
     .default([null, null]),
 });
+
 type CompanyFilterFormData = z.infer<typeof companyFilterFormSchema>;
 const exportReasonSchema = z.object({
   reason: z
@@ -509,6 +519,8 @@ export const getCompanyStatusClass = (
       "border border-orange-300 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300",
     inactive:
       "border border-red-300 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300",
+    disabled:
+      "border border-gray-300 bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300",
     "non verified":
       "border border-yellow-300 bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300",
   };
@@ -751,7 +763,7 @@ const CompanyAlertModal: React.FC<{
       )
       .finally(() => setIsFetching(false));
     reset({ newNote: "" });
-  }, [company.id, dispatch]);
+  }, [company.id, dispatch, reset]);
 
   const onAddNote = async (data: AlertNoteFormData) => {
     setIsSubmitting(true);
@@ -1501,7 +1513,7 @@ const AddCompanyScheduleDialog: React.FC<{
             Cancel
           </Button>
           <Button
-          style={{marginLeft:5}}
+            style={{ marginLeft: 5 }}
             variant="solid"
             type="submit"
             loading={isLoading}
@@ -1698,8 +1710,8 @@ const ViewCompanyMembersDialog: React.FC<{
               key={member.id}
               className="p-3 border rounded-md dark:border-gray-600"
             >
-        
-              
+
+
               <p className="font-semibold">{member.member_id} || {member.person_name}</p>
               <p className="text-sm text-gray-600 dark:text-gray-300">
                 {member.designation}
@@ -2194,7 +2206,7 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({
       setIsSubmitting(false);
     }
   };
-console.log("company",company);
+
 
   if (!isOpen || !company) return null;
   switch (type) {
@@ -2468,9 +2480,9 @@ const EnableBillingDialog: React.FC<EnableBillingDialogProps> = ({
     return watchedDocuments
       .map((doc, index) => ({ doc, index }))
       .filter(({ doc }) => doc.fileType === 'image' && doc.previewUrl)
-      .map(({ doc }) => ({
+      .map(({ doc, index }) => ({
         src: doc.previewUrl as string,
-        alt: doc.document_name?.label || `Document ${doc.index + 1}`
+        alt: doc.document_name?.label || `Document ${index + 1}`
       }));
   }, [watchedDocuments]);
 
@@ -2787,6 +2799,15 @@ const ActiveFiltersDisplay = ({
       if (key === "customFilter") {
         return [{ key, value: "custom", label: `Custom Filter: ${value}` }];
       }
+      // Handle single object filters like KYC
+      if (key === 'filterKycVerified' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        const item = value as { value: string, label: string };
+        return [{
+          key,
+          value: item.value,
+          label: `${filterKeyToLabelMap[key] || "Filter"}: ${item.label}`,
+        }];
+      }
       if (Array.isArray(value)) {
         return value
           .filter((item) => item !== null && item !== undefined)
@@ -3070,7 +3091,10 @@ const CompanyListTable = () => {
   ) => {
     setFilterCriteria((prev) => {
       const newCriteria = { ...prev, customFilter: undefined };
-      if (key === "filterCreatedDate") {
+
+      if (key === 'filterKycVerified') {
+        (newCriteria as any)[key] = null;
+      } else if (key === "filterCreatedDate") {
         (newCriteria as any)[key] = [null, null];
       } else {
         const currentFilterArray = newCriteria[key] as
@@ -3129,7 +3153,7 @@ const CompanyListTable = () => {
         newCriteria.filterStatus = [{ value: "Inactive", label: "Inactive" }];
         break;
       case "disabled":
-        newCriteria.filterStatus = [{ value: "disabled", label: "Disabled" }];
+        newCriteria.filterStatus = [{ value: "Disabled", label: "Disabled" }];
         break;
       case "verified":
         newCriteria.filterKycVerified = { value: "Yes", label: "Yes" };
@@ -3223,15 +3247,17 @@ const CompanyListTable = () => {
             selectedCities.includes(company.city)
           );
         }
-        
-        if (
-          filterCriteria.filterKycVerified 
-        ) {
-          const selectedKycValues = filterCriteria.filterKycVerified.value === "Yes";
-          filteredData = filteredData.filter((company) =>
-            [selectedKycValues].includes(company.kyc_verified)
+
+        // START: FIX for KYC Filter Logic
+        // Simplified the filtering logic for KYC to be more readable.
+        if (filterCriteria.filterKycVerified?.value) {
+          const shouldBeVerified = filterCriteria.filterKycVerified.value === 'Yes';
+          filteredData = filteredData.filter(
+            (company) => company.kyc_verified === shouldBeVerified
           );
         }
+        // END: FIX for KYC Filter Logic
+
         if (
           filterCriteria.filterEnableBilling &&
           filterCriteria.filterEnableBilling.length > 0
@@ -3291,7 +3317,7 @@ const CompanyListTable = () => {
       count += (filterCriteria.filterCountry?.length ?? 0) > 0 ? 1 : 0;
       count += (filterCriteria.filterState?.length ?? 0) > 0 ? 1 : 0;
       count += (filterCriteria.filterCity?.length ?? 0) > 0 ? 1 : 0;
-      count += (filterCriteria.filterKycVerified ? 1 : 0 ) > 0 ? 1 : 0;
+      count += (filterCriteria.filterKycVerified ? 1 : 0);
       count += (filterCriteria.filterEnableBilling?.length ?? 0) > 0 ? 1 : 0;
       count +=
         filterCriteria.filterCreatedDate?.[0] &&
@@ -3446,11 +3472,7 @@ const CompanyListTable = () => {
           const {
             company_name,
             ownership_type,
-            primary_business_type,
             country,
-            city,
-            state,
-            company_logo,
             company_code,
             id,
           } = row.original;
@@ -4152,6 +4174,9 @@ const CompanyListTable = () => {
                 )}
               />
             </UiFormItem>
+            {/* START: FIX for KYC Filter Form Component */}
+            {/* Corrected the value and onChange props to properly handle a single-select component */}
+            {/* This ensures that clearing the field sets a valid `null` value instead of `[]`, keeping the form valid */}
             <UiFormItem label="KYC Verified">
               <Controller
                 name="filterKycVerified"
@@ -4160,18 +4185,20 @@ const CompanyListTable = () => {
                   <UiSelect
                     placeholder="Select Status"
                     options={kycOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
+                    value={field.value}
+                    onChange={(val) => field.onChange(val)}
                   />
                 )}
               />
             </UiFormItem>
+            {/* END: FIX for KYC Filter Form Component */}
             <UiFormItem label="Enable Billing">
               <Controller
                 name="filterEnableBilling"
                 control={filterFormMethods.control}
                 render={({ field }) => (
                   <UiSelect
+                    isMulti
                     placeholder="Select Status"
                     options={billingOptions}
                     value={field.value || []}
