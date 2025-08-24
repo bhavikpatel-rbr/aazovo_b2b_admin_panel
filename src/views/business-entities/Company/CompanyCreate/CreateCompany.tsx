@@ -259,7 +259,7 @@ interface ReferenceItemFE {
   person_name?: string;
   company_id?: { label: string; value: string };
   number?: string;
-  number_code?:string
+  number_code?: string
   remark?: string;
 }
 interface CompanyMemberItemFE {
@@ -534,11 +534,16 @@ const transformApiToFormSchema = (
   allCompaniesForRef: Array<{ value: string; label: string }>,
   documentTypeOptions: Array<{ value: string; label: string }>
 ): Partial<CompanyFormSchema> => {
-  const stringToBoolean = (value: boolean | string | undefined | null): boolean => {
+  const stringToBoolean = (value, type) => {
+
     if (typeof value === 'boolean') return value;
     if (typeof value === 'string') {
       const lowerVal = value.toLowerCase();
-      return lowerVal === '1' || lowerVal === 'true' || lowerVal === 'yes';
+      return lowerVal === '1' || lowerVal === 'true' || lowerVal === 'yes' || lowerVal === 1 || lowerVal === 'on' || lowerVal === 'checked' || lowerVal === 'enable' || lowerVal === 'enabled' || lowerVal === 'default';
+    }
+
+    if (typeof value === 'number') {
+      return value === '1' || value === 1;
     }
     return false;
   };
@@ -555,7 +560,7 @@ const transformApiToFormSchema = (
 
   const mapCountries = allCountries.map(c => ({ value: String(c.id), label: c.name }));
   const mapContinents = allContinents.map(c => ({ value: String(c.id), label: c.name }));
-console.log("stringToBoolean(apiData.primary_is_default)",apiData.primary_is_default);
+  console.log("stringToBoolean(apiData.primary_is_default)", apiData.primary_is_default);
 
   return {
     id: apiData.id,
@@ -654,7 +659,7 @@ console.log("stringToBoolean(apiData.primary_is_default)",apiData.primary_is_def
     secondary_ifsc_code: apiData.secondary_ifsc_code || '',
     secondary_swift_code: apiData.secondary_swift_code || '',
     secondary_bank_verification_photo: apiData.secondary_bank_verification_photo || null,
-    secondary_is_default: stringToBoolean(apiData.secondary_is_default),
+    secondary_is_default: stringToBoolean(apiData.secondary_is_default, "apiData.secondary_is_default"),
     company_bank_details: apiData.company_bank_details?.map(bank => ({
       id: String(bank.id),
       bank_account_number: bank.bank_account_number || '',
@@ -765,8 +770,8 @@ const preparePayloadForApi = (
   // Office Info
   data.office_info
     ?.filter((office: BranchItemFE) =>
-        office.office_type?.value || office.office_name || office.address || office.country_id?.value || office.state || office.city ||
-        office.zip_code || office.gst_number || office.contact_person || office.office_email || office.office_phone
+      office.office_type?.value || office.office_name || office.address || office.country_id?.value || office.state || office.city ||
+      office.zip_code || office.gst_number || office.contact_person || office.office_email || office.office_phone
     )
     .forEach((office: BranchItemFE, index: number) => {
       appendField(`office_info[${index}][office_type]`, office.office_type);
@@ -847,21 +852,21 @@ const preparePayloadForApi = (
       appendField(`company_team_members[${index}][number]`, member.number);
     });
 
-    
+
   // Company Spot Verification
   data.company_spot_verification
-  ?.filter((item: SpotVerificationItemFE) =>
-    // A row is only valid if a verifier is selected, a remark is written, or a photo is uploaded.
-    // The 'verified' status alone is not enough to create a record.
-    item.verified_by_id?.value || item.remark || item.photo_upload
-  )
-  .forEach((item: SpotVerificationItemFE, index: number) => {
-    // For the valid rows that pass the filter, we append all their data.
-    appendField(`company_spot_verification[${index}][verified]`, item.verified);
-    appendField(`company_spot_verification[${index}][verified_by_id]`, item.verified_by_id);
-    appendField(`company_spot_verification[${index}][remark]`, item.remark);
-    appendField(`company_spot_verification[${index}][photo_upload]`, item.photo_upload);
-  });
+    ?.filter((item: SpotVerificationItemFE) =>
+      // A row is only valid if a verifier is selected, a remark is written, or a photo is uploaded.
+      // The 'verified' status alone is not enough to create a record.
+      item.verified_by_id?.value || item.remark || item.photo_upload
+    )
+    .forEach((item: SpotVerificationItemFE, index: number) => {
+      // For the valid rows that pass the filter, we append all their data.
+      appendField(`company_spot_verification[${index}][verified]`, item.verified);
+      appendField(`company_spot_verification[${index}][verified_by_id]`, item.verified_by_id);
+      appendField(`company_spot_verification[${index}][remark]`, item.remark);
+      appendField(`company_spot_verification[${index}][photo_upload]`, item.photo_upload);
+    });
   // Company References
   data.company_references
     ?.filter((ref: ReferenceItemFE) => ref.person_name || ref.company_id?.value || ref.number || ref.number_code || ref.remark)
@@ -1000,13 +1005,13 @@ const CompanyDetailsSection = ({
   useEffect(() => {
     // When country changes, clear the irrelevant trade info fields
     if (selectedCountry) {
-        if (isIndiaSelected) {
-            setValue('trn_number', '', { shouldValidate: true });
-            setValue('tan_number', '', { shouldValidate: true });
-        } else {
-            setValue('gst_number', '', { shouldValidate: true });
-            setValue('pan_number', '', { shouldValidate: true });
-        }
+      if (isIndiaSelected) {
+        setValue('trn_number', '', { shouldValidate: true });
+        setValue('tan_number', '', { shouldValidate: true });
+      } else {
+        setValue('gst_number', '', { shouldValidate: true });
+        setValue('pan_number', '', { shouldValidate: true });
+      }
     }
   }, [isIndiaSelected, selectedCountry, setValue]);
 
@@ -1088,19 +1093,19 @@ const CompanyDetailsSection = ({
       <h4 className="mb-4">Trade Information</h4>
       <div className="grid md:grid-cols-4 gap-3">
         {isIndiaSelected ? (
-            <>
-                <FormItem label={<div>GST Number<span className="text-red-500"> *</span></div>} invalid={!!errors.gst_number} errorMessage={errors.gst_number?.message as string}><Controller name="gst_number" control={control} render={({ field }) => (<Input placeholder="GST Number" {...field} />)} /></FormItem>
-                <FormItem label={<div>PAN Number<span className="text-red-500"> *</span></div>} invalid={!!errors.pan_number} errorMessage={errors.pan_number?.message as string}><Controller name="pan_number" control={control} render={({ field }) => (<Input placeholder="PAN Number" {...field} />)} /></FormItem>
-            </>
+          <>
+            <FormItem label={<div>GST Number<span className="text-red-500"> *</span></div>} invalid={!!errors.gst_number} errorMessage={errors.gst_number?.message as string}><Controller name="gst_number" control={control} render={({ field }) => (<Input placeholder="GST Number" {...field} />)} /></FormItem>
+            <FormItem label={<div>PAN Number<span className="text-red-500"> *</span></div>} invalid={!!errors.pan_number} errorMessage={errors.pan_number?.message as string}><Controller name="pan_number" control={control} render={({ field }) => (<Input placeholder="PAN Number" {...field} />)} /></FormItem>
+          </>
         ) : (
-            <>
-                <FormItem label={<div>TRN Number</div>} invalid={!!errors.trn_number} errorMessage={errors.trn_number?.message as string}>
-                  <Controller name="trn_number" control={control} render={({ field }) => (<Input placeholder="TRN Number" {...field} />)} />
-                </FormItem>
-                <FormItem label={<div>TAN Number</div>} invalid={!!errors.tan_number} errorMessage={errors.tan_number?.message as string}>
-                  <Controller name="tan_number" control={control} render={({ field }) => (<Input placeholder="TAN Number" {...field} />)} />
-                </FormItem>
-            </>
+          <>
+            <FormItem label={<div>TRN Number</div>} invalid={!!errors.trn_number} errorMessage={errors.trn_number?.message as string}>
+              <Controller name="trn_number" control={control} render={({ field }) => (<Input placeholder="TRN Number" {...field} />)} />
+            </FormItem>
+            <FormItem label={<div>TAN Number</div>} invalid={!!errors.tan_number} errorMessage={errors.tan_number?.message as string}>
+              <Controller name="tan_number" control={control} render={({ field }) => (<Input placeholder="TAN Number" {...field} />)} />
+            </FormItem>
+          </>
         )}
       </div>
 
@@ -1108,7 +1113,7 @@ const CompanyDetailsSection = ({
       <h4 className="mb-4">Company Information</h4>
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
         <FormItem label="Establishment Year" invalid={!!errors.establishment_year} errorMessage={errors.establishment_year?.message as string}>
-            <Controller name="establishment_year" control={control} render={({ field }) => (<NumericInput placeholder="YYYY" maxLength={4} {...field} onChange={(value) => field.onChange(value)} />)} />
+          <Controller name="establishment_year" control={control} render={({ field }) => (<NumericInput placeholder="YYYY" maxLength={4} {...field} onChange={(value) => field.onChange(value)} />)} />
         </FormItem>
         <FormItem label="No. of Employees" invalid={!!errors.no_of_employees} errorMessage={errors.no_of_employees?.message as string}>
           <Controller name="no_of_employees" control={control} render={({ field }) => (<NumericInput placeholder="e.g., 100" {...field} onChange={(value) => field.onChange(value)} />)} />
@@ -1145,7 +1150,7 @@ const CompanyDetailsSection = ({
                   />
                 )}
               </button>
-              <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => setValue('company_logo', null, { shouldDirty: true })} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title="Remove Logo"/>
+              <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => setValue('company_logo', null, { shouldDirty: true })} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title="Remove Logo" />
             </div>
           )}
         </FormItem>
@@ -1203,7 +1208,7 @@ const CompanyDetailsSection = ({
                         />
                       )}
                     </button>
-                    <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => setValue(`company_certificate.${index}.upload_certificate`, null, { shouldDirty: true })} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title="Remove Certificate"/>
+                    <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => setValue(`company_certificate.${index}.upload_certificate`, null, { shouldDirty: true })} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title="Remove Certificate" />
                   </div>
                 )}
               </FormItem>
@@ -1407,7 +1412,7 @@ const KYCDetailSection = ({ control, errors, formMethods, handlePreviewClick }: 
                       />
                     )}
                   </button>
-                   <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => setValue(doc.name, null, { shouldDirty: true })} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title={`Remove ${doc.label}`}/>
+                  <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => setValue(doc.name, null, { shouldDirty: true })} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title={`Remove ${doc.label}`} />
 
                   {doc.name === 'cancel_cheque_file' && (
                     <div className="mt-2 flex items-center justify-end gap-2">
@@ -1536,7 +1541,7 @@ const BankDetailsSection = ({ control, errors, formMethods, handlePreviewClick }
             />
           )}
         </button>
-        <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={onRemove} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title={`Remove ${label}`}/>
+        <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={onRemove} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title={`Remove ${label}`} />
       </div>
     )
   }
@@ -1746,7 +1751,7 @@ const SpotVerificationSection = ({ control, errors, formMethods, handlePreviewCl
                         />
                       )}
                     </button>
-                    <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => setValue(`company_spot_verification.${index}.photo_upload`, null, { shouldDirty: true })} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title={`Remove ${photoLabel}`}/>
+                    <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => setValue(`company_spot_verification.${index}.photo_upload`, null, { shouldDirty: true })} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title={`Remove ${photoLabel}`} />
                   </div>
                 )}
               </FormItem>
@@ -1851,7 +1856,7 @@ const AccessibilitySection = ({ control, errors, formMethods, handlePreviewClick
             />
           )}
         </button>
-        <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={onRemove} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title={`Remove ${label}`}/>
+        <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={onRemove} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title={`Remove ${label}`} />
       </div>
     )
   }
@@ -2280,14 +2285,14 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     .or(z.literal(""))
     .optional()
     .nullable();
-    
+
   const companySchema = z.object({
     id: z.union([z.string(), z.number()]).optional(),
     company_name: z.string().trim().min(1, "Company Name is required."),
-    
+
     primary_contact_number: z.string().trim().regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits).").optional().or(z.literal("")).nullable(),
     primary_contact_number_code: z.object({ value: z.string().min(1), label: z.string() }, { required_error: 'Country code is required.' }),
-    
+
     // Use the new helper for all email fields
     primary_email_id: optionalEmail,
     alternate_email_id: optionalEmail,
@@ -2318,81 +2323,81 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       office_email: optionalEmail, // Also apply it here
       office_phone: z.string().optional().nullable(),
     })).optional(),
-company_bank_details: z.array(
-        z.object({
-            id: z.string().optional(),
-            bank_account_number: z.string().optional().nullable(),
-            bank_name: z.string().optional().nullable(),
-            ifsc_code: z.string().optional().nullable(),
-            swift_code: z.string().optional().nullable(),
-            verification_photo: z.any().optional().nullable(),
-            type: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
-            is_default: z.boolean().optional().nullable(),
-        }).superRefine((data, ctx) => {
-            // A row is considered "active" or "touched" if any field has a value.
-            // This prevents validation on brand new, empty rows.
-            const isRowActive = Object.values(data).some(value => {
-                if (value === null || value === undefined || value === false) return false;
-                if (typeof value === 'string' && value.trim() === '') return false;
-                if (Array.isArray(value) && value.length === 0) return false;
-                if (typeof value === 'object' && Object.keys(value).length === 0) return false;
-                return true;
+    company_bank_details: z.array(
+      z.object({
+        id: z.string().optional(),
+        bank_account_number: z.string().optional().nullable(),
+        bank_name: z.string().optional().nullable(),
+        ifsc_code: z.string().optional().nullable(),
+        swift_code: z.string().optional().nullable(),
+        verification_photo: z.any().optional().nullable(),
+        type: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
+        is_default: z.boolean().optional().nullable(),
+      }).superRefine((data, ctx) => {
+        // A row is considered "active" or "touched" if any field has a value.
+        // This prevents validation on brand new, empty rows.
+        const isRowActive = Object.values(data).some(value => {
+          if (value === null || value === undefined || value === false) return false;
+          if (typeof value === 'string' && value.trim() === '') return false;
+          if (Array.isArray(value) && value.length === 0) return false;
+          if (typeof value === 'object' && Object.keys(value).length === 0) return false;
+          return true;
+        });
+
+        // If the row is not active, we don't need to validate it.
+        if (!isRowActive) {
+          return; // Exit validation for this empty row
+        }
+
+        // If the row is active, validate all required fields.
+        if (!data.type?.value) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['type'],
+            message: 'Type is required.',
+          });
+        }
+        if (!data.bank_account_number || data.bank_account_number.trim() === '') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['bank_account_number'],
+            message: 'Account Number is required.',
+          });
+        }
+        if (!data.bank_name || data.bank_name.trim() === '') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['bank_name'],
+            message: 'Bank Name is required.',
+          });
+        }
+        if (!data.ifsc_code || data.ifsc_code.trim() === '') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['ifsc_code'],
+            message: 'IFSC Code is required.',
+          });
+        }
+        // Note: Swift code and verification photo are often optional,
+        // so they are not included here. If they are required for your
+        // business logic, you can add checks for them as well:
+        /*
+        if (!data.swift_code || data.swift_code.trim() === '') {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['swift_code'],
+                message: 'Swift Code is required.',
             });
-            
-            // If the row is not active, we don't need to validate it.
-            if (!isRowActive) {
-                return; // Exit validation for this empty row
-            }
-            
-            // If the row is active, validate all required fields.
-            if (!data.type?.value) {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    path: ['type'],
-                    message: 'Type is required.',
-                });
-            }
-            if (!data.bank_account_number || data.bank_account_number.trim() === '') {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    path: ['bank_account_number'],
-                    message: 'Account Number is required.',
-                });
-            }
-             if (!data.bank_name || data.bank_name.trim() === '') {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    path: ['bank_name'],
-                    message: 'Bank Name is required.',
-                });
-            }
-            if (!data.ifsc_code || data.ifsc_code.trim() === '') {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    path: ['ifsc_code'],
-                    message: 'IFSC Code is required.',
-                });
-            }
-            // Note: Swift code and verification photo are often optional,
-            // so they are not included here. If they are required for your
-            // business logic, you can add checks for them as well:
-            /*
-            if (!data.swift_code || data.swift_code.trim() === '') {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    path: ['swift_code'],
-                    message: 'Swift Code is required.',
-                });
-            }
-            if (!data.verification_photo) {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    path: ['verification_photo'],
-                    message: 'Verification photo is required.',
-                });
-            }
-            */
-        })
+        }
+        if (!data.verification_photo) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['verification_photo'],
+                message: 'Verification photo is required.',
+            });
+        }
+        */
+      })
     ).optional(),
     gst_number: z.string().trim().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number format.").optional().or(z.literal("")).nullable(),
     pan_number: z.string().trim().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN card number format.").optional().or(z.literal("")).nullable(),
@@ -2495,11 +2500,11 @@ company_bank_details: z.array(
   const internalFormSubmit = (values: CompanyFormSchema) => {
     onFormSubmit?.(values, formMethods);
   };
-  
+
   // This function will be called when validation fails on submit
   const handleInvalidSubmit = (errors: FieldErrors<CompanyFormSchema>) => {
     console.log("Validation Errors: ", errors);
-    
+
     // Check if any email field has an error
     let emailErrorFound = false;
     const emailFieldKeys: (keyof CompanyFormSchema)[] = [
@@ -2508,22 +2513,22 @@ company_bank_details: z.array(
       'support_email',
       'notification_email'
     ];
-    
+
     for (const key of emailFieldKeys) {
-        if (errors[key]) {
-            emailErrorFound = true;
-            break;
-        }
+      if (errors[key]) {
+        emailErrorFound = true;
+        break;
+      }
     }
-    
+
     // Also check for email errors inside the office_info array
     if (!emailErrorFound && errors.office_info && Array.isArray(errors.office_info)) {
-        for (const officeError of errors.office_info) {
-            if (officeError?.office_email) {
-                emailErrorFound = true;
-                break;
-            }
+      for (const officeError of errors.office_info) {
+        if (officeError?.office_email) {
+          emailErrorFound = true;
+          break;
         }
+      }
     }
 
     if (emailErrorFound) {
