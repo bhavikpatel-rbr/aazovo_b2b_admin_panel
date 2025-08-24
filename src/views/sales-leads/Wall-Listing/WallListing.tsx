@@ -65,11 +65,11 @@ import {
   getSubcategoriesByCategoryIdAction, getWallListingAction, submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
+import { getMenuRights } from "@/utils/getMenuRights";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
 import { shallowEqual, useSelector } from "react-redux";
 import { z } from "zod";
-import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Type Definitions ---
 export type ApiWallItemFromSource = any;
@@ -406,7 +406,7 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
       <div className="flex flex-col h-full max-h-[80vh]">
         <div className="px-6 py-4 border-b"><h5>Matching Opportunities for "{wallItem.product_name}"</h5></div>
         <div className="flex-grow overflow-y-auto px-6 py-4">
-          {isLoading ? <div className="flex justify-center items-center h-64"><Spinner size={40} /></div> : <DataTable columns={columns} data={data} noData={data.length === 0} pagingData={{ total: data.length, pageIndex: 1, pageSize: Pagesize }} onSelectChange={(e)=> setPagesize(e)}/>}
+          {isLoading ? <div className="flex justify-center items-center h-64"><Spinner size={40} /></div> : <DataTable columns={columns} data={data} noData={data.length === 0} pagingData={{ total: data.length, pageIndex: 1, pageSize: Pagesize }} onSelectChange={(e) => setPagesize(e)} />}
         </div>
         <div className="px-6 py-4 border-t">
           {selected.length > 0 ? (
@@ -588,6 +588,8 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const { user } = useSelector(authSelector);
   const { wallListing, AllProductsData, ParentCategories, subCategoriesForSelectedCategoryData, BrandData, MemberTypeData, ProductSpecificationsData, Employees, AllCompanyData, getAllUserData, status: masterLoadingStatus } = useSelector(masterSelector, shallowEqual);
   const [initialLoading, setInitialLoading] = useState(true);
+  // --- Add this new state for instant feedback on data refetch ---
+  const [isRefetching, setIsRefetching] = useState(false);
   const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<WallItem | null>(null);
@@ -606,7 +608,15 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const apiParams = useMemo(() => { const formatMultiSelect = (items: { value: any }[] | undefined) => { if (!items || items.length === 0) return undefined; return items.map((item) => item.value).join(","); }; const params: any = { page: tableData.pageIndex, per_page: tableData.pageSize, search: tableData.query || undefined, sort_by: tableData.sort?.key || undefined, sort_order: tableData.sort?.order || undefined, status: formatMultiSelect(filterCriteria.filterRecordStatuses), company_ids: formatMultiSelect(filterCriteria.filterCompanyIds), want_to: formatMultiSelect(filterCriteria.filterIntents), product_ids: formatMultiSelect(filterCriteria.filterProductIds), category_ids: formatMultiSelect(filterCriteria.categories), subcategory_ids: formatMultiSelect(filterCriteria.subcategories), brand_ids: formatMultiSelect(filterCriteria.brands), product_status: formatMultiSelect(filterCriteria.productStatus), member_type_ids: formatMultiSelect(filterCriteria.memberType), created_by_ids: formatMultiSelect(filterCriteria.createdBy), product_spec_ids: formatMultiSelect(filterCriteria.productSpec), source: formatMultiSelect(filterCriteria.source) }; if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) { params.start_date = filterCriteria.dateRange[0] ? dayjs(filterCriteria.dateRange[0]).format("YYYY-MM-DD") : undefined; params.end_date = filterCriteria.dateRange[1] ? dayjs(filterCriteria.dateRange[1]).format("YYYY-MM-DD") : undefined; } if (filterCriteria.quickFilters) { if (filterCriteria.quickFilters.type === 'intent') params.want_to = filterCriteria.quickFilters.value; if (filterCriteria.quickFilters.type === 'status') params.status = filterCriteria.quickFilters.value; } Object.keys(params).forEach((key) => { if (params[key] === undefined || params[key] === null) { delete params[key]; } }); return params; }, [tableData, filterCriteria]);
 
   useEffect(() => { const fetchInitialData = async () => { setInitialLoading(true); try { await Promise.all([dispatch(getWallListingAction(apiParams)), dispatch(getProductsDataAsync()), dispatch(getParentCategoriesAction()), dispatch(getSubcategoriesByCategoryIdAction(0)), dispatch(getBrandAction()), dispatch(getMemberTypeAction()), dispatch(getProductSpecificationsAction()), dispatch(getEmployeesAction()), dispatch(getAllCompany()), dispatch(getAllUsersAction())]); } catch (error) { console.error("Failed to fetch initial data", error); toast.push(<Notification type="danger" title="Error">Could not load initial data.</Notification>); } finally { setInitialLoading(false); } }; fetchInitialData(); }, [dispatch]);
-  useEffect(() => { const timerId = setTimeout(() => { if (!initialLoading) { dispatch(getWallListingAction(apiParams)); } }, 300); return () => { clearTimeout(timerId); }; }, [dispatch, apiParams, initialLoading]);
+  useEffect(() => { const timerId = setTimeout(() => { if (!initialLoading) { dispatch(getWallListingAction(apiParams)).then(() => { setIsRefetching(false) }); } }, 300); return () => { clearTimeout(timerId); }; }, [dispatch, apiParams, initialLoading]);
+
+  // --- Add this useEffect to manage the refetching state ---
+  useEffect(() => {
+    // When the data is no longer loading, the refetch is complete
+    if (masterLoadingStatus !== 'loading') {
+      setIsRefetching(false);
+    }
+  }, [masterLoadingStatus]);
 
   const pageData = useMemo(() => { return Array.isArray(wallListing?.data?.data) ? wallListing.data.data.map(mapApiToWallItem) : []; }, [wallListing, mapApiToWallItem]);
   const total = wallListing?.data?.total || 0;
@@ -623,16 +633,19 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const handleSendEmail = useCallback((item: WallItem) => { if (!item.member_email) { toast.push(<Notification type="warning" title="No Email Address" children="This member does not have a valid email address." />); return; } const subject = `Regarding your wall listing: ${item.product_name}`; const body = `Dear ${item.member_name},\n\nI am interested in your listing for "${item.product_name}".\n\nKind regards,`; window.open(`mailto:${item.member_email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`); }, []);
   const handleSendWhatsapp = useCallback((item: WallItem) => { const phone = item.member_phone?.replace(/\D/g, ''); if (!phone) { toast.push(<Notification type="warning" title="No Mobile Number" children="This member does not have a valid phone number." />); return; } const message = `Hi ${item.member_name}, I'm interested in your listing for "${item.product_name}".`; window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank'); }, []);
   const onConfirmDeleteSelectedItems = useCallback(async () => { if (selectedItems.length === 0) { toast.push(<Notification title="No items selected" type="info">Please select items to delete.</Notification>); return; } setDeleteSelectedConfirmOpen(false); const ids = selectedItems.map((item) => item.id).join(","); try { await dispatch(deleteAllWallAction({ ids })).unwrap(); toast.push(<Notification title="Success" type="success">{selectedItems.length} item(s) deleted.</Notification>); setSelectedItems([]); dispatch(getWallListingAction(apiParams)); } catch (error: any) { toast.push(<Notification title="Error" type="danger">{error.message || "Bulk delete failed."}</Notification>); } }, [dispatch, selectedItems, apiParams]);
-  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(prev => ({ ...prev, ...data, quickFilters: null })); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
-  const onClearFilters = useCallback(() => { const defaults = filterFormSchema.parse({}); filterFormMethods.reset(defaults); setFilterCriteria(defaults); handleSetTableData({ query: "", pageIndex: 1 }); }, [filterFormMethods, handleSetTableData]);
-  const handleCardClick = (type: 'status' | 'intent', value: string) => { const newFilters = filterFormSchema.parse({}); if (type === 'status' && value === 'today') { const todayStart = dayjs().startOf('day').toDate(); const todayEnd = dayjs().endOf('day').toDate(); newFilters.dateRange = [todayStart, todayEnd]; } else if (type === 'status') { const statusOption = recordStatusOptions.find(opt => opt.value === value); if (statusOption) { newFilters.filterRecordStatuses = [statusOption]; } } else if (type === 'intent') { const intentOption = intentOptions.find(opt => opt.value === value); if (intentOption) { newFilters.filterIntents = [intentOption]; } } setFilterCriteria(newFilters); handleSetTableData({ query: "", pageIndex: 1 }); };
-  const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: any) => { setFilterCriteria(prev => { const newFilters = { ...prev }; const currentValues = prev[key] as { value: any }[] | undefined; if (Array.isArray(currentValues)) { (newFilters as any)[key] = currentValues.filter(item => item.value !== value.value); } else { (newFilters as any)[key] = null; } return newFilters; }); }, []);
+  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setIsRefetching(true); setFilterCriteria(prev => ({ ...prev, ...data, quickFilters: null })); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
+  const onClearFilters = useCallback(() => { setIsRefetching(true); const defaults = filterFormSchema.parse({}); filterFormMethods.reset(defaults); setFilterCriteria(defaults); handleSetTableData({ query: "", pageIndex: 1 }); }, [filterFormMethods, handleSetTableData]);
+  const handleCardClick = (type: 'status' | 'intent', value: string) => { setIsRefetching(true); const newFilters = filterFormSchema.parse({}); if (type === 'status' && value === 'today') { const todayStart = dayjs().startOf('day').toDate(); const todayEnd = dayjs().endOf('day').toDate(); newFilters.dateRange = [todayStart, todayEnd]; } else if (type === 'status') { const statusOption = recordStatusOptions.find(opt => opt.value === value); if (statusOption) { newFilters.filterRecordStatuses = [statusOption]; } } else if (type === 'intent') { const intentOption = intentOptions.find(opt => opt.value === value); if (intentOption) { newFilters.filterIntents = [intentOption]; } } setFilterCriteria(newFilters); handleSetTableData({ query: "", pageIndex: 1 }); };
+  const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: any) => { setIsRefetching(true); setFilterCriteria(prev => { const newFilters = { ...prev }; const currentValues = prev[key] as { value: any }[] | undefined; if (Array.isArray(currentValues)) { (newFilters as any)[key] = currentValues.filter(item => item.value !== value.value); } else { (newFilters as any)[key] = null; } return newFilters; }); }, []);
   const handleOpenExportReasonModal = useCallback(() => { if (total === 0) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true); }, [total, exportReasonFormMethods]);
   const handleConfirmExportWithReason = useCallback(async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const moduleName = "WallListing"; const timestamp = dayjs().format("YYYY-MM-DD"); const fileName = `wall_listing_export_${timestamp}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName, })).unwrap(); toast.push(<Notification title="Reason Submitted" type="info" duration={2000} message="Now fetching data for export..." />); const exportParams = { ...apiParams, per_page: 0, page: 1 }; const exportDataResponse = await dispatch(getWallListingAction(exportParams)).unwrap(); if (!exportDataResponse?.status) { throw new Error(exportDataResponse?.message || "Failed to fetch data for export."); } const allFilteredData = (exportDataResponse?.data?.data || []).map(mapApiToWallItem); const success = exportWallItemsToCsv(fileName, allFilteredData); if (success) { setIsExportReasonModalOpen(false); } } catch (error: any) { toast.push(<Notification title="Failed to Export" type="danger" message={error.message || "An unknown error occurred"} />); } finally { setIsSubmittingExportReason(false); } }, [apiParams, dispatch, mapApiToWallItem]);
-  const handlePaginationChange = (page: number) => handleSetTableData({ pageIndex: page });
-  const handlePageSizeChange = (value: number) => { handleSetTableData({ pageSize: value, pageIndex: 1 }); setSelectedItems([]); };
-  const handleSort = (sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 });
-  const handleSearchChange = (query: string) => handleSetTableData({ query, pageIndex: 1 });
+
+  // --- Update all data refetch handlers to set isRefetching to true ---
+  const handlePaginationChange = (page: number) => { setIsRefetching(true); handleSetTableData({ pageIndex: page }); };
+  const handlePageSizeChange = (value: number) => { setIsRefetching(true); handleSetTableData({ pageSize: value, pageIndex: 1 }); setSelectedItems([]); };
+  const handleSort = (sort: OnSortParam) => { setIsRefetching(true); handleSetTableData({ sort, pageIndex: 1 }); };
+  const handleSearchChange = (query: string) => { setIsRefetching(true); handleSetTableData({ query, pageIndex: 1 }); };
+
   const handleRowSelect = (checked: boolean, row: WallItem) => setSelectedItems((prev) => checked ? [...prev, row] : prev.filter((item) => item.id !== row.id));
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<WallItem>[]) => { const originals = currentRows.map((r) => r.original); if (checked) { setSelectedItems((prev) => { const oldIds = new Set(prev.map((i) => i.id)); return [...prev, ...originals.filter((o) => !oldIds.has(o.id))]; }); } else { const currentIds = new Set(originals.map((o) => o.id)); setSelectedItems((prev) => prev.filter((i) => !currentIds.has(i.id))); } }, []);
   const handleImportData = useCallback(() => setImportDialogOpen(true), []);
@@ -674,20 +687,21 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           <WallTableTools isDashboard={!!isDashboard} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onImport={handleImportData} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
           {!isDashboard && <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />}
           <div className="mt-4">
-            {initialLoading ? (
+            {/* --- Updated rendering logic --- */}
+            {initialLoading || isRefetching ? (
               <WallTable
                 columns={skeletonColumns}
                 data={skeletonData}
-                loading={false}
+                loading={true}
                 selectable={false}
-                pagingData={{ total: tableData.pageSize, pageIndex: 1, pageSize: tableData.pageSize }}
+                pagingData={{ total: total || tableData.pageSize, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
                 onPaginationChange={() => { }} onSelectChange={() => { }} onRowSelect={() => { }} onAllRowSelect={() => { }} onSort={() => { }}
                 selectedItems={[]}
               />
             ) : (
               <WallTable
                 selectable={!isDashboard}
-                columns={filteredColumns} data={pageData} loading={masterLoadingStatus === "loading" && !initialLoading}
+                columns={filteredColumns} data={pageData} loading={masterLoadingStatus === 'loading'}
                 pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
                 selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handlePageSizeChange} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} onSort={handleSort} />
             )}
