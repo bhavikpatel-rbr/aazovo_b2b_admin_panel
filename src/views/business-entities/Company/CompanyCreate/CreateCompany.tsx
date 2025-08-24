@@ -2035,7 +2035,7 @@ const MemberAddForm = ({ onSuccess, onCancel }: { onSuccess: () => void; onCance
     const uniqueCodes = new Set<string>();
     (CountriesData || []).forEach((c: any) => {
       if (c.phone_code) {
-        uniqueCodes.add(`+${c.phone_code}`);
+        uniqueCodes.add(`${c.phone_code}`);
       }
     });
     return Array.from(uniqueCodes)
@@ -2398,6 +2398,35 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
         }
         */
       })
+    ).optional(),
+    company_spot_verification: z.array(
+        z.object({
+            id: z.string().optional(),
+            verified: z.boolean().optional().nullable(),
+            verified_by_id: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
+            photo_upload: z.any().optional().nullable(),
+            remark: z.string().optional().nullable(),
+        }).superRefine((data, ctx) => {
+            // A row is "active" if any field has a value, indicating user interaction.
+            const isRowActive = data.verified === true || 
+                                !!data.verified_by_id?.value || 
+                                !!data.photo_upload || 
+                                (!!data.remark && data.remark.trim() !== '');
+
+            // If the row is not active (i.e., it's a new, empty row), skip validation.
+            if (!isRowActive) {
+                return; 
+            }
+
+            // If the row is active, then the "Verified By" field is required.
+            if (!data.verified_by_id || !data.verified_by_id.value) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['verified_by_id'],
+                    message: 'Verified By is required.',
+                });
+            }
+        })
     ).optional(),
     gst_number: z.string().trim().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number format.").optional().or(z.literal("")).nullable(),
     pan_number: z.string().trim().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN card number format.").optional().or(z.literal("")).nullable(),
