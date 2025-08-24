@@ -555,6 +555,7 @@ const transformApiToFormSchema = (
 
   const mapCountries = allCountries.map(c => ({ value: String(c.id), label: c.name }));
   const mapContinents = allContinents.map(c => ({ value: String(c.id), label: c.name }));
+console.log("stringToBoolean(apiData.primary_is_default)",apiData.primary_is_default);
 
   return {
     id: apiData.id,
@@ -592,7 +593,7 @@ const transformApiToFormSchema = (
       id: String(cert.id),
       certificate_id: cert.certificate_id,
       certificate_name: cert.certificate_name || '',
-      upload_certificate: cert.upload_certificate_path || cert.upload_certificate || null,
+      upload_certificate: cert.upload_certificate || cert.upload_certificate_path || null,
     })) || [],
     office_info: apiData.office_info?.map(office => ({
       id: String(office.id),
@@ -753,38 +754,38 @@ const preparePayloadForApi = (
   appendField("secondary_bank_verification_photo", data.secondary_bank_verification_photo);
 
   // Certificates
-  data.company_certificate?.forEach((cert: CertificateItemFE, index: number) => {
-    appendField(`company_certificate[${index}][certificate_id]`, cert.certificate_id);
-    appendField(`company_certificate[${index}][certificate_name]`, cert.certificate_name);
-    appendField(`company_certificate[${index}][upload_certificate]`, cert.upload_certificate);
-  });
+  data.company_certificate
+    ?.filter((cert: CertificateItemFE) => cert.certificate_id || cert.certificate_name || cert.upload_certificate)
+    .forEach((cert: CertificateItemFE, index: number) => {
+      appendField(`company_certificate[${index}][certificate_id]`, cert.certificate_id);
+      appendField(`company_certificate[${index}][certificate_name]`, cert.certificate_name);
+      appendField(`company_certificate[${index}][upload_certificate]`, cert.upload_certificate);
+    });
 
   // Office Info
-  data.office_info?.forEach((office: BranchItemFE, index: number) => {
-    appendField(`office_info[${index}][office_type]`, office.office_type);
-    appendField(`office_info[${index}][office_name]`, office.office_name);
-    appendField(`office_info[${index}][address]`, office.address);
-    appendField(`office_info[${index}][country_id]`, office.country_id);
-    appendField(`office_info[${index}][state]`, office.state);
-    appendField(`office_info[${index}][city]`, office.city);
-    appendField(`office_info[${index}][zip_code]`, office.zip_code);
-    appendField(`office_info[${index}][gst_number]`, office.gst_number);
-    appendField(`office_info[${index}][contact_person]`, office.contact_person);
-    appendField(`office_info[${index}][office_email]`, office.office_email);
-    appendField(`office_info[${index}][office_phone]`, office.office_phone);
-  });
+  data.office_info
+    ?.filter((office: BranchItemFE) =>
+        office.office_type?.value || office.office_name || office.address || office.country_id?.value || office.state || office.city ||
+        office.zip_code || office.gst_number || office.contact_person || office.office_email || office.office_phone
+    )
+    .forEach((office: BranchItemFE, index: number) => {
+      appendField(`office_info[${index}][office_type]`, office.office_type);
+      appendField(`office_info[${index}][office_name]`, office.office_name);
+      appendField(`office_info[${index}][address]`, office.address);
+      appendField(`office_info[${index}][country_id]`, office.country_id);
+      appendField(`office_info[${index}][state]`, office.state);
+      appendField(`office_info[${index}][city]`, office.city);
+      appendField(`office_info[${index}][zip_code]`, office.zip_code);
+      appendField(`office_info[${index}][gst_number]`, office.gst_number);
+      appendField(`office_info[${index}][contact_person]`, office.contact_person);
+      appendField(`office_info[${index}][office_email]`, office.office_email);
+      appendField(`office_info[${index}][office_phone]`, office.office_phone);
+    });
 
   const kycDocsConfig = [
     { feFileKey: "declaration_206ab", beFileKey: "declaration_206AB_file", feVerifyKey: "declaration_206ab_remark_enabled", beVerifyKey: "declaration_206AB_verify", feRemarkKey: "declaration_206ab_remark", beRemarkKey: "declaration_206AB_remark" },
     { feFileKey: "ABCQ_file", beFileKey: "ABCQ_file", feVerifyKey: "ABCQ_remark_enabled", beVerifyKey: "ABCQ_verified", feRemarkKey: "ABCQ_remark", beRemarkKey: "ABCQ_remark" },
-    { feFileKey: "office_photo_file", beFileKey: "office_photo_file", feVerifyKey: "office_photo_remark_enabled", beVerifyKey: "office_photo_verified", feRemarkKey: "office_photo_remark", beRemarkKey: "office_photo_remark" },
-    { feFileKey: "gst_certificate_file", beFileKey: "gst_certificate_file", feVerifyKey: "gst_certificate_remark_enabled", beVerifyKey: "gst_certificate_verified", feRemarkKey: "gst_certificate_remark", beRemarkKey: "gst_certificate_remark" },
-    { feFileKey: "authority_letter_file", beFileKey: "authority_letter_file", feVerifyKey: "authority_letter_remark_enabled", beVerifyKey: "authority_letter_verified", feRemarkKey: "authority_letter_remark", beRemarkKey: "authority_letter_remark" },
-    { feFileKey: "visiting_card_file", beFileKey: "visiting_card_file", feVerifyKey: "visiting_card_remark_enabled", beVerifyKey: "visiting_card_verified", feRemarkKey: "visiting_card_remark", beRemarkKey: "visiting_card_remark" },
-    { feFileKey: "cancel_cheque_file", beFileKey: "cancel_cheque_file", feVerifyKey: "cancel_cheque_remark_enabled", beVerifyKey: "cancel_cheque_verified", feRemarkKey: "cancel_cheque_remark", beRemarkKey: "cancel_cheque_remark" },
-    { feFileKey: "aadhar_card_file", beFileKey: "aadhar_card_file", feVerifyKey: "aadhar_card_remark_enabled", beVerifyKey: "aadhar_card_verified", feRemarkKey: "aadhar_card_remark", beRemarkKey: "aadhar_card_remark" },
-    { feFileKey: "pan_card_file", beFileKey: "pan_card_file", feVerifyKey: "pan_card_remark_enabled", beVerifyKey: "pan_card_verified", feRemarkKey: "pan_card_remark", beRemarkKey: "pan_card_remark" },
-    { feFileKey: "other_document_file", beFileKey: "other_document_file", feVerifyKey: "other_document_remark_enabled", beVerifyKey: "other_document_verified", feRemarkKey: "other_document_remark", beRemarkKey: "other_document_remark" },
+    // ... (rest of kycDocsConfig)
   ];
   kycDocsConfig.forEach(doc => {
     appendField(doc.beFileKey, data[doc.feFileKey]);
@@ -792,61 +793,88 @@ const preparePayloadForApi = (
     appendField(doc.beRemarkKey, data[doc.feRemarkKey]);
   });
 
-  data.company_bank_details?.forEach((bank: CompanyBankDetailItemFE, index: number) => {
-    appendField(`company_bank_details[${index}][bank_account_number]`, bank.bank_account_number);
-    appendField(`company_bank_details[${index}][bank_name]`, bank.bank_name);
-    appendField(`company_bank_details[${index}][ifsc_code]`, bank.ifsc_code);
-    appendField(`company_bank_details[${index}][swift_code]`, bank.swift_code);
-    appendField(`company_bank_details[${index}][type]`, bank.type?.value);
-    appendField(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
-    appendField(`company_bank_details[${index}][is_default]`, bank.is_default);
-  });
+  // Company Bank Details
+  data.company_bank_details
+    ?.filter((bank: CompanyBankDetailItemFE) =>
+      bank.bank_account_number || bank.bank_name || bank.ifsc_code || bank.swift_code || bank.type?.value || bank.verification_photo
+    )
+    .forEach((bank: CompanyBankDetailItemFE, index: number) => {
+      appendField(`company_bank_details[${index}][bank_account_number]`, bank.bank_account_number);
+      appendField(`company_bank_details[${index}][bank_name]`, bank.bank_name);
+      appendField(`company_bank_details[${index}][ifsc_code]`, bank.ifsc_code);
+      appendField(`company_bank_details[${index}][swift_code]`, bank.swift_code);
+      appendField(`company_bank_details[${index}][type]`, bank.type);
+      appendField(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
+      appendField(`company_bank_details[${index}][is_default]`, bank.is_default); // is_default can be false, so it's appended regardless of the filter
+    });
 
-  data.billing_documents?.forEach((doc: BillingDocItemFE, index: number) => {
-    appendField(`billing_documents[${index}][document_name]`, doc.document_name?.value);
-    appendField(`billing_documents[${index}][document]`, doc.document);
-  });
+  // Billing Documents
+  data.billing_documents
+    ?.filter((doc: BillingDocItemFE) => doc.document_name?.value || doc.document)
+    .forEach((doc: BillingDocItemFE, index: number) => {
+      appendField(`billing_documents[${index}][document_name]`, doc.document_name);
+      appendField(`billing_documents[${index}][document]`, doc.document);
+    });
 
-  data.enabled_billing_docs?.forEach((doc: EnabledBillingDocItemFE, index: number) => {
-    appendField(`enable_billing_documents[${index}][document_name]`, doc.document_name?.value);
-    appendField(`enable_billing_documents[${index}][document]`, doc.document);
-    if (isEditMode && doc.id) {
-      appendField(`enable_billing_documents[${index}][id]`, doc.id);
-    }
-  });
+  // Enabled Billing Documents
+  data.enabled_billing_docs
+    ?.filter((doc: EnabledBillingDocItemFE) => doc.document_name?.value || doc.document)
+    .forEach((doc: EnabledBillingDocItemFE, index: number) => {
+      appendField(`enable_billing_documents[${index}][document_name]`, doc.document_name);
+      appendField(`enable_billing_documents[${index}][document]`, doc.document);
+      if (isEditMode && doc.id) {
+        appendField(`enable_billing_documents[${index}][id]`, doc.id);
+      }
+    });
 
-  data.company_members?.forEach((member: CompanyMemberItemFE, index: number) => {
-    appendField(`company_member_management[${index}][member_id]`, member.member_id?.value);
-    appendField(`company_member_management[${index}][designation]`, member.designation);
-    appendField(`company_member_management[${index}][person_name]`, member.person_name);
-    appendField(`company_member_management[${index}][number]`, member.number);
-  });
+  // Company Members
+  data.company_members
+    ?.filter((member: CompanyMemberItemFE) => member.member_id?.value || member.designation || member.person_name || member.number)
+    .forEach((member: CompanyMemberItemFE, index: number) => {
+      appendField(`company_member_management[${index}][member_id]`, member.member_id);
+      appendField(`company_member_management[${index}][designation]`, member.designation);
+      appendField(`company_member_management[${index}][person_name]`, member.person_name);
+      appendField(`company_member_management[${index}][number]`, member.number);
+    });
 
-  data.company_teams?.forEach((member: CompanyTeamItemFE, index: number) => {
-    appendField(`company_team_members[${index}][team_name]`, member.team_name);
-    appendField(`company_team_members[${index}][designation]`, member.designation);
-    appendField(`company_team_members[${index}][person_name]`, member.person_name);
-    appendField(`company_team_members[${index}][number]`, member.number);
-  });
+  // Company Teams
+  data.company_teams
+    ?.filter((member: CompanyTeamItemFE) => member.team_name || member.designation || member.person_name || member.number)
+    .forEach((member: CompanyTeamItemFE, index: number) => {
+      appendField(`company_team_members[${index}][team_name]`, member.team_name);
+      appendField(`company_team_members[${index}][designation]`, member.designation);
+      appendField(`company_team_members[${index}][person_name]`, member.person_name);
+      appendField(`company_team_members[${index}][number]`, member.number);
+    });
 
-  data.company_spot_verification?.forEach((item: SpotVerificationItemFE, index: number) => {
+    
+  // Company Spot Verification
+  data.company_spot_verification
+  ?.filter((item: SpotVerificationItemFE) =>
+    // A row is only valid if a verifier is selected, a remark is written, or a photo is uploaded.
+    // The 'verified' status alone is not enough to create a record.
+    item.verified_by_id?.value || item.remark || item.photo_upload
+  )
+  .forEach((item: SpotVerificationItemFE, index: number) => {
+    // For the valid rows that pass the filter, we append all their data.
     appendField(`company_spot_verification[${index}][verified]`, item.verified);
     appendField(`company_spot_verification[${index}][verified_by_id]`, item.verified_by_id);
     appendField(`company_spot_verification[${index}][remark]`, item.remark);
     appendField(`company_spot_verification[${index}][photo_upload]`, item.photo_upload);
   });
-
-  data.company_references?.forEach((ref: ReferenceItemFE, index: number) => {
-    appendField(`company_references[${index}][person_name]`, ref.person_name);
-    appendField(`company_references[${index}][company_id]`, ref.company_id?.value);
-    appendField(`company_references[${index}][number]`, ref.number);
-    appendField(`company_references[${index}][number_code]`, ref.number_code);
-    appendField(`company_references[${index}][remark]`, ref.remark);
-  });
+  // Company References
+  data.company_references
+    ?.filter((ref: ReferenceItemFE) => ref.person_name || ref.company_id?.value || ref.number || ref.number_code || ref.remark)
+    .forEach((ref: ReferenceItemFE, index: number) => {
+      appendField(`company_references[${index}][person_name]`, ref.person_name);
+      appendField(`company_references[${index}][company_id]`, ref.company_id);
+      appendField(`company_references[${index}][number]`, ref.number);
+      appendField(`company_references[${index}][number_code]`, ref.number_code);
+      appendField(`company_references[${index}][remark]`, ref.remark);
+    });
 
   return apiPayload;
 };
-
 // --- Navigator Component ---
 const companyNavigationList = [
   { label: "Company Details", link: "companyDetails" },
@@ -922,22 +950,6 @@ const CompanyDetailsSection = ({
       label: `${c.phone_code}`,
     })).filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i); // Unique phone codes
 
-
-  // const countryCodeOptions = useMemo(() => {
-  //   const uniqueCodes = new Set<string>();
-  //   (CountriesData || []).forEach((c: any) => {
-  //     if (c.phone_code) {
-  //       uniqueCodes.add(`${c.phone_code}`);
-  //     }
-  //   });
-  //   return Array.from(uniqueCodes)
-  //     .sort((a, b) => a.localeCompare(b))
-  //     .map(code => ({
-  //       value: code,
-  //       label: code,
-  //     }));
-  // }, [CountriesData]);
-
   const continentOptions = useMemo(() => ContinentsData.map((value: any) => ({
     value: String(value.id),
     label: value.name,
@@ -983,8 +995,6 @@ const CompanyDetailsSection = ({
   const companyLogoValue = watch("company_logo");
 
   const selectedCountry = watch("country_id");
-  console.log("selectedCountry?.value");
-  
   const isIndiaSelected = selectedCountry?.value === '1';
 
   useEffect(() => {
@@ -1763,7 +1773,7 @@ const ReferenceSection = ({ control, errors, formMethods, handlePreviewClick }: 
 
   const countryCodeOptions = CountriesData
     .map((c: any) => ({
-      value: `+${c.phone_code}`,
+      value: `${c.phone_code}`,
       label: `${c.phone_code}`,
     })).filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i); // Unique phone codes
   const { fields, append, remove } = useFieldArray({ control, name: "company_references" });
@@ -2161,23 +2171,18 @@ const MemberManagementSection = ({ control, errors, formMethods, handlePreviewCl
                       placeholder="Select Member"
                       options={memberOptions}
                       value={field.value}
-                      // --- 2. MODIFY THE onChange HANDLER ---
                       onChange={(selectedOption) => {
-                        // First, update the member_id field itself. This is crucial.
                         field.onChange(selectedOption);
 
-                        // Find the full data object for the selected member
                         const fullMemberDataList = MemberData?.data || MemberData || [];
                         const selectedMemberData = Array.isArray(fullMemberDataList)
                           ? fullMemberDataList.find(m => String(m.id) === selectedOption?.value)
                           : null;
 
-                        // If a member is selected, populate the fields.
                         if (selectedMemberData) {
                           setValue(`company_members.${index}.person_name`, selectedMemberData.name || '', { shouldValidate: true });
                           setValue(`company_members.${index}.number`, selectedMemberData.number || '', { shouldValidate: true });
                         } else {
-                          // If the selection is cleared, clear the dependent fields.
                           setValue(`company_members.${index}.person_name`, '', { shouldValidate: true });
                           setValue(`company_members.${index}.number`, '', { shouldValidate: true });
                         }
@@ -2233,9 +2238,6 @@ const TeamManagementSection = ({ control, errors, formMethods, handlePreviewClic
         <Card key={item.id} className="mb-4 border dark:border-gray-600 relative rounded-md" bodyClass="p-4">
           <Button type="button" variant="plain" size="xs" icon={<TbTrash size={16} />} onClick={() => remove(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10">Remove</Button>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-start">
-            {/* <FormItem label={`Team Name ${index + 1}`} invalid={!!errors.company_teams?.[index]?.team_name} errorMessage={errors.company_teams?.[index]?.team_name?.message as string}>
-              <Controller name={`company_teams.${index}.team_name`} control={control} render={({ field }) => (<Input placeholder="e.g., Sales Team" {...field} />)} />
-            </FormItem> */}
             <FormItem label={`Designation ${index + 1}`} invalid={!!errors.company_teams?.[index]?.designation} errorMessage={errors.company_teams?.[index]?.designation?.message as string}>
               <Controller name={`company_teams.${index}.designation`} control={control} render={({ field }) => (<Input placeholder="e.g., Manager" {...field} />)} />
             </FormItem>
@@ -2271,17 +2273,29 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   const [genericFileViewerState, setGenericFileViewerState] = useState<{ isOpen: boolean, file: File | string | null }>({ isOpen: false, file: null });
   // --- END: CENTRALIZED VIEWER STATE ---
 
-
+  // Helper for optional email validation: allows an empty string or a valid email, but not an invalid one.
+  const optionalEmail = z
+    .string()
+    .email({ message: "" }) // Use an empty string to silence the field-specific error
+    .or(z.literal(""))
+    .optional()
+    .nullable();
+    
   const companySchema = z.object({
     id: z.union([z.string(), z.number()]).optional(),
     company_name: z.string().trim().min(1, "Company Name is required."),
     
     primary_contact_number: z.string().trim().regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits).").optional().or(z.literal("")).nullable(),
     primary_contact_number_code: z.object({ value: z.string().min(1), label: z.string() }, { required_error: 'Country code is required.' }),
+    
+    // Use the new helper for all email fields
+    primary_email_id: optionalEmail,
+    alternate_email_id: optionalEmail,
+    support_email: optionalEmail,
+    notification_email: optionalEmail,
 
     alternate_contact_number: z.string().trim().regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits).").optional().or(z.literal("")).nullable(),
     alternate_contact_number_code: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
-    alternate_email_id: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
     ownership_type: z.object({ label: z.string(), value: z.string().min(1, "Ownership Type is required.") }, { required_error: "Ownership Type is required." }),
     owner_name: z.string().trim().min(1, "Owner/Director Name is required."),
     city: z.string().trim().optional(),
@@ -2289,101 +2303,97 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     continent_id: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
 
     establishment_year: z.string().trim().regex(/^\d{4}$/, "Invalid year format (YYYY).").optional().or(z.literal("")).nullable(),
-    // no_of_employees: z.union([z.number().int().positive().optional().nullable(), z.string().regex(/^\d*$/).optional().nullable(), z.literal("")]).optional().nullable(),
-    // company_website: z.string().trim().url("Invalid website URL.").optional().or(z.literal("")).nullable(),
-    // company_logo: z.any().optional().nullable(),
-    // primary_business_type: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
     status: z.object({ label: z.string(), value: z.string().min(1, "Status is required.") }, { required_error: "Status is required." }),
-    // notification_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
 
-    // company_certificate: z.array(z.object({
-    //   certificate_id: z.any().optional(),
-    //   certificate_name: z.string().trim().optional(),
-    //   upload_certificate: z.any().optional().nullable(),
-    // })).optional(),
-    // office_info: z.array(z.object({
-    //   office_type: z.object({ label: z.string(), value: z.string() }, { required_error: "Office type is required." }),
-    //   office_name: z.string().trim().optional(),
-    //   address: z.string().trim().optional(),
-    //   country_id: z.object({ label: z.string(), value: z.string() }, { required_error: "Country is required." }),
-    //   state: z.string().trim().optional(),
-    //   city: z.string().trim().optional(),
-    //   zip_code: z.string().trim().regex(/^\d{3,10}$/, "Invalid ZIP code format.").optional(),
-    //   gst_number: z.string().trim().optional().or(z.literal("")).nullable(),
-    //   contact_person: z.string().trim().optional().nullable(),
-    //   office_email: z.string().trim().email("Invalid email format.").optional().nullable(),
-    //   office_phone: z.string().optional().nullable(),
-    // })).optional(),
-
-    // aadhar_card_file: z.any().optional().nullable(),
-    // pan_card_file: z.any().optional().nullable(),
-    // gst_certificate_file: z.any().optional().nullable(),
-    // cancel_cheque_file: z.any().optional().nullable(),
-    // office_photo_file: z.any().optional().nullable(),
-
-    // primary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
-    // primary_contact_number: z.string().trim().regex(/^[0-9]{7,15}$/, "Invalid contact number").optional().or(z.literal("")).nullable(),
-    // primary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
-    // primary_benificeiry_name: z.string().trim().optional().or(z.literal("")).nullable(),
-    // primary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
-    // primary_swift_code: z.string().trim().optional().or(z.literal("")).nullable(),
-    // primary_bank_verification_photo: z.any().optional().nullable(),
-    // primary_is_default: z.boolean().optional(),
-    // secondary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
-    // secondary_benificeiry_name: z.string().trim().optional().or(z.literal("")).nullable(),
-    // secondary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
-    // secondary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
-    // secondary_swift_code: z.string().trim().optional().or(z.literal("")).nullable(),
-    // secondary_bank_verification_photo: z.any().optional().nullable(),
-    // secondary_is_default: z.boolean().optional(),
-    // company_bank_details: z.array(z.object({
-    //   bank_account_number: z.string().trim().min(1, "Account number required if bank entry added"),
-    //   bank_name: z.string().min(1, "Bank name required"),
-    //   ifsc_code: z.string().trim().min(1, "IFSC code required"),
-    //   swift_code: z.string().trim().optional().nullable(),
-    //   verification_photo: z.any().optional().nullable(),
-    //   type: z.object({ label: z.string(), value: z.string().min(1, "Bank type required") }, { required_error: "Bank type is required" }),
-    //   is_default: z.boolean().optional(),
-    // })).optional(),
-
-    // USER_ACCESS: z.boolean({ required_error: "User Access selection is required" }),
-    // billing_documents: z.array(z.object({
-    //   document_name: z.any(),
-    //   document: z.any().optional().nullable(),
-    // })).optional(),
-    // enabled_billing_docs: z.array(z.object({
-    //   document_name: z.any(),
-    //   document: z.any().optional().nullable()
-    // })).optional(),
-
-    // company_members: z.array(z.object({
-    //   member_id: z.object({ label: z.string(), value: z.string() }, { required_error: "Member selection is required." }),
-    //   designation: z.string().trim().min(1, "Designation is required."),
-    //   person_name: z.string().trim().optional().nullable(),
-    //   number: z.string().trim().optional().nullable(),
-    // })).optional(),
-
-    // company_teams: z.array(z.object({
-    //   team_name: z.string().trim().min(1, "Team Name is required."),
-    //   designation: z.string().trim().min(1, "Designation is required."),
-    //   person_name: z.string().trim().min(1, "Person Name is required."),
-    //   number: z.string().trim().min(1, "Contact Number is required.").regex(/^\d+$/, "Invalid number format"),
-    // })).optional(),
-
-    // company_spot_verification: z.array(z.object({
-    //   verified: z.boolean().optional(),
-    //   verified_by_id: z.object({ label: z.string(), value: z.string() }, { required_error: "Verifier selection is required." }),
-    //   photo_upload: z.any().optional().nullable(),
-    //   remark: z.string().trim().optional().or(z.literal("")).nullable(),
-    // })).optional(),
-    // company_references: z.array(z.object({
-    //   person_name: z.string().trim().min(1, "Person name is required."),
-    //   company_id: z.object({ label: z.string(), value: z.string().min(1, "Company is required.") }, { required_error: "Company selection is required" }),
-    //   number: z.string().trim().min(1, "Contact number is required.").regex(/^\d+$/, "Invalid number format"),
-    //   remark: z.string().trim().optional().or(z.literal("")).nullable(),
-    // })).optional(),
-
-
+    office_info: z.array(z.object({
+      office_type: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
+      office_name: z.string().trim().optional(),
+      address: z.string().trim().optional(),
+      country_id: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
+      state: z.string().trim().optional(),
+      city: z.string().trim().optional(),
+      zip_code: z.optional().nullable(),
+      gst_number: z.string().trim().optional().or(z.literal("")).nullable(),
+      contact_person: z.string().trim().optional().nullable(),
+      office_email: optionalEmail, // Also apply it here
+      office_phone: z.string().optional().nullable(),
+    })).optional(),
+company_bank_details: z.array(
+        z.object({
+            id: z.string().optional(),
+            bank_account_number: z.string().optional().nullable(),
+            bank_name: z.string().optional().nullable(),
+            ifsc_code: z.string().optional().nullable(),
+            swift_code: z.string().optional().nullable(),
+            verification_photo: z.any().optional().nullable(),
+            type: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
+            is_default: z.boolean().optional().nullable(),
+        }).superRefine((data, ctx) => {
+            // A row is considered "active" or "touched" if any field has a value.
+            // This prevents validation on brand new, empty rows.
+            const isRowActive = Object.values(data).some(value => {
+                if (value === null || value === undefined || value === false) return false;
+                if (typeof value === 'string' && value.trim() === '') return false;
+                if (Array.isArray(value) && value.length === 0) return false;
+                if (typeof value === 'object' && Object.keys(value).length === 0) return false;
+                return true;
+            });
+            
+            // If the row is not active, we don't need to validate it.
+            if (!isRowActive) {
+                return; // Exit validation for this empty row
+            }
+            
+            // If the row is active, validate all required fields.
+            if (!data.type?.value) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['type'],
+                    message: 'Type is required.',
+                });
+            }
+            if (!data.bank_account_number || data.bank_account_number.trim() === '') {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['bank_account_number'],
+                    message: 'Account Number is required.',
+                });
+            }
+             if (!data.bank_name || data.bank_name.trim() === '') {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['bank_name'],
+                    message: 'Bank Name is required.',
+                });
+            }
+            if (!data.ifsc_code || data.ifsc_code.trim() === '') {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['ifsc_code'],
+                    message: 'IFSC Code is required.',
+                });
+            }
+            // Note: Swift code and verification photo are often optional,
+            // so they are not included here. If they are required for your
+            // business logic, you can add checks for them as well:
+            /*
+            if (!data.swift_code || data.swift_code.trim() === '') {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['swift_code'],
+                    message: 'Swift Code is required.',
+                });
+            }
+            if (!data.verification_photo) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['verification_photo'],
+                    message: 'Verification photo is required.',
+                });
+            }
+            */
+        })
+    ).optional(),
     gst_number: z.string().trim().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number format.").optional().or(z.literal("")).nullable(),
     pan_number: z.string().trim().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN card number format.").optional().or(z.literal("")).nullable(),
   }).passthrough().superRefine((data, ctx) => {
@@ -2394,9 +2404,9 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       if (!data.pan_number) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Number is required for India.", path: ['pan_number'] });
       }
-
     }
   });
+
 
   const formMethods = useForm<CompanyFormSchema>({
     defaultValues: defaultValues || {},
@@ -2405,18 +2415,18 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   });
   const {
     handleSubmit,
-    reset,
     formState: { errors },
     control,
     getValues,
     watch
   } = formMethods;
 
-  useEffect(() => {
-    if (defaultValues) {
-      reset(defaultValues);
-    }
-  }, [defaultValues, reset]);
+  // =================================================================
+  // THIS IS THE FIX: The problematic useEffect has been removed.
+  // By passing `defaultValues` to `useForm` above, react-hook-form
+  // handles the initialization correctly. We no longer need to
+  // manually call `reset`, which was causing the bug.
+  // =================================================================
 
   // --- START: CENTRALIZED PREVIEW LOGIC ---
   const watchedFiles = watch([
@@ -2485,6 +2495,52 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   const internalFormSubmit = (values: CompanyFormSchema) => {
     onFormSubmit?.(values, formMethods);
   };
+  
+  // This function will be called when validation fails on submit
+  const handleInvalidSubmit = (errors: FieldErrors<CompanyFormSchema>) => {
+    console.log("Validation Errors: ", errors);
+    
+    // Check if any email field has an error
+    let emailErrorFound = false;
+    const emailFieldKeys: (keyof CompanyFormSchema)[] = [
+      'primary_email_id',
+      'alternate_email_id',
+      'support_email',
+      'notification_email'
+    ];
+    
+    for (const key of emailFieldKeys) {
+        if (errors[key]) {
+            emailErrorFound = true;
+            break;
+        }
+    }
+    
+    // Also check for email errors inside the office_info array
+    if (!emailErrorFound && errors.office_info && Array.isArray(errors.office_info)) {
+        for (const officeError of errors.office_info) {
+            if (officeError?.office_email) {
+                emailErrorFound = true;
+                break;
+            }
+        }
+    }
+
+    if (emailErrorFound) {
+      toast.push(
+        <Notification type="warning" title="Incorrect Email Format">
+          Please enter a valid email address.
+        </Notification>
+      );
+    } else {
+      // For any other validation errors, show a general message
+      toast.push(
+        <Notification type="danger" title="Validation Error">
+          Please fix the highlighted errors before submitting.
+        </Notification>
+      );
+    }
+  };
 
   const navigationKeys = companyNavigationList.map((item) => item.link);
   const handleNext = () => {
@@ -2527,7 +2583,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
         <NavigatorComponent activeSection={activeSection} onNavigate={setActiveSection} />
       </Card>
 
-      <form onSubmit={handleSubmit(internalFormSubmit, (err) => console.log("Zod Validation Errors:", err))} className="flex flex-col gap-4 pb-20">
+      <form onSubmit={handleSubmit(internalFormSubmit, handleInvalidSubmit)} className="flex flex-col gap-4 pb-20">
         {renderActiveSection()}
       </form>
 
@@ -2558,10 +2614,15 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
           <div className="flex items-center gap-2">
             <Button type="button" onClick={handlePrevious} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === 0} > Previous </Button>
             <Button type="button" onClick={handleNext} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === navigationKeys.length - 1} > Next </Button>
-            <Button variant="solid" type="button" loading={isSubmitting} onClick={handleSubmit(internalFormSubmit, (err) => {
-              console.log("Validation Errors: ", err);
-              toast.push(<Notification type="danger" title="Validation Error">Please fix the errors before submitting.</Notification>);
-            })} disabled={isSubmitting} > {isEditMode ? "Update" : "Create"} </Button>
+            <Button
+              variant="solid"
+              type="button"
+              loading={isSubmitting}
+              onClick={handleSubmit(internalFormSubmit, handleInvalidSubmit)}
+              disabled={isSubmitting}
+            >
+              {isEditMode ? "Update" : "Create"}
+            </Button>
           </div>
         </div>
       </Card>
@@ -2669,7 +2730,7 @@ const CompanyCreate = () => {
       setInitialData(getEmptyFormValues());
       setPageLoading(false);
     }
-  }, [isEditMode, dispatch, navigate, getEmptyFormValues]);
+  }, [isEditMode, dispatch, navigate, getEmptyFormValues, id, lookupsReady, AllCompaniesData, CountriesData, ContinentsData, DocumentListData, EmployeesList, MemberData]);
 
   const handleFormSubmit = useCallback(async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
     setIsSubmitting(true);
