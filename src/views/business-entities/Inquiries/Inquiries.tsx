@@ -2806,7 +2806,7 @@ const InquiryListTable = () => {
                 )}
               />
             </UiFormItem>
-            <UiFormItem label="Feedback Status" className="col-span-2">
+            {/* <UiFormItem label="Feedback Status" className="col-span-2">
               <Controller
                 name="filterFeedbackStatus"
                 control={filterFormMethods.control}
@@ -2820,7 +2820,7 @@ const InquiryListTable = () => {
                   />
                 )}
               />
-            </UiFormItem>
+            </UiFormItem> */}
             <UiFormItem label="Inquiry Date Range" className="col-span-2">
               <Controller
                 name="filterInquiryDate"
