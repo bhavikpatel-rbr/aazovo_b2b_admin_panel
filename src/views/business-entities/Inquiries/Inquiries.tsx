@@ -232,73 +232,82 @@ const AddInquiryNotificationDialog: React.FC<{
   };
 
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Notify User about: {inquiry.inquiry_id}</h5>
-      <UiForm onSubmit={handleSubmit(onSend)}>
-        <UiFormItem
-          label="Title"
-          invalid={!!errors.notification_title}
-          errorMessage={errors.notification_title?.message}
-        >
-          <Controller
-            name="notification_title"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
-        </UiFormItem>
-        <UiFormItem
-          label="Send To"
-          invalid={!!errors.send_users}
-          errorMessage={errors.send_users?.message}
-        >
-          <Controller
-            name="send_users"
-            control={control}
-            render={({ field }) => (
-              <UiSelect
-                isMulti
-                placeholder="Select User(s)"
-                options={getAllUserDataOptions}
-                value={getAllUserDataOptions.filter((o) =>
-                  field.value?.includes(o.value)
-                )}
-                onChange={(options) =>
-                  field.onChange(options?.map((o) => o.value) || [])
-                }
-              />
-            )}
-          />
-        </UiFormItem>
-        <UiFormItem
-          label="Message"
-          invalid={!!errors.message}
-          errorMessage={errors.message?.message}
-        >
-          <Controller
-            name="message"
-            control={control}
-            render={({ field }) => <Input textArea {...field} rows={4} />}
-          />
-        </UiFormItem>
-        <div className="text-right mt-6">
-          <Button
-            type="button"
-            className="mr-2"
-            onClick={onClose}
-            disabled={isLoading}
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      title={`Notify User about: ${inquiry.inquiry_id}`}
+    >
+      {/* FIXED: Added a scrollable container for the form content to fix overflow issues. */}
+      <div className="max-h-[65vh] overflow-y-auto pr-4 -mr-4">
+        <UiForm id="notificationForm" onSubmit={handleSubmit(onSend)}>
+          <UiFormItem
+            label="Title"
+            invalid={!!errors.notification_title}
+            errorMessage={errors.notification_title?.message}
           >
-            Cancel
-          </Button>
-          <Button
-            variant="solid"
-            type="submit"
-            loading={isLoading}
-            disabled={!isValid || isLoading}
+            <Controller
+              name="notification_title"
+              control={control}
+              render={({ field }) => <Input {...field} />}
+            />
+          </UiFormItem>
+          <UiFormItem
+            label="Send To"
+            invalid={!!errors.send_users}
+            errorMessage={errors.send_users?.message}
           >
-            Send Notification
-          </Button>
-        </div>
-      </UiForm>
+            <Controller
+              name="send_users"
+              control={control}
+              render={({ field }) => (
+                <UiSelect
+                  isMulti
+                  placeholder="Select User(s)"
+                  options={getAllUserDataOptions}
+                  value={getAllUserDataOptions.filter((o) =>
+                    field.value?.includes(o.value)
+                  )}
+                  onChange={(options) =>
+                    field.onChange(options?.map((o) => o.value) || [])
+                  }
+                />
+              )}
+            />
+          </UiFormItem>
+          <UiFormItem
+            label="Message"
+            invalid={!!errors.message}
+            errorMessage={errors.message?.message}
+          >
+            <Controller
+              name="message"
+              control={control}
+              render={({ field }) => <Input textArea {...field} rows={4} />}
+            />
+          </UiFormItem>
+        </UiForm>
+      </div>
+      {/* FIXED: Moved buttons outside the scrollable area to act as a sticky footer. */}
+      <div className="text-right mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <Button
+          type="button"
+          className="mr-2"
+          onClick={onClose}
+          disabled={isLoading}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="solid"
+          type="submit"
+          form="notificationForm"
+          loading={isLoading}
+          disabled={!isValid || isLoading}
+        >
+          Send Notification
+        </Button>
+      </div>
     </Dialog>
   );
 };
@@ -390,46 +399,69 @@ const AddInquiryScheduleDialog: React.FC<{
   };
 
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Add Schedule for Inquiry: {inquiry.inquiry_id}</h5>
-      <UiForm onSubmit={handleSubmit(onAddEvent)}>
-        <UiFormItem
-          label="Event Title"
-          invalid={!!errors.event_title}
-          errorMessage={errors.event_title?.message}
-        >
-          <Controller
-            name="event_title"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
-        </UiFormItem>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      title={`Add Schedule for Inquiry: ${inquiry.inquiry_id}`}
+    >
+      <div className="max-h-[65vh] overflow-y-auto pr-4 -mr-4">
+        <UiForm id="scheduleForm" onSubmit={handleSubmit(onAddEvent)}>
           <UiFormItem
-            label="Event Type"
-            invalid={!!errors.event_type}
-            errorMessage={errors.event_type?.message}
+            label="Event Title"
+            invalid={!!errors.event_title}
+            errorMessage={errors.event_title?.message}
           >
             <Controller
-              name="event_type"
+              name="event_title"
               control={control}
-              render={({ field }) => (
-                <UiSelect
-                  placeholder="Select Type"
-                  options={eventTypeOptions}
-                  value={eventTypeOptions.find((o) => o.value === field.value)}
-                  onChange={(opt: any) => field.onChange(opt?.value)}
-                />
-              )}
+              render={({ field }) => <Input {...field} />}
             />
           </UiFormItem>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <UiFormItem
+              label="Event Type"
+              invalid={!!errors.event_type}
+              errorMessage={errors.event_type?.message}
+            >
+              <Controller
+                name="event_type"
+                control={control}
+                render={({ field }) => (
+                  <UiSelect
+                    placeholder="Select Type"
+                    options={eventTypeOptions}
+                    value={eventTypeOptions.find((o) => o.value === field.value)}
+                    onChange={(opt: any) => field.onChange(opt?.value)}
+                  />
+                )}
+              />
+            </UiFormItem>
+            <UiFormItem
+              label="Event Date & Time"
+              invalid={!!errors.date_time}
+              errorMessage={errors.date_time?.message}
+            >
+              <Controller
+                name="date_time"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker.DateTimepicker
+                    placeholder="Select date and time"
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </UiFormItem>
+          </div>
           <UiFormItem
-            label="Event Date & Time"
-            invalid={!!errors.date_time}
-            errorMessage={errors.date_time?.message}
+            label="Reminder Date & Time (Optional)"
+            invalid={!!errors.remind_from}
+            errorMessage={errors.remind_from?.message}
           >
             <Controller
-              name="date_time"
+              name="remind_from"
               control={control}
               render={({ field }) => (
                 <DatePicker.DateTimepicker
@@ -440,54 +472,38 @@ const AddInquiryScheduleDialog: React.FC<{
               )}
             />
           </UiFormItem>
-        </div>
-        <UiFormItem
-          label="Reminder Date & Time (Optional)"
-          invalid={!!errors.remind_from}
-          errorMessage={errors.remind_from?.message}
-        >
-          <Controller
-            name="remind_from"
-            control={control}
-            render={({ field }) => (
-              <DatePicker.DateTimepicker
-                placeholder="Select date and time"
-                value={field.value}
-                onChange={field.onChange}
-              />
-            )}
-          />
-        </UiFormItem>
-        <UiFormItem
-          label="Notes"
-          invalid={!!errors.notes}
-          errorMessage={errors.notes?.message}
-        >
-          <Controller
-            name="notes"
-            control={control}
-            render={({ field }) => <Input textArea {...field} />}
-          />
-        </UiFormItem>
-        <div className="text-right mt-6">
-          <Button
-            type="button"
-            className="mr-2"
-            onClick={onClose}
-            disabled={isLoading}
+          <UiFormItem
+            label="Notes"
+            invalid={!!errors.notes}
+            errorMessage={errors.notes?.message}
           >
-            Cancel
-          </Button>
-          <Button
-            variant="solid"
-            type="submit"
-            loading={isLoading}
-            disabled={!isValid || isLoading}
-          >
-            Save Event
-          </Button>
-        </div>
-      </UiForm>
+            <Controller
+              name="notes"
+              control={control}
+              render={({ field }) => <Input textArea {...field} />}
+            />
+          </UiFormItem>
+        </UiForm>
+      </div>
+      <div className="text-right mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <Button
+          type="button"
+          className="mr-2"
+          onClick={onClose}
+          disabled={isLoading}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="solid"
+          type="submit"
+          form="scheduleForm"
+          loading={isLoading}
+          disabled={!isValid || isLoading}
+        >
+          Save Event
+        </Button>
+      </div>
     </Dialog>
   );
 };
@@ -557,110 +573,117 @@ const AssignTaskDialog: React.FC<{
   };
 
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Assign Task for Inquiry: {inquiry.inquiry_id}</h5>
-      <UiForm onSubmit={handleSubmit(onAssignTask)}>
-        <UiFormItem
-          label="Task Title"
-          invalid={!!errors.task_title}
-          errorMessage={errors.task_title?.message}
-        >
-          <Controller
-            name="task_title"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
-        </UiFormItem>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      title={`Assign Task for Inquiry: ${inquiry.inquiry_id}`}
+    >
+      <div className="max-h-[65vh] overflow-y-auto pr-4 -mr-4">
+        <UiForm id="taskForm" onSubmit={handleSubmit(onAssignTask)}>
           <UiFormItem
-            label="Assign To"
-            invalid={!!errors.assign_to}
-            errorMessage={errors.assign_to?.message}
+            label="Task Title"
+            invalid={!!errors.task_title}
+            errorMessage={errors.task_title?.message}
           >
             <Controller
-              name="assign_to"
+              name="task_title"
               control={control}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder="Select User(s)"
-                  options={getAllUserDataOptions}
-                  value={getAllUserDataOptions.filter((o) =>
-                    field.value?.includes(o.value)
-                  )}
-                  onChange={(opts: any) =>
-                    field.onChange(opts?.map((o: any) => o.value) || [])
-                  }
-                />
-              )}
+              render={({ field }) => <Input {...field} />}
             />
           </UiFormItem>
-          <UiFormItem
-            label="Priority"
-            invalid={!!errors.priority}
-            errorMessage={errors.priority?.message}
-          >
-            <Controller
-              name="priority"
-              control={control}
-              render={({ field }) => (
-                <UiSelect
-                  placeholder="Select Priority"
-                  options={priorityOptions}
-                  value={priorityOptions.find((p) => p.value === field.value)}
-                  onChange={(opt: any) => field.onChange(opt?.value)}
-                />
-              )}
-            />
-          </UiFormItem>
-        </div>
-        <UiFormItem
-          label="Due Date (Optional)"
-          invalid={!!errors.due_date}
-          errorMessage={errors.due_date?.message}
-        >
-          <Controller
-            name="due_date"
-            control={control}
-            render={({ field }) => (
-              <DatePicker
-                placeholder="Select a date"
-                value={field.value}
-                onChange={field.onChange}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <UiFormItem
+              label="Assign To"
+              invalid={!!errors.assign_to}
+              errorMessage={errors.assign_to?.message}
+            >
+              <Controller
+                name="assign_to"
+                control={control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select User(s)"
+                    options={getAllUserDataOptions}
+                    value={getAllUserDataOptions.filter((o) =>
+                      field.value?.includes(o.value)
+                    )}
+                    onChange={(opts: any) =>
+                      field.onChange(opts?.map((o: any) => o.value) || [])
+                    }
+                  />
+                )}
               />
-            )}
-          />
-        </UiFormItem>
-        <UiFormItem
-          label="Description"
-          invalid={!!errors.description}
-          errorMessage={errors.description?.message}
+            </UiFormItem>
+            <UiFormItem
+              label="Priority"
+              invalid={!!errors.priority}
+              errorMessage={errors.priority?.message}
+            >
+              <Controller
+                name="priority"
+                control={control}
+                render={({ field }) => (
+                  <UiSelect
+                    placeholder="Select Priority"
+                    options={priorityOptions}
+                    value={priorityOptions.find((p) => p.value === field.value)}
+                    onChange={(opt: any) => field.onChange(opt?.value)}
+                  />
+                )}
+              />
+            </UiFormItem>
+          </div>
+          <UiFormItem
+            label="Due Date (Optional)"
+            invalid={!!errors.due_date}
+            errorMessage={errors.due_date?.message}
+          >
+            <Controller
+              name="due_date"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  placeholder="Select a date"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </UiFormItem>
+          <UiFormItem
+            label="Description"
+            invalid={!!errors.description}
+            errorMessage={errors.description?.message}
+          >
+            <Controller
+              name="description"
+              control={control}
+              render={({ field }) => <Input textArea {...field} rows={4} />}
+            />
+          </UiFormItem>
+        </UiForm>
+      </div>
+      <div className="text-right mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <Button
+          type="button"
+          className="mr-2"
+          onClick={onClose}
+          disabled={isLoading}
         >
-          <Controller
-            name="description"
-            control={control}
-            render={({ field }) => <Input textArea {...field} rows={4} />}
-          />
-        </UiFormItem>
-        <div className="text-right mt-6">
-          <Button
-            type="button"
-            className="mr-2"
-            onClick={onClose}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="solid"
-            type="submit"
-            loading={isLoading}
-            disabled={!isValid || isLoading}
-          >
-            Assign Task
-          </Button>
-        </div>
-      </UiForm>
+          Cancel
+        </Button>
+        <Button
+          variant="solid"
+          type="submit"
+          form="taskForm"
+          loading={isLoading}
+          disabled={!isValid || isLoading}
+        >
+          Assign Task
+        </Button>
+      </div>
     </Dialog>
   );
 };
@@ -750,40 +773,45 @@ const StatusUpdateModal: React.FC<{
   };
 
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Change Status for: {inquiry.inquiry_id}</h5>
-      <p className="mb-1 text-sm">Company: <span className="font-semibold">{inquiry.company_name}</span></p>
-      <p className="mb-4 text-sm">Current Status: <span className="font-semibold">{inquiry.inquiry_status}</span></p>
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      title={`Change Status for: ${inquiry.inquiry_id}`}
+    >
+      <div className="max-h-[65vh] overflow-y-auto pr-4 -mr-4">
+        <p className="mb-1 text-sm">Company: <span className="font-semibold">{inquiry.company_name}</span></p>
+        <p className="mb-4 text-sm">Current Status: <span className="font-semibold">{inquiry.inquiry_status}</span></p>
 
-      <UiForm onSubmit={handleSubmit(handleStatusUpdate)}>
-        <UiFormItem
-          label="New Status"
-          invalid={!!errors.status}
-          errorMessage={errors.status?.message}
-        >
-          <Controller
-            name="status"
-            control={control}
-            render={({ field }) => (
-              <UiSelect
-                placeholder="Select a new status"
-                options={statusOptions}
-                value={statusOptions.find(o => o.value === field.value)}
-                onChange={opt => field.onChange(opt?.value)}
-              />
-            )}
-          />
-        </UiFormItem>
-
-        <div className="text-right mt-6">
-          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>
-            Cancel
-          </Button>
-          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>
-            Update Status
-          </Button>
-        </div>
-      </UiForm>
+        <UiForm id="statusUpdateForm" onSubmit={handleSubmit(handleStatusUpdate)}>
+          <UiFormItem
+            label="New Status"
+            invalid={!!errors.status}
+            errorMessage={errors.status?.message}
+          >
+            <Controller
+              name="status"
+              control={control}
+              render={({ field }) => (
+                <UiSelect
+                  placeholder="Select a new status"
+                  options={statusOptions}
+                  value={statusOptions.find(o => o.value === field.value)}
+                  onChange={opt => field.onChange(opt?.value)}
+                />
+              )}
+            />
+          </UiFormItem>
+        </UiForm>
+      </div>
+      <div className="text-right mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>
+          Cancel
+        </Button>
+        <Button variant="solid" type="submit" form="statusUpdateForm" loading={isLoading} disabled={!isValid || isLoading}>
+          Update Status
+        </Button>
+      </div>
     </Dialog>
   );
 };
@@ -869,39 +897,42 @@ const AssignToUpdateModal: React.FC<{
   };
 
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Assign for: {inquiry.inquiry_id}</h5>
-      <p className="mb-1 text-sm">Company: <span className="font-semibold">{inquiry.company_name}</span></p>
-      <p className="mb-4 text-sm">Inquiry Assigned to: <span className="font-semibold">{inquiry.assigned_to || 'N/A'}</span></p>
-
-      <UiForm onSubmit={handleSubmit(handleAssignToUpdate)}>
-        <UiFormItem
-          label="Assigned To"
-          invalid={!!errors.status}
-          errorMessage={errors.status?.message}
-        >
-          <Controller name="assigned_to" control={control} render={({ field }) => (
-            <Select
-              placeholder="Select Assignee"
-              options={usersDataOptions}
-              isLoading={masterLoadingStatus === "loading" && usersDataOptions.length === 0}
-              value={usersDataOptions.find(o => o.value === field.value) || null}
-              onChange={opt => field.onChange(opt ? opt.value : null)}
-              isClearable
-            />
-          )} />
-
-        </UiFormItem>
-
-        <div className="text-right mt-6">
-          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>
-            Cancel
-          </Button>
-          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>
-            Update
-          </Button>
-        </div>
-      </UiForm>
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      title={`Assign for: ${inquiry.inquiry_id}`}
+    >
+      <div className="max-h-[65vh] overflow-y-auto pr-4 -mr-4">
+        <p className="mb-1 text-sm">Company: <span className="font-semibold">{inquiry.company_name}</span></p>
+        <p className="mb-4 text-sm">Inquiry Assigned to: <span className="font-semibold">{inquiry.assigned_to || 'N/A'}</span></p>
+        <UiForm id="assignToForm" onSubmit={handleSubmit(handleAssignToUpdate)}>
+          <UiFormItem
+            label="Assigned To"
+            invalid={!!errors.assigned_to}
+            errorMessage={errors.assigned_to?.message}
+          >
+            <Controller name="assigned_to" control={control} render={({ field }) => (
+              <Select
+                placeholder="Select Assignee"
+                options={usersDataOptions}
+                isLoading={masterLoadingStatus === "loading" && usersDataOptions.length === 0}
+                value={usersDataOptions.find(o => o.value === field.value) || null}
+                onChange={opt => field.onChange(opt ? opt.value : null)}
+                isClearable
+              />
+            )} />
+          </UiFormItem>
+        </UiForm>
+      </div>
+      <div className="text-right mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>
+          Cancel
+        </Button>
+        <Button variant="solid" type="submit" form="assignToForm" loading={isLoading} disabled={!isValid || isLoading}>
+          Update
+        </Button>
+      </div>
     </Dialog>
   );
 };
@@ -1453,7 +1484,8 @@ const InquiryViewModal: React.FC<InquiryViewModalProps> = ({
       title={`Inquiry Details: ${inquiry.inquiry_id}`}
       width={700}
     >
-      <div className="py-4 px-1">
+      {/* FIXED: Separated content and footer, making the content area scrollable to fix overflow. */}
+      <div className="py-4 px-1 max-h-[65vh] overflow-y-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
           <div>
             <h6 className="text-sm font-semibold mb-2 text-gray-700 dark:text-gray-200">
@@ -1608,11 +1640,11 @@ const InquiryViewModal: React.FC<InquiryViewModalProps> = ({
               </div>
             )}
         </div>
-        <div className="text-right mt-6">
-          <Button size="sm" onClick={onClose}>
-            Close
-          </Button>
-        </div>
+      </div>
+      <div className="text-right mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <Button size="sm" onClick={onClose}>
+          Close
+        </Button>
       </div>
     </Dialog>
   );
@@ -2806,7 +2838,7 @@ const InquiryListTable = () => {
                 )}
               />
             </UiFormItem>
-            <UiFormItem label="Feedback Status" className="col-span-2">
+            {/* <UiFormItem label="Feedback Status" className="col-span-2">
               <Controller
                 name="filterFeedbackStatus"
                 control={filterFormMethods.control}
@@ -2820,7 +2852,7 @@ const InquiryListTable = () => {
                   />
                 )}
               />
-            </UiFormItem>
+            </UiFormItem> */}
             <UiFormItem label="Inquiry Date Range" className="col-span-2">
               <Controller
                 name="filterInquiryDate"
@@ -3060,29 +3092,31 @@ const InquiryListSelected = () => {
         isOpen={sendMessageDialogOpen}
         onRequestClose={() => setSendMessageDialogOpen(false)}
         onClose={() => setSendMessageDialogOpen(false)}
+        title="Send Message"
       >
-        <h5 className="mb-2">Send Message</h5>
-        <p>Send message regarding the following inquiries:</p>
-        <div className="mt-4 max-h-32 overflow-y-auto">
-          {selectedInquiries.map((inquiry) => (
-            <div
-              key={inquiry.id}
-              className="text-sm p-1 border-b dark:border-gray-700"
-            >
-              <Tooltip
-                title={`${inquiry.inquiry_id}: ${inquiry.inquiry_subject} (Contact: ${inquiry.name})`}
+        <div className="max-h-[65vh] overflow-y-auto pr-4 -mr-4">
+          <p>Send message regarding the following inquiries:</p>
+          <div className="mt-4 max-h-32 overflow-y-auto">
+            {selectedInquiries.map((inquiry) => (
+              <div
+                key={inquiry.id}
+                className="text-sm p-1 border-b dark:border-gray-700"
               >
-                <span>
-                  {inquiry.inquiry_id} - {inquiry.company_name}
-                </span>
-              </Tooltip>
-            </div>
-          ))}
+                <Tooltip
+                  title={`${inquiry.inquiry_id}: ${inquiry.inquiry_subject} (Contact: ${inquiry.name})`}
+                >
+                  <span>
+                    {inquiry.inquiry_id} - {inquiry.company_name}
+                  </span>
+                </Tooltip>
+              </div>
+            ))}
+          </div>
+          <div className="my-4">
+            <RichTextEditor content={""} />
+          </div>
         </div>
-        <div className="my-4">
-          <RichTextEditor content={""} />
-        </div>
-        <div className="ltr:justify-end flex items-center gap-2">
+        <div className="text-right mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <Button size="sm" onClick={() => setSendMessageDialogOpen(false)}>
             Cancel
           </Button>
