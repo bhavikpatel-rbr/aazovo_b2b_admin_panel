@@ -445,7 +445,6 @@ const transformApiToFormSchema = (
     company_name_temp: formData.company_temp || "",
     company_name: formData.company_actual || "",
     status: toSelectOption(formData.status),
-
     continent_id: formData.continent
       ? { value: String(formData.continent.id), label: formData.continent.name }
       : null,
