@@ -1837,7 +1837,7 @@ const memberAddSchema = z.object({
   mobile_no: z.string().trim().min(7, { message: "A valid mobile number is required." }).regex(/^\d+$/, "Only digits are allowed."),
   contact_country_code: z.object({ value: z.string().min(1), label: z.string() }, { required_error: 'Country code is required.' }),
   email: z.string().trim().min(1, { message: "Email is required." }).email("Invalid email format."),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }).optional().or(z.literal("")),
+  password: z.string().min(8, { message: "Password must be at least 8 characters." }).optional().or(z.literal("")),
   country_id: z.object({ value: z.string().min(1), label: z.string() }, { required_error: 'Country is required.' }),
   interested_category_ids: z.array(z.object({ value: z.string(), label: z.string() })).min(1, { message: "At least one category is required." }),
 });

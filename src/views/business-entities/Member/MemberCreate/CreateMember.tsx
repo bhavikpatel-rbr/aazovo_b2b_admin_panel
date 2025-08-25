@@ -3230,7 +3230,8 @@ const MemberCreate = () => {
     id,
     isEditMode,
     navigate,
-    dispatch
+    dispatch,
+    ParentCategories
   ]);
   // --- END: CORRECTED useEffect ---
 
