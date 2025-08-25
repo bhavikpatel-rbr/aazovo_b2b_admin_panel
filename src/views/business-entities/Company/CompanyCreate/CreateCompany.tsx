@@ -534,16 +534,16 @@ const transformApiToFormSchema = (
   allCompaniesForRef: Array<{ value: string; label: string }>,
   documentTypeOptions: Array<{ value: string; label: string }>
 ): Partial<CompanyFormSchema> => {
-  const stringToBoolean = (value, type) => {
+  const stringToBoolean = (value: any, type: any) => {
 
     if (typeof value === 'boolean') return value;
     if (typeof value === 'string') {
       const lowerVal = value.toLowerCase();
-      return lowerVal === '1' || lowerVal === 'true' || lowerVal === 'yes' || lowerVal === 1 || lowerVal === 'on' || lowerVal === 'checked' || lowerVal === 'enable' || lowerVal === 'enabled' || lowerVal === 'default';
+      return lowerVal === '1' || lowerVal === 'true' || lowerVal === 'yes' || lowerVal === 'on' || lowerVal === 'checked' || lowerVal === 'enable' || lowerVal === 'enabled' || lowerVal === 'default';
     }
 
     if (typeof value === 'number') {
-      return value === '1' || value === 1;
+      return value === 1;
     }
     return false;
   };
@@ -617,34 +617,34 @@ const transformApiToFormSchema = (
 
     declaration_206ab: apiData["206AB_file"] || null,
     declaration_206ab_remark: apiData["206AB_remark"] || '',
-    declaration_206ab_remark_enabled: stringToBoolean(apiData["206AB_verified"]),
+    declaration_206ab_remark_enabled: stringToBoolean(apiData["206AB_verified"], ""),
     ABCQ_file: apiData.ABCQ_file || null,
     ABCQ_remark: apiData.ABCQ_remark || '',
-    ABCQ_remark_enabled: stringToBoolean(apiData.ABCQ_verified),
+    ABCQ_remark_enabled: stringToBoolean(apiData.ABCQ_verified, ""),
     office_photo_file: apiData.office_photo_file || null,
     office_photo_remark: apiData.office_photo_remark || "",
-    office_photo_remark_enabled: stringToBoolean(apiData.office_photo_verified),
+    office_photo_remark_enabled: stringToBoolean(apiData.office_photo_verified, ""),
     gst_certificate_file: apiData.gst_certificate_file || null,
     gst_certificate_remark: apiData.gst_certificate_remark || "",
-    gst_certificate_remark_enabled: stringToBoolean(apiData.gst_certificate_verified),
+    gst_certificate_remark_enabled: stringToBoolean(apiData.gst_certificate_verified, ""),
     authority_letter_file: apiData.authority_letter_file || null,
     authority_letter_remark: apiData.authority_letter_remark || "",
-    authority_letter_remark_enabled: stringToBoolean(apiData.authority_letter_verified),
+    authority_letter_remark_enabled: stringToBoolean(apiData.authority_letter_verified, ""),
     visiting_card_file: apiData.visiting_card_file || null,
     visiting_card_remark: apiData.visiting_card_remark || "",
-    visiting_card_remark_enabled: stringToBoolean(apiData.visiting_card_verified),
+    visiting_card_remark_enabled: stringToBoolean(apiData.visiting_card_verified, ""),
     cancel_cheque_file: apiData.cancel_cheque_file || null,
     cancel_cheque_remark: apiData.cancel_cheque_remark || "",
-    cancel_cheque_remark_enabled: stringToBoolean(apiData.cancel_cheque_verified),
+    cancel_cheque_remark_enabled: stringToBoolean(apiData.cancel_cheque_verified, ""),
     aadhar_card_file: apiData.aadhar_card_file || null,
     aadhar_card_remark: apiData.aadhar_card_remark || "",
-    aadhar_card_remark_enabled: stringToBoolean(apiData.aadhar_card_verified),
+    aadhar_card_remark_enabled: stringToBoolean(apiData.aadhar_card_verified, ""),
     pan_card_file: apiData.pan_card_file || null,
     pan_card_remark: apiData.pan_card_remark || "",
-    pan_card_remark_enabled: stringToBoolean(apiData.pan_card_verified),
+    pan_card_remark_enabled: stringToBoolean(apiData.pan_card_verified, ""),
     other_document_file: apiData.other_document_file || null,
     other_document_remark: apiData.other_document_remark || "",
-    other_document_remark_enabled: stringToBoolean(apiData.other_document_verified),
+    other_document_remark_enabled: stringToBoolean(apiData.other_document_verified, ""),
 
     primary_account_number: apiData.primary_account_number || '',
     primary_bank_name: apiData.primary_bank_name || '',
@@ -652,7 +652,7 @@ const transformApiToFormSchema = (
     primary_ifsc_code: apiData.primary_ifsc_code || '',
     primary_swift_code: apiData.primary_swift_code || '',
     primary_bank_verification_photo: apiData.primary_bank_verification_photo || null,
-    primary_is_default: stringToBoolean(apiData.primary_is_default),
+    primary_is_default: stringToBoolean(apiData.primary_is_default, ""),
     secondary_account_number: apiData.secondary_account_number || '',
     secondary_benificeiry_name: apiData?.secondary_benificeiry_name || '',
     secondary_bank_name: apiData.secondary_bank_name || '',
@@ -668,10 +668,10 @@ const transformApiToFormSchema = (
       swift_code: bank.swift_code || '',
       type: bank.type ? { label: bank.type, value: bank.type } : undefined,
       verification_photo: bank.verification_photo || null,
-      is_default: stringToBoolean(bank.is_default),
+      is_default: stringToBoolean(bank.is_default, ""),
     })) || [],
 
-    USER_ACCESS: stringToBoolean(apiData.kyc_verified),
+    USER_ACCESS: stringToBoolean(apiData.kyc_verified, ""),
     billing_documents: apiData.billing_documents?.map(doc => ({
       id: String(doc.id),
       document_name: findOptionByValue(documentTypeOptions, doc.document_name as any), // Cast to any to handle potential type mismatch
@@ -698,7 +698,7 @@ const transformApiToFormSchema = (
 
     company_spot_verification: apiData.company_spot_verification?.map(item => ({
       id: String(item.id),
-      verified: stringToBoolean(item.verified),
+      verified: stringToBoolean(item.verified, ""),
       verified_by_id: findOptionByValue(allEmployees, item.verified_by_id) || findOptionByLabel(allEmployees, item.verified_by_name),
       photo_upload: item.photo_upload || null,
       remark: item.remark || '',
@@ -790,7 +790,14 @@ const preparePayloadForApi = (
   const kycDocsConfig = [
     { feFileKey: "declaration_206ab", beFileKey: "declaration_206AB_file", feVerifyKey: "declaration_206ab_remark_enabled", beVerifyKey: "declaration_206AB_verify", feRemarkKey: "declaration_206ab_remark", beRemarkKey: "declaration_206AB_remark" },
     { feFileKey: "ABCQ_file", beFileKey: "ABCQ_file", feVerifyKey: "ABCQ_remark_enabled", beVerifyKey: "ABCQ_verified", feRemarkKey: "ABCQ_remark", beRemarkKey: "ABCQ_remark" },
-    // ... (rest of kycDocsConfig)
+    { feFileKey: "office_photo_file", beFileKey: "office_photo_file", feVerifyKey: "office_photo_remark_enabled", beVerifyKey: "office_photo_verified", feRemarkKey: "office_photo_remark", beRemarkKey: "office_photo_remark" },
+    { feFileKey: "gst_certificate_file", beFileKey: "gst_certificate_file", feVerifyKey: "gst_certificate_remark_enabled", beVerifyKey: "gst_certificate_verified", feRemarkKey: "gst_certificate_remark", beRemarkKey: "gst_certificate_remark" },
+    { feFileKey: "authority_letter_file", beFileKey: "authority_letter_file", feVerifyKey: "authority_letter_remark_enabled", beVerifyKey: "authority_letter_verified", feRemarkKey: "authority_letter_remark", beRemarkKey: "authority_letter_remark" },
+    { feFileKey: "visiting_card_file", beFileKey: "visiting_card_file", feVerifyKey: "visiting_card_remark_enabled", beVerifyKey: "visiting_card_verified", feRemarkKey: "visiting_card_remark", beRemarkKey: "visiting_card_remark" },
+    { feFileKey: "cancel_cheque_file", beFileKey: "cancel_cheque_file", feVerifyKey: "cancel_cheque_remark_enabled", beVerifyKey: "cancel_cheque_verified", feRemarkKey: "cancel_cheque_remark", beRemarkKey: "cancel_cheque_remark" },
+    { feFileKey: "aadhar_card_file", beFileKey: "aadhar_card_file", feVerifyKey: "aadhar_card_remark_enabled", beVerifyKey: "aadhar_card_verified", feRemarkKey: "aadhar_card_remark", beRemarkKey: "aadhar_card_remark" },
+    { feFileKey: "pan_card_file", beFileKey: "pan_card_file", feVerifyKey: "pan_card_remark_enabled", beVerifyKey: "pan_card_verified", feRemarkKey: "pan_card_remark", beRemarkKey: "pan_card_remark" },
+    { feFileKey: "other_document_file", beFileKey: "other_document_file", feVerifyKey: "other_document_remark_enabled", beVerifyKey: "other_document_verified", feRemarkKey: "other_document_remark", beRemarkKey: "other_document_remark" },
   ];
   kycDocsConfig.forEach(doc => {
     appendField(doc.beFileKey, data[doc.feFileKey]);
@@ -2211,19 +2218,30 @@ const MemberManagementSection = ({ control, errors, formMethods, handlePreviewCl
       </Card>
 
       <Dialog
-        isOpen={isAddMemberModalOpen}
-        onClose={() => setIsAddMemberModalOpen(false)}
-        onRequestClose={() => setIsAddMemberModalOpen(false)}
-        width={900}
-        closable={false}
-      >
-        <h5 className="mb-4">Create a New Member</h5>
-        <p className="mb-6 text-sm">Create a new member record. Once created, it will be available in the 'Member' dropdown to add to this company.</p>
-        <MemberAddForm
-          onSuccess={handleMemberAdded}
-          onCancel={() => setIsAddMemberModalOpen(false)}
-        />
-      </Dialog>
+  isOpen={isAddMemberModalOpen}
+  onClose={() => setIsAddMemberModalOpen(false)}
+  onRequestClose={() => setIsAddMemberModalOpen(false)}
+  width={900}
+  closable={false}
+>
+  {/* Static Header Content */}
+  <h5 className="mb-4">Create a New Member</h5>
+  <p className="mb-6 text-sm">Create a new member record. Once created, it will be available in the 'Member' dropdown to add to this company.</p>
+  
+  {/* Scrollable Container */}
+  <div 
+    style={{ 
+      maxHeight: '60vh', // Or a fixed height like '500px'
+      overflowY: 'auto', // Show scrollbar only when needed
+      paddingRight: '1rem' // Optional: Adds space for the scrollbar
+    }}
+  >
+    <MemberAddForm
+      onSuccess={handleMemberAdded}
+      onCancel={() => setIsAddMemberModalOpen(false)}
+    />
+  </div>
+</Dialog>
     </>
   );
 };
@@ -2378,25 +2396,6 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
             message: 'IFSC Code is required.',
           });
         }
-        // Note: Swift code and verification photo are often optional,
-        // so they are not included here. If they are required for your
-        // business logic, you can add checks for them as well:
-        /*
-        if (!data.swift_code || data.swift_code.trim() === '') {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ['swift_code'],
-                message: 'Swift Code is required.',
-            });
-        }
-        if (!data.verification_photo) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ['verification_photo'],
-                message: 'Verification photo is required.',
-            });
-        }
-        */
       })
     ).optional(),
     company_spot_verification: z.array(
@@ -2428,6 +2427,30 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
             }
         })
     ).optional(),
+    company_members: z.array(
+      z.object({
+        member_id: z.object({ value: z.string(), label: z.string() }).optional().nullable(),
+        designation: z.string().optional().nullable(),
+        person_name: z.string().optional().nullable(),
+        number: z.string().optional().nullable(),
+      }).superRefine((data, ctx) => {
+        // A row is "active" if any field has a value, preventing validation on new, empty rows.
+        const isRowActive = data.member_id?.value || data.designation || data.person_name || data.number;
+
+        if (!isRowActive) {
+          return; // Skip validation for empty, untouched rows
+        }
+
+        // Core Validation: If a number is entered, a member must be selected.
+        if (data.number && data.number.trim() !== '' && (!data.member_id || !data.member_id.value)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['member_id'],
+            message: 'Member selection is required',
+          });
+        }
+      })
+    ).optional(),
     gst_number: z.string().trim().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number format.").optional().or(z.literal("")).nullable(),
     pan_number: z.string().trim().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN card number format.").optional().or(z.literal("")).nullable(),
   }).passthrough().superRefine((data, ctx) => {
@@ -2454,13 +2477,6 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     getValues,
     watch
   } = formMethods;
-
-  // =================================================================
-  // THIS IS THE FIX: The problematic useEffect has been removed.
-  // By passing `defaultValues` to `useForm` above, react-hook-form
-  // handles the initialization correctly. We no longer need to
-  // manually call `reset`, which was causing the bug.
-  // =================================================================
 
   // --- START: CENTRALIZED PREVIEW LOGIC ---
   const watchedFiles = watch([
