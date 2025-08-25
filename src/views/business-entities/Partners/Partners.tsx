@@ -38,6 +38,7 @@ import {
 import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
 import Notification from "@/components/ui/Notification";
+import Skeleton from "@/components/ui/Skeleton"; // --- ADDED: Skeleton Component ---
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
 
@@ -145,6 +146,7 @@ export type PartnerItem = {
     certificate_name: string;
     upload_certificate_path: string;
   }[];
+  isSkeleton?: boolean; // --- ADDED: For skeleton loading state ---
   [key: string]: any;
 };
 export type SelectOption = { value: any; label: string; };
@@ -819,7 +821,28 @@ const PartnerAlertModal: React.FC<{ partner: PartnerItem; onClose: () => void }>
           {/* The scrollable container for the timeline */}
           <div className="flex-grow overflow-y-auto lg:pr-4 lg:-mr-4">
             {isFetching ? (
-              <div className="flex justify-center items-center h-full"><Spinner size="lg" /></div>
+              // --- MODIFIED: Skeleton Loader for Timeline ---
+              <div className="space-y-8">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="relative flex items-start gap-4 pl-12">
+                    <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
+                      <Skeleton variant="circle" height={40} width={40} />
+                      <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+                    </div>
+                    <div className="flex-grow rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+                      <header className="flex justify-between items-center mb-3">
+                        <Skeleton height={16} width={120} />
+                        <Skeleton height={12} width={150} />
+                      </header>
+                      <div className="space-y-2">
+                        <Skeleton height={14} width="90%" />
+                        <Skeleton height={14} width="95%" />
+                        <Skeleton height={14} width="70%" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : alerts.length > 0 ? (
               <div className="space-y-8">
                 {alerts.map((alert, index) => {
@@ -1019,8 +1042,18 @@ const PartnerListTable = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { partnerList, setSelectedPartners, partnerCount, ContinentsData, CountriesData, getAllUserData } = usePartnerList();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // --- MODIFIED: Start in loading state ---
   const PARTNER_STATE_STORAGE_KEY = 'partnerListStatePersistence';
+
+  // --- ADDED: Simulate initial data fetch to show skeletons ---
+  useEffect(() => {
+    // In a real app, this `isLoading` state would be connected to your Redux slice's loading status.
+    // This timer simulates a network request for demonstration purposes.
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1500); // Simulate a 1.5-second load
+    return () => clearTimeout(timer);
+  }, []);
 
   const getInitialState = () => {
     try {
@@ -1248,20 +1281,50 @@ const PartnerListTable = () => {
   const openImageViewer = (imageUrl: string | null) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
   const closeImageViewer = () => setImageViewerOpen(false);
 
-  // --- MODIFIED: columns definition for the listing view ---
+  // --- ADDED: skeletonData for loading state ---
+  const skeletonData: PartnerItem[] = useMemo(() =>
+    Array.from({ length: tableData.pageSize as number }).map((_, i) => ({
+      id: `skeleton-${i}`,
+      partner_name: '',
+      owner_name: '',
+      primary_contact_number: '',
+      primary_contact_number_code: '',
+      primary_email_id: '',
+      status: 'Active',
+      country: { name: '' },
+      continent: { name: '' },
+      state: '',
+      city: '',
+      teams_count: 0,
+      profile_completion: 0,
+      kyc_verified: false,
+      due_after_3_months_date: '',
+      created_at: '',
+      partner_team_members: [],
+      partner_certificate: [],
+      isSkeleton: true, // Flag to identify skeleton items
+    })),
+    [tableData.pageSize]
+  );
+
+  // --- MODIFIED: columns definition for the listing view to include skeleton rendering ---
   const columns: ColumnDef<PartnerItem>[] = useMemo(() => [
     {
       header: "Partner Info", accessorKey: "partner_name", id: 'partnerInfo', size: 220, cell: ({ row }) => {
-        const { partner_name, id, company_name, industrial_expertise, join_us_as, country } = row.original;
+        const { partner_name, id, company_name, industrial_expertise, join_us_as, country, isSkeleton } = row.original;
+        if (isSkeleton) {
+          return (
+            <div className="flex flex-col gap-2">
+              <Skeleton height={12} width="50%" />
+              <Skeleton height={14} width="80%" />
+              <Skeleton height={12} width="60%" />
+            </div>
+          );
+        }
         return (
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <Link
-
-                to={
-                  `/business-entities/member-view/${id}`
-                }
-              >
+              <Link to={`/business-entities/member-view/${id}`}>
                 <h6 className="text-xs font-semibold"><em className="text-blue-600">{String(id).padStart(5, '0') || "Partner Code"}</em></h6>
                 <span className="text-xs font-semibold leading-1">{partner_name}</span>
                 {company_name && <span className="text-xs text-gray-500 block">({company_name})</span>}
@@ -1276,7 +1339,16 @@ const PartnerListTable = () => {
     },
     {
       header: "Contact", accessorKey: "owner_name", id: 'contact', size: 180, cell: ({ row }) => {
-        const { owner_name, primary_contact_number, primary_email_id, partner_website, primary_contact_number_code } = row.original;
+        const { owner_name, primary_contact_number, primary_email_id, partner_website, primary_contact_number_code, isSkeleton } = row.original;
+        if (isSkeleton) {
+          return (
+            <div className="flex flex-col gap-1.5">
+              <Skeleton height={12} width="70%" />
+              <Skeleton height={12} width="90%" />
+              <Skeleton height={12} width="80%" />
+            </div>
+          );
+        }
         return (
           <div className="text-xs flex flex-col gap-0.5">
             {owner_name && (<span><b>Owner: </b> {owner_name}</span>)}
@@ -1288,27 +1360,64 @@ const PartnerListTable = () => {
       },
     },
     {
-      header: "Identity & Status", size: 180, accessorKey: 'status', id: 'legal', cell: ({ row }) => (
-        <div className="flex flex-col gap-1 text-[11px]">
-          {row.original.gst_number && <div><b>GST:</b> <span className="break-all">{row.original.gst_number}</span></div>}
-          {row.original.pan_number && <div><b>PAN:</b> <span className="break-all">{row.original.pan_number}</span></div>}
-          <Tag className={`${getPartnerStatusClass(row.original.status)} capitalize mt-1 self-start !text-[11px] px-2 py-1`}>{row.original.status}</Tag>
-        </div>
-      )
+      header: "Identity & Status", size: 180, accessorKey: 'status', id: 'legal', cell: ({ row }) => {
+        const { isSkeleton } = row.original;
+        if (isSkeleton) {
+          return (
+            <div className="flex flex-col gap-1.5">
+              <Skeleton height={12} width="80%" />
+              <Skeleton height={12} width="70%" />
+              <Skeleton height={24} width={70} />
+            </div>
+          );
+        }
+        return (
+          <div className="flex flex-col gap-1 text-[11px]">
+            {row.original.gst_number && <div><b>GST:</b> <span className="break-all">{row.original.gst_number}</span></div>}
+            {row.original.pan_number && <div><b>PAN:</b> <span className="break-all">{row.original.pan_number}</span></div>}
+            <Tag className={`${getPartnerStatusClass(row.original.status)} capitalize mt-1 self-start !text-[11px] px-2 py-1`}>{row.original.status}</Tag>
+          </div>
+        );
+      }
     },
     {
-      header: "Profile & Scores", size: 190, accessorKey: 'profile_completion', id: 'profile', cell: ({ row }) => (
-        <div className="flex flex-col gap-1.5 text-xs">
-          <span><b>Teams:</b> {row.original.teams_count || 0}</span>
-          <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${row.original.kyc_verified ? 'Yes' : 'No'}`}>{row.original.kyc_verified ? <MdCheckCircle className="text-green-500 text-lg" /> : <MdCancel className="text-red-500 text-lg" />}</Tooltip></div>
-          <Tooltip title={`Profile Completion ${row.original.profile_completion}%`}>
-            <div className="h-2.5 w-full rounded-full bg-gray-300"><div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${row.original.profile_completion}%` }}></div></div>
-          </Tooltip>
-        </div>
-      )
+      header: "Profile & Scores", size: 190, accessorKey: 'profile_completion', id: 'profile', cell: ({ row }) => {
+        const { isSkeleton } = row.original;
+        if (isSkeleton) {
+          return (
+            <div className="flex flex-col gap-2">
+              <Skeleton height={14} width="50%" />
+              <Skeleton height={14} width="60%" />
+              <Skeleton height={10} width="100%" />
+            </div>
+          );
+        }
+        return (
+          <div className="flex flex-col gap-1.5 text-xs">
+            <span><b>Teams:</b> {row.original.teams_count || 0}</span>
+            <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${row.original.kyc_verified ? 'Yes' : 'No'}`}>{row.original.kyc_verified ? <MdCheckCircle className="text-green-500 text-lg" /> : <MdCancel className="text-red-500 text-lg" />}</Tooltip></div>
+            <Tooltip title={`Profile Completion ${row.original.profile_completion}%`}>
+              <div className="h-2.5 w-full rounded-full bg-gray-300"><div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${row.original.profile_completion}%` }}></div></div>
+            </Tooltip>
+          </div>
+        );
+      }
     },
-    { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props) => <PartnerActionColumn rowData={props.row.original} onEdit={(id) => navigate(`/business-entities/partner-edit/${id}`)} onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} />, },
-  ], [navigate, openImageViewer, handleOpenModal, handleDeleteClick]);
+    {
+      header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props) => {
+        if (props.row.original.isSkeleton) {
+          return (
+            <div className="flex items-center justify-center gap-2">
+              <Skeleton variant="circle" height={24} width={24} />
+              <Skeleton variant="circle" height={24} width={24} />
+              <Skeleton variant="circle" height={24} width={24} />
+            </div>
+          );
+        }
+        return <PartnerActionColumn rowData={props.row.original} onEdit={(id) => navigate(`/business-entities/partner-edit/${id}`)} onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} />
+      }
+    },
+  ], [navigate, handleOpenModal, handleDeleteClick]);
 
   const [filteredColumns, setFilteredColumns] = useState(columns);
   const toggleColumn = (checked: boolean, colId: string) => {
@@ -1342,14 +1451,33 @@ const PartnerListTable = () => {
   const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-1";
 
+  // --- ADDED: Skeleton component for summary cards ---
+  const CardSkeleton = () => (
+    <div className={classNames(cardClass, "border-gray-200 dark:border-gray-700")}>
+      <div className={cardBodyClass}>
+        <Skeleton variant="circle" height={32} width={32} />
+        <div className="flex flex-col gap-1 justify-center">
+          <Skeleton height={16} width={40} />
+          <Skeleton height={10} width={50} />
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 mb-4 gap-2">
-        <Tooltip title="Click to show all partners"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbBuilding size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.total ?? 0}</b><span className="text-[9px] font-semibold">Total</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to filter by Active status"><div onClick={() => handleCardClick('status', 'Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbBuildingBank size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.active ?? 0}</b><span className="text-[9px] font-semibold">Active</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to filter by Disable status"><div onClick={() => handleCardClick('status', 'Disabled')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.disabled ?? 0}</b><span className="text-[9px] font-semibold">Disabled</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to filter by KYC Verified"><div onClick={() => handleCardClick('kyc', 'Yes')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCircleCheck size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.verified ?? 0}</b><span className="text-[9px] font-semibold">Verified</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to filter by KYC Unverified"><div onClick={() => handleCardClick('kyc', 'No')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><TbCircleX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.non_verified ?? 0}</b><span className="text-[9px] font-semibold">Unverified</span></div></Card></div></Tooltip>
+        {isLoading ? (
+          Array.from({ length: 5 }).map((_, i) => <CardSkeleton key={i} />)
+        ) : (
+          <>
+            <Tooltip title="Click to show all partners"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbBuilding size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.total ?? 0}</b><span className="text-[9px] font-semibold">Total</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to filter by Active status"><div onClick={() => handleCardClick('status', 'Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbBuildingBank size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.active ?? 0}</b><span className="text-[9px] font-semibold">Active</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to filter by Disable status"><div onClick={() => handleCardClick('status', 'Disabled')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.disabled ?? 0}</b><span className="text-[9px] font-semibold">Disabled</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to filter by KYC Verified"><div onClick={() => handleCardClick('kyc', 'Yes')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCircleCheck size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.verified ?? 0}</b><span className="text-[9px] font-semibold">Verified</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to filter by KYC Unverified"><div onClick={() => handleCardClick('kyc', 'No')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><TbCircleX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.non_verified ?? 0}</b><span className="text-[9px] font-semibold">Unverified</span></div></Card></div></Tooltip>
+          </>
+        )}
       </div>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         <PartnerListSearch onInputChange={(val) => handleSetTableData({ query: val, pageIndex: 1 })} value={tableData.query} />
@@ -1367,7 +1495,24 @@ const PartnerListTable = () => {
         </div>
       </div>
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
-      <DataTable menuName="partner" selectable columns={filteredColumns} data={pageData} loading={isLoading} noData={pageData.length <= 0} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
+      <DataTable
+        menuName="partner"
+        selectable
+        columns={filteredColumns}
+        data={isLoading ? skeletonData : pageData}
+        loading={isLoading}
+        noData={!isLoading && pageData.length <= 0}
+        pagingData={{
+          total: isLoading ? 0 : total,
+          pageIndex: tableData.pageIndex as number,
+          pageSize: tableData.pageSize as number
+        }}
+        onPaginationChange={handlePaginationChange}
+        onSelectChange={handleSelectChange}
+        onSort={handleSort}
+        onCheckBoxChange={handleRowSelect}
+        onIndeterminateCheckBoxChange={handleAllRowSelect}
+      />
 
       {/* --- MODIFIED: Filter Drawer UI --- */}
       <Drawer
