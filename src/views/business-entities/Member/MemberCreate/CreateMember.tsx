@@ -125,7 +125,7 @@ export interface MemberFormSchema {
   address?: string;
   company_description?: string | null;
   company_address?: string;
-  whatsapp_number?: string;
+  whatsapp_no?: string;
   whatsapp_country_code?: string | { label: string; value: string };
   alternate_contact_country_code?: string | { label: string; value: string };
   alternate_contact_number?: string;
@@ -448,17 +448,17 @@ const transformApiToFormSchema = (
 
     continent_id: formData.continent
       ? { value: String(formData.continent.id), label: formData.continent.name }
-      : { value: String(formData.continent_id), label: 'Loading...' },
+      : null,
     country_id: formData.country
       ? { value: String(formData.country.id), label: formData.country.name }
-      : { value: String(formData.country_id), label: 'Loading...' },
+      : null,
     state: formData.state || "",
     city: formData.city || "",
     pincode: formData.pincode || "",
     address: formData.address || "",
 
     // Contact & Social Info
-    whatsapp_number: formData.whatsapp_no || "",
+    whatsapp_no: formData.whatsapp_no || "",
     whatsapp_country_code: createCountryCodeOption(
       formData.whatsapp_country_code
     ),
@@ -590,7 +590,7 @@ const preparePayloadForApi = (
     city: formData.city || "",
     pincode: formData.pincode || "",
     address: formData.address || "",
-    whatsapp_no: formData.whatsapp_number || null,
+    whatsapp_no: formData.whatsapp_no || null,
     whatsapp_country_code: getValue(formData.whatsapp_country_code) || null,
     alternate_contact_number: formData.alternate_contact_number || null,
     alternate_contact_number_code: getValue(formData.alternate_contact_country_code) || null,
@@ -1954,10 +1954,10 @@ const MemberProfileComponent = ({ control, errors, formMethods, isEditMode }: Fo
     control,
     name: "dynamic_member_profiles" as "dynamic_member_profiles",
   });
-  
+
   const { watch, setValue } = formMethods;
   const dispatch = useAppDispatch();
-  
+
   const selectedCat = watch("interested_category_ids");
   const selectedSubCat = watch("interested_subcategory_ids");
 
@@ -1978,51 +1978,51 @@ const MemberProfileComponent = ({ control, errors, formMethods, isEditMode }: Fo
   // Effect 2 (Unchanged): Set the default FIRST category in "Add New" mode.
   useEffect(() => {
     if (!isEditMode && ParentCategories.length > 0) {
-        const alreadySet = watch('interested_category_ids');
-        if (!alreadySet || alreadySet.length === 0) {
-            const defaultCategory = ParentCategories[0];
-            const defaultCategoryOption = { value: defaultCategory.id, label: defaultCategory.name };
-            setValue('interested_category_ids', [defaultCategoryOption], { shouldValidate: true });
-        }
+      const alreadySet = watch('interested_category_ids');
+      if (!alreadySet || alreadySet.length === 0) {
+        const defaultCategory = ParentCategories[0];
+        const defaultCategoryOption = { value: defaultCategory.id, label: defaultCategory.name };
+        setValue('interested_category_ids', [defaultCategoryOption], { shouldValidate: true });
+      }
     }
   }, [isEditMode, ParentCategories, setValue, watch]);
 
   // Effect 3 (Unchanged): Set the default FIRST sub-category in "Add New" mode.
   useEffect(() => {
     if (!isEditMode && subCategoriesForSelectedCategoryData.length > 0) {
-        const alreadySet = watch('interested_subcategory_ids');
-        if (!alreadySet || alreadySet.length === 0) {
-            const defaultSubCategory = subCategoriesForSelectedCategoryData[0];
-            const defaultSubCategoryOption = { value: defaultSubCategory.id, label: defaultSubCategory.name };
-            setValue('interested_subcategory_ids', [defaultSubCategoryOption], { shouldValidate: true });
-        }
+      const alreadySet = watch('interested_subcategory_ids');
+      if (!alreadySet || alreadySet.length === 0) {
+        const defaultSubCategory = subCategoriesForSelectedCategoryData[0];
+        const defaultSubCategoryOption = { value: defaultSubCategory.id, label: defaultSubCategory.name };
+        setValue('interested_subcategory_ids', [defaultSubCategoryOption], { shouldValidate: true });
+      }
     }
   }, [isEditMode, subCategoriesForSelectedCategoryData, setValue, watch]);
 
   // Effect 4 (Unchanged): Set the default FIRST product in "Add New" mode.
   useEffect(() => {
     if (!isEditMode && productsMasterData.length > 0 && selectedCat?.length > 0 && selectedSubCat?.length > 0) {
-        const alreadySet = watch('favourite_product_id');
-        if (!alreadySet || alreadySet.length === 0) {
-            const selectedCategoryId = selectedCat[0].value;
-            const selectedSubCategoryId = selectedSubCat[0].value;
-            const matchingProduct = productsMasterData.find((p: any) => 
-                String(p.category_id) === String(selectedCategoryId) && 
-                String(p.sub_category_id) === String(selectedSubCategoryId)
-            );
-            if (matchingProduct) {
-                const productOption = { value: matchingProduct.id, label: matchingProduct.name };
-                setValue('favourite_product_id', [productOption], { shouldValidate: true });
-            }
+      const alreadySet = watch('favourite_product_id');
+      if (!alreadySet || alreadySet.length === 0) {
+        const selectedCategoryId = selectedCat[0].value;
+        const selectedSubCategoryId = selectedSubCat[0].value;
+        const matchingProduct = productsMasterData.find((p: any) =>
+          String(p.category_id) === String(selectedCategoryId) &&
+          String(p.sub_category_id) === String(selectedSubCategoryId)
+        );
+        if (matchingProduct) {
+          const productOption = { value: matchingProduct.id, label: matchingProduct.name };
+          setValue('favourite_product_id', [productOption], { shouldValidate: true });
         }
+      }
     }
   }, [isEditMode, productsMasterData, selectedCat, selectedSubCat, setValue, watch]);
 
   // Effect 5 (NEW): Handle clearing of sub-categories to also clear products.
   useEffect(() => {
-      if (!selectedSubCat || selectedSubCat.length === 0) {
-          setValue('favourite_product_id', [], { shouldValidate: true });
-      }
+    if (!selectedSubCat || selectedSubCat.length === 0) {
+      setValue('favourite_product_id', [], { shouldValidate: true });
+    }
   }, [selectedSubCat, setValue]);
 
   // Options for dropdowns
@@ -2036,11 +2036,11 @@ const MemberProfileComponent = ({ control, errors, formMethods, isEditMode }: Fo
     { value: "Global Supplier", label: "Global Supplier" },
     { value: "Global Buyer", label: "Global Buyer" },
   ];
-  const gradeOptions = [ { value: "A", label: "A" }, { value: "B", label: "B" }, { value: "C", label: "C" }, { value: "D", label: "D" } ];
+  const gradeOptions = [{ value: "A", label: "A" }, { value: "B", label: "B" }, { value: "C", label: "C" }, { value: "D", label: "D" }];
   const managerOptions = usersData.map((m: any) => ({ value: String(m.id), label: `(${m.employee_id}) ${m.name}` }));
-  const interestedinOption = [ { value: "For Sell", label: "For Sell" }, { value: "For Buy", label: "For Buy" }, { value: "Both", label: "Both" }];
+  const interestedinOption = [{ value: "For Sell", label: "For Sell" }, { value: "For Buy", label: "For Buy" }, { value: "Both", label: "Both" }];
   const memberTypeOptions = MemberTypeData.map((m: any) => ({ value: m.id, label: m.name }));
-  
+
   return (
     <Card id="memberProfile">
       <h4 className="mb-6">Additional Member Profile</h4>
@@ -2374,7 +2374,7 @@ const PersonalDetailsComponent = ({
           </div>
         </FormItem>
         <FormItem
-          label={<div>Email<span className="text-red-500"> * </span></div>}
+          label={<div>Email</div>}
           invalid={!!errors.email}
           errorMessage={errors.email?.message}
         >
@@ -2564,8 +2564,8 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
       <div className="grid md:grid-cols-3 gap-4">
         <FormItem
           label={<div>WhatsApp No</div>}
-          invalid={!!errors.whatsapp_number}
-          errorMessage={errors.whatsapp_number?.message}
+          invalid={!!errors.whatsapp_no}
+          errorMessage={errors.whatsapp_no?.message}
         >
           <div className="flex items-center gap-2">
             <Controller
@@ -2581,7 +2581,7 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
               )}
             />
             <Controller
-              name="whatsapp_number"
+              name="whatsapp_no"
               control={control}
               render={({ field }) => (
                 <Input placeholder="Enter WhatsApp number" {...field} />
@@ -3094,7 +3094,7 @@ const MemberCreate = () => {
     address: "",
     company_description: "",
     company_address: "",
-    whatsapp_number: "",
+    whatsapp_no: "",
     whatsapp_country_code: "",
     alternate_contact_country_code: undefined,
     alternate_contact_number: "",
