@@ -1993,7 +1993,6 @@ const preparePayloadForApiAdd = (formData: MemberAddFormSchema): any => {
     password: formData.password,
     status: getValue(formData.status),
     number: formData.mobile_no,
-    customer_code: getValue(formData.contact_country_code),
     country_id: getValue(formData.country_id),
     interested_category_ids: formData.interested_category_ids.map(c => getValue(c)),
     role_type: '0', // Assuming '0' corresponds to 'Member' role
@@ -2448,6 +2447,28 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
             path: ['member_id'],
             message: 'Member selection is required',
           });
+        }
+      })
+    ).optional(),
+    company_teams: z.array(
+      z.object({
+        id: z.string().optional(),
+        team_name: z.string().optional().nullable(),
+        designation: z.string().optional().nullable(),
+        person_name: z.string().optional().nullable(),
+        number: z.string().optional().nullable(),
+      }).superRefine((data, ctx) => {
+        // A row is considered "active" if the user has entered data into the designation or number fields.
+        const isRowActive = (data.designation && data.designation.trim() !== '') ||
+                            (data.number && data.number.trim() !== '');
+
+        // If the row is active and the person's name is missing, add an error.
+        if (isRowActive && (!data.person_name || data.person_name.trim() === '')) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['person_name'],
+                message: 'Person Name is required.',
+            });
         }
       })
     ).optional(),
