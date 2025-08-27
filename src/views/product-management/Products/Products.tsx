@@ -1,4 +1,3 @@
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
 import cloneDeep from "lodash/cloneDeep";
@@ -403,23 +402,25 @@ const SendEmailDialog: React.FC<{ item: ProductItem; onClose: () => void }> = ({
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Send Email about {item.name}</h5>
       <form onSubmit={handleSubmit(onSendEmail)}>
-        <FormItem label="Subject">
-          <Controller
-            name="subject"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
-        </FormItem>
-        <FormItem label="Message">
-          <Controller
-            name="message"
-            control={control}
-            render={({ field }) => (
-              <RichTextEditor value={field.value} onChange={field.onChange} />
-            )}
-          />
-        </FormItem>
-        <div className="text-right mt-6">
+        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+          <FormItem label="Subject">
+            <Controller
+              name="subject"
+              control={control}
+              render={({ field }) => <Input {...field} />}
+            />
+          </FormItem>
+          <FormItem label="Message">
+            <Controller
+              name="message"
+              control={control}
+              render={({ field }) => (
+                <RichTextEditor value={field.value} onChange={field.onChange} />
+              )}
+            />
+          </FormItem>
+        </div>
+        <div className="text-right mt-6 flex-shrink-0">
           <Button className="mr-2" onClick={onClose}>
             Cancel
           </Button>
@@ -456,52 +457,54 @@ const AddNotificationDialog: React.FC<{
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Notification for {item.name}</h5>
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <FormItem
-          label="Notification Title"
-          invalid={!!errors.notification_title}
-          errorMessage={errors.notification_title?.message}
-        >
-          <Controller
-            name="notification_title"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
-        </FormItem>
-        <FormItem
-          label="Send to Users"
-          invalid={!!errors.send_users}
-          errorMessage={errors.send_users?.message}
-        >
-          <Controller
-            name="send_users"
-            control={control}
-            render={({ field }) => (
-              <UiSelect
-                isMulti
-                placeholder="Select Users"
-                options={userOptions}
-                value={userOptions.filter((o) =>
-                  field.value?.includes(o.value)
-                )}
-                onChange={(options: any) =>
-                  field.onChange(options?.map((o: any) => o.value) || [])
-                }
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Message"
-          invalid={!!errors.message}
-          errorMessage={errors.message?.message}
-        >
-          <Controller
-            name="message"
-            control={control}
-            render={({ field }) => <Input textArea {...field} rows={3} />}
-          />
-        </FormItem>
-        <div className="text-right mt-6">
+        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+          <FormItem
+            label="Notification Title"
+            invalid={!!errors.notification_title}
+            errorMessage={errors.notification_title?.message}
+          >
+            <Controller
+              name="notification_title"
+              control={control}
+              render={({ field }) => <Input {...field} />}
+            />
+          </FormItem>
+          <FormItem
+            label="Send to Users"
+            invalid={!!errors.send_users}
+            errorMessage={errors.send_users?.message}
+          >
+            <Controller
+              name="send_users"
+              control={control}
+              render={({ field }) => (
+                <UiSelect
+                  isMulti
+                  placeholder="Select Users"
+                  options={userOptions}
+                  value={userOptions.filter((o) =>
+                    field.value?.includes(o.value)
+                  )}
+                  onChange={(options: any) =>
+                    field.onChange(options?.map((o: any) => o.value) || [])
+                  }
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label="Message"
+            invalid={!!errors.message}
+            errorMessage={errors.message?.message}
+          >
+            <Controller
+              name="message"
+              control={control}
+              render={({ field }) => <Input textArea {...field} rows={3} />}
+            />
+          </FormItem>
+        </div>
+        <div className="text-right mt-6 flex-shrink-0">
           <Button className="mr-2" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
@@ -545,89 +548,91 @@ const AssignTaskDialog: React.FC<{
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Assign Task for {item.name}</h5>
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <FormItem
-          label="Title"
-          invalid={!!errors.task_title}
-          errorMessage={errors.task_title?.message}
-        >
-          <Controller
-            name="task_title"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
-        </FormItem>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
           <FormItem
-            label="Assign To"
-            invalid={!!errors.assign_to}
-            errorMessage={errors.assign_to?.message}
+            label="Title"
+            invalid={!!errors.task_title}
+            errorMessage={errors.task_title?.message}
           >
             <Controller
-              name="assign_to"
+              name="task_title"
+              control={control}
+              render={({ field }) => <Input {...field} />}
+            />
+          </FormItem>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormItem
+              label="Assign To"
+              invalid={!!errors.assign_to}
+              errorMessage={errors.assign_to?.message}
+            >
+              <Controller
+                name="assign_to"
+                control={control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select User"
+                    options={userOptions}
+                    value={userOptions.filter((o) =>
+                      field.value?.includes(o.value)
+                    )}
+                    onChange={(opts: any) =>
+                      field.onChange(opts?.map((o: any) => o.value) || [])
+                    }
+                  />
+                )}
+              />
+            </FormItem>
+            <FormItem
+              label="Priority"
+              invalid={!!errors.priority}
+              errorMessage={errors.priority?.message}
+            >
+              <Controller
+                name="priority"
+                control={control}
+                render={({ field }) => (
+                  <UiSelect
+                    placeholder="Select Priority"
+                    options={priorityOptions}
+                    value={priorityOptions.find((p) => p.value === field.value)}
+                    onChange={(opt: any) => field.onChange(opt?.value)}
+                  />
+                )}
+              />
+            </FormItem>
+          </div>
+          <FormItem
+            label="Due Date"
+            invalid={!!errors.due_date}
+            errorMessage={errors.due_date?.message}
+          >
+            <Controller
+              name="due_date"
               control={control}
               render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder="Select User"
-                  options={userOptions}
-                  value={userOptions.filter((o) =>
-                    field.value?.includes(o.value)
-                  )}
-                  onChange={(opts: any) =>
-                    field.onChange(opts?.map((o: any) => o.value) || [])
-                  }
+                <DatePicker
+                  placeholder="Select date"
+                  value={field.value}
+                  onChange={field.onChange}
                 />
               )}
             />
           </FormItem>
           <FormItem
-            label="Priority"
-            invalid={!!errors.priority}
-            errorMessage={errors.priority?.message}
+            label="Description"
+            invalid={!!errors.description}
+            errorMessage={errors.description?.message}
           >
             <Controller
-              name="priority"
+              name="description"
               control={control}
-              render={({ field }) => (
-                <UiSelect
-                  placeholder="Select Priority"
-                  options={priorityOptions}
-                  value={priorityOptions.find((p) => p.value === field.value)}
-                  onChange={(opt: any) => field.onChange(opt?.value)}
-                />
-              )}
+              render={({ field }) => <Input textArea {...field} />}
             />
           </FormItem>
         </div>
-        <FormItem
-          label="Due Date"
-          invalid={!!errors.due_date}
-          errorMessage={errors.due_date?.message}
-        >
-          <Controller
-            name="due_date"
-            control={control}
-            render={({ field }) => (
-              <DatePicker
-                placeholder="Select date"
-                value={field.value}
-                onChange={field.onChange}
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Description"
-          invalid={!!errors.description}
-          errorMessage={errors.description?.message}
-        >
-          <Controller
-            name="description"
-            control={control}
-            render={({ field }) => <Input textArea {...field} />}
-          />
-        </FormItem>
-        <div className="text-right mt-6">
+        <div className="text-right mt-6 flex-shrink-0">
           <Button className="mr-2" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
@@ -670,83 +675,85 @@ const AddScheduleDialog: React.FC<{
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Schedule for {item.name}</h5>
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <FormItem
-          label="Event Title"
-          invalid={!!errors.event_title}
-          errorMessage={errors.event_title?.message}
-        >
-          <Controller
-            name="event_title"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
-        </FormItem>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
           <FormItem
-            label="Event Type"
-            invalid={!!errors.event_type}
-            errorMessage={errors.event_type?.message}
+            label="Event Title"
+            invalid={!!errors.event_title}
+            errorMessage={errors.event_title?.message}
           >
             <Controller
-              name="event_type"
+              name="event_title"
               control={control}
-              render={({ field }) => (
-                <UiSelect
-                  placeholder="Select Type"
-                  options={eventTypeOptions}
-                  value={eventTypeOptions.find((o) => o.value === field.value)}
-                  onChange={(opt: any) => field.onChange(opt?.value)}
-                />
-              )}
+              render={({ field }) => <Input {...field} />}
             />
           </FormItem>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormItem
+              label="Event Type"
+              invalid={!!errors.event_type}
+              errorMessage={errors.event_type?.message}
+            >
+              <Controller
+                name="event_type"
+                control={control}
+                render={({ field }) => (
+                  <UiSelect
+                    placeholder="Select Type"
+                    options={eventTypeOptions}
+                    value={eventTypeOptions.find((o) => o.value === field.value)}
+                    onChange={(opt: any) => field.onChange(opt?.value)}
+                  />
+                )}
+              />
+            </FormItem>
+            <FormItem
+              label="Date & Time"
+              invalid={!!errors.date_time}
+              errorMessage={errors.date_time?.message}
+            >
+              <Controller
+                name="date_time"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker.DateTimepicker
+                    placeholder="Select date & time"
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </FormItem>
+          </div>
           <FormItem
-            label="Date & Time"
-            invalid={!!errors.date_time}
-            errorMessage={errors.date_time?.message}
+            label="Reminder Date & Time (Optional)"
+            invalid={!!errors.remind_from}
+            errorMessage={errors.remind_from?.message}
           >
             <Controller
-              name="date_time"
+              name="remind_from"
               control={control}
               render={({ field }) => (
                 <DatePicker.DateTimepicker
-                  placeholder="Select date & time"
+                  placeholder="Select date and time"
                   value={field.value}
                   onChange={field.onChange}
                 />
               )}
             />
           </FormItem>
+          <FormItem
+            label="Notes"
+            invalid={!!errors.notes}
+            errorMessage={errors.notes?.message}
+          >
+            <Controller
+              name="notes"
+              control={control}
+              render={({ field }) => <Input textArea {...field} />}
+            />
+          </FormItem>
         </div>
-        <FormItem
-          label="Reminder Date & Time (Optional)"
-          invalid={!!errors.remind_from}
-          errorMessage={errors.remind_from?.message}
-        >
-          <Controller
-            name="remind_from"
-            control={control}
-            render={({ field }) => (
-              <DatePicker.DateTimepicker
-                placeholder="Select date and time"
-                value={field.value}
-                onChange={field.onChange}
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Notes"
-          invalid={!!errors.notes}
-          errorMessage={errors.notes?.message}
-        >
-          <Controller
-            name="notes"
-            control={control}
-            render={({ field }) => <Input textArea {...field} />}
-          />
-        </FormItem>
-        <div className="text-right mt-6">
+        <div className="text-right mt-6 flex-shrink-0">
           <Button
             type="button"
             className="mr-2"
@@ -788,37 +795,39 @@ const AddActivityDialog: React.FC<{
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Activity for {item.name}</h5>
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <FormItem
-          label="Activity"
-          invalid={!!errors.item}
-          errorMessage={errors.item?.message}
-        >
-          <Controller
-            name="item"
-            control={control}
-            render={({ field }) => (
-              <Input {...field} placeholder="e.g., Followed up with supplier" />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Notes (Optional)"
-          invalid={!!errors.notes}
-          errorMessage={errors.notes?.message}
-        >
-          <Controller
-            name="notes"
-            control={control}
-            render={({ field }) => (
-              <Input
-                textArea
-                {...field}
-                placeholder="Add relevant details..."
-              />
-            )}
-          />
-        </FormItem>
-        <div className="text-right mt-6">
+        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+          <FormItem
+            label="Activity"
+            invalid={!!errors.item}
+            errorMessage={errors.item?.message}
+          >
+            <Controller
+              name="item"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} placeholder="e.g., Followed up with supplier" />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label="Notes (Optional)"
+            invalid={!!errors.notes}
+            errorMessage={errors.notes?.message}
+          >
+            <Controller
+              name="notes"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  textArea
+                  {...field}
+                  placeholder="Add relevant details..."
+                />
+              )}
+            />
+          </FormItem>
+        </div>
+        <div className="text-right mt-6 flex-shrink-0">
           <Button
             type="button"
             className="mr-2"
@@ -3729,109 +3738,106 @@ const Products = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          {/* <FormItem label="Name or SKU">
-            <Controller
-              name="filterNameOrSku"
-              control={filterFormControl}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter Name or SKU" />
-              )}
-            />
-          </FormItem> */}
-          <FormItem label="Categories">
-            <Controller
-              name="filterCategoryIds"
-              control={filterFormControl}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder="Select Categories"
-                  options={categoryOptions}
-                  value={categoryOptions.filter((o) =>
-                    field.value?.includes(o.value)
+          {/* START: Responsive Fix */}
+          <div className="h-full overflow-y-auto">
+            <div className="flex flex-col gap-4">
+              <FormItem label="Categories">
+                <Controller
+                  name="filterCategoryIds"
+                  control={filterFormControl}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select Categories"
+                      options={categoryOptions}
+                      value={categoryOptions.filter((o) =>
+                        field.value?.includes(o.value)
+                      )}
+                      onChange={(opts) => {
+                        field.onChange(opts?.map((o) => o.value));
+                        if (!opts || opts.length !== 1) {
+                          const currentFilterSubCatIds = getFilterValues(
+                            "filterSubCategoryIds"
+                          );
+                          if (
+                            currentFilterSubCatIds &&
+                            currentFilterSubCatIds.length > 0
+                          )
+                            setFilterFormValue("filterSubCategoryIds", []);
+                        }
+                      }}
+                    />
                   )}
-                  onChange={(opts) => {
-                    field.onChange(opts?.map((o) => o.value));
-                    if (!opts || opts.length !== 1) {
-                      const currentFilterSubCatIds = getFilterValues(
-                        "filterSubCategoryIds"
-                      );
-                      if (
-                        currentFilterSubCatIds &&
-                        currentFilterSubCatIds.length > 0
-                      )
-                        setFilterFormValue("filterSubCategoryIds", []);
-                    }
-                  }}
                 />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Sub Categories">
-            <Controller
-              name="filterSubCategoryIds"
-              control={filterFormControl}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder={
-                    !watchedFilterCategoryIds ||
-                      watchedFilterCategoryIds.length !== 1
-                      ? "Select one category first"
-                      : subcategoryOptions.length === 0 &&
-                        masterLoadingStatus !== "loading"
-                        ? "No subcategories"
-                        : "Select Sub Categories"
-                  }
-                  options={subcategoryOptions}
-                  value={subcategoryOptions.filter((o) =>
-                    field.value?.includes(o.value)
+              </FormItem>
+              <FormItem label="Sub Categories">
+                <Controller
+                  name="filterSubCategoryIds"
+                  control={filterFormControl}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder={
+                        !watchedFilterCategoryIds ||
+                          watchedFilterCategoryIds.length !== 1
+                          ? "Select one category first"
+                          : subcategoryOptions.length === 0 &&
+                            masterLoadingStatus !== "loading"
+                            ? "No subcategories"
+                            : "Select Sub Categories"
+                      }
+                      options={subcategoryOptions}
+                      value={subcategoryOptions.filter((o) =>
+                        field.value?.includes(o.value)
+                      )}
+                      onChange={(opts) => field.onChange(opts?.map((o) => o.value))}
+                      isDisabled={
+                        !watchedFilterCategoryIds ||
+                        watchedFilterCategoryIds.length !== 1 ||
+                        (subcategoryOptions.length === 0 &&
+                          masterLoadingStatus !== "loading")
+                      }
+                    />
                   )}
-                  onChange={(opts) => field.onChange(opts?.map((o) => o.value))}
-                  isDisabled={
-                    !watchedFilterCategoryIds ||
-                    watchedFilterCategoryIds.length !== 1 ||
-                    (subcategoryOptions.length === 0 &&
-                      masterLoadingStatus !== "loading")
-                  }
                 />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Brands">
-            <Controller
-              name="filterBrandIds"
-              control={filterFormControl}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder="Select Brands"
-                  options={brandOptions}
-                  value={brandOptions.filter((o) =>
-                    field.value?.includes(o.value)
+              </FormItem>
+              <FormItem label="Brands">
+                <Controller
+                  name="filterBrandIds"
+                  control={filterFormControl}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select Brands"
+                      options={brandOptions}
+                      value={brandOptions.filter((o) =>
+                        field.value?.includes(o.value)
+                      )}
+                      onChange={(opts) => field.onChange(opts?.map((o) => o.value))}
+                    />
                   )}
-                  onChange={(opts) => field.onChange(opts?.map((o) => o.value))}
                 />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Status">
-            <Controller
-              name="filterStatuses"
-              control={filterFormControl}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder="Select Status"
-                  options={uiProductStatusOptions}
-                  value={uiProductStatusOptions.filter((o) =>
-                    field.value?.includes(o.value)
+              </FormItem>
+              <FormItem label="Status">
+                <Controller
+                  name="filterStatuses"
+                  control={filterFormControl}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select Status"
+                      options={uiProductStatusOptions}
+                      value={uiProductStatusOptions.filter((o) =>
+                        field.value?.includes(o.value)
+                      )}
+                      onChange={(opts) => field.onChange(opts?.map((o) => o.value))}
+                    />
                   )}
-                  onChange={(opts) => field.onChange(opts?.map((o) => o.value))}
                 />
-              )}
-            />
-          </FormItem>
+              </FormItem>
+            </div>
+          </div>
+          {/* END: Responsive Fix */}
         </Form>
       </Drawer>
       <ConfirmDialog
