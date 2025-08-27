@@ -83,13 +83,13 @@ import {
   addTaskAction,
   deleteAllInquiryAction,
   editInquiriesAction,
-  getAllUsersAction, // MODIFIED: Added edit action
+  getAllUsersAction,
   getDepartmentsAction,
   getInquiriesAction,
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import axiosInstance from '@/services/api/api'; // ADDED: For direct API calls
+import axiosInstance from '@/services/api/api';
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 import dayjs from "dayjs";
 import { BsThreeDotsVertical } from "react-icons/bs";
@@ -157,13 +157,78 @@ const formatDateForApi = (date: Date | string | null | undefined): string | null
   }
 };
 
+// ============================================================================
+// --- SKELETON COMPONENTS ---
+// ============================================================================
+const Skeleton = ({ className }: { className?: string }) => (
+  <div className={classNames('animate-pulse bg-gray-200 dark:bg-gray-700 rounded', className)} />
+);
+
+const SummaryCardsSkeleton = () => (
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
+    {Array.from({ length: 8 }).map((_, i) => (
+      <Card key={i} bodyClass="flex items-center gap-2 p-2">
+        <Skeleton className="h-10 w-10 rounded-md flex-shrink-0" />
+        <div className="flex-1">
+          <Skeleton className="h-4 w-1/3 mb-1.5" />
+          <Skeleton className="h-3 w-2/3" />
+        </div>
+      </Card>
+    ))}
+  </div>
+);
+
+const TableSkeleton = () => (
+  <div>
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
+      <Skeleton className="h-9 w-full md:w-64" />
+      <div className="flex gap-2">
+        <Skeleton className="h-9 w-9" />
+        <Skeleton className="h-9 w-9" />
+        <Skeleton className="h-9 w-24" />
+        <Skeleton className="h-9 w-24" />
+      </div>
+    </div>
+    <div className="border rounded-md dark:border-gray-700">
+      <div className="w-full">
+        {/* Table Head */}
+        <div className="flex bg-gray-50 dark:bg-gray-700/50 p-3 rounded-t-md border-b dark:border-gray-700">
+          <div className="w-12 px-4"><Skeleton className="h-4 w-4 rounded-sm" /></div>
+          <div className="flex-1 px-4" style={{ maxWidth: '280px' }}><Skeleton className="h-4 w-3/4" /></div>
+          <div className="flex-1 px-4" style={{ maxWidth: '240px' }}><Skeleton className="h-4 w-1/2" /></div>
+          <div className="flex-1 px-4" style={{ maxWidth: '280px' }}><Skeleton className="h-4 w-2/3" /></div>
+          <div className="flex-1 px-4" style={{ maxWidth: '180px' }}><Skeleton className="h-4 w-1/2" /></div>
+          <div className="w-32 px-4 text-center"><Skeleton className="h-4 w-1/2 mx-auto" /></div>
+        </div>
+        {/* Table Body */}
+        <div>
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="flex items-center border-b dark:border-gray-700 p-3 h-[74px]">
+              <div className="w-12 px-4"><Skeleton className="h-4 w-4 rounded-sm" /></div>
+              <div className="flex-1 px-4" style={{ maxWidth: '280px' }}><Skeleton className="h-4 w-5/6" /></div>
+              <div className="flex-1 px-4" style={{ maxWidth: '240px' }}><Skeleton className="h-4 w-full" /></div>
+              <div className="flex-1 px-4" style={{ maxWidth: '280px' }}><Skeleton className="h-4 w-3/4" /></div>
+              <div className="flex-1 px-4" style={{ maxWidth: '180px' }}><Skeleton className="h-4 w-4/5" /></div>
+              <div className="w-32 px-4 flex justify-center gap-2">
+                <Skeleton className="h-5 w-5 rounded-full" />
+                <Skeleton className="h-5 w-5 rounded-full" />
+                <Skeleton className="h-5 w-5 rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 
 // ============================================================================
 // --- MODALS SECTION ---
 // ============================================================================
 
 // --- Type Definitions for Modals ---
-export type InquiryModalType = "notification" | "schedule" | "task" | "statusUpdate" | "assignUpdate"; // MODIFIED
+export type InquiryModalType = "notification" | "schedule" | "task" | "statusUpdate" | "assignUpdate";
 export interface InquiryModalState {
   isOpen: boolean;
   type: InquiryModalType | null;
@@ -238,7 +303,6 @@ const AddInquiryNotificationDialog: React.FC<{
       onRequestClose={onClose}
       title={`Notify User about: ${inquiry.inquiry_id}`}
     >
-      {/* FIXED: Added a scrollable container for the form content to fix overflow issues. */}
       <div className="max-h-[65vh] overflow-y-auto pr-4 -mr-4">
         <UiForm id="notificationForm" onSubmit={handleSubmit(onSend)}>
           <UiFormItem
@@ -288,7 +352,6 @@ const AddInquiryNotificationDialog: React.FC<{
           </UiFormItem>
         </UiForm>
       </div>
-      {/* FIXED: Moved buttons outside the scrollable area to act as a sticky footer. */}
       <div className="text-right mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
         <Button
           type="button"
@@ -688,7 +751,7 @@ const AssignTaskDialog: React.FC<{
   );
 };
 
-// --- Status Update Dialog (ADDED) ---
+// --- Status Update Dialog ---
 const StatusUpdateModal: React.FC<{
   inquiry: InquiryItem;
   onClose: () => void;
@@ -714,14 +777,12 @@ const StatusUpdateModal: React.FC<{
   const handleStatusUpdate = async (formData: StatusUpdateFormData) => {
     setIsLoading(true);
     try {
-      // 1. Fetch the full, most up-to-date inquiry data
       const response = await axiosInstance.get(`/inquiry/${inquiry.id}`);
       if (!response.data?.data) {
         throw new Error("Failed to fetch latest inquiry data.");
       }
       const apiData = response.data.data;
 
-      // 2. Construct the payload as FormData, preserving all original data
       const formDataPayload = new FormData();
       const payloadObject: { [key: string]: any } = {
         company_name: apiData.company_name,
@@ -756,11 +817,10 @@ const StatusUpdateModal: React.FC<{
       formDataPayload.append('id', String(inquiry.id));
       formDataPayload.append('_method', 'PUT');
 
-      // 3. Dispatch the edit action
       await dispatch(editInquiriesAction({ id: inquiry.id, data: formDataPayload })).unwrap();
 
       toast.push(<Notification type="success" title="Status Updated">Inquiry status changed successfully.</Notification>);
-      onSuccess(); // This will trigger a data refresh in the parent component
+      onSuccess();
       onClose();
 
     } catch (error: any) {
@@ -823,7 +883,7 @@ const AssignToUpdateModal: React.FC<{
   onSuccess: () => void;
 }> = ({ inquiry, onClose, onSuccess }) => {
   const dispatch = useAppDispatch();
-  const { usersData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
+  const { usersData = [] } = useSelector(masterSelector, shallowEqual);
 
   const [isLoading, setIsLoading] = useState(false);
   const usersDataOptions = useMemo(() => Array.isArray(usersData) ? usersData.map((sp: ApiLookupItem) => ({ value: String(sp.id), label: `(${sp.employee_id}) - ${sp.name || 'N/A'}` })) : [], [usersData]);
@@ -838,14 +898,12 @@ const AssignToUpdateModal: React.FC<{
   const handleAssignToUpdate = async (formData: AssignUpdateFormData) => {
     setIsLoading(true);
     try {
-      // 1. Fetch the full, most up-to-date inquiry data
       const response = await axiosInstance.get(`/inquiry/${inquiry.id}`);
       if (!response.data?.data) {
         throw new Error("Failed to fetch latest inquiry data.");
       }
       const apiData = response.data.data;
 
-      // 2. Construct the payload as FormData, preserving all original data
       const formDataPayload = new FormData();
       const payloadObject: { [key: string]: any } = {
         company_name: apiData.company_name,
@@ -856,7 +914,7 @@ const AssignToUpdateModal: React.FC<{
         inquiry_subject: apiData.inquiry_subject,
         priority: apiData.priority || apiData.inquiry_priority,
         inquiry_description: apiData.inquiry_description,
-        status: apiData.status, // Use the new status from the form
+        status: apiData.status,
         assigned_to: formData.assigned_to,
         department_id: apiData.department_id,
         inquiry_date: formatDateForApi(apiData.inquiry_date),
@@ -880,15 +938,14 @@ const AssignToUpdateModal: React.FC<{
       formDataPayload.append('id', String(inquiry.id));
       formDataPayload.append('_method', 'PUT');
 
-      // 3. Dispatch the edit action
       await dispatch(editInquiriesAction({ id: inquiry.id, data: formDataPayload })).unwrap();
 
-      toast.push(<Notification type="success" title="Status Updated">Inquiry status changed successfully.</Notification>);
-      onSuccess(); // This will trigger a data refresh in the parent component
+      toast.push(<Notification type="success" title="Assignee Updated">Inquiry assignee changed successfully.</Notification>);
+      onSuccess();
       onClose();
 
     } catch (error: any) {
-      console.error("Status Update Error:", error);
+      console.error("Assignee Update Error:", error);
       const errorMessage = error?.payload?.message || error.message || "An unknown error occurred.";
       toast.push(<Notification type="danger" title="Update Failed">{errorMessage}</Notification>);
     } finally {
@@ -916,7 +973,7 @@ const AssignToUpdateModal: React.FC<{
               <Select
                 placeholder="Select Assignee"
                 options={usersDataOptions}
-                isLoading={masterLoadingStatus === "loading" && usersDataOptions.length === 0}
+                isLoading={!isLoading && usersDataOptions.length === 0}
                 value={usersDataOptions.find(o => o.value === field.value) || null}
                 onChange={opt => field.onChange(opt ? opt.value : null)}
                 isClearable
@@ -942,7 +999,7 @@ const AssignToUpdateModal: React.FC<{
 const InquiriesModals: React.FC<{
   modalState: InquiryModalState;
   onClose: () => void;
-  onSuccess: () => void; // ADDED onSuccess to refresh data
+  onSuccess: () => void;
   getAllUserDataOptions: SelectOption[];
 }> = ({ modalState, onClose, onSuccess, getAllUserDataOptions }) => {
   const { type, data: inquiry, isOpen } = modalState;
@@ -967,7 +1024,7 @@ const InquiriesModals: React.FC<{
           getAllUserDataOptions={getAllUserDataOptions}
         />
       );
-    case "statusUpdate": // ADDED
+    case "statusUpdate":
       return (
         <StatusUpdateModal
           inquiry={inquiry}
@@ -1018,8 +1075,6 @@ export type ApiInquiryItem = {
   inquiry_attachments_array: string[];
   assigned_to_name: string;
   inquiry_department_name: string;
-  name?: string | null;
-  email?: string | null;
   contact_person?: string | null;
   priority?: string | null;
   status?: string | null;
@@ -1166,9 +1221,8 @@ const processApiDataToInquiryItems = (
     id: String(apiItem.id),
     inquiry_id: apiItem.inquiry_id || `INQ-${apiItem.id}`,
     company_name: apiItem.company_name || "N/A",
-    name: apiItem.name || apiItem.name || "N/A",
-    email:
-      apiItem.email || apiItem.email || "N/A",
+    name: apiItem.name || "N/A",
+    email: apiItem.email || "N/A",
     mobile_no: apiItem.contact_person || apiItem.mobile_no || "N/A",
     inquiry_type: apiItem.inquiry_type || "N/A",
     inquiry_subject: apiItem.inquiry_subject || "N/A",
@@ -1217,7 +1271,6 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({
     inquiryList1,
     departmentsData,
     getAllUserData,
-    status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector);
   const [inquiryList, setInquiryList] = useState<InquiryItem[]>([]);
   const [selectedInquiries, setSelectedInquiries] = useState<InquiryItem[]>([]);
@@ -1236,15 +1289,20 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   useEffect(() => {
-    dispatch(getDepartmentsAction());
-    dispatch(getInquiriesAction());
-    dispatch(getAllUsersAction());
+    const fetchData = async () => {
+      setIsLoading(true);
+      await dispatch(getDepartmentsAction());
+      await dispatch(getInquiriesAction());
+      await dispatch(getAllUsersAction());
+      setIsLoading(false);
+    };
+
+    fetchData();
   }, [dispatch]);
 
   useEffect(() => {
-    setIsLoading(masterLoadingStatus === "loading");
 
-    if (masterLoadingStatus === "succeeded" || masterLoadingStatus === "idle") {
+    if (!isLoading) {
       const rawInquiries = inquiryList1?.data?.data;
       const inquiryDataFromApi = Array.isArray(rawInquiries)
         ? rawInquiries
@@ -1259,16 +1317,11 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({
         ? departmentsData.data
         : [];
       setDepartments(deptsFromApi as Department[]);
-    } else if (masterLoadingStatus === "failed") {
+    } else {
       setInquiryList([]);
       setDepartments([]);
-      toast.push(
-        <Notification type="danger" title="Error">
-          Failed to load data.
-        </Notification>
-      );
     }
-  }, [inquiryList1, departmentsData, masterLoadingStatus]);
+  }, [inquiryList1, departmentsData, isLoading]);
 
   return (
     <InquiryListContext.Provider
@@ -1307,19 +1360,21 @@ const InquiryActionColumn = ({
   const handleEdit = () => onEdit && onEdit(rowData.id);
   return (
     <div className="flex items-center justify-center gap-1">
-      {getMenuRights("inquiry")?.is_edit && <div>
-        {onEdit && (
-          <Tooltip title="Edit">
-            <div
-              className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
-              role="button"
-              onClick={handleEdit}
-            >
-              <TbPencil />
-            </div>
-          </Tooltip>
-        )}
-      </div>}
+      {getMenuRights("inquiry")?.is_edit && (
+        <div>
+          {onEdit && (
+            <Tooltip title="Edit">
+              <div
+                className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
+                role="button"
+                onClick={handleEdit}
+              >
+                <TbPencil />
+              </div>
+            </Tooltip>
+          )}
+        </div>
+      )}
       <Tooltip title="View">
         <div
           className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
@@ -1484,7 +1539,6 @@ const InquiryViewModal: React.FC<InquiryViewModalProps> = ({
       title={`Inquiry Details: ${inquiry.inquiry_id}`}
       width={700}
     >
-      {/* FIXED: Separated content and footer, making the content area scrollable to fix overflow. */}
       <div className="py-4 px-1 max-h-[65vh] overflow-y-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
           <div>
@@ -1727,17 +1781,19 @@ const InquiryListTable = () => {
   const {
     inquiryList,
     departments,
-    isLoading,
+    isLoading, // MODIFIED: Using global loading state from context
     selectedInquiries,
     setSelectedInquiries,
     getAllUserDataOptions,
   } = useInquiryList();
+
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
     pageSize: 10,
     sort: { order: "", key: "" },
     query: "",
   });
+  // REMOVED: `const [isLoading, setIsLoading] = useState(false);` This is now handled globally.
   const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<InquiryFilterFormData>(
     {}
@@ -1852,6 +1908,7 @@ const InquiryListTable = () => {
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1, query: "" });
+    // MODIFIED: Removed local state management. Redux will handle the loading state.
     dispatch(getInquiriesAction());
   };
 
@@ -2044,7 +2101,7 @@ const InquiryListTable = () => {
                 : -Infinity;
           if (isNaN(dateA)) return 1;
           if (isNaN(dateB)) return -1;
-          return order === "asc" ? dateA - dateB : dateB - aVal;
+          return order === "asc" ? dateA - dateB : dateB - dateA;
         }
         if (typeof aVal === "string" && typeof bVal === "string")
           return order === "asc"
@@ -2101,7 +2158,11 @@ const InquiryListTable = () => {
               <span className="text-xs text-gray-700 dark:text-gray-300">
                 {d.company_name || "Company Name"}
               </span>
-              <Tooltip title={d.inquiry_subject}></Tooltip>
+              <Tooltip title={d.inquiry_subject}>
+                <p className="text-gray-600 dark:text-gray-400 line-clamp-1">
+                  {d.inquiry_subject}
+                </p>
+              </Tooltip>
               <div className="flex items-center gap-2 mt-1">
                 <Tag className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
                   {d.inquiry_type || "Inquiry Type"}
@@ -2227,7 +2288,6 @@ const InquiryListTable = () => {
     ],
     [
       navigate,
-      allFilteredAndSortedData,
       handleOpenModal,
       handleSendEmail,
       handleSendWhatsapp,
@@ -2505,6 +2565,18 @@ const InquiryListTable = () => {
     };
   }, [inquiryList]);
 
+  // --- SKELETON RENDER LOGIC ---
+  // CORRECTED: This now uses the global `isLoading` state from the context provider,
+  // ensuring skeletons are shown during the initial data fetch.
+  if (isLoading) {
+    return (
+      <>
+        <SummaryCardsSkeleton />
+        <TableSkeleton />
+      </>
+    );
+  }
+
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
@@ -2685,7 +2757,8 @@ const InquiryListTable = () => {
               </span>
             )}
           </Button>
-          <Button menuName="inquiry"
+          <Button
+            menuName="inquiry"
             isExport={true}
             icon={<TbCloudUpload />}
             onClick={handleExport}
@@ -2748,21 +2821,6 @@ const InquiryListTable = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
         >
           <div className="sm:grid grid-cols-2 gap-x-4 gap-y-2">
-            {/* <UiFormItem label="Record Status">
-              <Controller
-                name="filterRecordStatus"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Status"
-                    options={recordStatusOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
-            </UiFormItem> */}
             <UiFormItem label="Inquiry Type">
               <Controller
                 name="filterInquiryType"
@@ -2838,21 +2896,6 @@ const InquiryListTable = () => {
                 )}
               />
             </UiFormItem>
-            {/* <UiFormItem label="Feedback Status" className="col-span-2">
-              <Controller
-                name="filterFeedbackStatus"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Status"
-                    options={feedbackStatusOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
-            </UiFormItem> */}
             <UiFormItem label="Inquiry Date Range" className="col-span-2">
               <Controller
                 name="filterInquiryDate"
@@ -3139,32 +3182,30 @@ const Inquiries = () => {
   const navigate = useNavigate();
   return (
     <InquiryListProvider>
-      <>
-        <Container>
-          <AdaptiveCard>
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                <h5>Inquiries</h5>
-                <div className="flex flex-col md:flex-row gap-3">
-                  <Button
-                    menuName="inquiry"
-                    isAdd={true}
-                    variant="solid"
-                    icon={<TbPlus className="text-lg" />}
-                    onClick={() => {
-                      navigate("/business-entities/create-inquiry");
-                    }}
-                  >
-                    Add New
-                  </Button>
-                </div>
+      <Container>
+        <AdaptiveCard>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+              <h5>Inquiries</h5>
+              <div className="flex flex-col md:flex-row gap-3">
+                <Button
+                  menuName="inquiry"
+                  isAdd={true}
+                  variant="solid"
+                  icon={<TbPlus className="text-lg" />}
+                  onClick={() => {
+                    navigate("/business-entities/create-inquiry");
+                  }}
+                >
+                  Add New
+                </Button>
               </div>
-              <InquiryListTable />
             </div>
-          </AdaptiveCard>
-        </Container>
-        <InquiryListSelected />
-      </>
+            <InquiryListTable />
+          </div>
+        </AdaptiveCard>
+      </Container>
+      <InquiryListSelected />
     </InquiryListProvider>
   );
 };
