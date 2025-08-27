@@ -2820,109 +2820,113 @@ const InquiryListTable = () => {
           id="filterInquiryForm"
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
         >
-          <div className="sm:grid grid-cols-2 gap-x-4 gap-y-2">
-            <UiFormItem label="Inquiry Type">
-              <Controller
-                name="filterInquiryType"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Type"
-                    options={inquiryTypeOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
-            </UiFormItem>
-            <UiFormItem label="Inquiry Priority">
-              <Controller
-                name="filterInquiryPriority"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Priority"
-                    options={inquiryPriorityOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
-            </UiFormItem>
-            <UiFormItem label="Inquiry Current Status">
-              <Controller
-                name="filterInquiryCurrentStatus"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Status"
-                    options={inquiryCurrentStatusOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
-            </UiFormItem>
-            <UiFormItem label="Assigned To">
-              <Controller
-                name="filterAssignedTo"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Assignee"
-                    options={assignedToOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
-            </UiFormItem>
-            <UiFormItem label="Department">
-              <Controller
-                name="filterDepartment"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Department"
-                    options={departmentFilterOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
-            </UiFormItem>
-            <UiFormItem label="Inquiry Date Range" className="col-span-2">
-              <Controller
-                name="filterInquiryDate"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <DatePickerRange
-                    placeholder="Select Inquiry Dates"
-                    value={field.value as [Date | null, Date | null]}
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-            </UiFormItem>
-            <UiFormItem label="Response Date Range" className="col-span-2">
-              <Controller
-                name="filterResponseDate"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <DatePickerRange
-                    placeholder="Select Response Dates"
-                    value={field.value as [Date | null, Date | null]}
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-            </UiFormItem>
+          {/* START: Responsive Fix for Drawer */}
+          <div className="h-full overflow-y-auto">
+            <div className="sm:grid grid-cols-2 gap-x-4 gap-y-2">
+              <UiFormItem label="Inquiry Type">
+                <Controller
+                  name="filterInquiryType"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select Type"
+                      options={inquiryTypeOptions}
+                      value={field.value || []}
+                      onChange={(val) => field.onChange(val || [])}
+                    />
+                  )}
+                />
+              </UiFormItem>
+              <UiFormItem label="Inquiry Priority">
+                <Controller
+                  name="filterInquiryPriority"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select Priority"
+                      options={inquiryPriorityOptions}
+                      value={field.value || []}
+                      onChange={(val) => field.onChange(val || [])}
+                    />
+                  )}
+                />
+              </UiFormItem>
+              <UiFormItem label="Inquiry Current Status">
+                <Controller
+                  name="filterInquiryCurrentStatus"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select Status"
+                      options={inquiryCurrentStatusOptions}
+                      value={field.value || []}
+                      onChange={(val) => field.onChange(val || [])}
+                    />
+                  )}
+                />
+              </UiFormItem>
+              <UiFormItem label="Assigned To">
+                <Controller
+                  name="filterAssignedTo"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select Assignee"
+                      options={assignedToOptions}
+                      value={field.value || []}
+                      onChange={(val) => field.onChange(val || [])}
+                    />
+                  )}
+                />
+              </UiFormItem>
+              <UiFormItem label="Department">
+                <Controller
+                  name="filterDepartment"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select Department"
+                      options={departmentFilterOptions}
+                      value={field.value || []}
+                      onChange={(val) => field.onChange(val || [])}
+                    />
+                  )}
+                />
+              </UiFormItem>
+              <UiFormItem label="Inquiry Date Range" className="col-span-2">
+                <Controller
+                  name="filterInquiryDate"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <DatePickerRange
+                      placeholder="Select Inquiry Dates"
+                      value={field.value as [Date | null, Date | null]}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </UiFormItem>
+              <UiFormItem label="Response Date Range" className="col-span-2">
+                <Controller
+                  name="filterResponseDate"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <DatePickerRange
+                      placeholder="Select Response Dates"
+                      value={field.value as [Date | null, Date | null]}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </UiFormItem>
+            </div>
           </div>
+          {/* END: Responsive Fix for Drawer */}
         </UiForm>
       </Drawer>
       <ConfirmDialog
