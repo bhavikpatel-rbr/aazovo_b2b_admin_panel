@@ -589,7 +589,7 @@ const preparePayloadForApi = (
     city: formData.city || "",
     pincode: formData.pincode || "",
     address: formData.address || "",
-    whatsapp_no: formData.whatsapp_no || null,
+    whatsApp_no: formData.whatsapp_no || null,
     whatsapp_country_code: getValue(formData.whatsapp_country_code) || null,
     alternate_contact_number: formData.alternate_contact_number || null,
     alternate_contact_number_code: getValue(formData.alternate_contact_country_code) || null,

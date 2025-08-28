@@ -49,7 +49,7 @@ import toast from "@/components/ui/toast";
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  TbAlarm, TbBell, TbBellRinging, TbBrandWhatsapp, TbCalendarEvent, TbCalendarTime, TbChecks, TbCloudUpload, TbColumns, TbEye, TbFileSearch, TbFilter, TbInfoCircle, TbMail, TbNotesOff, TbPencil, TbPencilPlus, TbPlus,
+  TbAlarm, TbBell, TbBellRinging, TbBrandWhatsapp, TbCalendarEvent, TbCalendarTime, TbChecks, TbCloudUpload, TbColumns, TbEye, TbFileSearch, TbFilter, TbInfoCircle, TbLock, TbMail, TbNotesOff, TbPencil, TbPencilPlus, TbPlus,
   TbReload,
   TbTagStarred, TbUser, TbUserCancel, TbUserCheck, TbUserCircle, TbUserExclamation, TbUsersGroup, TbX
 } from "react-icons/tb";
@@ -65,8 +65,10 @@ import {
   addScheduleAction,
   addTaskAction,
   deleteAllMemberAction,
+  editMemberAction,
   getAlertsAction,
   getAllUsersAction,
+  getMemberByIdAction,
   getMemberlistingAction,
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
@@ -121,6 +123,335 @@ export type FormItem = {
   category?: string; // ADDED: Used in cell rendering
   subcategory?: string; // ADDED: Used in cell rendering
   [key: string]: any;
+};
+
+// It's recommended to have this interface in a shared types file (e.g., src/@types/member.ts)
+export interface MemberFormSchema {
+  id?: string | number;
+  role_type?: string | { label: string; value: string };
+  name?: string;
+  email?: string;
+  password?: string;
+  contact_country_code?: string | { label: string; value: string };
+  mobile_no?: string;
+  interested_category_ids?: Array<{ label: string; value: string }>;
+  interested_subcategory_ids?: Array<{ label: string; value: string }>;
+  favourite_brands?: Array<{ label: string; value: string }>;
+  kyc_verified?: "Yes" | "No" | string | { label: string; value: string };
+  permanent_id?: string;
+  city?: string;
+  state?: string;
+  country_id?: string | { label: string; value: string };
+  continent_id?: string | { label: string; value: string };
+  customer_ids?: string;
+  pincode?: string;
+  status?: string | { label: string; value: string };
+  company_name?: string | { label: string; value: string };
+  company_name_temp?: string | { label: string; value: string };
+  company_code?: string; // New field for actual company code
+  address?: string;
+  company_description?: string | null;
+  company_address?: string;
+  whatsapp_no?: string;
+  whatsapp_country_code?: string | { label: string; value: string };
+  alternate_contact_country_code?: string | { label: string; value: string };
+  alternate_contact_number?: string;
+  landline_number?: string;
+  fax_number?: string;
+  alternate_email?: string;
+  botim?: string;
+  skype?: string;
+  we_chat?: string;
+  website?: string;
+  business_type?: string;
+  gst_number?: string;
+  pan_number?: string;
+  bank_account_no?: string;
+  ifsc_code?: string;
+  bank_name?: string;
+  branch_name?: string;
+  swift_code?: string;
+  fssai_license?: string;
+  drug_license?: string;
+  iec_code?: string;
+  iso_certificate?: string;
+  other_trading_license?: string;
+  usfda_license?: string;
+  other_trading_license_2?: string;
+  wall_enquiry_permission?: string | { label: string; value: string }; // Updated type
+  interested_in?: string | { label: string; value: string };
+  customer_code_permanent?: string;
+  product_upload_permission?: boolean | string;
+  trade_inquiry_allowed?: string | { label: string; value: string }; // Updated type
+  membership_plan_text?: string;
+  upgrade_plan?: string | { label: string; value: string };
+  request_description?: string;
+  favourite_product_id?: Array<{ label: string; value: string }>;
+  business_opportunity?: Array<{ label: string; value: string }>;
+  member_grade?: string | { label: string; value: string };
+  relationship_manager_id?: string | { label: string; value: string };
+  remarks?: string;
+  linkedin_profile?: string;
+  facebook_profile?: string;
+  instagram_profile?: string;
+  is_blacklisted?: boolean;
+  dealing_in_bulk?: string | { label: string; value: string };
+  dynamic_member_profiles?: {
+    db_id?: number; // Add this to store the database ID of the profile
+    member_type?: { label: string; value: string | number };
+    brands?: Array<{ label: string; value: string | number }>;
+    sub_categories?: Array<{ label: string; value: string | number }>;
+    categories?: Array<{ label: string; value: string | number }>;
+  }[];
+}
+  
+export const transformApiToFormSchema = (
+    apiData: any, 
+    allCategories: any[], 
+    allSubCategories: any[]
+): Partial<MemberFormSchema> => {
+
+    // Helper to convert a simple value to a { value, label } object for Select components
+    const toSelectOption = (value: string | undefined | null) =>
+        value ? { value: String(value), label: String(value) } : undefined;
+
+    // Helper to parse a JSON string that's supposed to be an array of primitives
+    const parseJsonStringToArray = (jsonString: string | undefined | null): any[] => {
+        if (!jsonString || typeof jsonString !== 'string' || !jsonString.startsWith('[')) {
+            return [];
+        }
+        try {
+            const data = JSON.parse(jsonString);
+            return Array.isArray(data) ? data : [];
+        } catch (e) {
+            console.error("Failed to parse JSON string to array:", jsonString, e);
+            return [];
+        }
+    };
+
+    // Helper to parse a JSON string of IDs and map them to { value, label } objects
+    // using a provided master list for name lookups.
+    const createOptionsFromIdString = (idString: string, masterList: any[]) => {
+        const ids = parseJsonStringToArray(idString);
+        if (!ids.length || !masterList || !masterList.length) {
+            return [];
+        }
+        const masterMap = new Map(masterList.map((item) => [String(item.id), item.name]));
+        return ids.map((id) => ({
+            value: String(id),
+            label: masterMap.get(String(id)) || `Unknown ID: ${id}`,
+        }));
+    };
+
+    const createCountryCodeOption = (code: string | undefined | null) => {
+        const normalized = code ? String(code).replace(/^\+\+/, "+") : undefined;
+        return normalized ? { value: normalized, label: normalized } : undefined;
+    };
+
+    return {
+        // --- Personal Details ---
+        id: apiData.id,
+        name: apiData.name || "",
+        email: apiData.email || "",
+        mobile_no: apiData.number || "",
+        contact_country_code: createCountryCodeOption(apiData.number_code),
+        company_name_temp: apiData.company_name_tmp || "",
+        company_name: apiData.company_name_acl || apiData.company_name || "", // Prefer acl, fallback to company_name
+        company_code: apiData.customer_code_permanent || apiData.customer_code || "",
+        status: toSelectOption(apiData.status),
+        continent_id: apiData.continent ? { value: String(apiData.continent.id), label: apiData.continent.name } : undefined,
+        country_id: apiData.country ? { value: String(apiData.country.id), label: apiData.country.name } : undefined,
+        state: apiData.state || "",
+        city: apiData.city || "",
+        pincode: apiData.pincode || "",
+        address: apiData.address || "",
+
+        // --- Contact & Social Info ---
+        whatsapp_no: apiData.whatsapp_no || "",
+        whatsapp_country_code: createCountryCodeOption(apiData.whatsapp_country_code),
+        alternate_contact_number: apiData.alternate_contact_number || apiData.alt_mobile || "",
+        alternate_contact_country_code: createCountryCodeOption(apiData.alternate_contact_number_code),
+        landline_number: apiData.landline_number || apiData.office_no || "",
+        fax_number: apiData.fax_number || "",
+        alternate_email: apiData.alternate_email || apiData.alt_email || "",
+        botim: apiData.botim || "",
+        skype: apiData.skype || "",
+        we_chat: apiData.we_chat || "",
+        linkedin_profile: apiData.linkedin_profile || "",
+        facebook_profile: apiData.facebook_profile || "",
+        instagram_profile: apiData.instagram_profile || "",
+        website: apiData.website || "",
+
+        // --- Member Profile Section ---
+        business_opportunity: parseJsonStringToArray(apiData.business_opportunity).map((item: string) => ({ value: item, label: item })),
+        business_type: toSelectOption(apiData.business_type),
+        favourite_product_id: apiData.favourite_products_list?.map((p: any) => ({ value: String(p.id), label: p.name })) || [],
+        interested_in: toSelectOption(apiData.interested_for),
+        interested_category_ids: createOptionsFromIdString(apiData.interested_category_ids, allCategories),
+        interested_subcategory_ids: createOptionsFromIdString(apiData.interested_subcategory_ids, allSubCategories),
+        member_grade: toSelectOption(apiData.member_grade),
+        relationship_manager_id: apiData.relationship_manager ? { value: String(apiData.relationship_manager.id), label: apiData.relationship_manager.name } : undefined,
+        dealing_in_bulk: apiData.dealing_in_bulk || "No",
+        remarks: apiData.remarks || "",
+
+        // --- Dynamic Member Profiles ---
+        dynamic_member_profiles: apiData.dynamic_member_profiles?.map((apiProfile: any) => {
+            const createSelectOptions = (idJsonString: string, names: string[]) => {
+                try {
+                    if (typeof idJsonString !== "string" || !idJsonString.startsWith("[")) return [];
+                    const ids: (string | number)[] = JSON.parse(idJsonString);
+                    const safeNames = Array.isArray(names) ? names : [];
+                    if (!Array.isArray(ids) || ids.length !== safeNames.length) return [];
+                    return ids.map((id, index) => ({
+                        value: id,
+                        label: safeNames[index],
+                    }));
+                } catch (e) {
+                    console.error("Failed to parse ID JSON string:", idJsonString, e);
+                    return [];
+                }
+            };
+            return {
+                db_id: apiProfile.id,
+                member_type: {
+                    value: apiProfile.member_type.id,
+                    label: apiProfile.member_type.name,
+                },
+                brands: createSelectOptions(apiProfile.brand_id, apiProfile.brand_names),
+                categories: createSelectOptions(apiProfile.category_id, apiProfile.category_names),
+                sub_categories: createSelectOptions(apiProfile.sub_category_id, apiProfile.sub_category_names),
+            };
+        }) || [],
+
+        // --- Accessibility & Membership ---
+        product_upload_permission: apiData.product_upload_permission === true || apiData.product_upload_permission === "1",
+        wall_enquiry_permission: toSelectOption(apiData.wall_enquiry_permission),
+        trade_inquiry_allowed: toSelectOption(apiData.trade_inquiry_allowed),
+        membership_plan_text: apiData.membership_plan || "",
+        upgrade_plan: toSelectOption(apiData.upgrade_your_plan),
+        is_blacklisted: apiData.is_blacklisted === true || apiData.is_blacklisted === "1",
+    };
+};
+
+/**
+ * Transforms the React Hook Form data into a clean payload for the API.
+ * @param formData The data from the form (Partial<MemberFormSchema>).
+ * @param isEditMode A boolean indicating if this is for an update or creation.
+ * @returns A clean object ready to be sent to the API.
+ */
+export const preparePayloadForApi = (
+    formData: Partial<MemberFormSchema>,
+    isEditMode: boolean
+): any => {
+    // Helper to safely extract 'value' from a select object
+    const getValue = (field: any) =>
+        typeof field === 'object' && field !== null && 'value' in field
+            ? field.value
+            : field;
+
+    /**
+     * NEW HELPER FUNCTION
+     * Safely processes an array from the form. It handles three cases:
+     * 1. The data is already a proper array of objects (from react-select).
+     * 2. The data is a JSON string representing an array (from API response).
+     * 3. The data is null, undefined, or not an array/string.
+     */
+    const getArrayPayload = (formField: any) => {
+        if (Array.isArray(formField)) {
+            // Case 1: Already a proper array, map over it.
+            return formField.map(item => getValue(item));
+        }
+        if (typeof formField === 'string' && formField.startsWith('[')) {
+            // Case 2: It's a JSON string, parse it.
+            try {
+                const parsed = JSON.parse(formField);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return []; // Return empty array on parsing error
+            }
+        }
+        // Case 3: It's something else, return an empty array.
+        return [];
+    };
+
+    const payload: any = {
+        // --- Personal Details ---
+        id: formData.id,
+        name: formData.name || "",
+        number: formData.mobile_no || "",
+        number_code: getValue(formData.contact_country_code) || null,
+        email: formData.email || "",
+        company_temp: formData.company_name_temp || "",
+        company_actual: getValue(formData.company_name) || "",
+        company_code: formData.company_code || null,
+        status: getValue(formData.status) || null,
+        continent_id: getValue(formData.continent_id) || null,
+        country_id: getValue(formData.country_id) || null,
+        state: formData.state || "",
+        city: formData.city || "",
+        pincode: formData.pincode || "",
+        address: formData.address || "",
+
+        // --- Contact & Social Info ---
+        whatsapp_no: formData.whatsapp_no || null,
+        whatsapp_country_code: getValue(formData.whatsapp_country_code) || null,
+        alternate_contact_number: formData.alternate_contact_number || null,
+        alternate_contact_number_code: getValue(formData.alternate_contact_country_code) || null,
+        landline_number: formData.landline_number || null,
+        fax_number: formData.fax_number || null,
+        alternate_email: formData.alternate_email || null,
+        botim: formData.botim || null,
+        skype: formData.skype || null,
+        we_chat: formData.we_chat || null,
+        linkedin_profile: formData.linkedin_profile || null,
+        facebook_profile: formData.facebook_profile || null,
+        instagram_profile: formData.instagram_profile || null,
+        website: formData.website || null,
+
+        // --- Member Profile Section (USING THE NEW HELPER) ---
+        business_opportunity: getArrayPayload(formData.business_opportunity),
+        business_type: getValue(formData.business_type) || null,
+        favourite_product_id: getArrayPayload(formData.favourite_product_id),
+        interested_in: getValue(formData.interested_in) || null,
+        interested_category_ids: getArrayPayload(formData.interested_category_ids),
+        interested_subcategory_ids: getArrayPayload(formData.interested_subcategory_ids),
+        member_grade: getValue(formData.member_grade) || null,
+        relationship_manager_id: getValue(formData.relationship_manager_id) || null,
+        dealing_in_bulk: formData.dealing_in_bulk || "No",
+        remarks: formData.remarks || "",
+        
+        // --- Accessibility & Membership ---
+        product_upload_permission: formData.product_upload_permission ? "1" : "0",
+        wall_enquiry_permission: getValue(formData.wall_enquiry_permission) || null,
+        trade_inquiry_allowed: getValue(formData.trade_inquiry_allowed) || null,
+        membership_plan: formData.membership_plan_text || "",
+        upgrade_your_plan: getValue(formData.upgrade_plan) || null,
+        is_blacklisted: formData.is_blacklisted ? "1" : "0",
+    };
+
+    // --- Dynamic Member Profiles ---
+    if (formData.dynamic_member_profiles) {
+        payload.dynamic_member_profiles = formData.dynamic_member_profiles.map(formProfile => {
+            const apiProfile: any = {
+                id: formProfile.db_id,
+                member_type_id: getValue(formProfile.member_type),
+                brand_id: getArrayPayload(formProfile.brands),
+                category_id: getArrayPayload(formProfile.categories),
+                sub_category_id: getArrayPayload(formProfile.sub_categories),
+            };
+            if (apiProfile.id === undefined) {
+                delete apiProfile.id;
+            }
+            return apiProfile;
+        });
+    }
+
+    // --- Conditional Password Handling ---
+    if (formData.password) {
+        payload.password = formData.password;
+    }
+
+    return payload;
 };
 // --- END: Detailed Type Definitions ---
 
@@ -411,14 +742,55 @@ const ExcelViewerModal: React.FC<{ isOpen: boolean; onClose: () => void; fileUrl
 // --- END: NEW Excel Viewer Modal ---
 
 // --- START: MODALS SECTION ---
-export type MemberModalType = "notification" | "task" | "calendar" | "viewDetail" | "alert" | "transaction" | "activity";
+export type MemberModalType = "notification" | "task" | "calendar" | "viewDetail" | "alert" | "transaction" | "activity" | "changePassword";
 export interface MemberModalState { isOpen: boolean; type: MemberModalType | null; data: FormItem | null; }
+const passwordSchema = z.object({
+  password: z.string().min(6, 'Password must be at least 6 characters long.'),
+  confirmPassword: z.string(),
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+type PasswordFormData = z.infer<typeof passwordSchema>;
 
+const ChangePasswordDialog: React.FC<{ member: FormItem; onClose: () => void; }> = ({ member, onClose }) => {
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<PasswordFormData>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: { password: '', confirmPassword: '' },
+    mode: 'onChange',
+  });
+
+  const onSubmitPassword = async (data: PasswordFormData) => {
+   
+      toast.push(<Notification type="danger" title="Function Under Developement"  />);
+   
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose}>
+      <h5 className="mb-4">Change Password for {member.name}</h5>
+      <UiForm onSubmit={handleSubmit(onSubmitPassword)}>
+        <UiFormItem label="New Password" invalid={!!errors.password} errorMessage={errors.password?.message}>
+          <Controller name="password" control={control} render={({ field }) => <Input type="password" {...field} autoFocus />} />
+        </UiFormItem>
+        <UiFormItem label="Confirm New Password" invalid={!!errors.confirmPassword} errorMessage={errors.confirmPassword?.message}>
+          <Controller name="confirmPassword" control={control} render={({ field }) => <Input type="password" {...field} />} />
+        </UiFormItem>
+        <div className="text-right mt-6">
+          <Button type="button" onClick={onClose} disabled={isLoading} className="mr-2">Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Save Password</Button>
+        </div>
+      </UiForm>
+    </Dialog>
+  );
+};
 const AddNotificationDialog: React.FC<{ member: FormItem; onClose: () => void; userOptions: SelectOption[] }> = ({ member, onClose, userOptions }) => {
   const dispatch = useAppDispatch(); const [isLoading, setIsLoading] = useState(false);
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(z.object({ notification_title: z.string().min(3), send_users: z.array(z.number()).min(1), message: z.string().min(10) })), defaultValues: { notification_title: `Regarding Member: ${member.name}`, send_users: [], message: `This is a notification for member "${member.name}" (${member.customer_code}). Please review their details.`, }, mode: 'onChange', });
   const onSend = async (formData: any) => { setIsLoading(true); const payload = { ...formData, module_id: String(member.id), module_name: 'Member' }; try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed" children={error?.message} />); } finally { setIsLoading(false); } };
-  return (<Dialog isOpen={true} onClose={onClose}> <h5 className="mb-4">Notify User about: {member.name}</h5> <UiForm onSubmit={handleSubmit(onSend)}> {/* START: Responsive Fix */} <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4"> <UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter((o) => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map((o) => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> </div> {/* END: Responsive Fix */} <div className="text-right mt-6 flex-shrink-0"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Send</Button></div> </UiForm> </Dialog>);
+  return (<Dialog isOpen={true} width={700} onClose={onClose}> <h5 className="mb-4">Notify User about: {member.name}</h5> <UiForm onSubmit={handleSubmit(onSend)}> {/* START: Responsive Fix */} <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4"> <UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter((o) => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map((o) => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> </div> {/* END: Responsive Fix */} <div className="text-right mt-6 flex-shrink-0"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Send</Button></div> </UiForm> </Dialog>);
 };
 
 const AssignTaskDialog: React.FC<{ member: FormItem; onClose: () => void; userOptions: SelectOption[] }> = ({ member, onClose, userOptions }) => {
@@ -427,7 +799,11 @@ const AssignTaskDialog: React.FC<{ member: FormItem; onClose: () => void; userOp
   today.setHours(0, 0, 0, 0);
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({ resolver: zodResolver(taskValidationSchema), defaultValues: { task_title: `Follow up with ${member.name}`, assign_to: [], priority: 'Medium', }, mode: 'onChange' });
   const onAssignTask = async (data: TaskFormData) => { setIsLoading(true); const payload = { ...data, due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined, module_id: String(member.id), module_name: 'Member', }; try { await dispatch(addTaskAction(payload)).unwrap(); toast.push(<Notification type="success" title="Task Assigned!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message} />); } finally { setIsLoading(false); } };
-  return (<Dialog isOpen={true} onClose={onClose}> <h5 className="mb-4">Assign Task for {member.name}</h5> <UiForm onSubmit={handleSubmit(onAssignTask)}> {/* START: Responsive Fix */} <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4"> <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></UiFormItem> </div> <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) =>
+  return (<Dialog width={700} isOpen={true} onClose={onClose}> <h5 className="mb-4">Assign Task for {member.name}</h5> <UiForm onSubmit={handleSubmit(onAssignTask)}> {/* START: Responsive Fix */} <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4"> <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> 
+   <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem> 
+  <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></UiFormItem> 
+  
+  <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) =>
     <DatePicker minDate={today} placeholder="Select date" value={field.value} onChange={field.onChange} />} />
   </UiFormItem> <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> </div> {/* END: Responsive Fix */} <div className="text-right mt-6 flex-shrink-0"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Assign Task</Button></div> </UiForm> </Dialog>);
 };
@@ -440,7 +816,7 @@ const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; onSub
   });
 
   return (
-    <Dialog isOpen={true} onClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose}>
       <h5 className="mb-4">Add Schedule for {member.name}</h5>
       <UiForm onSubmit={handleSubmit(onSubmit)}>
         <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
@@ -464,7 +840,7 @@ const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; onSub
         </div>
         <div className="text-right mt-6 flex-shrink-0">
           <Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button>
-          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Save Event</Button>
+          <Button style={{marginLeft:5}} variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Save Event</Button>
         </div>
       </UiForm>
     </Dialog>
@@ -583,7 +959,7 @@ const AddActivityDialog: React.FC<{ member: FormItem; onClose: () => void; user:
   };
 
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Activity Log for "{member.name}"</h5>
       <Form onSubmit={handleSubmit(onAddActivity)}>
         <FormItem label="Activity" invalid={!!errors.item} errorMessage={errors.item?.message}>
@@ -820,6 +1196,7 @@ const MemberModals: React.FC<{ modalState: MemberModalState; onClose: () => void
     case "alert": return <MemberAlertModal member={member} onClose={onClose} />;
     case "transaction": return <GenericInfoDialog title={`Transactions for ${member.name}`} onClose={onClose} />;
     case "activity": return <AddActivityDialog member={member} onClose={onClose} user={userData} />;
+    case "changePassword": return <ChangePasswordDialog member={member} onClose={onClose} />;
     default: return null;
   }
 };
@@ -880,6 +1257,7 @@ const ActionColumn = ({ rowData, onOpenModal }: { rowData: FormItem; onOpenModal
       {getMenuRights("member")?.is_edit && <Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600" role="button" onClick={() => navigate(`/business-entities/member-edit/${rowData.id}`)}><TbPencil /></div></Tooltip>}
       <Tooltip title="View Page"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600" role="button" onClick={() => navigate(`/business-entities/member-view/${rowData.id}`)}><TbEye /></div></Tooltip>
       <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+        <Dropdown.Item onClick={() => onOpenModal("changePassword", rowData)} className="flex items-center gap-2"><TbLock /> Change Password</Dropdown.Item>
         <Dropdown.Item onClick={() => handleSendEmail(rowData)} className="flex items-center gap-2"><TbMail /> Send Email</Dropdown.Item>
         <Dropdown.Item onClick={() => handleSendWhatsapp(rowData)} className="flex items-center gap-2"><TbBrandWhatsapp /> Send WhatsApp</Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell /> Add Notification</Dropdown.Item>
@@ -1080,7 +1458,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
               <b>View Dynamic Profiles</b>
             </span>
             <span><b>Interested: </b>{interested_in || 'N/A'}</span>
-            <Dialog width={620} isOpen={isOpen} onClose={() => setIsOpen(false)}>
+            <Dialog width={700} isOpen={isOpen} onClose={() => setIsOpen(false)}>
               <h6>Dynamic Profiles for {row.original.name}</h6>
               <Table className="mt-4">
                 <thead className="bg-gray-100 dark:bg-gray-700">
@@ -1272,7 +1650,7 @@ const FormListSelected = () => {
         <h5 className="mb-2">Send Message</h5>
         <Avatar.Group chained maxCount={6}>{selectedMembers.map(m => (<Tooltip key={m.id} title={m.name}><Avatar src={m.full_profile_pic || undefined} icon={<TbUserCircle />} /></Tooltip>))}</Avatar.Group>
         <div className="my-4"><RichTextEditor /></div>
-        <div className="text-right gap-2"><Button size="sm" onClick={() => setSendMessageDialogOpen(false)}>Cancel</Button><Button size="sm" variant="solid" loading={sendMessageLoading} onClick={handleSend}>Send</Button></div>
+        <div className="text-right gap-2"><Button size="sm" onClick={() => setSendMessageDialogOpen(false)}>Cancel</Button><Button style={{marginLeft:5}} size="sm" variant="solid" loading={sendMessageLoading} onClick={handleSend}>Send</Button></div>
       </Dialog>
     </>
   );
