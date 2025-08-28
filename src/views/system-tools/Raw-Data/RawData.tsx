@@ -359,6 +359,52 @@ const RowDataSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: 
   return (<><StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"><div className="flex items-center justify-between w-full px-4 sm:px-8"><span className="flex items-center gap-2"><span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span><span className="font-semibold flex items-center gap-1 text-sm sm:text-base"><span className="heading-text">{selectedItems.length}</span><span>Item{selectedItems.length > 1 ? "s" : ""} selected</span></span></span><div className="flex items-center gap-3"><Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteClick} loading={isDeleting}>Delete Selected</Button></div></div></StickyFooter><ConfirmDialog isOpen={deleteConfirmationOpen} type="danger" title={`Delete ${selectedItems.length} Item${selectedItems.length > 1 ? "s" : ""}`} onClose={handleCancelDelete} onRequestClose={handleCancelDelete} onCancel={handleCancelDelete} onConfirm={handleConfirmDelete} loading={isDeleting}><p>Are you sure you want to delete the selected row data item{selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.</p></ConfirmDialog></>);
 };
 
+// --- Skeleton Loader Component ---
+const RowDataListingSkeleton = () => {
+  return (
+    <Container className="h-auto">
+      <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
+        {/* Header Skeleton */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+          <Skeleton className="h-8 w-64 mb-2 sm:mb-0" />
+          <Skeleton className="h-10 w-28" />
+        </div>
+        {/* Cards Skeleton */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 mb-4 gap-2">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <Card key={i} bodyClass="flex gap-2 p-2">
+              <Skeleton className="h-12 w-12 rounded-md" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-5 w-10" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </Card>
+          ))}
+        </div>
+        {/* Table Tools Skeleton */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full mb-4">
+          <Skeleton className="h-10 flex-grow" />
+          <div className="flex gap-1">
+            <Skeleton className="h-10 w-10" />
+            <Skeleton className="h-10 w-10" />
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-28" />
+            <Skeleton className="h-10 w-28" />
+          </div>
+        </div>
+        {/* Table Skeleton */}
+        <div className="flex-grow overflow-auto">
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
+        </div>
+      </AdaptiveCard>
+    </Container>
+  );
+};
+
 const RowDataListing = () => {
   const dispatch = useAppDispatch();
   // Expect rowData to have { data, total, counts } from the API
@@ -454,9 +500,9 @@ const RowDataListing = () => {
 
   // Effect for fetching table data whenever filters, pagination, or sorting changes
   useEffect(() => {
-    if (!isDataReady) return; // Don't fetch until lookups are ready
+    if (initialLoading) return; // Don't fetch until lookups are ready and initial load is false
     dispatch(getRowDataAction(getApiParams()));
-  }, [dispatch, tableData, filterCriteria, isDataReady]);
+  }, [dispatch, tableData, filterCriteria, initialLoading]);
 
   useEffect(() => { setCountryOptions(Array.isArray(CountriesData) ? CountriesData.map((c: CountryListItem) => ({ value: String(c.id), label: c.name })) : []) }, [CountriesData]);
   useEffect(() => { setCategoryOptions(Array.isArray(ParentCategories) ? ParentCategories.map((c: CategoryListItem) => ({ value: String(c.id), label: c.name })) : []) }, [ParentCategories]);
@@ -643,10 +689,14 @@ const RowDataListing = () => {
 
   const renderCardContent = (content: number | string | undefined) => {
     if (initialLoading) {
-      return <Skeleton width={50} height={20} />;
+      return <Skeleton className="h-6 w-10" />;
     }
     return <h6>{content ?? "..."}</h6>;
   };
+
+  if (initialLoading) {
+    return <RowDataListingSkeleton />;
+  }
 
   return (
     <>
