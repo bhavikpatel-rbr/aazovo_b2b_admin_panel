@@ -110,7 +110,17 @@ export type BrandItem = {
 const brandFormSchema = z.object({
   name: z.string().min(1, "Brand name is required.").max(255, "Name cannot exceed 255 chars."),
   slug: z.string().min(1, "Slug is required.").max(255, "Slug cannot exceed 255 chars."),
-  mobile_no: z.string().optional().nullable(),
+  mobile_no: z.string()
+    .optional()
+    .nullable()
+    .refine((val) => {
+      // Allows null, undefined, or empty string
+      if (!val) return true;
+      // If a value is present, it must be numeric and within length constraints
+      return /^[0-9]+$/.test(val) && val.length >= 7 && val.length <= 15;
+    }, {
+      message: "If provided, mobile number must be 7 to 15 numeric digits.",
+    }),
   icon: z.union([z.instanceof(File), z.null()]).optional().nullable(),
   show_header: z.enum(["0", "1"], { errorMap: () => ({ message: "Please select if shown in header." }) }).transform((val) => Number(val)),
   status: z.enum(["Active", "Inactive"], { errorMap: () => ({ message: "Please select a status." }) }),
@@ -382,7 +392,8 @@ const Brands = () => {
       await dispatch(editBrandAction({ id: editingBrand.id, formData })).unwrap();
       toast.push(<Notification title="Brand Updated" type="success" duration={2000}>Brand "{data.name}" updated.</Notification>);
       closeEditDrawer(); dispatch(getBrandAction());
-    } catch (error: any) {
+    } catch (error: any)
+    {
       const responseData = error.response?.data; let errorMessage = "Could not update brand.";
       if (responseData) { if (responseData.message) errorMessage = responseData.message; if (responseData.errors) { const validationErrors = Object.values(responseData.errors).flat().join(" "); errorMessage += ` Details: ${validationErrors}`; } } else if (error.message) errorMessage = error.message;
       toast.push(<Notification title="Failed to Update" type="danger" duration={4000}>{errorMessage}</Notification>);
@@ -600,11 +611,11 @@ const Brands = () => {
           <div className="flex gap-2"><FormItem label={<div>Brand Icon (250 X 250)<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.icon} errorMessage={addFormMethods.formState.errors.icon?.message as string} className="w-full"><Controller name="icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => (<Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files && e.target.files.length > 0 ? e.target.files[0] : null; onChange(file); if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl); setAddFormPreviewUrl(file ? URL.createObjectURL(file) : null); }} accept="image/png, image/jpeg, image/gif, image/svg+xml, image/webp" />)} /><p className="text-xs text-gray-500 mt-1">Allowed formats: SVG, PNG, JPG, GIF, WebP. Max size: 2MB.</p></FormItem>{addFormPreviewUrl && <div className="mt-2 text-right"><Avatar src={addFormPreviewUrl} size={70} shape="circle" /></div>}</div>
           <FormItem label={<div>Brand Name<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.name} errorMessage={addFormMethods.formState.errors.name?.message} isRequired><Controller name="name" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Brand Name" />} /></FormItem>
           <FormItem label={<div>Slug/URL<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.slug} errorMessage={addFormMethods.formState.errors.slug?.message} isRequired><Controller name="slug" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter brand-slug" />} /></FormItem>
-          <FormItem label={<div>Mobile No.<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.mobile_no} errorMessage={addFormMethods.formState.errors.mobile_no?.message}><Controller name="mobile_no" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Enter Mobile Number" />} /></FormItem>
+          <FormItem label="Mobile No." invalid={!!addFormMethods.formState.errors.mobile_no} errorMessage={addFormMethods.formState.errors.mobile_no?.message}><Controller name="mobile_no" control={addFormMethods.control} render={({ field }) => <Input {...field} type="tel" inputMode="numeric" value={field.value ?? ""} placeholder="Enter Mobile Number" />} /></FormItem>
           <div className="grid grid-cols-2 gap-2"><FormItem label="Show in Header?" invalid={!!addFormMethods.formState.errors.show_header} errorMessage={addFormMethods.formState.errors.show_header?.message} isRequired><Controller name="show_header" control={addFormMethods.control} render={({ field }) => (<UiSelect options={showHeaderOptions} value={showHeaderOptions.find((opt) => opt.value === String(field.value))} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} />)} /></FormItem><FormItem label="Status" invalid={!!addFormMethods.formState.errors.status} errorMessage={addFormMethods.formState.errors.status?.message} isRequired><Controller name="status" control={addFormMethods.control} render={({ field }) => (<UiSelect options={apiStatusOptions} value={apiStatusOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} />)} /></FormItem></div>
           <FormItem style={{ fontWeight: "bold", color: "#000" }} label="Meta Options (Optional)"></FormItem>
-          <FormItem label={<div>Meta Title<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.meta_title} errorMessage={addFormMethods.formState.errors.meta_title?.message}><Controller name="meta_title" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Title" />} /></FormItem>
-          <FormItem label={<div>Meta Description<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.meta_descr} errorMessage={addFormMethods.formState.errors.meta_descr?.message}><Controller name="meta_descr" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Meta Description" />} /></FormItem>
+          <FormItem label="Meta Title" invalid={!!addFormMethods.formState.errors.meta_title} errorMessage={addFormMethods.formState.errors.meta_title?.message}><Controller name="meta_title" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Title" />} /></FormItem>
+          <FormItem label="Meta Description" invalid={!!addFormMethods.formState.errors.meta_descr} errorMessage={addFormMethods.formState.errors.meta_descr?.message}><Controller name="meta_descr" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Meta Description" />} /></FormItem>
           <FormItem label="Meta Keywords" invalid={!!addFormMethods.formState.errors.meta_keyword} errorMessage={addFormMethods.formState.errors.meta_keyword?.message}><Controller name="meta_keyword" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Keywords (comma-separated)" />} /></FormItem>
         </Form>
       </Drawer>
@@ -620,11 +631,11 @@ const Brands = () => {
           </div>
           <FormItem label={<div>Brand Name<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.name} errorMessage={editFormMethods.formState.errors.name?.message} isRequired><Controller name="name" control={editFormMethods.control} render={({ field }) => <Input {...field} />} /></FormItem>
           <FormItem label={<div>Slug/URL<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.slug} errorMessage={editFormMethods.formState.errors.slug?.message} isRequired><Controller name="slug" control={editFormMethods.control} render={({ field }) => <Input {...field} />} /></FormItem>
-          <FormItem label={<div>Mobile No.<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.mobile_no} errorMessage={editFormMethods.formState.errors.mobile_no?.message}><Controller name="mobile_no" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} /></FormItem>
+          <FormItem label="Mobile No." invalid={!!editFormMethods.formState.errors.mobile_no} errorMessage={editFormMethods.formState.errors.mobile_no?.message}><Controller name="mobile_no" control={editFormMethods.control} render={({ field }) => <Input {...field} type="tel" inputMode="numeric" value={field.value ?? ""} />} /></FormItem>
           <div className="grid grid-cols-2 gap-2"><FormItem label="Show in Header?" invalid={!!editFormMethods.formState.errors.show_header} errorMessage={editFormMethods.formState.errors.show_header?.message} isRequired><Controller name="show_header" control={editFormMethods.control} render={({ field }) => (<UiSelect options={showHeaderOptions} value={showHeaderOptions.find((opt) => opt.value === String(field.value))} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} />)} /></FormItem><FormItem label="Status" invalid={!!editFormMethods.formState.errors.status} errorMessage={editFormMethods.formState.errors.status?.message} isRequired><Controller name="status" control={editFormMethods.control} render={({ field }) => (<UiSelect options={apiStatusOptions} value={apiStatusOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} />)} /></FormItem></div>
           <FormItem style={{ fontWeight: "bold", color: "#000" }} label="Meta Options (Optional)"></FormItem>
-          <FormItem label={<div>Meta Title<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.meta_title} errorMessage={editFormMethods.formState.errors.meta_title?.message}><Controller name="meta_title" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} /></FormItem>
-          <FormItem label={<div>Meta Description<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.meta_descr} errorMessage={editFormMethods.formState.errors.meta_descr?.message}><Controller name="meta_descr" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea />} /></FormItem>
+          <FormItem label="Meta Title" invalid={!!editFormMethods.formState.errors.meta_title} errorMessage={editFormMethods.formState.errors.meta_title?.message}><Controller name="meta_title" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} /></FormItem>
+          <FormItem label="Meta Description" invalid={!!editFormMethods.formState.errors.meta_descr} errorMessage={editFormMethods.formState.errors.meta_descr?.message}><Controller name="meta_descr" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea />} /></FormItem>
           <FormItem label="Meta Keywords" invalid={!!editFormMethods.formState.errors.meta_keyword} errorMessage={editFormMethods.formState.errors.meta_keyword?.message}><Controller name="meta_keyword" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} /></FormItem>
         </Form>
       </Drawer>
@@ -677,8 +688,8 @@ const Brands = () => {
                     value={brandToView.showHeader === 1 ? 'Visible' : 'Hidden'}
                     valueClassName={brandToView.showHeader === 1 ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'font-semibold text-amber-600 dark:text-amber-400'}
                   />
-                  <DialogDetailRow label="Mobile No." value={brandToView.mobileNo || ' '} />
-                  <DialogDetailRow label="Slug / URL" value={brandToView.slug} isLink breakAll />
+                  <DialogDetailRow label="Mobile No." value={brandToView.mobileNo || 'N/A'} />
+                  <DialogDetailRow label="Slug / URL" value={brandToView.slug}  />
                   <DialogDetailRow
                     label="Created"
                     value={new Date(brandToView.createdAt).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
