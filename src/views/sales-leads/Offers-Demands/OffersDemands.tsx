@@ -426,11 +426,7 @@ const ViewDetailsDialog: React.FC<{
   // I've added this to demonstrate the UI. You should get this from your `item` prop.
   const itemWithProducts = {
     ...item,
-    products: item.products || [
-      { id: 1, name: 'Premium Leather Sofa', qty: 2, color: 'Cognac Brown', price: '1,500.00', unit: 'piece' },
-      { id: 2, name: 'Oak Wood Coffee Table', qty: 1, color: 'Natural Oak', price: '450.00', unit: 'piece' },
-      { id: 3, name: 'Velvet Accent Chair', qty: 4, color: 'Emerald Green', price: '320.00', unit: 'piece' },
-    ],
+    products: item.products ,
   };
   // --- End of Mock Data ---
 
@@ -461,7 +457,7 @@ const ViewDetailsDialog: React.FC<{
                 </p>
               </div>
             </div>
-            <div className="flex flex-col items-end gap-2">
+            {/* <div className="flex flex-col items-end gap-2">
               <span
                 className={`px-2 py-1 text-xs font-semibold rounded-full ${item.type === "Offer"
                   ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
@@ -470,7 +466,7 @@ const ViewDetailsDialog: React.FC<{
               >
                 {item.type}
               </span>
-            </div>
+            </div> */}
           </div>
         </div>
 
