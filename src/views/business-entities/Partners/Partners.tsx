@@ -999,8 +999,8 @@ const PartnerActionColumn = ({ rowData, onEdit, onOpenModal, onDelete }: {
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('notification', rowData))} className="flex items-center gap-2"><TbBell /> Add Notification</Dropdown.Item>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('schedule', rowData))} className="flex items-center gap-2"><TbCalendarEvent /> Add Schedule</Dropdown.Item>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('task', rowData))} className="flex items-center gap-2"><TbUser /> Assign Task</Dropdown.Item>
-        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('activity', rowData))} className="flex items-center gap-2"><TbTagStarred size={18} /> Add Activity</Dropdown.Item>
-        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('alert', rowData))} className="flex items-center gap-2"><TbAlarm /> View Alert</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('activity', rowData))} className="flex items-center gap-2"><TbTagStarred size={18} /> Add to active</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('alert', rowData))} className="flex items-center gap-2"><TbAlarm /> View Remarks</Dropdown.Item>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('document', rowData))} className="flex items-center gap-2"><TbDownload /> Download Document</Dropdown.Item>
 
       </Dropdown>

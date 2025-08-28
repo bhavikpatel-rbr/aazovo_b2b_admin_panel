@@ -2365,7 +2365,7 @@ const LeadActionColumn = ({
           onClick={() => onOpenModal("activity")}
           className="flex items-center gap-2 text-xs"
         >
-          <TbTagStarred size={18} /> Add Activity
+          <TbTagStarred size={18} /> Add to active
         </Dropdown.Item>
         {data.lead_status == 'Approved' ? <Dropdown.Item
           onClick={() => onOpenModal("convertToDeal")}

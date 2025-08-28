@@ -50,6 +50,8 @@ import {
     getMemberByIdAction,
     getDemandsAction,
     getOffersAction,
+    getOfferById,
+    getDemandById,
 } from '@/reduxtool/master/middleware'
 
 
@@ -297,28 +299,48 @@ const WallInquiryTab = ({ data, loading }: { data: any[], loading: boolean }) =>
         </Card>
     );
 };
-// --- Offer/Demand Components are unchanged ---
 
+// --- MODIFIED: OfferDemandTab component with search functionality ---
 const OfferDemandTab = ({ data, loading, onRowClick, type }: { data: any[], loading: boolean, onRowClick: (item: any) => void, type: string }) => {
     const [sort, setSort] = useState<SortingState>([]);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredData = useMemo(() => {
+        if (!searchTerm) {
+            return data;
+        }
+        const lowercasedSearchTerm = searchTerm.toLowerCase();
+        return data.filter(item =>
+            item.offer_name?.toLowerCase().includes(lowercasedSearchTerm) ||
+            item.product?.toLowerCase().includes(lowercasedSearchTerm) ||
+            String(item.product_id)?.toLowerCase().includes(lowercasedSearchTerm)
+        );
+    }, [data, searchTerm]);
+    
     const columns = useMemo(() => [
         { header: `${type} Name`, accessorKey: 'offer_name' },
         { header: 'Product Name', accessorKey: 'product' },
         { header: 'Product ID', accessorKey: 'product_id' },
-        {
-            header: 'Action',
-            id: 'action',
-            cell: ({ row }: CellContext<any, any>) => (
-                <Button size="xs" onClick={() => onRowClick(row.original)} variant="solid">
-                    View Details
-                </Button>
-            )
-        },
+        // {
+        //     header: 'Action',
+        //     id: 'action',
+        //     cell: ({ row }: CellContext<any, any>) => (
+        //         <Button size="xs" onClick={() => onRowClick(row.original)} variant="solid">
+        //             View Details
+        //         </Button>
+        //     )
+        // },
     ], [onRowClick, type]);
 
     return (
         <Card bordered>
-            <DataTable columns={columns} data={data} loading={loading} onSort={setSort} />
+            <Input
+                className="mb-4 max-w-sm"
+                placeholder={`Search ${type}...`}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <DataTable columns={columns} data={filteredData} loading={loading} onSort={setSort} />
         </Card>
     );
 };
@@ -334,15 +356,20 @@ const OfferDemandDetailDialog = ({ item, type, isOpen, onClose }: { item: any, t
         const fetchDetails = async () => {
             setIsLoading(true);
             setDetailedData(null);
+            
             try {
+                // For a demand, its specific ID is likely in 'demand_id' or a generic 'id' property,
+                // while 'offer_id' might be something else. We prioritize 'demand_id'.
+                const idToFetch = type === 'Offer' ? item.offer_id : (item.demand_id || item.offer_id);
+
                 const action = type === 'Offer'
-                    ? getOffersAction()
+                    ? getOfferById(idToFetch)
                     // @ts-ignore
-                    : getDemandsAction();
+                    : getDemandById(idToFetch);
+
 
                 const response = await dispatch(action).unwrap();
-                const Result = response?.data || response || [];
-                setDetailedData(Result.find((d: any) => d.id == item.offer_id) || null);
+                setDetailedData(response);
             } catch (error) {
                 toast.push(<Notification type="danger" title={`Error fetching ${type} details.`} />);
                 console.error(`Error fetching ${type} details:`, error);
@@ -367,12 +394,14 @@ const OfferDemandDetailDialog = ({ item, type, isOpen, onClose }: { item: any, t
             )}
         </div>
     );
+    
+    const displayId = type === 'Offer' ? item.offer_id : (item.demand_id || item.offer_id);
 
     return (
         <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width={700}>
             <div className='mb-4'>
                 <h5 className="mb-1">{type} Details</h5>
-                <p className='text-sm'>Viewing full details for ID: {item.offer_id}</p>
+                <p className='text-sm'>Viewing full details for ID: {displayId}</p>
             </div>
 
             {isLoading ? (
@@ -453,7 +482,6 @@ const MemberViewPage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [viewingOfferDemand, setViewingOfferDemand] = useState<{ item: any, type: 'Offer' | 'Demand' } | null>(null);
 
-    // --- STEP 1: Add state for the dynamic profile dialog ---
     const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
 
     useEffect(() => {
@@ -531,7 +559,19 @@ const MemberViewPage = () => {
                      <div className="text-xs space-y-1.5 md:col-span-1">
                        
                         <p><b>Business Opportunity:</b> <ListAsTags list={memberData.business_opportunity} /></p>
-                        <p> {memberData.category?.split(',').map(s => s.trim())}{memberData.subcategory ?? '/' + memberData.subcategory?.split(',').map(s => s.trim())}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+    {/* Display Categories */}
+    {memberData.category && memberData.category.split(',').map(s => s.trim()).join(', ')}
+
+    {/* Display Separator only if BOTH category and subcategory exist */}
+    {memberData.category && memberData.subcategory && ' / '}
+
+    {/* Display Subcategories */}
+    {memberData.subcategory && memberData.subcategory.split(',').map(s => s.trim()).join(', ')}
+
+    {/* Display a fallback if NEITHER exists */}
+    {(!memberData.category && !memberData.subcategory) && 'N/A'}
+</p>
 
                          <span className="flex items-center gap-1 ">
                                       <Tooltip title="View Dynamic Profiles"><TbInfoCircle size={16} className="text-blue-500 cursor-pointer flex-shrink-0" onClick={() => setIsProfileDialogOpen(true)} /></Tooltip>
@@ -635,8 +675,6 @@ const MemberViewPage = () => {
                                 ) : <p className="text-sm text-gray-500">No favourite products listed.</p>}
                             </Card>
                         </TabContent>
-
-                        {/* --- STEP 3: Replace the "Assign Brand" tab content --- */}
                        
                     </div>
                 </Tabs>
@@ -652,7 +690,6 @@ const MemberViewPage = () => {
                 />
             )}
 
-            {/* --- STEP 2: Add the new Dynamic Profiles Dialog --- */}
             {isProfileDialogOpen && (
                  <Dialog
                     width={800}
