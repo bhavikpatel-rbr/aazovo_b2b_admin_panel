@@ -1049,7 +1049,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
           />
         </FormItem>
         <FormItem
-          label="Postal Code"
+          label="Pin Code"
           invalid={!!errors.zip_code}
           errorMessage={errors.zip_code?.message as string}
         >
@@ -2142,7 +2142,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   const nameRegex = /^[a-zA-Z\s.'-]+$/;
   const companyNameRegex = /^[a-zA-Z0-9\s.'\-&]+$/;
   const addressComponentRegex = /^[a-zA-Z0-9\s.,'-]+$/;
-  const postalCodeRegex = /^[a-zA-Z0-9-]{3,10}$/;
+  const postalCodeRegex =  /^\d{1,100}$/;
   const selectObjectSchema = z.object({ value: z.any(), label: z.any() }).nullable().optional();
 
   const companySchema = z.object({
