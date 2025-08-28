@@ -681,6 +681,79 @@ const CategoryDetailView = ({
   );
 };
 
+// --- Skeleton Loader Components ---
+const Skeleton = ({ className }: { className?: string }) => (
+  <div className={classNames('bg-gray-200 dark:bg-gray-700 rounded animate-pulse', className)} />
+);
+
+const CardSkeleton = () => (
+  <div className="rounded-md border border-gray-200 dark:border-gray-700 p-2">
+    <div className="flex items-center gap-2">
+      <Skeleton className="h-12 w-12 rounded-md" />
+      <div className="flex-1 space-y-2">
+        <Skeleton className="h-5 w-10" />
+        <Skeleton className="h-3 w-16" />
+      </div>
+    </div>
+  </div>
+);
+
+const TableToolsSkeleton = () => (
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+    <Skeleton className="h-10 w-full sm:w-64" />
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+      <Skeleton className="h-10 w-10" />
+      <Skeleton className="h-10 w-10" />
+      <Skeleton className="h-10 w-24" />
+      <Skeleton className="h-10 w-28" />
+    </div>
+  </div>
+);
+
+const DataTableSkeleton = ({ columns, rowCount = 5 }: { columns: { key: string }[], rowCount?: number }) => (
+  <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+    <div className="table w-full">
+      <div className="table-header-group">
+        <div className="table-row bg-gray-50 dark:bg-gray-700/50">
+          <div className="table-cell p-4 w-12"><Skeleton className="h-5 w-5 rounded" /></div>
+          {columns.map(col => <div key={col.key} className="table-cell p-4"><Skeleton className="h-4 w-3/4" /></div>)}
+        </div>
+      </div>
+      <div className="table-row-group">
+        {Array.from({ length: rowCount }).map((_, i) => (
+          <div key={i} className="table-row border-t border-gray-200 dark:border-gray-700">
+            <div className="table-cell p-4"><Skeleton className="h-5 w-5 rounded" /></div>
+            {columns.map(col => <div key={col.key} className="table-cell p-4"><Skeleton className="h-5 w-full" /></div>)}
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const CategoryPageSkeleton = () => {
+  const skeletonColumns = [
+    { key: "id" }, { key: "name" }, { key: "parent" }, { key: "status" }, { key: "action" }
+  ];
+  return (
+    <Container className="h-auto">
+      <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-10 w-32 mt-2 sm:mt-0" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
+          {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
+        </div>
+        <div className="mb-4"><TableToolsSkeleton /></div>
+        <div className="mt-4 flex-grow overflow-y-auto">
+          <DataTableSkeleton columns={skeletonColumns} rowCount={5} />
+        </div>
+      </AdaptiveCard>
+    </Container>
+  );
+};
+
 
 // --- Main Component (Categories) ---
 const Categories = () => {
@@ -721,8 +794,14 @@ const Categories = () => {
   const [activeAddTab, setActiveAddTab] = useState('general');
   const [activeEditTab, setActiveEditTab] = useState('general');
 
-  const { CategoriesData = [], status: masterLoadingStatus = "idle", ParentCategories = [] } = useSelector(masterSelector);
-  useEffect(() => { dispatch(getCategoriesAction()); dispatch(getParentCategoriesAction()); }, [dispatch]);
+  const { CategoriesData = [], ParentCategories = [] } = useSelector(masterSelector);
+  const [masterLoadingStatus, setMasterLoadingStatus] = useState(false);
+
+  useEffect(() => {
+    setMasterLoadingStatus(true);
+    dispatch(getCategoriesAction()).finally(() => { setMasterLoadingStatus(false); }
+    ); dispatch(getParentCategoriesAction());
+  }, [dispatch]);
 
   useEffect(() => {
     return () => {
@@ -1221,9 +1300,14 @@ const Categories = () => {
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<CategoryItem>[]>(columns);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
+  const isLoading = masterLoadingStatus;
   const tableLoading = masterLoadingStatus === "loading" || isSubmitting || isProcessing || isImporting;
   const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex items-center gap-2 p-2";
+
+  if (isLoading) {
+    return <CategoryPageSkeleton />;
+  }
 
   return (
     <>
