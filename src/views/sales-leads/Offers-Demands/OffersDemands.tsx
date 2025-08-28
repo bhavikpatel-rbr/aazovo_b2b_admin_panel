@@ -573,10 +573,10 @@ const AddNotificationDialog: React.FC<{
     mode: "onChange",
   });
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Notification for {item.name}</h5>
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+        <div className="max-h-[60vh] min-h-[50vh] overflow-y-auto pr-4 -mr-4">
           <FormItem
             label="Notification Title"
             invalid={!!errors.notification_title}
@@ -663,10 +663,10 @@ const AssignTaskDialog: React.FC<{
     mode: "onChange",
   });
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Assign Task for {item.name}</h5>
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+        <div className="max-h-[60vh] min-h-[50vh] overflow-y-auto pr-4 -mr-4">
           <FormItem
             label="Title"
             invalid={!!errors.task_title}
@@ -790,10 +790,10 @@ const AddScheduleDialog: React.FC<{
     mode: "onChange",
   });
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Schedule for {item.name}</h5>
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+        <div className="max-h-[60vh] min-h-[50vh]  overflow-y-auto pr-4 -mr-4">
           <FormItem
             label="Event Title"
             invalid={!!errors.event_title}
@@ -912,10 +912,10 @@ const AddActivityDialog: React.FC<{
     mode: "onChange",
   });
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Activity for {item.name}</h5>
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+        <div className="max-h-[60vh] min-h-[30vh] overflow-y-auto pr-4 -mr-4">
 
           <FormItem
             label="Activity"
@@ -947,7 +947,7 @@ const AddActivityDialog: React.FC<{
               )}
             />
           </FormItem>
-          <div className="text-right mt-6">
+          <div className="text-right ">
             <Button
               type="button"
               className="mr-2"
@@ -961,7 +961,7 @@ const AddActivityDialog: React.FC<{
               type="submit"
               loading={isLoading}
               disabled={!isValid || isLoading}
-              icon={<TbCheck />}
+             
             >
               Save Activity
             </Button>
@@ -2857,6 +2857,7 @@ const OffersDemands = () => {
               </Button>
             </div>
           </div>
+          {currentTab === TABS.ALL && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
             <Tooltip title="Click to show all items">
               <div onClick={onClearFilters}>
@@ -2907,6 +2908,7 @@ const OffersDemands = () => {
               </div>
             </Tooltip>
           </div>
+          )}
           <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
             <nav className="-mb-px flex space-x-8" aria-label="Tabs">
               {[TABS.ALL, TABS.OFFER, TABS.DEMAND].map((tabKey) => (
@@ -3058,6 +3060,7 @@ const OffersDemands = () => {
       </ConfirmDialog>
       <Drawer
         title="Filters"
+     
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
