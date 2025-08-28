@@ -100,6 +100,7 @@ const Dialog = (props: DialogProps) => {
             bodyOpenClassName={classNames('dialog-open', bodyOpenClassName)}
             ariaHideApp={false}
             isOpen={isOpen}
+            
             style={finalStyle} // Use the final calculated style
             closeTimeoutMS={closeTimeoutMS}
             {...rest}

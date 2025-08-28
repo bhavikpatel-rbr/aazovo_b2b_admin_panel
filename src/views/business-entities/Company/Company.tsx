@@ -1415,7 +1415,7 @@ const AddCompanyNotificationDialog: React.FC<{
     <Dialog isOpen={true}  width={700} onClose={onClose}>
       <h5 className="mb-4">Notify User about: {company.company_name}</h5>
       <UiForm onSubmit={handleSubmit(onSend)}>
-        <div className="overflow-y-auto max-h-[60vh] pr-4">
+        <div className="overflow-y-auto max-h-[60vh] min-h-[60vh] pr-4">
           <UiFormItem
             label="Title"
             invalid={!!errors.notification_title}
@@ -2588,12 +2588,12 @@ const EnableBillingDialog: React.FC<EnableBillingDialogProps> = ({
 
   return (
     <>
-      <Dialog isOpen={true} onClose={onClose} width={700}>
+      <Dialog isOpen={true} onClose={onClose} width={700} >
         <h5 className="text-xl font-bold mb-4">
           Enable Billing Documents for: {company.company_name}
         </h5>
         <UiForm id="enableBillingForm" onSubmit={handleSubmit(onSubmit)}>
-          <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+          <div className="max-h-[60vh] min-h-[60vh] overflow-y-auto pr-4 -mr-4">
             <div className="space-y-4">
               {fields.map((field, index) => {
                 const currentDoc = watchedDocuments[index];
