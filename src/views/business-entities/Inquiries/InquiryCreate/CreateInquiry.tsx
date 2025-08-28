@@ -480,10 +480,36 @@ const CreateInquiry = () => {
               <FormItem label={<>Contact Person Email <span className="text-red-500">*</span></>} invalid={!!errors.email} errorMessage={errors.email?.message} >
                 <Controller name="email" control={control} render={({ field }) => <Input {...field} type="email" placeholder="Enter Email Address" />} />
               </FormItem>
-              <FormItem label={<>Contact Person Mobile <span className="text-red-500">*</span></>} invalid={!!errors.mobile_no} errorMessage={errors.mobile_no?.message} >
-                 {/* UPDATED: Added type="tel" for better mobile usability */}
-                <Controller name="mobile_no" control={control} render={({ field }) => <Input {...field} type="tel" placeholder="e.g. +1234567890" />} />
-              </FormItem>
+              <FormItem
+  label={<>Contact Person Mobile <span className="text-red-500">*</span></>}
+  invalid={!!errors.mobile_no}
+  errorMessage={errors.mobile_no?.message}
+>
+  <Controller
+    name="mobile_no"
+    control={control}
+    render={({ field }) => {
+      // Create a custom onChange handler
+      const handleChange = (e) => {
+        const value = e.target.value;
+        // Use a regular expression to remove any non-digit characters
+        const numericValue = value.replace(/[^0-9]/g, '');
+        // Call the original react-hook-form onChange with the sanitized value
+        field.onChange(numericValue);
+      };
+
+      return (
+        <Input
+          {...field} // Spread all original field props (value, onBlur, name, ref)
+          onChange={handleChange} // Override the onChange handler
+          type="tel" // 'tel' is great for mobile keyboards
+          placeholder="e.g. 81234567"
+          inputMode="numeric" // Helps bring up the numeric keyboard on mobile devices
+        />
+      );
+    }}
+  />
+</FormItem>
 
               {/* --- Row 2: Core Inquiry Details --- */}
               <FormItem label={<>Inquiry Subject <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_subject} errorMessage={errors.inquiry_subject?.message} className="md:col-span-2 lg:col-span-4" >
