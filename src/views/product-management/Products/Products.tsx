@@ -454,10 +454,10 @@ const AddNotificationDialog: React.FC<{
     mode: "onChange",
   });
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <Dialog width={700} isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Notification for {item.name}</h5>
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+        <div className="max-h-[60vh] min-h-[50vh] overflow-y-auto pr-4 -mr-4">
           <FormItem
             label="Notification Title"
             invalid={!!errors.notification_title}
@@ -1310,19 +1310,19 @@ const ActionColumn = React.memo(
         >
           <TbBell size={18} /> <span className="text-xs">Add Notification</span>
         </Dropdown.Item>
-        <Dropdown.Item
+        {/* <Dropdown.Item
           onClick={() => onOpenModal("task", rowData)}
           className="flex items-center gap-2"
         >
           <TbUser size={18} /> <span className="text-xs">Assign Task</span>
-        </Dropdown.Item>
-        <Dropdown.Item
+        </Dropdown.Item> */}
+        {/* <Dropdown.Item
           onClick={() => onOpenModal("calendar", rowData)}
           className="flex items-center gap-2"
         >
           <TbCalendarEvent size={18} />{" "}
           <span className="text-xs">Add Schedule</span>
-        </Dropdown.Item>
+        </Dropdown.Item> */}
         <Dropdown.Item
           onClick={() => onOpenModal("active", rowData)}
           className="flex items-center gap-2"
@@ -2869,27 +2869,27 @@ const Products = () => {
                 >
                   Export Products
                 </Dropdown.Item>
-                <Dropdown.Item
+                {/* <Dropdown.Item
                   eventKey="Import Product"
                   onClick={() => openImportModal("products")}
                   disabled={!isDataReady} // ADDED
                 >
                   Import Products
-                </Dropdown.Item>
-                <Dropdown.Item
+                </Dropdown.Item> */}
+                {/* <Dropdown.Item
                   eventKey="Export Keywords"
                   onClick={() => handleOpenExportReasonModal("keywords")}
                   disabled={!isDataReady} // ADDED
                 >
                   Export Keywords
-                </Dropdown.Item>
-                <Dropdown.Item
+                </Dropdown.Item> */}
+                {/* <Dropdown.Item
                   eventKey="Import Keywords"
                   onClick={() => openImportModal("keywords")}
                   disabled={!isDataReady} // ADDED
                 >
                   Import Keywords
-                </Dropdown.Item>
+                </Dropdown.Item> */}
               </Dropdown>
               <Button
                 menuName="products" isAdd={true}
@@ -3335,7 +3335,7 @@ const Products = () => {
                 <FormItem
                   label={
                     <div>
-                      Unit<span className="text-red-500"> * </span>
+                      Unit
                     </div>
                   }
                   invalid={!!formErrors.unit_id}
