@@ -189,10 +189,10 @@ const TableSkeleton = () => (
         <Skeleton className="h-9 w-24" />
       </div>
     </div>
-    <div className="border rounded-md dark:border-gray-700">
+    <div className=" rounded-md dark:border-gray-700">
       <div className="w-full">
         {/* Table Head */}
-        <div className="flex bg-gray-50 dark:bg-gray-700/50 p-3 rounded-t-md border-b dark:border-gray-700">
+        <div className="flex bg-gray-50 dark:bg-gray-700/50 p-3 rounded-t-md dark:border-gray-700">
           <div className="w-12 px-4"><Skeleton className="h-4 w-4 rounded-sm" /></div>
           <div className="flex-1 px-4" style={{ maxWidth: '280px' }}><Skeleton className="h-4 w-3/4" /></div>
           <div className="flex-1 px-4" style={{ maxWidth: '240px' }}><Skeleton className="h-4 w-1/2" /></div>
@@ -203,7 +203,7 @@ const TableSkeleton = () => (
         {/* Table Body */}
         <div>
           {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className="flex items-center border-b dark:border-gray-700 p-3 h-[74px]">
+            <div key={i} className="flex items-center dark:border-gray-700 p-3 h-[74px]">
               <div className="w-12 px-4"><Skeleton className="h-4 w-4 rounded-sm" /></div>
               <div className="flex-1 px-4" style={{ maxWidth: '280px' }}><Skeleton className="h-4 w-5/6" /></div>
               <div className="flex-1 px-4" style={{ maxWidth: '240px' }}><Skeleton className="h-4 w-full" /></div>
@@ -300,10 +300,12 @@ const AddInquiryNotificationDialog: React.FC<{
     <Dialog
       isOpen={true}
       onClose={onClose}
+      width={700}
       onRequestClose={onClose}
       title={`Notify User about: ${inquiry.inquiry_id}`}
     >
-      <div className="max-h-[65vh] overflow-y-auto pr-4 -mr-4">
+      <div className="max-h-[65vh] min-h-[45vh]  overflow-y-auto pr-4 -mr-4">
+
         <UiForm id="notificationForm" onSubmit={handleSubmit(onSend)}>
           <UiFormItem
             label="Title"
@@ -465,6 +467,7 @@ const AddInquiryScheduleDialog: React.FC<{
     <Dialog
       isOpen={true}
       onClose={onClose}
+      width={700}
       onRequestClose={onClose}
       title={`Add Schedule for Inquiry: ${inquiry.inquiry_id}`}
     >
@@ -639,10 +642,11 @@ const AssignTaskDialog: React.FC<{
     <Dialog
       isOpen={true}
       onClose={onClose}
+      width={700}
       onRequestClose={onClose}
       title={`Assign Task for Inquiry: ${inquiry.inquiry_id}`}
     >
-      <div className="max-h-[65vh] overflow-y-auto pr-4 -mr-4">
+      <div className="max-h-[65vh]  overflow-y-auto pr-4 -mr-4">
         <UiForm id="taskForm" onSubmit={handleSubmit(onAssignTask)}>
           <UiFormItem
             label="Task Title"
@@ -835,11 +839,13 @@ const StatusUpdateModal: React.FC<{
   return (
     <Dialog
       isOpen={true}
+      width={700}
+      
       onClose={onClose}
       onRequestClose={onClose}
       title={`Change Status for: ${inquiry.inquiry_id}`}
     >
-      <div className="max-h-[65vh] overflow-y-auto pr-4 -mr-4">
+      <div className="max-h-[65vh] min-h-[45vh] overflow-y-auto pr-4 -mr-4">
         <p className="mb-1 text-sm">Company: <span className="font-semibold">{inquiry.company_name}</span></p>
         <p className="mb-4 text-sm">Current Status: <span className="font-semibold">{inquiry.inquiry_status}</span></p>
 
@@ -883,11 +889,14 @@ const AssignToUpdateModal: React.FC<{
   onSuccess: () => void;
 }> = ({ inquiry, onClose, onSuccess }) => {
   const dispatch = useAppDispatch();
-  const { usersData = [] } = useSelector(masterSelector, shallowEqual);
+  const { getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
 
+  
   const [isLoading, setIsLoading] = useState(false);
-  const usersDataOptions = useMemo(() => Array.isArray(usersData) ? usersData.map((sp: ApiLookupItem) => ({ value: String(sp.id), label: `(${sp.employee_id}) - ${sp.name || ' '}` })) : [], [usersData]);
+  const usersDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((sp: ApiLookupItem) => ({ value: String(sp.id), label: `(${sp.employee_id}) - ${sp.name || 'N/A'}` })) : [], [getAllUserData]);
 
+console.log("usersDataOptions",usersDataOptions);
+console.log("usersData",getAllUserData);
 
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<AssignUpdateFormData>({
     resolver: zodResolver(assigntoUpdateSchema),
@@ -956,11 +965,12 @@ const AssignToUpdateModal: React.FC<{
   return (
     <Dialog
       isOpen={true}
+      width={700}
       onClose={onClose}
       onRequestClose={onClose}
       title={`Assign for: ${inquiry.inquiry_id}`}
     >
-      <div className="max-h-[65vh] overflow-y-auto pr-4 -mr-4">
+      <div className="max-h-[65vh] min-h-[50vh] overflow-y-auto pr-4 -mr-4">
         <p className="mb-1 text-sm">Company: <span className="font-semibold">{inquiry.company_name}</span></p>
         <p className="mb-4 text-sm">Inquiry Assigned to: <span className="font-semibold">{inquiry.assigned_to || ' '}</span></p>
         <UiForm id="assignToForm" onSubmit={handleSubmit(handleAssignToUpdate)}>
@@ -1781,7 +1791,7 @@ const InquiryListTable = () => {
   const {
     inquiryList,
     departments,
-    isLoading, // MODIFIED: Using global loading state from context
+    isLoading,
     selectedInquiries,
     setSelectedInquiries,
     getAllUserDataOptions,
@@ -1793,7 +1803,7 @@ const InquiryListTable = () => {
     sort: { order: "", key: "" },
     query: "",
   });
-  // REMOVED: `const [isLoading, setIsLoading] = useState(false);` This is now handled globally.
+
   const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<InquiryFilterFormData>(
     {}
@@ -1908,25 +1918,101 @@ const InquiryListTable = () => {
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1, query: "" });
-    // MODIFIED: Removed local state management. Redux will handle the loading state.
     dispatch(getInquiriesAction());
   };
 
+  const counts = useMemo(() => {
+    const total = inquiryList.length;
+    const newCount = inquiryList.filter(
+      (i) => i.inquiry_status === "Open"
+    ).length;
+    const inProgressCount = inquiryList.filter(
+      (i) => i.inquiry_status === "In Progress"
+    ).length;
+    const resolvedCount = inquiryList.filter(
+      (i) => i.inquiry_status === "Resolved"
+    ).length;
+    const closedCount = inquiryList.filter(
+      (i) => i.inquiry_status === "Closed"
+    ).length;
+    const highPriority = inquiryList.filter(
+      (i) => i.inquiry_priority === "High"
+    ).length;
+    const mediumPriority = inquiryList.filter(
+      (i) => i.inquiry_priority === "Medium"
+    ).length;
+    const lowPriority = inquiryList.filter(
+      (i) => i.inquiry_priority === "Low"
+    ).length;
+    return {
+      total,
+      newCount,
+      inProgressCount,
+      resolvedCount,
+      closedCount,
+      highPriority,
+      mediumPriority,
+      lowPriority,
+    };
+  }, [inquiryList]);
+
   const handleCardClick = (type: "status" | "priority", value: string) => {
-    onClearFilters();
-    if (type === "status") {
-      const statusOption = inquiryCurrentStatusOptions.find(
-        (opt) => opt.value === value
-      );
-      if (statusOption)
-        setFilterCriteria({ filterInquiryCurrentStatus: [statusOption] });
-    } else if (type === "priority") {
-      const priorityOption = inquiryPriorityOptions.find(
-        (opt) => opt.value === value
-      );
-      if (priorityOption)
-        setFilterCriteria({ filterInquiryPriority: [priorityOption] });
+    let countToCheck = -1;
+    // Determine the count for the clicked card
+    if (type === 'status') {
+      const statusMap: { [key: string]: number } = { 'Open': counts.newCount, 'In Progress': counts.inProgressCount, 'Resolved': counts.resolvedCount, 'Closed': counts.closedCount };
+      countToCheck = statusMap[value] ?? -1;
+    } else if (type === 'priority') {
+      const priorityMap: { [key: string]: number } = { 'High': counts.highPriority, 'Medium': counts.mediumPriority, 'Low': counts.lowPriority };
+      countToCheck = priorityMap[value] ?? -1;
     }
+
+    // If the count is 0, show the toast notification and do nothing else.
+    if (countToCheck === 0) {
+      toast.push(
+        <Notification type="info" title="No Records Found" duration={4000}>
+          There are currently no inquiries that match this criteria.
+        </Notification>
+      );
+      return; // Stop further execution
+    }
+
+    // Create a fresh, empty filter object. This replaces the need for a separate onClearFilters() call.
+    const newFilterCriteria: InquiryFilterFormData = {
+      filterRecordStatus: [],
+      filterInquiryType: [],
+      filterInquiryPriority: [],
+      filterInquiryCurrentStatus: [],
+      filterAssignedTo: [],
+      filterDepartment: [],
+      filterFeedbackStatus: [],
+      filterInquiryDate: [null, null],
+      filterResponseDate: [null, null],
+      filterResolutionDate: [null, null],
+      filterFollowUpDate: [null, null],
+    };
+
+    // Dynamically get filter options from the current list
+    const inquiryCurrentStatusOptions = Array.from(new Set(inquiryList.map(item => item.inquiry_status).filter(Boolean))).map(status => ({ value: status, label: status }));
+    const inquiryPriorityOptions = Array.from(new Set(inquiryList.map(item => item.inquiry_priority).filter(Boolean))).map(priority => ({ value: priority, label: priority }));
+
+    // Apply the specific filter based on the card that was clicked.
+    if (type === "status") {
+      const statusOption = inquiryCurrentStatusOptions.find((opt) => opt.value === value);
+      if (statusOption) {
+        newFilterCriteria.filterInquiryCurrentStatus = [statusOption];
+      }
+    } else if (type === "priority") {
+      const priorityOption = inquiryPriorityOptions.find((opt) => opt.value === value);
+      if (priorityOption) {
+        newFilterCriteria.filterInquiryPriority = [priorityOption];
+      }
+    }
+
+    // Set the new filter state. This will cause the table to re-render.
+    setFilterCriteria(newFilterCriteria);
+    // Also reset pagination to the first page.
+    handleSetTableData({ pageIndex: 1 });
   };
 
   const handleRemoveFilter = (key: keyof InquiryFilterFormData, value: any) => {
@@ -2530,44 +2616,7 @@ const InquiryListTable = () => {
   const cardClass =
     "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex items-center gap-2 p-2";
-  const counts = useMemo(() => {
-    const total = inquiryList.length;
-    const newCount = inquiryList.filter(
-      (i) => i.inquiry_status === "Open"
-    ).length;
-    const inProgressCount = inquiryList.filter(
-      (i) => i.inquiry_status === "In Progress"
-    ).length;
-    const resolvedCount = inquiryList.filter(
-      (i) => i.inquiry_status === "Resolved"
-    ).length;
-    const closedCount = inquiryList.filter(
-      (i) => i.inquiry_status === "Closed"
-    ).length;
-    const highPriority = inquiryList.filter(
-      (i) => i.inquiry_priority === "High"
-    ).length;
-    const mediumPriority = inquiryList.filter(
-      (i) => i.inquiry_priority === "Medium"
-    ).length;
-    const lowPriority = inquiryList.filter(
-      (i) => i.inquiry_priority === "Low"
-    ).length;
-    return {
-      total,
-      newCount,
-      inProgressCount,
-      resolvedCount,
-      closedCount,
-      highPriority,
-      mediumPriority,
-      lowPriority,
-    };
-  }, [inquiryList]);
 
-  // --- SKELETON RENDER LOGIC ---
-  // CORRECTED: This now uses the global `isLoading` state from the context provider,
-  // ensuring skeletons are shown during the initial data fetch.
   if (isLoading) {
     return (
       <>
@@ -2820,7 +2869,6 @@ const InquiryListTable = () => {
           id="filterInquiryForm"
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
         >
-          {/* START: Responsive Fix for Drawer */}
           <div className="h-full overflow-y-auto">
             <div className="sm:grid grid-cols-2 gap-x-4 gap-y-2">
               <UiFormItem label="Inquiry Type">
@@ -2926,7 +2974,6 @@ const InquiryListTable = () => {
               </UiFormItem>
             </div>
           </div>
-          {/* END: Responsive Fix for Drawer */}
         </UiForm>
       </Drawer>
       <ConfirmDialog

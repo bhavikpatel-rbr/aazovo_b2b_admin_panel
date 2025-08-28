@@ -87,7 +87,7 @@ const DocumentViewer: React.FC<{
     };
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} width="auto" height="85vh" closable={false}  contentClassName="top-0 p-0 bg-transparent">
+        <Dialog isOpen={isOpen} onClose={onClose} width="auto" height="85vh" closable={false} contentClassName="top-0 p-0 bg-transparent">
             <div className="w-full h-full bg-black/80 backdrop-blur-sm flex flex-col">
                 <header className="flex-shrink-0 h-16 bg-gray-800/50 text-white flex items-center justify-between px-4">
                     <div className="flex items-center gap-4">
@@ -132,7 +132,7 @@ const DocumentCard: React.FC<{ document: DocumentRecord; onPreview: () => void }
             <div className="p-4 flex flex-col flex-grow">
                 <p className="font-semibold truncate flex-grow" title={document.name}>{document.name}</p>
                 <div className="flex justify-between items-center mt-3">
-                   {document.verified ?
+                    {document.verified ?
                         <Tag className="bg-emerald-100 text-emerald-700"><TbCheck className='mr-1' />Verified</Tag> :
                         <Tag className="bg-red-100 text-red-700"><TbX className='mr-1' />Not Verified</Tag>
                     }
@@ -156,65 +156,65 @@ interface PartnerSpotVerification { id: number; verified_by_name?: string; verif
 interface PartnerReference { id: number; person_name: string; contact_number: string; }
 
 interface ApiSinglePartnerItem {
-  id: number;
-  partner_code: string | null;
-  partner_name: string;
-  status: string;
-  primary_email_id: string;
-  primary_contact_number: string;
-  primary_contact_number_code: string;
-  alternate_contact_number: string | null;
-  alternate_contact_number_code: string | null;
-  alternate_email_id: string | null;
-  ownership_type: string;
-  company_name: string;
-  partner_address: string;
-  country_id: number;
-  state: string;
-  city: string;
-  zip_code: string;
-  gst_number: string | null;
-  pan_number: string | null;
-  establishment_year: string | null;
-  no_of_employees: number | null;
-  partner_website: string | null;
-  kyc_verified: boolean;
-  enable_billing: boolean;
-  partner_logo: string | null;
-  primary_account_number: string | null;
-  primary_bank_name: string | null;
-  primary_ifsc_code: string | null;
-  secondary_account_number: string | null;
-  secondary_bank_name: string | null;
-  secondary_ifsc_code: string | null;
-  agreement_file: string | null;
-  agreement_verified: boolean;
-  office_photo_file: string | null;
-  office_photo_verified: boolean;
-  gst_certificate_file: string | null;
-  gst_certificate_verified: boolean;
-  visiting_card_file: string | null;
-  visiting_card_verified: boolean;
-  authority_letter_file: string | null;
-  authority_letter_verified: boolean;
-  cancel_cheque_file: string | null;
-  cancel_cheque_verified: boolean;
-  aadhar_card_file: string | null;
-  aadhar_card_verified: boolean;
-  pan_card_file: string | null;
-  pan_card_verified: boolean;
-  other_document_file: string | null;
-  other_document_verified: boolean;
-  industrial_expertise: string;
-  join_us_as: string;
-  created_at: string;
-  country?: CountryReference;
-  continent?: ContinentReference | null;
-  partner_certificate?: PartnerCertificate[];
-  partner_bank_details?: PartnerBankDetail[];
-  partner_team_members?: PartnerTeamMember[];
-  partner_spot_verification?: PartnerSpotVerification[];
-  partner_references?: PartnerReference[];
+    id: number;
+    partner_code: string | null;
+    partner_name: string;
+    status: string;
+    primary_email_id: string;
+    primary_contact_number: string;
+    primary_contact_number_code: string;
+    alternate_contact_number: string | null;
+    alternate_contact_number_code: string | null;
+    alternate_email_id: string | null;
+    ownership_type: string;
+    company_name: string;
+    partner_address: string;
+    country_id: number;
+    state: string;
+    city: string;
+    zip_code: string;
+    gst_number: string | null;
+    pan_number: string | null;
+    establishment_year: string | null;
+    no_of_employees: number | null;
+    partner_website: string | null;
+    kyc_verified: boolean;
+    enable_billing: boolean;
+    partner_logo: string | null;
+    primary_account_number: string | null;
+    primary_bank_name: string | null;
+    primary_ifsc_code: string | null;
+    secondary_account_number: string | null;
+    secondary_bank_name: string | null;
+    secondary_ifsc_code: string | null;
+    agreement_file: string | null;
+    agreement_verified: boolean;
+    office_photo_file: string | null;
+    office_photo_verified: boolean;
+    gst_certificate_file: string | null;
+    gst_certificate_verified: boolean;
+    visiting_card_file: string | null;
+    visiting_card_verified: boolean;
+    authority_letter_file: string | null;
+    authority_letter_verified: boolean;
+    cancel_cheque_file: string | null;
+    cancel_cheque_verified: boolean;
+    aadhar_card_file: string | null;
+    aadhar_card_verified: boolean;
+    pan_card_file: string | null;
+    pan_card_verified: boolean;
+    other_document_file: string | null;
+    other_document_verified: boolean;
+    industrial_expertise: string;
+    join_us_as: string;
+    created_at: string;
+    country?: CountryReference;
+    continent?: ContinentReference | null;
+    partner_certificate?: PartnerCertificate[];
+    partner_bank_details?: PartnerBankDetail[];
+    partner_team_members?: PartnerTeamMember[];
+    partner_spot_verification?: PartnerSpotVerification[];
+    partner_references?: PartnerReference[];
 }
 
 // --- REUSABLE HELPER COMPONENTS ---
@@ -298,7 +298,15 @@ const BankAndBillingTabView = ({ partner }: { partner: ApiSinglePartnerItem }) =
         </div>
     );
 };
-const TeamsTabView = ({ partner }: { partner: ApiSinglePartnerItem }) => { const teams = partner.partner_team_members || []; if (teams.length === 0) return <NoDataMessage message="No team members found." />; return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{teams.map(t => (<InfoCard key={t.id} title={t.person_name} data={[{ label: 'Team', value: t.team_name },{ label: 'Designation', value: t.designation },{ label: 'Contact', value: t.number }]} />))}</div> };
+const TeamsTabView = ({ partner }: { partner: ApiSinglePartnerItem }) => {
+    const teams = partner.partner_team_members || []; if (teams.length === 0) return <NoDataMessage message="No team members found." />; return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{teams.map(t => (<InfoCard key={t.id} title={t.person_name} data={[
+        { label: 'Team', value: t.team_name },
+        { label: 'Company Name', value: t.company_name },
+        { label: 'Email ID', value: t.email_id },
+        { label: 'Designation', value: t.designation },
+        { label: 'Contact Number', value: t.number },
+    ]} />))}</div>
+};
 
 const ReferencesTabView = ({ partner }: { partner: ApiSinglePartnerItem }) => {
     const references = partner.partner_references || [];
@@ -310,7 +318,12 @@ const ReferencesTabView = ({ partner }: { partner: ApiSinglePartnerItem }) => {
                 <InfoCard
                     key={r.id}
                     title={r.person_name}
-                    data={[{ label: 'Contact', value: r.contact_number }]}
+                    data={[
+                        { label: 'Company Name', value: r.company_name },
+                        { label: 'Email ID', value: r.email_id },
+                        { label: 'Contact', value: r.number },
+                        { label: 'Remark / Reference', value: r.remark },
+                    ]}
                 />
             ))}
         </div>
@@ -345,7 +358,7 @@ const DocumentsTabView = ({ partner }: { partner: ApiSinglePartnerItem }) => {
         addDoc("Authority Letter", partner.authority_letter_file, partner.authority_letter_verified);
         addDoc("Agreement", partner.agreement_file, partner.agreement_verified);
         addDoc("Other Document", partner.other_document_file, partner.other_document_verified);
-        
+
         (partner.partner_certificate || []).forEach(cert => {
             addDoc(cert.certificate_name, cert.upload_certificate_path, true);
         });
@@ -387,18 +400,18 @@ const PartnerView = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
-  
+
     const [partner, setPartner] = useState<ApiSinglePartnerItem | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeSection, setActiveSection] = useState<string>(partnerViewNavigationList[0].link);
-  
+
     useEffect(() => {
         if (!id) {
             toast.push(<Notification type="danger" title="Error">No Partner ID provided.</Notification>);
             navigate('/business-entities/partner');
             return;
         }
-  
+
         const fetchPartner = async () => {
             setLoading(true);
             try {
@@ -412,10 +425,10 @@ const PartnerView = () => {
         };
         fetchPartner();
     }, [id, dispatch, navigate]);
-  
+
     const renderActiveSection = () => {
         if (!partner) return <NoDataMessage message="Partner data is not available." />;
-  
+
         switch (activeSection) {
             case "details": return <DetailsTabView partner={partner} />;
             case "documents": return <DocumentsTabView partner={partner} />;
@@ -425,11 +438,11 @@ const PartnerView = () => {
             default: return <DetailsTabView partner={partner} />;
         }
     };
-  
+
     if (loading) {
         return <Container className="h-full flex justify-center items-center"><Spinner size={40} /></Container>;
     }
-  
+
     if (!partner) {
         return (
             <Container>
@@ -441,7 +454,7 @@ const PartnerView = () => {
             </Container>
         );
     }
-  
+
     return (
         <Container className="h-full">
             <div className="flex gap-1 items-end mb-4">
