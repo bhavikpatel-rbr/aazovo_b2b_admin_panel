@@ -474,7 +474,7 @@ const AddPartnerActivityDialog: React.FC<{ partner: PartnerItem; onClose: () => 
   };
 
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Activity Log for "{partner.partner_name}"</h5>
       <UiForm onSubmit={handleSubmit(onAddActivity)}>
         <UiFormItem label="Activity" invalid={!!errors.item} errorMessage={errors.item?.message}>
@@ -530,11 +530,11 @@ const AddPartnerScheduleDialog: React.FC<{ partner: PartnerItem; onClose: () => 
   };
 
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Schedule for {partner.partner_name}</h5>
       <UiForm onSubmit={handleSubmit(onAddEvent)}>
         {/* START: Responsive Fix */}
-        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+        <div className="max-h-[60vh] min-h-[50vh] overflow-y-auto pr-4 -mr-4">
           <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
             <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
           </UiFormItem>
@@ -591,11 +591,11 @@ const AddPartnerNotificationDialog: React.FC<{ partner: PartnerItem; onClose: ()
   };
 
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Notify User about: {partner.partner_name}</h5>
       <UiForm onSubmit={handleSubmit(onSend)}>
         {/* START: Responsive Fix */}
-        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+        <div className="max-h-[60vh] min-h-[50vh] overflow-y-auto pr-4 -mr-4">
           <UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></UiFormItem>
           <UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem>
           <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem>
@@ -631,16 +631,16 @@ const AssignPartnerTaskDialog: React.FC<{ partner: PartnerItem; onClose: () => v
   };
 
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Assign Task for {partner.partner_name}</h5>
       <UiForm onSubmit={handleSubmit(onAssignTask)}>
         {/* START: Responsive Fix */}
-        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+        <div className="max-h-[60vh] min-h-[50vh]overflow-y-auto pr-4 -mr-4">
           <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
             <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem>
             <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} /></UiFormItem>
-          </div>
+          
           <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} /></UiFormItem>
           <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem>
         </div>
