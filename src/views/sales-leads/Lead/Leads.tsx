@@ -2362,24 +2362,24 @@ const LeadActionColumn = ({
         >
           <TbTrophy size={18} /> View Opportunities
         </Dropdown.Item>
-        <Dropdown.Item
+        {/* <Dropdown.Item
           onClick={() => onOpenModal("viewLeadForm")}
           className="flex items-center gap-2 text-xs"
         >
           <TbFileDescription size={18} /> View Lead Form
-        </Dropdown.Item>
-        <Dropdown.Item
+        </Dropdown.Item> */}
+        {/* <Dropdown.Item
           onClick={() => onOpenModal("viewDeal")}
           className="flex items-center gap-2 text-xs"
         >
           <TbPennant size={18} /> View Deal
-        </Dropdown.Item>
-        <Dropdown.Item
+        </Dropdown.Item> */}
+        {/* <Dropdown.Item
           onClick={() => onOpenModal("addAccountDocuments")}
           className="flex items-center gap-2 text-xs"
         >
           <TbFileInvoice size={18} /> Add Account Documents
-        </Dropdown.Item>
+        </Dropdown.Item> */}
         {!data.assigned_saled_id ? <Dropdown.Item
           onClick={() => onOpenModal("assignLead")}
           className="flex items-center gap-2 text-xs"
@@ -3839,23 +3839,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
             />
           </FormItem>
           {/* --- FIX: Use real user data (getAllUserDataOptions) instead of dummy data --- */}
-          <FormItem label="Sales Person">
-            <Controller
-              name="filterSalesPersonIds"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  options={getAllUserDataOptions}
-                  value={getAllUserDataOptions.filter((o) => field.value?.includes(o.value))}
-                  onChange={(opts: any) =>
-                    field.onChange(opts?.map((o: any) => o.value) || [])
-                  }
-                  placeholder="Select sales people..."
-                />
-              )}
-            />
-          </FormItem>
+         
           <FormItem label="Date Range">
             <Controller
               name="dateRange"
