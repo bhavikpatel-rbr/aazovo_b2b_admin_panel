@@ -1,3 +1,4 @@
+import axiosInstance from "@/services/api/api"; // Added for done leads modal
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
 import dayjs from "dayjs";
@@ -15,7 +16,6 @@ import React, {
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import axiosInstance from "@/services/api/api"; // Added for done leads modal
 
 dayjs.extend(isBetween);
 dayjs.extend(isSameOrBefore);
@@ -38,12 +38,12 @@ import {
   Drawer,
   Input,
   Select,
+  Skeleton,
   Spinner,
+  Table,
   Form as UiForm,
   FormItem as UiFormItem,
   Select as UiSelect,
-  Table,
-  Skeleton,
 } from "@/components/ui";
 import Button from "@/components/ui/Button";
 import Dropdown from "@/components/ui/Dropdown";
@@ -59,12 +59,12 @@ import {
   TbBell,
   TbBellRinging,
   TbBrandGoogleDrive,
-  TbBrandWhatsapp,
   TbBuildingStore,
   TbCalendarClock,
   TbCalendarEvent,
   TbCheck,
   TbChecklist,
+  TbCircleCheck, // Icon for Verify button
   TbCloudDownload,
   TbCloudUpload,
   TbColumns,
@@ -76,7 +76,6 @@ import {
   TbFileExcel,
   TbFilePlus,
   TbFilter,
-  TbMailShare,
   TbNotesOff,
   TbPencil,
   TbPencilPlus,
@@ -84,8 +83,7 @@ import {
   TbReload,
   TbTagStarred,
   TbUser,
-  TbX,
-  TbCircleCheck, // Icon for Verify button
+  TbX
 } from "react-icons/tb";
 
 // Types
@@ -118,18 +116,18 @@ import {
   getAllUsersAction,
   getbyIDaccountdocAction,
   getDocumentListAction,
-  getEmployeesListingAction,
+  getEmployeesListingAction, // IMPORTED from FillUpForm
+  getFilledFormAction,
   getFillUpFormAction, // IMPORTED from FillUpForm
-  getFilledFormAction, // IMPORTED from FillUpForm
   getFormBuilderAction,
   getfromIDcompanymemberAction,
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
+import { getMenuRights } from "@/utils/getMenuRights";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
 import { shallowEqual, useSelector } from "react-redux";
-import { getMenuRights } from "@/utils/getMenuRights";
 
 
 // --- START: Copied types and constants from LeadsListing for PendingLeadsModal ---
@@ -198,6 +196,7 @@ export type LeadMemberInfo = {
 export type VerifiedLead = {
   id: number;
   lead_number: string | null;
+  lead_type?: 'Manual lead' | 'Product lead' | 'Wall lead';
   qty: number;
   target_price: number;
   color: string | null;
@@ -430,7 +429,6 @@ const PendingLeadsModal = ({
   const navigate = useNavigate();
   const { getaccountdoc } = useSelector(masterSelector);
   const [pendingLeads, setPendingLeads] = useState<VerifiedLead[]>([]);
-  console.log("pendingLeads",pendingLeads);
   
   const [isLoading, setIsLoading] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -2907,6 +2905,61 @@ const AccountDocumentSelectedFooter = ({
   );
 };
 
+// --- Skeleton Loader Component ---
+const AccountDocumentSkeleton = () => {
+    return (
+        <Container className="h-auto">
+            <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
+                {/* Header Skeleton */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                    <Skeleton className="h-8 w-48 mb-2 sm:mb-0" />
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="h-10 w-32" />
+                        <Skeleton className="h-10 w-32" />
+                    </div>
+                </div>
+                {/* Cards Skeleton */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <Card key={i} bodyClass="flex gap-2 p-2">
+                            <Skeleton className="h-12 w-12 rounded-md" />
+                            <div className="flex-1 space-y-2">
+                                <Skeleton className="h-5 w-10" />
+                                <Skeleton className="h-3 w-16" />
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+                {/* Filter Shortcuts Skeleton */}
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                    {Array.from({ length: 10 }).map((_, i) => (
+                        <Skeleton key={i} className="h-8 w-24" />
+                    ))}
+                </div>
+                {/* Table Tools Skeleton */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full mb-4">
+                    <Skeleton className="h-10 flex-grow" />
+                    <div className="flex gap-1">
+                        <Skeleton className="h-10 w-10" />
+                        <Skeleton className="h-10 w-10" />
+                        <Skeleton className="h-10 w-24" />
+                        <Skeleton className="h-10 w-28" />
+                    </div>
+                </div>
+                {/* Table Skeleton */}
+                <div className="flex-grow overflow-auto">
+                    <div className="space-y-2">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <Skeleton key={i} className="h-16 w-full" />
+                        ))}
+                    </div>
+                </div>
+            </AdaptiveCard>
+        </Container>
+    );
+};
+
+
 // --- Main Account Document Component ---
 const AccountDocument = () => {
   const dispatch = useAppDispatch();
@@ -2915,6 +2968,8 @@ const AccountDocument = () => {
     masterSelector,
     shallowEqual
   );
+  
+  const [isLoading, setIsLoading] = useState(true); // Added loading state
 
   const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -2961,8 +3016,16 @@ const AccountDocument = () => {
   });
 
   useEffect(() => {
-    dispatch(getAllUsersAction());
-    dispatch(getaccountdocAction());
+    const fetchData = async () => {
+      setIsLoading(true);
+      await Promise.all([
+        dispatch(getAllUsersAction()),
+        dispatch(getaccountdocAction())
+      ]);
+      setIsLoading(false);
+    };
+
+    fetchData();
     try {
       const { useEncryptApplicationStorage } = config;
       setUserData(
@@ -3547,6 +3610,10 @@ const AccountDocument = () => {
   const cardClass =
     "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-2";
+
+  if (isLoading) {
+    return <AccountDocumentSkeleton />;
+  }
 
   return (
     <>
