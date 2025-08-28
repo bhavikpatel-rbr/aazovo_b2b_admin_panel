@@ -479,11 +479,10 @@ const ViewDetailsDialog: React.FC<{
             </h6>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
               <DialogDetailRow label="Created By" value={item.createdByInfo.userName} />
-              <DialogDetailRow label="Assigned To" value={item.assignedToInfo?.userName} />
+             
               <DialogDetailRow label="Created Date" value={dayjs(item.createdDate).format("D MMM YYYY, h:mm A")} />
               <DialogDetailRow label="Last Updated" value={item.updated_at ? dayjs(item.updated_at).format("D MMM YYYY, h:mm A") : ' '} />
-              <DialogDetailRow label="Number of Buyers" value={item.numberOfBuyers} />
-              <DialogDetailRow label="Number of Sellers" value={item.numberOfSellers} />
+             
             </div>
           </div>
 
