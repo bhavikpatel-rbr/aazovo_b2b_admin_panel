@@ -689,7 +689,7 @@ const Brands = () => {
                     valueClassName={brandToView.showHeader === 1 ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'font-semibold text-amber-600 dark:text-amber-400'}
                   />
                   <DialogDetailRow label="Mobile No." value={brandToView.mobileNo || 'N/A'} />
-                  <DialogDetailRow label="Slug / URL" value={brandToView.slug} isLink breakAll />
+                  <DialogDetailRow label="Slug / URL" value={brandToView.slug}  />
                   <DialogDetailRow
                     label="Created"
                     value={new Date(brandToView.createdAt).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
