@@ -810,8 +810,8 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
     label: value.name,
   }));
   const countryCodeOptions = CountriesData.map((c: any) => ({
-    value: `+${c.phone_code}`,
-    label: `+${c.phone_code}`,
+    value: `${c.phone_code}`,
+    label: `${c.phone_code}`,
   })).filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i);
 
   const continentOptions = ContinentsData.map((value: any) => ({
