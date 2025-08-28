@@ -170,7 +170,7 @@ const ProductDetailsTab: React.FC<{ lead: LeadData }> = ({ lead }) => (
         <InfoRow label="Product name">{lead.product?.name}</InfoRow>
         <InfoRow label="Qty">{lead.qty}</InfoRow>
         <InfoRow label="Product status">{lead.product_status || 'Active'}</InfoRow>
-        <InfoRow label="Product spec">{lead.product_spec?.name || 'N/A'}</InfoRow>
+        <InfoRow label="Product spec">{lead.product_spec?.name || ' '}</InfoRow>
         <InfoRow label="Internal Remarks">{lead.internal_remark}</InfoRow>
     </Card>
 )
@@ -181,7 +181,7 @@ const MemberDetailsTab: React.FC<{ title: string; member: MemberDetail | null }>
         {member ? (
             <>
                 <InfoRow label="Name">{member.name}</InfoRow>
-                <InfoRow label="Company">{member.company_actual || 'N/A'}</InfoRow>
+                <InfoRow label="Company">{member.company_actual || ' '}</InfoRow>
                 <InfoRow label="Member ID">{member.id}</InfoRow>
             </>
         ) : (
@@ -195,7 +195,7 @@ const OpportunityDetailsTab: React.FC<{ opportunities: Opportunity[] }> = ({ opp
         { header: 'Opp. ID', accessorKey: 'id' },
         { header: 'Seller', cell: props => props.row.original.member.name },
         { header: 'Qty', accessorKey: 'qty' },
-        { header: 'Price', cell: props => props.row.original.price ? `$${props.row.original.price}` : 'N/A' },
+        { header: 'Price', cell: props => props.row.original.price ? `$${props.row.original.price}` : ' ' },
         { header: 'Location', accessorKey: 'location' },
         { header: 'Status', cell: props => <Tag className="bg-amber-100 text-amber-600">{props.row.original.status}</Tag> },
     ], []);

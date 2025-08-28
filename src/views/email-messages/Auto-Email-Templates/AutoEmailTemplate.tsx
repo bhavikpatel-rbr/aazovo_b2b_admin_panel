@@ -152,11 +152,11 @@ function exportAutoEmailTemplatesToCsv(filename: string, rows: AutoEmailTemplate
     email_type: row.email_type,
     template_key: row.template_key,
     categoryNameDisplay: row.category?.name || String(row.category_id),
-    departmentNameDisplay: row.department?.name || (row.department_id ? String(row.department_id) : "N/A"),
+    departmentNameDisplay: row.department?.name || (row.department_id ? String(row.department_id) : " "),
     status: row.status,
-    updated_by_name: row.updated_by_user?.name || "N/A",
-    updated_by_role: row.updated_by_user?.roles?.[0]?.display_name || "N/A",
-    updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : 'N/A',
+    updated_by_name: row.updated_by_user?.name || " ",
+    updated_by_role: row.updated_by_user?.roles?.[0]?.display_name || " ",
+    updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : ' ',
   }));
   const separator = ",";
   const csvContent = CSV_HEADERS_AET.join(separator) + "\n" + preparedRows.map((row: any) => CSV_KEYS_AET.map((k) => { let cell: any = row[k]; if (cell === null || cell === undefined) cell = ""; else cell = String(cell).replace(/"/g, '""'); if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`; return cell; }).join(separator)).join("\n");
@@ -496,7 +496,7 @@ const AutoEmailTemplatesListing = () => {
         ...item,
         status: item.status || "Inactive",
         categoryNameDisplay: item.category?.name || categoryOptions.find(c => c.value === String(item.category_id))?.label || String(item.category_id),
-        departmentNameDisplay: item.department?.name || departmentOptions.find(d => d.value === String(item.department_id))?.label || (item.department_id ? String(item.department_id) : "N/A"),
+        departmentNameDisplay: item.department?.name || departmentOptions.find(d => d.value === String(item.department_id))?.label || (item.department_id ? String(item.department_id) : " "),
       })) : [];
 
     let processedData = cloneDeep(sourceDataWithDisplayNames);
@@ -542,7 +542,7 @@ const AutoEmailTemplatesListing = () => {
   const columns: ColumnDef<AutoEmailTemplateItem>[] = useMemo(() => [
     { header: "Email Type", accessorKey: "email_type", size: 250, enableSorting: true },
     { header: "Category", accessorKey: "category_id", size: 180, enableSorting: true, cell: props => props.row.original.category?.name || categoryOptions.find(c => c.value === String(props.getValue()))?.label || String(props.getValue()) },
-    { header: "Department", accessorKey: "department_id", size: 180, enableSorting: true, cell: props => props.row.original.department?.name || departmentOptions.find(d => d.value === String(props.getValue()))?.label || (props.getValue() ? String(props.getValue()) : "N/A") },
+    { header: "Department", accessorKey: "department_id", size: 180, enableSorting: true, cell: props => props.row.original.department?.name || departmentOptions.find(d => d.value === String(props.getValue()))?.label || (props.getValue() ? String(props.getValue()) : " ") },
     {
       header: "Status", accessorKey: "status", enableSorting: true, size: 100,
       cell: (props) => {
@@ -572,7 +572,7 @@ const AutoEmailTemplatesListing = () => {
                 onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} />
             </Tooltip>
             <div>
-              <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
+              <span className='font-semibold'>{updated_by_user?.name || ' '}</span>
               <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
               <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
             </div>
@@ -662,13 +662,13 @@ const AutoEmailTemplatesListing = () => {
             <div className="grid grid-cols-[2fr_3fr] text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
               <div>
                 <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
-                <p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p>
-                <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
+                <p className="text-sm font-semibold">{editingItem.updated_by_user?.name || " "}</p>
+                <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || " "}</p>
               </div>
               <div className="text-right">
                 <br />
-                <span className="font-semibold">Created At:</span>{" "}<span>{editingItem.created_at ? dayjs(editingItem.created_at).format("D MMM YYYY, h:mm A") : "N/A"}</span><br />
-                <span className="font-semibold">Updated At:</span>{" "}<span>{editingItem.updated_at ? dayjs(editingItem.updated_at).format("D MMM YYYY, h:mm A") : "N/A"}</span>
+                <span className="font-semibold">Created At:</span>{" "}<span>{editingItem.created_at ? dayjs(editingItem.created_at).format("D MMM YYYY, h:mm A") : " "}</span><br />
+                <span className="font-semibold">Updated At:</span>{" "}<span>{editingItem.updated_at ? dayjs(editingItem.updated_at).format("D MMM YYYY, h:mm A") : " "}</span>
               </div>
             </div>
           </div>

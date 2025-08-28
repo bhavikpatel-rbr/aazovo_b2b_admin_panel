@@ -414,7 +414,7 @@ const DialogDetailRow = ({
         valueClassName
       )}
     >
-      {children || value || <span className="font-normal italic text-slate-400 dark:text-slate-500">N/A</span>}
+      {children || value || <span className="font-normal italic text-slate-400 dark:text-slate-500"> </span>}
     </div>
   </div>
 );
@@ -485,7 +485,7 @@ const ViewDetailsDialog: React.FC<{
               <DialogDetailRow label="Created By" value={item.createdByInfo.userName} />
               <DialogDetailRow label="Assigned To" value={item.assignedToInfo?.userName} />
               <DialogDetailRow label="Created Date" value={dayjs(item.createdDate).format("D MMM YYYY, h:mm A")} />
-              <DialogDetailRow label="Last Updated" value={item.updated_at ? dayjs(item.updated_at).format("D MMM YYYY, h:mm A") : 'N/A'} />
+              <DialogDetailRow label="Last Updated" value={item.updated_at ? dayjs(item.updated_at).format("D MMM YYYY, h:mm A") : ' '} />
               <DialogDetailRow label="Number of Buyers" value={item.numberOfBuyers} />
               <DialogDetailRow label="Number of Sellers" value={item.numberOfSellers} />
             </div>
@@ -1354,13 +1354,13 @@ function exportToCsvOffersDemands(filename: string, rows: OfferDemandItem[]) {
     numberOfBuyers: row.numberOfBuyers,
     numberOfSellers: row.numberOfSellers,
     created_by_name: row.createdByInfo.userName,
-    assigned_to_name: row.assignedToInfo?.userName || "N/A",
+    assigned_to_name: row.assignedToInfo?.userName || " ",
     created_date_formatted: dayjs(row.createdDate).format(
       "YYYY-MM-DD HH:mm:ss"
     ),
     updated_date_formatted: row.updated_at
       ? dayjs(row.updated_at).format("YYYY-MM-DD HH:mm:ss")
-      : "N/A",
+      : " ",
     updated_by_name: row.updated_by_user?.name,
     updated_by_role: row.updated_by_user?.roles?.[0]?.display_name,
   }));
@@ -2003,7 +2003,7 @@ const OffersDemands = () => {
   }, []);
 
   const formatCustomDateTime = (dateStr: string | Date | null | undefined) => {
-    if (!dateStr) return "N/A";
+    if (!dateStr) return " ";
     return dayjs(dateStr).format("D MMM YYYY, h:mm A");
   };
 
@@ -2053,7 +2053,7 @@ const OffersDemands = () => {
       Array.isArray(getAllUserData)
         ? getAllUserData.map((user: any) => ({
           value: String(user.id),
-          label: `(${user.employee_id}) - ${user.name || 'N/A'}`,
+          label: `(${user.employee_id}) - ${user.name || ' '}`,
         }))
         : [],
     [getAllUserData]
@@ -2644,10 +2644,10 @@ const OffersDemands = () => {
               props.row.original.numberOfSellers !== undefined) && (
                 <>
                   <div className="text-xs text-gray-600 dark:text-gray-300">
-                    Buyers: {props.row.original.numberOfBuyers ?? "N/A"}
+                    Buyers: {props.row.original.numberOfBuyers ?? " "}
                   </div>
                   <div className="text-xs text-gray-600 dark:text-gray-300">
-                    Sellers: {props.row.original.numberOfSellers ?? "N/A"}
+                    Sellers: {props.row.original.numberOfSellers ?? " "}
                   </div>
                 </>
               )}

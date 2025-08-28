@@ -105,7 +105,7 @@ const statusOptions = [
 ];
 
 const formatReadableDateTime = (dateString?: string) => {
-  if (!dateString) return "N/A";
+  if (!dateString) return " ";
   const date = new Date(dateString);
   return `${date.getDate()} ${date.toLocaleString("en-US", {
     month: "short",
@@ -137,8 +137,8 @@ function exportJobDepartmentsToCsv(
     id: row.id,
     name: row.name,
     status: row.status,
-    updated_by_name: row.updated_by_user?.name || "N/A",
-    updated_at: row.updated_at ? formatReadableDateTime(row.updated_at) : "N/A",
+    updated_by_name: row.updated_by_user?.name || " ",
+    updated_at: row.updated_at ? formatReadableDateTime(row.updated_at) : " ",
   }));
 
   const csvContent =
@@ -788,7 +788,7 @@ const JobDepartment = () => {
                 onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
               />
               <div>
-                <span className="font-semibold">{updated_by_user?.name || "N/A"}</span>
+                <span className="font-semibold">{updated_by_user?.name || " "}</span>
                 <div className="text-xs">
                   {updated_by_user?.roles?.[0]?.display_name || ""}
                 </div>
@@ -1005,10 +1005,10 @@ const JobDepartment = () => {
               <div>
                   <b className="font-semibold text-primary-600 dark:text-primary-400">Latest Update:</b>
                   <p className="text-sm font-semibold mt-1">
-                      {editingItem.updated_by_user?.name || 'N/A'}
+                      {editingItem.updated_by_user?.name || ' '}
                   </p>
                   <p>
-                      {editingItem.updated_by_user?.roles?.[0]?.display_name || 'N/A'}
+                      {editingItem.updated_by_user?.roles?.[0]?.display_name || ' '}
                   </p>
               </div>
               <div className="text-right">

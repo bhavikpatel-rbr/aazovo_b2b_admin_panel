@@ -72,7 +72,7 @@ const DetailSection = ({ title, icon, children }: { title: string; icon: React.R
 const InfoPair = ({ label, value }: { label: string; value?: React.ReactNode; }) => (
     <div className="grid grid-cols-2 py-1.5">
         <span className="font-semibold text-gray-700 dark:text-gray-300">{label}</span>
-        <span className="break-words">{value || <span className="text-gray-400">N/A</span>}</span>
+        <span className="break-words">{value || <span className="text-gray-400"> </span>}</span>
     </div>
 );
 const NoDataMessage = ({ message }: { message: string }) => <div className="text-center py-8 text-gray-500">{message}</div>;
@@ -182,7 +182,7 @@ const MemberDetailsView = ({ customer }: { customer: CustomerInfo | null }) => {
                     <InfoPair label="Business Type" value={customer.business_type} />
                     <InfoPair label="Email" value={<a href={`mailto:${customer.email}`} className="text-blue-500 hover:underline">{customer.email}</a>} />
                     <InfoPair label="Phone" value={customer.number} />
-                    <InfoPair label="Website" value={customer.website ? <a href={customer.website} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{customer.website}</a> : 'N/A'} />
+                    <InfoPair label="Website" value={customer.website ? <a href={customer.website} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{customer.website}</a> : ' '} />
                 </div>
             </Card>
             <div className="space-y-6">
@@ -253,10 +253,10 @@ const LeadsTabView = ({ leadsData }: { leadsData: LeadInfo | LeadInfo[] | null; 
                                 <Tr key={lead.id}>
                                     <Td>#{lead.id}</Td>
                                     <Td><Tag className={`${getStatusClass(lead.lead_intent)} font-semibold`}>{lead.lead_intent}</Tag></Td>
-                                    <Td>{lead.enquiry_type || 'N/A'}</Td>
+                                    <Td>{lead.enquiry_type || ' '}</Td>
                                     <Td>{lead.qty}</Td>
                                     <Td><Tag className={getStatusClass(lead.lead_status)}>{lead.lead_status}</Tag></Td>
-                                    <Td><div className="flex items-center gap-2"><Avatar size={28} src={lead.created_by_user?.profile_pic_path} shape="circle" /><span className="font-semibold">{lead.created_by_user?.name || 'N/A'}</span></div></Td>
+                                    <Td><div className="flex items-center gap-2"><Avatar size={28} src={lead.created_by_user?.profile_pic_path} shape="circle" /><span className="font-semibold">{lead.created_by_user?.name || ' '}</span></div></Td>
                                     <Td>{dayjs(lead.created_at).format('DD MMM YYYY, h:mm A')}</Td>
                                 </Tr>
                             ))
@@ -359,7 +359,7 @@ const OpportunityTabView = ({ wallItem }: { wallItem: WallEnquiryData }) => {
                             <Td>
                                 <div className="flex flex-col text-xs">
                                     <span>Qty: <strong>{op.qty}</strong></span>
-                                    <span>Price: <strong>{op.price ? `$${op.price}` : 'N/A'}</strong></span>
+                                    <span>Price: <strong>{op.price ? `$${op.price}` : ' '}</strong></span>
                                     <span>{op.color}, {op.device_condition}</span>
                                 </div>
                             </Td>

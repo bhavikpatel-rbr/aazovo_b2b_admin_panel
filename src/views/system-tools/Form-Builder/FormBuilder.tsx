@@ -183,14 +183,14 @@ function exportFormsToCsvLogic(filename: string, rows: FormBuilderItem[]) {
     const preparedRows = rows.map(row => ({
         ID: row.id,
         FormName: row.form_name,
-        FormTitle: row.form_title || 'N/A',
+        FormTitle: row.form_title || ' ',
         Status: row.status,
         Type: row.is_external ? 'External' : 'Internal',
-        Departments: Array.isArray(row.departments) ? `"${row.departments.join(', ')}"` : 'N/A',
-        Categories: Array.isArray(row.categories) ? `"${row.categories.join(', ')}"` : 'N/A',
+        Departments: Array.isArray(row.departments) ? `"${row.departments.join(', ')}"` : ' ',
+        Categories: Array.isArray(row.categories) ? `"${row.categories.join(', ')}"` : ' ',
         QuestionCount: row.questionCount || 0,
-        CreatedBy: row.created_by_user?.name || 'N/A',
-        UpdatedBy: row.updated_by_user?.name || 'N/A',
+        CreatedBy: row.created_by_user?.name || ' ',
+        UpdatedBy: row.updated_by_user?.name || ' ',
         UpdatedAt: new Date(row.updated_at).toLocaleString(),
     }));
 
@@ -369,7 +369,7 @@ const FormBuilder = () => {
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
   
-  const allUserOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: String(b.id), label: `(${b.employee_id}) - ${b.name || 'N/A'}` })) : [], [getAllUserData]);
+  const allUserOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: String(b.id), label: `(${b.employee_id}) - ${b.name || ' '}` })) : [], [getAllUserData]);
   const categoryFilterOptions = useMemo(() => (CategoriesData || []).map((cat: GeneralCategoryListItem) => ({ value: String(cat.id), label: cat.name })), [CategoriesData]);
   const departmentFilterOptions = useMemo(() => (departmentsData?.data || []).map((dept: DepartmentListItem) => ({ value: String(dept.id), label: dept.name })), [departmentsData?.data]);
   const statusFilterOptions = useMemo(() => FORM_STATUS_OPTIONS, []);
@@ -573,11 +573,11 @@ const FormBuilder = () => {
   const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
 
   const baseColumns: ColumnDef<FormBuilderItem>[] = useMemo(() => [
-    { header: "Form Name / Title", accessorKey: "form_name", size: 260, enableSorting: true, cell: (props) => (<div onClick={() => openViewDialog(props.row.original)} className="cursor-pointer"><span className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">{props.row.original.form_name || "N/A"}</span><br /><span className="text-xs text-gray-500">{props.row.original.form_title || "-"}</span></div>), },
-    { header: "Departments", id: "departments", size: 180, enableSorting: false, cell: (props) => { const item = props.row.original; let displayNames: string[]; if (Array.isArray(item.departments) && item.departments.length > 0) { displayNames = item.departments; } else { const ids = item.department_ids_array || []; displayNames = ids.map(id => (departmentsData?.data || []).find(d => String(d.id) === String(id))?.name || `ID:${id}`); } if (!displayNames.length) return <Tag className="capitalize font-semibold border-gray-300 dark:border-gray-500 border-1 ">N/A</Tag>; return (<div className="flex flex-wrap gap-1">{displayNames.slice(0, 2).map((name) => (<Tag className="capitalize font-semibold border-gray-300 dark:border-gray-500 border-1" key={name}>{name}</Tag>))}{displayNames.length > 2 && <Tag className="capitalize font-semibold border-gray-300 dark:border-gray-500 border-1">+{displayNames.length - 2}</Tag>}</div>); }, },
-    { header: "Categories", id: "categories", size: 180, enableSorting: false, cell: (props) => { const item = props.row.original; let displayNames: string[]; if (Array.isArray(item.categories) && item.categories.length > 0) { displayNames = item.categories; } else { const ids = item.category_ids_array || []; displayNames = ids.map(id => (CategoriesData || []).find(c => String(c.id) === String(id))?.name || `ID:${id}`); } if (!displayNames.length) return <Tag className="capitalize font-semibold border-gray-300 dark:border-gray-500 border-1">N/A</Tag>; return (<div className="flex flex-wrap gap-1">{displayNames.slice(0, 2).map((name) => (<Tag className="capitalize font-semibold border-gray-300 dark:border-gray-500 border-1" key={name}>{name}</Tag>))}{displayNames.length > 2 && <Tag className="capitalize font-semibold border-gray-300 dark:border-gray-500 border-1">+{displayNames.length - 2}</Tag>}</div>); }, },
+    { header: "Form Name / Title", accessorKey: "form_name", size: 260, enableSorting: true, cell: (props) => (<div onClick={() => openViewDialog(props.row.original)} className="cursor-pointer"><span className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">{props.row.original.form_name || " "}</span><br /><span className="text-xs text-gray-500">{props.row.original.form_title || "-"}</span></div>), },
+    { header: "Departments", id: "departments", size: 180, enableSorting: false, cell: (props) => { const item = props.row.original; let displayNames: string[]; if (Array.isArray(item.departments) && item.departments.length > 0) { displayNames = item.departments; } else { const ids = item.department_ids_array || []; displayNames = ids.map(id => (departmentsData?.data || []).find(d => String(d.id) === String(id))?.name || `ID:${id}`); } if (!displayNames.length) return <Tag className="capitalize font-semibold border-gray-300 dark:border-gray-500 border-1 "> </Tag>; return (<div className="flex flex-wrap gap-1">{displayNames.slice(0, 2).map((name) => (<Tag className="capitalize font-semibold border-gray-300 dark:border-gray-500 border-1" key={name}>{name}</Tag>))}{displayNames.length > 2 && <Tag className="capitalize font-semibold border-gray-300 dark:border-gray-500 border-1">+{displayNames.length - 2}</Tag>}</div>); }, },
+    { header: "Categories", id: "categories", size: 180, enableSorting: false, cell: (props) => { const item = props.row.original; let displayNames: string[]; if (Array.isArray(item.categories) && item.categories.length > 0) { displayNames = item.categories; } else { const ids = item.category_ids_array || []; displayNames = ids.map(id => (CategoriesData || []).find(c => String(c.id) === String(id))?.name || `ID:${id}`); } if (!displayNames.length) return <Tag className="capitalize font-semibold border-gray-300 dark:border-gray-500 border-1"> </Tag>; return (<div className="flex flex-wrap gap-1">{displayNames.slice(0, 2).map((name) => (<Tag className="capitalize font-semibold border-gray-300 dark:border-gray-500 border-1" key={name}>{name}</Tag>))}{displayNames.length > 2 && <Tag className="capitalize font-semibold border-gray-300 dark:border-gray-500 border-1">+{displayNames.length - 2}</Tag>}</div>); }, },
     { header: "Que", accessorKey: "questionCount", size: 90, enableSorting: true, meta: { tdClass: "text-center", thClass: "text-center" }, cell: (props) => <Tag className="capitalize font-semibold border-emerald-300 dark:border-emerald-500 border-1 bg-emerald-100 dark:bg-emerald-700">{props.row.original.questionCount || 0}</Tag> },
-    { header: "Status", accessorKey: "status", size: 120, enableSorting: true, cell: (props) => (<Tag className={classNames("capitalize", statusColors[props.row.original.status] || statusColors.Draft)}>{props.row.original.status || "N/A"}</Tag>) },
+    { header: "Status", accessorKey: "status", size: 120, enableSorting: true, cell: (props) => (<Tag className={classNames("capitalize", statusColors[props.row.original.status] || statusColors.Draft)}>{props.row.original.status || " "}</Tag>) },
     { header: "Type", accessorKey: "is_external", size: 120, cell: (props) => { const isExternal = props.row.original.is_external; return (<Tag className={classNames("capitalize", isExternal ? "border-sky-300 dark:border-sky-500 border-1 bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-100" : "border-fuchsia-300 dark:border-fuchsia-500 border-1 bg-fuchsia-100 text-fuchsia-600 dark:bg-fuchsia-500/20 dark:text-fuchsia-100")}>{isExternal ? "External" : "Internal"}</Tag>); }, },
     { header: "Actions", id: "action", size: 120, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<ActionColumn 
         item={props.row.original} 

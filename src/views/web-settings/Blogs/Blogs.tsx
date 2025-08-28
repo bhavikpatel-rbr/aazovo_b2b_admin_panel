@@ -177,15 +177,15 @@ function exportToCsvBlog(filename: string, rows: BlogItem[]): boolean {
 
   const preparedRows: BlogExportItem[] = rows.map((row) => ({
     ...row,
-    author: row.author || "N/A",
-    tags: row.tags || "N/A",
-    icon_full_path: row.icon_full_path || "N/A",
-    blog_descr: row.blog_descr || "N/A",
-    status: row.status || "N/A",
-    created_at_formatted: row.created_at ? new Date(row.created_at).toLocaleString() : "N/A",
-    updated_by_name: row.updated_by_name || "N/A",
-    updated_by_role: row.updated_by_role || "N/A",
-    updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : "N/A",
+    author: row.author || " ",
+    tags: row.tags || " ",
+    icon_full_path: row.icon_full_path || " ",
+    blog_descr: row.blog_descr || " ",
+    status: row.status || " ",
+    created_at_formatted: row.created_at ? new Date(row.created_at).toLocaleString() : " ",
+    updated_by_name: row.updated_by_name || " ",
+    updated_by_role: row.updated_by_role || " ",
+    updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : " ",
   }));
 
   const separator = ",";
@@ -615,7 +615,7 @@ const Blogs = () => {
     () => [
       { header: "Icon", accessorKey: "icon_full_path", enableSorting: false, size: 60, meta: { headerClass: "text-center", cellClass: "text-center" }, cell: (props) => { const iconPath = props.row.original.icon_full_path; return (<Avatar size={40} shape="square" src={iconPath || undefined} icon={!iconPath ? <TbFileText /> : undefined} onClick={() => openImageViewer(iconPath)} className={iconPath ? "cursor-pointer hover:ring-2 hover:ring-indigo-500" : ""}>{!iconPath ? props.row.original.title?.charAt(0).toUpperCase() : null}</Avatar>); }, },
       { header: "Title", accessorKey: "title", enableSorting: true, size: 240, cell: (props) => <span>{props.getValue<string>()}</span>, },
-      { header: "Author", accessorKey: "author", enableSorting: true, size: 150, cell: (props) => <span>{props.getValue<string>() || "N/A"}</span>, },
+      { header: "Author", accessorKey: "author", enableSorting: true, size: 150, cell: (props) => <span>{props.getValue<string>() || " "}</span>, },
       { header: "Tags", accessorKey: "tags", enableSorting: true, size: 180, cell: (props) => { const tags = props.getValue<string | null>(); if (!tags) return <span>-</span>; return (<div className="flex flex-wrap gap-1 max-w-[170px]">{tags.split(",").map((tag) => tag.trim()).filter(Boolean).map((t) => (<Tag key={t} className="bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 text-[11px] border-b border-emerald-300 dark:border-emerald-700">{t}</Tag>))}</div>); }, },
       {
         header: "Updated Info",
@@ -637,7 +637,7 @@ const Blogs = () => {
                 }
               />
               <div>
-                <span>{updated_by_user?.name || "N/A"}</span>
+                <span>{updated_by_user?.name || " "}</span>
                 <div className="text-xs">
                   <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
                 </div>
@@ -775,11 +775,11 @@ const Blogs = () => {
                   </b>
                   <br />
                   <p className="text-sm font-semibold">
-                    {editingBlog.updated_by_user?.name || "N/A"}
+                    {editingBlog.updated_by_user?.name || " "}
                   </p>
                   <p>
                     {editingBlog.updated_by_user?.roles[0]?.display_name ||
-                      "N/A"}
+                      " "}
                   </p>
                 </div>
                 <div className="text-right">
@@ -802,7 +802,7 @@ const Blogs = () => {
                         minute: "2-digit",
                         hour12: true,
                       })}`
-                      : "N/A"}
+                      : " "}
                   </span>
                   <br />
                   <span className="font-semibold">Updated At:</span>{" "}
@@ -824,7 +824,7 @@ const Blogs = () => {
                         minute: "2-digit",
                         hour12: true,
                       })}`
-                      : "N/A"}
+                      : " "}
                   </span>
                 </div>
               </div>

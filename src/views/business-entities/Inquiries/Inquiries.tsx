@@ -886,7 +886,7 @@ const AssignToUpdateModal: React.FC<{
   const { usersData = [] } = useSelector(masterSelector, shallowEqual);
 
   const [isLoading, setIsLoading] = useState(false);
-  const usersDataOptions = useMemo(() => Array.isArray(usersData) ? usersData.map((sp: ApiLookupItem) => ({ value: String(sp.id), label: `(${sp.employee_id}) - ${sp.name || 'N/A'}` })) : [], [usersData]);
+  const usersDataOptions = useMemo(() => Array.isArray(usersData) ? usersData.map((sp: ApiLookupItem) => ({ value: String(sp.id), label: `(${sp.employee_id}) - ${sp.name || ' '}` })) : [], [usersData]);
 
 
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<AssignUpdateFormData>({
@@ -962,7 +962,7 @@ const AssignToUpdateModal: React.FC<{
     >
       <div className="max-h-[65vh] overflow-y-auto pr-4 -mr-4">
         <p className="mb-1 text-sm">Company: <span className="font-semibold">{inquiry.company_name}</span></p>
-        <p className="mb-4 text-sm">Inquiry Assigned to: <span className="font-semibold">{inquiry.assigned_to || 'N/A'}</span></p>
+        <p className="mb-4 text-sm">Inquiry Assigned to: <span className="font-semibold">{inquiry.assigned_to || ' '}</span></p>
         <UiForm id="assignToForm" onSubmit={handleSubmit(handleAssignToUpdate)}>
           <UiFormItem
             label="Assigned To"
@@ -1163,7 +1163,7 @@ const priorityColors: Record<string, string> = {
   Medium:
     "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300",
   Low: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
-  "N/A": "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300",
+  " ": "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300",
 };
 const inquiryCurrentStatusColors: Record<string, string> = {
   Open: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
@@ -1172,7 +1172,7 @@ const inquiryCurrentStatusColors: Record<string, string> = {
   Resolved:
     "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
   Closed: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300",
-  "N/A": "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300",
+  " ": "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300",
 };
 
 // --- Helper to format date for display ---
@@ -1183,10 +1183,10 @@ const FormattedDateDisplay = ({
   dateString?: string;
   label?: string;
 }) => {
-  if (!dateString || dateString === "N/A")
+  if (!dateString || dateString === " ")
     return (
       <div className="text-[10px] text-gray-500 dark:text-gray-400">
-        {label && <b>{label}: </b>}N/A
+        {label && <b>{label}: </b>} 
       </div>
     );
   try {
@@ -1220,24 +1220,24 @@ const processApiDataToInquiryItems = (
   return apiData.map((apiItem) => ({
     id: String(apiItem.id),
     inquiry_id: apiItem.inquiry_id || `INQ-${apiItem.id}`,
-    company_name: apiItem.company_name || "N/A",
-    name: apiItem.name || "N/A",
-    email: apiItem.email || "N/A",
-    mobile_no: apiItem.contact_person || apiItem.mobile_no || "N/A",
-    inquiry_type: apiItem.inquiry_type || "N/A",
-    inquiry_subject: apiItem.inquiry_subject || "N/A",
+    company_name: apiItem.company_name || " ",
+    name: apiItem.name || " ",
+    email: apiItem.email || " ",
+    mobile_no: apiItem.contact_person || apiItem.mobile_no || " ",
+    inquiry_type: apiItem.inquiry_type || " ",
+    inquiry_subject: apiItem.inquiry_subject || " ",
     inquiry_description:
-      apiItem.requirements || apiItem.inquiry_description || "N/A",
-    inquiry_priority: apiItem.inquiry_priority || apiItem.priority || "N/A",
-    inquiry_status: apiItem.inquiry_status || apiItem.status || "N/A",
+      apiItem.requirements || apiItem.inquiry_description || " ",
+    inquiry_priority: apiItem.inquiry_priority || apiItem.priority || " ",
+    inquiry_status: apiItem.inquiry_status || apiItem.status || " ",
     assigned_to: apiItem.assigned_to_name || "Unassigned",
     department: apiItem.inquiry_department_name || undefined,
-    inquiry_date: apiItem.inquiry_date || apiItem.created_at || "N/A",
-    response_date: apiItem.response_date || "N/A",
-    resolution_date: apiItem.resolution_date || "N/A",
-    follow_up_date: apiItem.follow_up_date || "N/A",
-    feedback_status: apiItem.feedback_status || "N/A",
-    inquiry_resolution: apiItem.inquiry_resolution || "N/A",
+    inquiry_date: apiItem.inquiry_date || apiItem.created_at || " ",
+    response_date: apiItem.response_date || " ",
+    resolution_date: apiItem.resolution_date || " ",
+    follow_up_date: apiItem.follow_up_date || " ",
+    feedback_status: apiItem.feedback_status || " ",
+    inquiry_resolution: apiItem.inquiry_resolution || " ",
     inquiry_attachments: apiItem.inquiry_attachments_array || [],
     status: apiItem.deleted_at ? "inactive" : "active",
   }));
@@ -1282,7 +1282,7 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({
       Array.isArray(getAllUserData)
         ? getAllUserData.map((u) => ({
           value: u.id,
-          label: `(${u.employee_id}) - ${u.name || "N/A"}`,
+          label: `(${u.employee_id}) - ${u.name || " "}`,
         }))
         : [],
     [getAllUserData]
@@ -1604,7 +1604,7 @@ const InquiryViewModal: React.FC<InquiryViewModalProps> = ({
                   <strong>Priority:</strong>{" "}
                   <Tag
                     className={`${priorityColors[inquiry.inquiry_priority] ||
-                      priorityColors["N/A"]
+                      priorityColors[" "]
                       } capitalize text-[10px] px-1.5 py-0.5`}
                   >
                     {inquiry.inquiry_priority}
@@ -1614,7 +1614,7 @@ const InquiryViewModal: React.FC<InquiryViewModalProps> = ({
                   <strong>Current Status:</strong>{" "}
                   <Tag
                     className={`${inquiryCurrentStatusColors[inquiry.inquiry_status] ||
-                      inquiryCurrentStatusColors["N/A"]
+                      inquiryCurrentStatusColors[" "]
                       } capitalize text-[10px] px-1.5 py-0.5`}
                   >
                     {inquiry.inquiry_status}
@@ -1645,7 +1645,7 @@ const InquiryViewModal: React.FC<InquiryViewModalProps> = ({
             </div>
           </div>
           {inquiry.inquiry_resolution &&
-            inquiry.inquiry_resolution !== "N/A" && (
+            inquiry.inquiry_resolution !== " " && (
               <div className="md:col-span-2 mt-2">
                 <h6 className="text-sm font-semibold mb-1 text-gray-700 dark:text-gray-200">
                   Resolution
@@ -1841,7 +1841,7 @@ const InquiryListTable = () => {
   const handleSendEmail = (inquiry: InquiryItem) => {
     if (
       !inquiry.email ||
-      inquiry.email === "N/A"
+      inquiry.email === " "
     ) {
       toast.push(
         <Notification type="warning" title="Missing Email">
@@ -1861,7 +1861,7 @@ const InquiryListTable = () => {
 
   const handleSendWhatsapp = (inquiry: InquiryItem) => {
     const phone = inquiry.mobile_no?.replace(/\D/g, "");
-    if (!phone || phone === "N/A") {
+    if (!phone || phone === " ") {
       toast.push(
         <Notification type="warning" title="Missing Phone">
           Contact number is not available.
@@ -2025,7 +2025,7 @@ const InquiryListTable = () => {
       dateStr: string,
       range: (Date | null)[] | undefined
     ) => {
-      if (!dateStr || dateStr === "N/A" || !range || (!range[0] && !range[1]))
+      if (!dateStr || dateStr === " " || !range || (!range[0] && !range[1]))
         return true;
       try {
         const itemDate = new Date(dateStr).setHours(0, 0, 0, 0);
@@ -2088,13 +2088,13 @@ const InquiryListTable = () => {
           ].includes(key)
         ) {
           const dateA =
-            aVal && aVal !== "N/A"
+            aVal && aVal !== " "
               ? new Date(aVal as string).getTime()
               : order === "asc"
                 ? Infinity
                 : -Infinity;
           const dateB =
-            bVal && bVal !== "N/A"
+            bVal && bVal !== " "
               ? new Date(bVal as string).getTime()
               : order === "asc"
                 ? Infinity
@@ -2216,14 +2216,14 @@ const InquiryListTable = () => {
             <div className="flex flex-col gap-1 text-xs">
               <div className="flex items-center gap-2">
                 <Tag
-                  className={`${priorityColors[d.inquiry_priority] || priorityColors["N/A"]
+                  className={`${priorityColors[d.inquiry_priority] || priorityColors[" "]
                     } capitalize text-[10px] px-1.5 py-0.5`}
                 >
                   {d.inquiry_priority}{" "}
                 </Tag>
                 <Tag
                   className={`${inquiryCurrentStatusColors[d.inquiry_status] ||
-                    inquiryCurrentStatusColors["N/A"]
+                    inquiryCurrentStatusColors[" "]
                     } capitalize text-[10px] px-1.5 py-0.5`}
                 >
                   {d.inquiry_status}
@@ -2461,7 +2461,7 @@ const InquiryListTable = () => {
         new Set(
           inquiryList
             .map((item) => item.inquiry_type)
-            .filter((t) => t && t !== "N/A")
+            .filter((t) => t && t !== " ")
         )
       ).map((type) => ({ value: type, label: type })),
     [inquiryList]
@@ -2472,7 +2472,7 @@ const InquiryListTable = () => {
         new Set(
           inquiryList
             .map((item) => item.inquiry_priority)
-            .filter((p) => p && p !== "N/A")
+            .filter((p) => p && p !== " ")
         )
       ).map((priority) => ({ value: priority, label: priority })),
     [inquiryList]
@@ -2483,7 +2483,7 @@ const InquiryListTable = () => {
         new Set(
           inquiryList
             .map((item) => item.inquiry_status)
-            .filter((s) => s && s !== "N/A")
+            .filter((s) => s && s !== " ")
         )
       ).map((status) => ({ value: status, label: status })),
     [inquiryList]
@@ -2494,7 +2494,7 @@ const InquiryListTable = () => {
         new Set(
           inquiryList
             .map((item) => item.assigned_to)
-            .filter((a) => a && a !== "N/A")
+            .filter((a) => a && a !== " ")
         )
       ).map((assignee) => ({ value: assignee, label: assignee })),
     [inquiryList]
@@ -2509,7 +2509,7 @@ const InquiryListTable = () => {
         new Set(
           inquiryList
             .map((item) => item.feedback_status)
-            .filter((f) => f && f !== "N/A")
+            .filter((f) => f && f !== " ")
         )
       ).map((status) => ({ value: status, label: status })),
     [inquiryList]

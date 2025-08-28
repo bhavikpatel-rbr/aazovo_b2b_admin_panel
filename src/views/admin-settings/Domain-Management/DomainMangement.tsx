@@ -183,18 +183,18 @@ function exportDomainsToCsv(filename: string, rows: DomainItem[]) {
   }
    const preparedRows: DomainExportItem[] = rows.map((row) => ({
     ...row,
-    prefix: row.prefix || "N/A",
+    prefix: row.prefix || " ",
     customer_code_starting: row.customer_code_starting || "0",
     current_customer_code: row.current_customer_code || "0",
     non_kyc_customer_code_starting: row.non_kyc_customer_code_starting || "0",
     non_kyc_current_customer_code: row.non_kyc_current_customer_code || "0",
-    country_ids: row.country_ids || "N/A",
-    analytics_script: row.analytics_script || "N/A",
+    country_ids: row.country_ids || " ",
+    analytics_script: row.analytics_script || " ",
     status: row.status, // <<<< ENSURE STATUS IS INCLUDED
-    created_at_formatted: row.created_at ? new Date(row.created_at).toLocaleString() : "N/A",
-    updated_by_name: row.updated_by_name || "N/A",
-    updated_by_role: row.updated_by_role || "N/A",
-    updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : "N/A",
+    created_at_formatted: row.created_at ? new Date(row.created_at).toLocaleString() : " ",
+    updated_by_name: row.updated_by_name || " ",
+    updated_by_role: row.updated_by_role || " ",
+    updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : " ",
   }));
 
   const separator = ",";
@@ -591,7 +591,7 @@ const DomainManagementListing = () => {
      
       { header: "Countries", accessorKey: "country_ids", id: "countriesDisplay", enableSorting: true, sortingFn: (rowA, rowB) => { const countA = rowA.original.country_ids?.split(",").filter((id) => id).length || 0; const countB = rowB.original.country_ids?.split(",").filter((id) => id).length || 0; return countA - countB; },
         cell: (props) => {
-          const countryIdString = props.row.original.country_ids; if (!countryIdString) return <Tag>N/A</Tag>;
+          const countryIdString = props.row.original.country_ids; if (!countryIdString) return <Tag> </Tag>;
           const idsArray = countryIdString.split(",").map((id) => id.trim()).filter((id) => id); if (idsArray.length === 0) return <Tag>None</Tag>;
           const names = idsArray.map((idStr) => { const country = allCountryOptions.find((opt) => opt.value === idStr); return country ? country.label : `ID:${idStr}`; });
           const displayLimit = 2; const displayedNames = names.slice(0, displayLimit); const remainingCount = names.length - displayLimit;
@@ -604,17 +604,17 @@ const DomainManagementListing = () => {
         cell: (props) => {
             const currencyId = String(props.row.original.currency_id);
             const currency = currencyFormOptions.find(c => c.value === currencyId);
-            return currency ? currency.label.split(' - ')[0] : 'N/A';
+            return currency ? currency.label.split(' - ')[0] : ' ';
         }
       },
       { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 160,
         cell: (props) => {
           const { updated_at, updated_by_user } = props.row.original; // Using updated_by_user
-          const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "short" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A";
+          const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "short" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : " ";
           return (
             <div className="text-xs">
               <span>
-                {updated_by_user?.name || "N/A"}
+                {updated_by_user?.name || " "}
                 {updated_by_user?.roles?.[0]?.display_name && (
                     <><br /><b>{updated_by_user.roles[0].display_name}</b></>
                   )}
@@ -745,8 +745,8 @@ const DomainManagementListing = () => {
                 <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                     <div>
                         <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
-                        <p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p>
-                        <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
+                        <p className="text-sm font-semibold">{editingItem.updated_by_user?.name || " "}</p>
+                        <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || " "}</p>
                     </div>
                     <div className='text-right'>
                         <br />
@@ -764,7 +764,7 @@ const DomainManagementListing = () => {
                                 minute: "2-digit",
                                 hour12: true,
                               })}`
-                            : "N/A"}
+                            : " "}
                         </span>
                         <br />
                         <span className="font-semibold">Updated At:</span>{" "}
@@ -781,7 +781,7 @@ const DomainManagementListing = () => {
                                 minute: "2-digit",
                                 hour12: true,
                               })}`
-                            : "N/A"}
+                            : " "}
                         </span>
 
                     </div>

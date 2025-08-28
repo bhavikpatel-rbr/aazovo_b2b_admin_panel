@@ -577,7 +577,7 @@ function exportToCsv(filename: string, rows: FormItem[]) {
   if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
   const CSV_HEADERS = ["Member ID", "Member Code", "Name", "Email", "Contact", "Status", "Company (Temp)", "Company (Actual)", "Business Type", "Business Opportunity", "Member Grade", "Interested In", "Country", "Profile Completion (%)", "Joined Date"];
   const preparedRows = rows.map(row => ({
-    id: row.id, customer_code: row.customer_code, name: row.name, email: row.email, contact: `${row.customer_code || ''} ${row.number || ''}`.trim(), status: row.status, company_temp: row.company_temp || 'N/A', company_actual: row.company_actual || 'N/A', business_type: row.business_type || 'N/A', business_opportunity: row.business_opportunity || 'N/A', member_grade: row.member_grade || 'N/A', interested_in: row.interested_in || 'N/A', country: row.country?.name || 'N/A', profile_completion: row.profile_completion, created_at: row.created_at ? dayjs(row.created_at).format('DD MMM YYYY') : 'N/A'
+    id: row.id, customer_code: row.customer_code, name: row.name, email: row.email, contact: `${row.customer_code || ''} ${row.number || ''}`.trim(), status: row.status, company_temp: row.company_temp || ' ', company_actual: row.company_actual || ' ', business_type: row.business_type || ' ', business_opportunity: row.business_opportunity || ' ', member_grade: row.member_grade || ' ', interested_in: row.interested_in || ' ', country: row.country?.name || ' ', profile_completion: row.profile_completion, created_at: row.created_at ? dayjs(row.created_at).format('DD MMM YYYY') : ' '
   }));
   const csvContent = [CSV_HEADERS.join(','), ...preparedRows.map(row => CSV_HEADERS.map(header => { const key = header.toLowerCase().replace(/ \(.+\)/, '').replace(/ /g, '_') as keyof typeof row; const cell = row[key] ?? ''; const cellString = String(cell).replace(/"/g, '""'); return `"${cellString}"`; }).join(','))].join('\n');
   const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
@@ -848,11 +848,11 @@ const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; onSub
 };
 
 const ViewMemberDetailDialog: React.FC<{ member: FormItem; onClose: () => void; }> = ({ member, onClose }) => {
-  const getDisplayValue = (value: any, fallback = "N/A") => (value !== null && value !== undefined && value !== '') ? value : fallback;
+  const getDisplayValue = (value: any, fallback = " ") => (value !== null && value !== undefined && value !== '') ? value : fallback;
   const renderDetailItem = (label: string, value: React.ReactNode) => (<div className="mb-3"><p className="text-xs text-gray-500 dark:text-gray-400">{label}</p><p className="text-sm font-semibold">{getDisplayValue(value)}</p></div>);
-  const renderListAsTags = (list: (string | number)[] | undefined | null) => !list || list.length === 0 ? "N/A" : <div className="flex flex-wrap gap-1">{list.map((item, idx) => (<Tag key={idx} className="text-xs">{getDisplayValue(item)}</Tag>))}</div>;
-  const formatDate = (dateString: string | undefined | null) => dateString ? dayjs(dateString).format('DD MMM YYYY') : "N/A";
-  const renderLink = (url: string | undefined | null, text?: string) => (url ? <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{text || url}</a> : "N/A");
+  const renderListAsTags = (list: (string | number)[] | undefined | null) => !list || list.length === 0 ? " " : <div className="flex flex-wrap gap-1">{list.map((item, idx) => (<Tag key={idx} className="text-xs">{getDisplayValue(item)}</Tag>))}</div>;
+  const formatDate = (dateString: string | undefined | null) => dateString ? dayjs(dateString).format('DD MMM YYYY') : " ";
+  const renderLink = (url: string | undefined | null, text?: string) => (url ? <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{text || url}</a> : " ");
 
   return (
     <Dialog isOpen={true} onClose={onClose} width={800}>
@@ -1067,7 +1067,7 @@ const MemberAlertModal: React.FC<{ member: FormItem; onClose: () => void }> = ({
             ) : alerts.length > 0 ? (
               <div className="space-y-8">
                 {alerts.map((alert, index) => {
-                  const userName = alert?.created_by_user?.name || 'N/A';
+                  const userName = alert?.created_by_user?.name || ' ';
                   const userInitial = userName.charAt(0).toUpperCase();
                   return (
                     <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
@@ -1227,7 +1227,7 @@ const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 
 
-  const userOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((u: any) => ({ value: u.id, label: `(${u.employee_id}) - ${u.name || 'N/A'}` })) : [], [getAllUserData]);
+  const userOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((u: any) => ({ value: u.id, label: `(${u.employee_id}) - ${u.name || ' '}` })) : [], [getAllUserData]);
 
   return (<MemberListContext.Provider value={{ memberList, setSelectedMembers, selectedMembers, userOptions }}>{children}</MemberListContext.Provider>);
 };
@@ -1416,7 +1416,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
               <b>Actual: </b>{company_code} | {company_actual}
             </div>}
             <div className="font-semibold text-amber-600 dark:text-amber-400">
-              <b>Temp: </b>{company_temp || "N/A"}
+              <b>Temp: </b>{company_temp || " "}
             </div>
           </div>
         );
@@ -1433,11 +1433,11 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
     {
       header: "Profile", accessorKey: "profile_completion", id: "profile", size: 220, cell: ({ row }) => (
         <div className="text-xs flex flex-col gap-0.5">
-          <span><b>RM: </b>{row.original.relationship_manager?.name || "N/A"}</span>
-          <span><b>Grade: </b>{row.original.member_grade || "N/A"}</span>
+          <span><b>RM: </b>{row.original.relationship_manager?.name || " "}</span>
+          <span><b>Grade: </b>{row.original.member_grade || " "}</span>
 
-          <span className="truncate"><b>Opportunity: </b>{row.original.business_opportunity || "N/A"}</span>
-          <span><b></b>{row.original.category || "N/A"} / {row.original.subcategory || "N/A"}  </span>
+          <span className="truncate"><b>Opportunity: </b>{row.original.business_opportunity || " "}</span>
+          <span><b></b>{row.original.category || " "} / {row.original.subcategory || " "}  </span>
           <Tooltip title={`Profile: ${row.original.profile_completion}%`}>
             <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1"><div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${row.original.profile_completion}%` }}></div></div>
           </Tooltip>
@@ -1448,16 +1448,16 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
       header: "Preferences", accessorKey: 'interested_in', id: "preferences", size: 250, cell: ({ row }) => {
         const [isOpen, setIsOpen] = useState(false);
         const { dynamic_member_profiles, brand_name, business_type, interested_in } = row.original;
-        const brandDisplay = (dynamic_member_profiles?.[0]?.brand_names?.[0]) ? dynamic_member_profiles[0].brand_names.join(', ') : (brand_name || "N/A");
+        const brandDisplay = (dynamic_member_profiles?.[0]?.brand_names?.[0]) ? dynamic_member_profiles[0].brand_names.join(', ') : (brand_name || " ");
 
         return (
           <div className="flex flex-col gap-1 text-xs">
-            <span><b>Business Type: </b>{business_type || 'N/A'}</span>
+            <span><b>Business Type: </b>{business_type || ' '}</span>
             <span className="flex items-center gap-1 truncate">
               <Tooltip title="View Dynamic Profiles"><TbInfoCircle size={16} className="text-blue-500 cursor-pointer flex-shrink-0" onClick={() => setIsOpen(true)} /></Tooltip>
               <b>View Dynamic Profiles</b>
             </span>
-            <span><b>Interested: </b>{interested_in || 'N/A'}</span>
+            <span><b>Interested: </b>{interested_in || ' '}</span>
             <Dialog width={700} isOpen={isOpen} onClose={() => setIsOpen(false)}>
               <h6>Dynamic Profiles for {row.original.name}</h6>
               <Table className="mt-4">
@@ -1467,7 +1467,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
                 <tbody>
                   {dynamic_member_profiles?.length > 0 ? (
                     dynamic_member_profiles.map(p => (
-                      <Tr key={p.id}><Td>{p.member_type?.name || 'N/A'}</Td><Td>{p.brand_names?.join(', ') || 'N/A'}</Td><Td>{p.sub_category_names?.join(', ') || 'N/A'}</Td></Tr>
+                      <Tr key={p.id}><Td>{p.member_type?.name || ' '}</Td><Td>{p.brand_names?.join(', ') || ' '}</Td><Td>{p.sub_category_names?.join(', ') || ' '}</Td></Tr>
                     ))
                   ) : <Tr><Td colSpan={4} className="text-center">No dynamic profiles available.</Td></Tr>}
                 </tbody>

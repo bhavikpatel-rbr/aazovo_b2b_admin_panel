@@ -150,8 +150,8 @@ function exportAutoEmailsToCsv(filename: string, rows: AutoEmailItem[]) {
                 row.emailTypeDisplay,
                 row.usersDisplay?.map(u => u.name).join('; '),
                 row.status,
-                row.updated_by_user?.name || 'N/A',
-                row.updated_at ? formatCustomDateTime(row.updated_at) : 'N/A'
+                row.updated_by_user?.name || ' ',
+                row.updated_at ? formatCustomDateTime(row.updated_at) : ' '
             ];
             return cells.map(cell => { let strCell = String(cell ?? '').replace(/"/g, '""'); return `"${strCell}"`; }).join(separator);
         })
@@ -638,7 +638,7 @@ const AutoEmailListing = () => {
                     <div className="flex items-center gap-2">
                         <Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} />
                         <div>
-                            <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
+                            <span className='font-semibold'>{updated_by_user?.name || ' '}</span>
                             <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
                             <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
                         </div>

@@ -118,12 +118,12 @@ function exportToCsvRoles(filename: string, rows: RoleItem[], visibleColumns: Co
     const rowData: (string | number)[] = [];
     visibleColumns.forEach(col => {
       if (col.id === 'action' || !col.accessorKey) return;
-      if (col.accessorKey === 'department.name') rowData.push(row.department?.name || 'N/A');
-      else if (col.accessorKey === 'designation.name') rowData.push(row.designation?.name || 'N/A');
+      if (col.accessorKey === 'department.name') rowData.push(row.department?.name || ' ');
+      else if (col.accessorKey === 'designation.name') rowData.push(row.designation?.name || ' ');
       else if (col.accessorKey === 'updated_at') rowData.push(
-        `${row.updated_by_user?.name || 'N/A'} (${formatCustomDateTime(row.updated_at)})`
+        `${row.updated_by_user?.name || ' '} (${formatCustomDateTime(row.updated_at)})`
       );
-      else rowData.push((row as any)[col.accessorKey as string] || 'N/A');
+      else rowData.push((row as any)[col.accessorKey as string] || ' ');
     });
     return rowData;
   });
@@ -406,7 +406,7 @@ const RolesListing = () => {
             onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
           />
           <div>
-            <span>{updated_by_user?.name || "N/A"}</span>
+            <span>{updated_by_user?.name || " "}</span>
             <div className="text-xs"><b>{updated_by_user?.roles?.[0]?.display_name || ""}</b></div>
             <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
           </div>
@@ -580,8 +580,8 @@ const RolesListing = () => {
           <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-4">
             <div>
               <p className="font-semibold">Last Update By:</p>
-              <p>{editingRole.updated_by_user?.name || 'N/A'}</p>
-              <p>{editingRole.updated_by_user?.roles?.[0]?.display_name || 'N/A'}</p>
+              <p>{editingRole.updated_by_user?.name || ' '}</p>
+              <p>{editingRole.updated_by_user?.roles?.[0]?.display_name || ' '}</p>
             </div>
             <div className="text-right">
               <p><span className="font-semibold">Created:</span> {formatCustomDateTime(editingRole.created_at)}</p>
@@ -597,13 +597,13 @@ const RolesListing = () => {
             <h4 className="text-lg font-bold">{viewingRole.display_name}</h4>
             <div className="grid grid-cols-3 gap-x-4 gap-y-2 text-sm">
               <div className="font-semibold text-gray-600 dark:text-gray-300">System Key:</div><div className="col-span-2">{viewingRole.name}</div>
-              <div className="font-semibold text-gray-600 dark:text-gray-300">Department:</div><div className="col-span-2">{viewingRole.department?.name || 'N/A'}</div>
-              <div className="font-semibold text-gray-600 dark:text-gray-300">Designation:</div><div className="col-span-2">{viewingRole.designation?.name || 'N/A'}</div>
+              <div className="font-semibold text-gray-600 dark:text-gray-300">Department:</div><div className="col-span-2">{viewingRole.department?.name || ' '}</div>
+              <div className="font-semibold text-gray-600 dark:text-gray-300">Designation:</div><div className="col-span-2">{viewingRole.designation?.name || ' '}</div>
               <div className="font-semibold text-gray-600 dark:text-gray-300 col-span-3 border-t pt-2 mt-2">Description:</div><div className="col-span-3 text-gray-800 dark:text-gray-100">{viewingRole.description}</div>
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 border-t pt-2 mt-2">
               <p><strong>Created:</strong> {formatCustomDateTime(viewingRole.created_at)}</p>
-              <p><strong>Last Updated:</strong> {formatCustomDateTime(viewingRole.updated_at)} by <strong>{viewingRole.updated_by_user?.name || 'N/A'}</strong></p>
+              <p><strong>Last Updated:</strong> {formatCustomDateTime(viewingRole.updated_at)} by <strong>{viewingRole.updated_by_user?.name || ' '}</strong></p>
             </div>
           </div>
         )}

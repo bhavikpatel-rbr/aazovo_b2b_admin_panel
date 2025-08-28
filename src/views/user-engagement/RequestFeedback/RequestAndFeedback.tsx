@@ -864,7 +864,7 @@ const handleCardClick = useCallback(
       categoryName:
         item.category?.name ||
         item.category_id ||
-        "N/A",
+        " ",
     }));
 
     let processedData = dataWithNames;
@@ -932,10 +932,10 @@ const handleCardClick = useCallback(
               )}
               <span className="font-semibold text-sm">{props.row.original.name}</span>
               <span className="text-gray-600 dark:text-gray-400">
-                {props.row.original.email || "N/A"}
+                {props.row.original.email || " "}
               </span>
               <span className="text-gray-600 dark:text-gray-400">
-                {props.row.original.mobile_no || "N/A"}
+                {props.row.original.mobile_no || " "}
               </span>
             </div>
           </div>
@@ -946,7 +946,7 @@ const handleCardClick = useCallback(
         accessorKey: "type",
         size: 100,
         cell: (props) => (
-          <Tag className="capitalize">{props.getValue() || "N/A"}</Tag>
+          <Tag className="capitalize">{props.getValue() || " "}</Tag>
         ),
       },
       {
@@ -955,7 +955,7 @@ const handleCardClick = useCallback(
         size: 180,
         cell: (props) => (
           <div className="truncate w-44" title={props.row.original.categoryName}>
-            {props.row.original.categoryName || "N/A"}
+            {props.row.original.categoryName || " "}
           </div>
         ),
       },
@@ -963,7 +963,7 @@ const handleCardClick = useCallback(
         header: "Department",
         accessorKey: "department_id",
         size: 150,
-        cell: (props) => props.row.original.department?.name || "N/A",
+        cell: (props) => props.row.original.department?.name || " ",
       },
       {
         header: "Status",
@@ -978,7 +978,7 @@ const handleCardClick = useCallback(
                 statusColors[s] || "bg-gray-200"
               )}
             >
-              {s || "N/A"}
+              {s || " "}
             </Tag>
           );
         },
@@ -1221,13 +1221,13 @@ const handleCardClick = useCallback(
               <div className="flex"><span className="font-semibold w-1/3 text-gray-700">ID:</span><span className="w-2/3">{viewingItem.id}</span></div>
               <div className="flex"><span className="font-semibold w-1/3 text-gray-700">Name:</span><span className="w-2/3">{viewingItem.name}</span></div>
               <div className="flex"><span className="font-semibold w-1/3 text-gray-700">Email:</span><span className="w-2/3">{viewingItem.email}</span></div>
-              <div className="flex"><span className="font-semibold w-1/3 text-gray-700">Mobile No:</span><span className="w-2/3">{viewingItem.mobile_no || "N/A"}</span></div>
-              <div className="flex"><span className="font-semibold w-1/3 text-gray-700">Company:</span><span className="w-2/3">{viewingItem.company_name || "N/A"}</span></div>
+              <div className="flex"><span className="font-semibold w-1/3 text-gray-700">Mobile No:</span><span className="w-2/3">{viewingItem.mobile_no || " "}</span></div>
+              <div className="flex"><span className="font-semibold w-1/3 text-gray-700">Company:</span><span className="w-2/3">{viewingItem.company_name || " "}</span></div>
               <div className="flex items-center"><span className="font-semibold w-1/3 text-gray-700">Type:</span><Tag className="capitalize">{viewingItem.type}</Tag></div>
-              <div className="flex"><span className="font-semibold w-1/3 text-gray-700">Category:</span><span className="w-2/3">{viewingItem.categoryName || "N/A"}</span></div>
-              <div className="flex"><span className="font-semibold w-1/3 text-gray-700">Department:</span><span className="w-2/3">{viewingItem.department?.name || "N/A"}</span></div>
+              <div className="flex"><span className="font-semibold w-1/3 text-gray-700">Category:</span><span className="w-2/3">{viewingItem.categoryName || " "}</span></div>
+              <div className="flex"><span className="font-semibold w-1/3 text-gray-700">Department:</span><span className="w-2/3">{viewingItem.department?.name || " "}</span></div>
               <div className="flex items-center"><span className="font-semibold w-1/3 text-gray-700">Status:</span><Tag className={classNames("capitalize", statusColors[viewingItem.status] || "bg-gray-200")}>{viewingItem.status}</Tag></div>
-              <div className="flex items-center"><span className="font-semibold w-1/3 text-gray-700">Rating:</span><span className="w-2/3 flex items-center gap-1">{viewingItem.rating ? (<><TbStar className="text-amber-500" /> {viewingItem.rating}{" "}Stars</>) : ("N/A")}</span></div>
+              <div className="flex items-center"><span className="font-semibold w-1/3 text-gray-700">Rating:</span><span className="w-2/3 flex items-center gap-1">{viewingItem.rating ? (<><TbStar className="text-amber-500" /> {viewingItem.rating}{" "}Stars</>) : (" ")}</span></div>
               {viewingItem.attachment && (
                 <div className="flex items-start">
                   <span className="font-semibold w-1/3 pt-1">Attachment:</span>

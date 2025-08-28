@@ -59,7 +59,7 @@ import { getMenuRights } from '@/utils/getMenuRights'
 
 // --- Utility Functions ---
 function formatCustomDateTime(dateString: string | null | undefined): string {
-    if (!dateString) return 'N/A';
+    if (!dateString) return ' ';
     try {
         const date = new Date(dateString);
         return `${date.getDate()} ${date.toLocaleString("en-US", { month: "short" })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
@@ -116,8 +116,8 @@ function exportTrendingImagesToCsv(filename: string, rows: TrendingPageImageItem
             `"${String(row.product_ids || '').replace(/"/g, '""')}"`,
             `"${String(row.productNames).replace(/"/g, '""')}"`,
             `"${row.created_at_formatted}"`,
-            `"${String(row.updated_by_name || 'N/A').replace(/"/g, '""')}"`,
-            `"${String(row.updated_by_role || 'N/A').replace(/"/g, '""')}"`,
+            `"${String(row.updated_by_name || ' ').replace(/"/g, '""')}"`,
+            `"${String(row.updated_by_role || ' ').replace(/"/g, '""')}"`,
             `"${row.updated_at_formatted}"`,
         ].join(','))
     ].join('\n');
@@ -305,7 +305,7 @@ const TrendingImages = () => {
     const baseColumns: ColumnDef<TrendingPageImageItem>[] = useMemo(() => [
         { header: 'Page Name', accessorKey: 'page_name', enableSorting: true, size: 250, cell: (props) => <span className="font-semibold">{props.row.original.page_name}</span> },
         { header: 'Trending Products', id: 'trending_products', size: 350, cell: (props) => { const ids = props.row.original.product_ids?.split(',').map(id => id.trim()) || []; if (ids.length === 0) return <span className="text-gray-400">None</span>; const names = ids.map(id => productNameMap.get(id) || `ID:${id}`); const display = names.slice(0, 3).join(', '); const remaining = names.length - 3; return (<Tooltip title={names.join(', ')}><span>{display}{remaining > 0 && ` +${remaining} more`}</span></Tooltip>); } },
-        { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path || undefined} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path || null)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs"><b>{updated_by_user?.roles?.[0]?.display_name || ''}</b></div><div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div></div></div>); } },
+        { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path || undefined} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path || null)} /><div><span>{updated_by_user?.name || ' '}</span><div className="text-xs"><b>{updated_by_user?.roles?.[0]?.display_name || ''}</b></div><div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div></div></div>); } },
         { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={`${statusColor[props.row.original.status]} capitalize font-semibold`}>{props.row.original.status}</Tag>) },
         { header: 'Actions', id: 'action', meta: { cellClass: 'text-center' }, size: 80, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
     ], [productNameMap, openImageViewer]);
@@ -387,8 +387,8 @@ const TrendingImages = () => {
                         <div className=" grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                             <div>
                                 <b className="font-semibold text-primary">Latest Update:</b><br />
-                                <p className="font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p>
-                                <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
+                                <p className="font-semibold">{editingItem.updated_by_user?.name || " "}</p>
+                                <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || " "}</p>
                             </div>
                             <div className="text-right">
                                 <br />

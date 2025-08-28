@@ -113,7 +113,7 @@ const DetailSection = ({ title, icon, children }: { title: string; icon: React.R
 const InfoPair = ({ label, value }: { label: string; value?: React.ReactNode; }) => (
   <div className="grid grid-cols-2 py-1.5">
     <span className="font-semibold text-gray-700 dark:text-gray-300">{label}</span>
-    <span className="break-words">{value || <span className="text-gray-400">N/A</span>}</span>
+    <span className="break-words">{value || <span className="text-gray-400"> </span>}</span>
   </div>
 );
 
@@ -147,7 +147,7 @@ const ProductHeader = ({ product }: { product: ProductData }) => {
             <Avatar size={60} src={product.icon_full_path} shape="square" icon={<TbBox />} />
             <div>
                 <h4 className="font-bold">{product.name || 'Unnamed Product'}</h4>
-                <p className="text-sm text-gray-500">SKU: {product.sku_code || 'N/A'}</p>
+                <p className="text-sm text-gray-500">SKU: {product.sku_code || ' '}</p>
                 <div className="mt-2 flex items-center gap-2">
                     <Tag className={`${getStatusClass(product.status)} capitalize`}>{product.status}</Tag>
                     {product.brand?.name && <Tag>{product.brand.name}</Tag>}
@@ -363,7 +363,7 @@ const ProductLeadsTabView = ({ leads }: { leads: ProductLead[] }) => {
                                 <Tr key={lead.id}>
                                     <Td>#{lead.id}</Td>
                                     <Td className="font-semibold">{lead.name}</Td>
-                                    <Td>{lead.brand?.name || 'N/A'}</Td>
+                                    <Td>{lead.brand?.name || ' '}</Td>
                                     <Td><Tag className={getStatusClass(lead.status)}>{lead.status}</Tag></Td>
                                     <Td>{dayjs(lead.created_at).format('DD MMM YYYY, h:mm A')}</Td>
                                     {/* <Td><Button size="sm" onClick={() => navigate(`/leads/${lead.id}`)}>View</Button></Td> */}
@@ -395,11 +395,11 @@ const ProductKeywordsTabView = ({ product }: { product: ProductData }) => {
                     <InfoPair label="Meta Title" value={product.meta_title} />
                     <div>
                         <span className="font-semibold text-gray-700 dark:text-gray-300">Meta Description</span>
-                        <p className="mt-1 break-words text-sm">{product.meta_descr || <span className="text-gray-400">N/A</span>}</p>
+                        <p className="mt-1 break-words text-sm">{product.meta_descr || <span className="text-gray-400"> </span>}</p>
                     </div>
                      <div>
                         <span className="font-semibold text-gray-700 dark:text-gray-300">Meta Keywords</span>
-                        <p className="mt-1 break-words text-sm">{product.meta_keyword || <span className="text-gray-400">N/A</span>}</p>
+                        <p className="mt-1 break-words text-sm">{product.meta_keyword || <span className="text-gray-400"> </span>}</p>
                     </div>
                 </div>
             </DetailSection>

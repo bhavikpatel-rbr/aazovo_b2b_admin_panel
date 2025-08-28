@@ -230,24 +230,24 @@ function exportToCsv(filename: string, rows: PartnerItem[]) {
     return false;
   }
   const transformedRows = rows.map(row => ({
-    id: String(row.id) || "N/A",
-    name: row.partner_name || "N/A",
-    partner_code: row.partner_code || "N/A",
-    company_name: row.company_name || "N/A",
-    industrial_expertise: row.industrial_expertise || "N/A",
-    join_us_as: row.join_us_as || "N/A",
-    status: row.status || "N/A",
-    country: row.country?.name || "N/A",
-    state: row.state || "N/A",
-    city: row.city || "N/A",
+    id: String(row.id) || " ",
+    name: row.partner_name || " ",
+    partner_code: row.partner_code || " ",
+    company_name: row.company_name || " ",
+    industrial_expertise: row.industrial_expertise || " ",
+    join_us_as: row.join_us_as || " ",
+    status: row.status || " ",
+    country: row.country?.name || " ",
+    state: row.state || " ",
+    city: row.city || " ",
     kyc_verified: row.kyc_verified ? "Yes" : "No",
-    created_at: row.created_at ? new Date(row.created_at).toLocaleDateString("en-GB") : "N/A",
-    owner_name: row.owner_name || "N/A",
-    primary_contact_number: row.primary_contact_number || "N/A",
-    primary_email_id: row.primary_email_id || "N/A",
-    partner_website: row.partner_website || "N/A",
-    gst_number: row.gst_number || "N/A",
-    pan_number: row.pan_number || "N/A",
+    created_at: row.created_at ? new Date(row.created_at).toLocaleDateString("en-GB") : " ",
+    owner_name: row.owner_name || " ",
+    primary_contact_number: row.primary_contact_number || " ",
+    primary_email_id: row.primary_email_id || " ",
+    partner_website: row.partner_website || " ",
+    gst_number: row.gst_number || " ",
+    pan_number: row.pan_number || " ",
   }));
 
   const headerToKeyMap: Record<string, keyof typeof transformedRows[0]> = {
@@ -317,7 +317,7 @@ const PartnerListProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [partnerList, setPartnerList] = useState<PartnerItem[]>(partnerData?.data ?? []);
   const [selectedPartners, setSelectedPartners] = useState<PartnerItem[]>([]);
   const [partnerCount, setPartnerCount] = useState(partnerData?.counts ?? {});
-  const getAllUserDataOptionsData = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: b.id, label: `(${b.employee_id}) - ${b.name || 'N/A'}` })) : [], [getAllUserData]);
+  const getAllUserDataOptionsData = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: b.id, label: `(${b.employee_id}) - ${b.name || ' '}` })) : [], [getAllUserData]);
 
   useEffect(() => {
     dispatch(getCountriesAction());
@@ -858,7 +858,7 @@ const PartnerAlertModal: React.FC<{ partner: PartnerItem; onClose: () => void }>
             ) : alerts.length > 0 ? (
               <div className="space-y-8">
                 {alerts.map((alert, index) => {
-                  const userName = alert?.created_by_user?.name || 'N/A';
+                  const userName = alert?.created_by_user?.name || ' ';
                   const userInitial = userName.charAt(0).toUpperCase();
                   return (
                     <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
@@ -1344,7 +1344,7 @@ const PartnerListTable = () => {
             </div>
             {industrial_expertise && <span className="text-xs mt-1"><b>Expertise:</b> {industrial_expertise}</span>}
             {join_us_as && <span className="text-xs mt-1"><b>Joined As:</b> {join_us_as}</span>}
-            <div className="text-xs text-gray-500 mt-1">{country?.name || "N/A"}</div>
+            <div className="text-xs text-gray-500 mt-1">{country?.name || " "}</div>
           </div>
         )
       },

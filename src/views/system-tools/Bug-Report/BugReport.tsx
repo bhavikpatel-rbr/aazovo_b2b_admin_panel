@@ -198,14 +198,14 @@ function exportBugReportsToCsv(filename: string, rows: BugReportItem[]) {
     ID: row.id,
     Name: row.name,
     Email: row.email,
-    MobileNo: row.mobile_no || "N/A",
+    MobileNo: row.mobile_no || " ",
     Report: `"${(row.report || "").replace(/"/g, '""')}"`,
-    Attachment: row.attachment || "N/A",
+    Attachment: row.attachment || " ",
     Status: row.status,
-    CreatedAt: row.created_at ? new Date(row.created_at).toLocaleString() : "N/A",
-    UpdatedBy: row.updated_by_user?.name || "N/A",
-    UpdatedRole: row.updated_by_user?.roles?.[0]?.display_name || 'N/A',
-    UpdatedAt: row.updated_at ? new Date(row.updated_at).toLocaleString() : "N/A",
+    CreatedAt: row.created_at ? new Date(row.created_at).toLocaleString() : " ",
+    UpdatedBy: row.updated_by_user?.name || " ",
+    UpdatedRole: row.updated_by_user?.roles?.[0]?.display_name || ' ',
+    UpdatedAt: row.updated_at ? new Date(row.updated_at).toLocaleString() : " ",
   }));
   const csvContent = [
     Object.keys(preparedRows[0]).join(','),
@@ -551,7 +551,7 @@ const BugReportListing = () => {
   }, []);
   const { bugReportsData: rawBugReportsData = { data: [], counts: {} }, status: masterLoadingStatus = "idle", getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
 
-  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: String(b.id), label: `(${b.employee_id}) - ${b.name || 'N/A'}` })) : [], [getAllUserData]);
+  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: String(b.id), label: `(${b.employee_id}) - ${b.name || ' '}` })) : [], [getAllUserData]);
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
@@ -851,7 +851,7 @@ const BugReportListing = () => {
     { header: "Contact", accessorKey: "email", size: 200, cell: (props) => (<div><span>{props.row.original.email}</span> <br /><span className="text-xs text-gray-500">{props.row.original.mobile_no}</span></div>) },
     { header: "Reported On", accessorKey: "created_at", size: 200, enableSorting: true, cell: (props) => (<div className="text-xs">{dayjs(props.getValue<string>()).format("DD MMM YYYY, h:mm A")}</div>) },
     { header: "Severity", accessorKey: "severity", size: 120, cell: (props) => (<span>{props.row.original.severity}</span>) },
-    { header: "Status", accessorKey: "status", size: 120, enableSorting: true, cell: (props) => { const statusVal = props.getValue<BugReportStatusApi>(); return (<Tag className={classNames("capitalize whitespace-nowrap text-center", bugStatusColor[statusVal] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>{statusVal || "N/A"}</Tag>); } },
+    { header: "Status", accessorKey: "status", size: 120, enableSorting: true, cell: (props) => { const statusVal = props.getValue<BugReportStatusApi>(); return (<Tag className={classNames("capitalize whitespace-nowrap text-center", bugStatusColor[statusVal] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>{statusVal || " "}</Tag>); } },
     {
       header: "Actions", id: "actions", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 100,
       cell: (props) => (<ActionColumn

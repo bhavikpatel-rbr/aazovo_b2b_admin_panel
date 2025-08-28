@@ -137,7 +137,7 @@ const PendingLeadViewModal = ({
   const renderDetail = (label: string, value: React.ReactNode) => (
     <div className="flex flex-col sm:flex-row py-2 border-b border-gray-200 dark:border-gray-700">
       <dt className="sm:w-1/3 font-semibold text-gray-600 dark:text-gray-300">{label}</dt>
-      <dd className="sm:w-2/3 mt-1 sm:mt-0 text-gray-800 dark:text-gray-100 break-words">{value ?? 'N/A'}</dd>
+      <dd className="sm:w-2/3 mt-1 sm:mt-0 text-gray-800 dark:text-gray-100 break-words">{value ?? ' '}</dd>
     </div>
   );
 
@@ -172,7 +172,7 @@ const PendingLeadViewModal = ({
               {renderDetail('Lead Number', lead.lead_number || `LD-${lead.id.toString().padStart(5, '0')}`)}
               {renderDetail('Product', lead.product?.name)}
               {renderDetail('Quantity', lead.qty)}
-              {renderDetail('Target Price', lead.target_price ? `$${lead.target_price}` : 'N/A')}
+              {renderDetail('Target Price', lead.target_price ? `$${lead.target_price}` : ' ')}
               {renderDetail('Status', <Tag className={`${leadStatusColor[lead.status] || leadStatusColor.default} capitalize`}>{lead.status}</Tag>)}
               {renderDetail('Intent', <Tag className="capitalize">{lead.lead_intent}</Tag>)}
               {renderDetail('Created At', dayjs(lead.created_at).format('DD MMM YYYY, h:mm A'))}
@@ -281,11 +281,11 @@ const PendingLeadsModal = ({
                   {pendingLeads.map((item) => (
                     <Table.Tr key={item.id}>
                       <Table.Td>{item.lead?.lead_number || `LD-${item.lead?.id}`}</Table.Td>
-                      <Table.Td>{item.lead?.product?.name || 'N/A'}</Table.Td>
+                      <Table.Td>{item.lead?.product?.name || ' '}</Table.Td>
                       <Table.Td>
                         <div className="text-xs">
-                          <p><strong>B:</strong> {item.lead?.lead_info?.buyer?.name || 'N/A'}</p>
-                          <p><strong>S:</strong> {item.lead?.lead_info?.seller?.name || 'N/A'}</p>
+                          <p><strong>B:</strong> {item.lead?.lead_info?.buyer?.name || ' '}</p>
+                          <p><strong>S:</strong> {item.lead?.lead_info?.seller?.name || ' '}</p>
                         </div>
                       </Table.Td>
                       <Table.Td>Qty: {item.lead?.qty || '-'} | Price: ${item.lead?.target_price || '-'}</Table.Td>
@@ -969,7 +969,7 @@ const ProductDetailsTab: React.FC<{ lead: LeadListItem }> = ({ lead }) => (
     <h5 className="font-semibold mb-4">Product Details</h5>
     <InfoRow label="Product Name">{lead.productName}</InfoRow>
     <InfoRow label="Quantity">{lead.qty}</InfoRow>
-    <InfoRow label="Target Price">{`$${lead.target_price || 'N/A'}`}</InfoRow>
+    <InfoRow label="Target Price">{`$${lead.target_price || ' '}`}</InfoRow>
   </Card>
 );
 
@@ -1188,7 +1188,7 @@ const ViewOpportunitiesDialog: React.FC<{
         return (
           <div>
             <p>Qty: <span className="font-semibold">{qty}</span></p>
-            <p>Price: <span className="font-semibold">{price ? `$${price}` : 'N/A'}</span></p>
+            <p>Price: <span className="font-semibold">{price ? `$${price}` : ' '}</span></p>
           </div>
         );
       }
@@ -1255,10 +1255,10 @@ const ViewLeadFormDialog: React.FC<{
       </FormItem>
       <div className="grid grid-cols-2 gap-4">
         <FormItem label="Quantity">
-          <Input value={lead.qty ?? "N/A"} readOnly />
+          <Input value={lead.qty ?? " "} readOnly />
         </FormItem>
         <FormItem label="Target Price">
-          <Input value={lead.target_price ?? "N/A"} readOnly />
+          <Input value={lead.target_price ?? " "} readOnly />
         </FormItem>
       </div>
       <FormItem label="Assigned Sales Person">
@@ -1548,7 +1548,7 @@ const AssignLeadDialog: React.FC<{
       <p className="mb-4 text-sm">
         Lead Product:{" "}
         <span className="font-semibold">
-          {lead.productName || "N/A"}
+          {lead.productName || " "}
         </span>
       </p>
 
@@ -2725,7 +2725,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
       Array.isArray(getAllUserData)
         ? getAllUserData.map((user: any) => ({
           value: user.id,
-          label: `(${user.employee_id}) - ${user.name || 'N/A'}`
+          label: `(${user.employee_id}) - ${user.name || ' '}`
         }))
         : [],
     [getAllUserData]
@@ -2742,9 +2742,9 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         enquiry_type: apiLead.lead_type || apiLead.enquiry_type || "Other",
         lead_info: apiLead.lead_info,
         productId: apiLead.product?.id,
-        productName: apiLead.product?.name ?? "N/A",
-        customerId: String(apiLead.customer?.id ?? apiLead.customer_id ?? "N/A"),
-        customerName: apiLead.customer?.name ?? "N/A",
+        productName: apiLead.product?.name ?? " ",
+        customerId: String(apiLead.customer?.id ?? apiLead.customer_id ?? " "),
+        customerName: apiLead.customer?.name ?? " ",
         lead_intent: (apiLead.want_to as LeadIntent) || "Buy",
         qty: apiLead.qty,
         target_price: apiLead.target_price,
@@ -3249,7 +3249,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         cell: (props: CellContext<LeadListItem, any>) => {
           const formattedDate = props.row.original.createdAt
             ? dayjs(props.row.original.createdAt).format('DD MMM YYYY, h:mm A')
-            : "N/A";
+            : " ";
           return (
             <div className="flex flex-col gap-1 text-xs">
               <div className="flex items-center gap-2">

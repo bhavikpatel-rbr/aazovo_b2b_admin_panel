@@ -117,11 +117,11 @@ function exportCarouselItemsToCsv(filename: string, rows: TrendingCarouselItemDa
 
     const preparedRows: TrendingCarouselExportItem[] = rows.map((row) => ({
         ...row,
-        links: row.links || 'N/A',
+        links: row.links || ' ',
         created_at_formatted: new Date(row.created_at).toLocaleString(),
-        updated_by_name: row.updated_by_name || 'N/A',
-        updated_by_role: row.updated_by_role || 'N/A',
-        updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : 'N/A',
+        updated_by_name: row.updated_by_name || ' ',
+        updated_by_role: row.updated_by_role || ' ',
+        updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : ' ',
     }))
 
     const csvContent = [
@@ -352,7 +352,7 @@ const TrendingCarousel = () => {
     const baseColumns: ColumnDef<TrendingCarouselItemData>[] = useMemo(() => [
         { header: 'Image', accessorKey: 'images_full_path', enableSorting: false, size: 80, cell: (props) => (<Avatar size={40} shape="circle" src={props.row.original.images_full_path || undefined} icon={!props.row.original.images_full_path ? <TbPhoto /> : undefined} onClick={() => openImageViewer(props.row.original.images_full_path)} className={props.row.original.images_full_path ? 'cursor-pointer hover:ring-2 hover:ring-indigo-500' : ''} />) },
         { header: 'Link', accessorKey: 'links', enableSorting: true, size: 320, cell: (props) => props.row.original.links ? (<a href={props.row.original.links} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline truncate block max-w-[230px]" title={props.row.original.links}>{props.row.original.links}</a>) : (<span className="text-gray-500">No Link</span>) },
-        { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path || undefined} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path || null)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs"><b>{updated_by_user?.roles?.[0]?.display_name || ''}</b></div><div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div></div></div>); } },
+        { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path || undefined} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path || null)} /><div><span>{updated_by_user?.name || ' '}</span><div className="text-xs"><b>{updated_by_user?.roles?.[0]?.display_name || ''}</b></div><div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div></div></div>); } },
         { header: 'Status', accessorKey: 'status', enableSorting: true, size: 80, cell: (props) => (<Tag className={classNames('capitalize font-semibold', props.row.original.status === 'Active' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700' : 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700')}>{props.row.original.status}</Tag>) },
         { header: 'Actions', id: 'action', meta: { cellClass: 'text-center', HeaderClass: 'text-center', }, size: 80, cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />) },
     ], [openImageViewer, openEditDrawer, handleDeleteClick]);
@@ -414,8 +414,8 @@ const TrendingCarousel = () => {
                         <div className=" grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                             <div>
                                 <b className="font-semibold text-primary">Latest Update:</b><br />
-                                <p className="font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p>
-                                <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
+                                <p className="font-semibold">{editingItem.updated_by_user?.name || " "}</p>
+                                <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || " "}</p>
                             </div>
                             <div className="text-right">
                                 <br />

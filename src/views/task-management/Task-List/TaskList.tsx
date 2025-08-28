@@ -250,14 +250,14 @@ const exportTaskToCsv = (filename: string, rows: TaskItem[]) => {
         createdDateFormatted: row.createdDate.toLocaleDateString(),
         dueDateFormatted: row.dueDate
             ? row.dueDate.toLocaleDateString()
-            : 'N/A',
-        priority: row.priority || 'N/A',
-        category: row.category || 'N/A',
-        description: row.description || 'N/A',
+            : ' ',
+        priority: row.priority || ' ',
+        category: row.category || ' ',
+        description: row.description || ' ',
         updated_at_formatted: row.updated_at
             ? new Date(row.updated_at).toLocaleString()
-            : 'N/A',
-        updated_by_name: row.updated_by_name || 'N/A',
+            : ' ',
+        updated_by_name: row.updated_by_name || ' ',
     }))
 
     const CSV_KEYS_EXPORT_DYNAMIC: (keyof TaskExportItem)[] = [
@@ -1377,7 +1377,7 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
     const tableLoading = initialLoading || isSubmitting || isDeleting || isUpdating;
 
 
-    const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: `(${b.employee_id}) - ${b.name || 'N/A'}` })) : [], [getAllUserData]);
+    const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: `(${b.employee_id}) - ${b.name || ' '}` })) : [], [getAllUserData]);
 
     useEffect(() => {
         const { useEncryptApplicationStorage } = config;
@@ -1950,9 +1950,9 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
                                     onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
                                 />
                                 <div>
-                                    <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
+                                    <span className='font-semibold'>{updated_by_user?.name || ' '}</span>
                                     <div className="text-xs text-gray-500 dark:text-gray-400">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
-                                    <div className="text-xs text-gray-500">{updated_at ? dayjs(updated_at).format('DD MMM YYYY, h:mm A') : 'N/A'}</div>
+                                    <div className="text-xs text-gray-500">{updated_at ? dayjs(updated_at).format('DD MMM YYYY, h:mm A') : ' '}</div>
                                 </div>
                             </div>
                         )

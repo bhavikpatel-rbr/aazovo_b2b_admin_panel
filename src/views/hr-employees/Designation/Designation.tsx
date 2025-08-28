@@ -171,14 +171,14 @@ function exportDesignationsToCsv(filename: string, rows: DesignationItem[]) {
   const preparedRows: DesignationExportItem[] = rows.map((row) => ({
     ...row,
     department: row.department.map(d => d.name).join(', '),
-    reporting_manager: row.reporting_manager?.name || "N/A",
+    reporting_manager: row.reporting_manager?.name || " ",
     created_at_formatted: row.created_at
       ? new Date(row.created_at).toLocaleString()
-      : "N/A",
+      : " ",
     updated_at_formatted: row.updated_at
       ? new Date(row.updated_at).toLocaleString()
-      : "N/A",
-    updated_by_name: row.updated_by_user?.name || "N/A",
+      : " ",
+    updated_by_name: row.updated_by_user?.name || " ",
   }));
 
   const separator = ",";
@@ -818,21 +818,21 @@ const DesignationListing = () => {
               </div>
             )
           }
-          return "N/A";
+          return " ";
         },
       },
       {
         header: "Reporting to",
         accessorKey: "reporting_manager",
         enableSorting: true,
-        cell: (props) => props.row.original.reporting_manager?.name || "N/A",
+        cell: (props) => props.row.original.reporting_manager?.name || " ",
       },
       {
         header: "Status",
         accessorKey: "status",
         enableSorting: true,
         size: 100,
-        cell: (props) => (<Tag className={classNames("capitalize", statusColors[props.getValue<string>()])}>{props.getValue<string>() || "N/A"}</Tag>),
+        cell: (props) => (<Tag className={classNames("capitalize", statusColors[props.getValue<string>()])}>{props.getValue<string>() || " "}</Tag>),
       },
       {
         header: "Updated Info",
@@ -841,7 +841,7 @@ const DesignationListing = () => {
         size: 220,
         cell: (props) => {
           const { updated_at, updated_by_user } = props.row.original;
-          const formattedDate = updated_at ? formatCustomDateTime(updated_at) : "N/A";
+          const formattedDate = updated_at ? formatCustomDateTime(updated_at) : " ";
 
           return (
             <div className="flex items-center gap-2">
@@ -855,7 +855,7 @@ const DesignationListing = () => {
                 onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
               />
               <div>
-                <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
+                <span className='font-semibold'>{updated_by_user?.name || ' '}</span>
                 <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
                 <div className="text-xs text-gray-500">{formattedDate}</div>
               </div>
@@ -986,7 +986,7 @@ const DesignationListing = () => {
       </Drawer>
       <Drawer title="Edit Designation" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} width={480} onRequestClose={closeEditDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="editDesignationForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</Button></div>}>
         <Form id="editDesignationForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-y-6 relative pb-28">{renderDrawerForm(formMethods)}
-          {editingItem && (<div className="absolute bottom-0 w-full"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="font-semibold text-primary">Latest Update:</b><br /><p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p><p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p></div><div className="text-right"><br /><span className="font-semibold">Created At:</span> <span>{editingItem.created_at ? formatCustomDateTime(editingItem.created_at) : "N/A"}</span><br /><span className="font-semibold">Updated At:</span> <span>{editingItem.updated_at ? formatCustomDateTime(editingItem.updated_at) : "N/A"}</span></div></div></div>)}
+          {editingItem && (<div className="absolute bottom-0 w-full"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="font-semibold text-primary">Latest Update:</b><br /><p className="text-sm font-semibold">{editingItem.updated_by_user?.name || " "}</p><p>{editingItem.updated_by_user?.roles?.[0]?.display_name || " "}</p></div><div className="text-right"><br /><span className="font-semibold">Created At:</span> <span>{editingItem.created_at ? formatCustomDateTime(editingItem.created_at) : " "}</span><br /><span className="font-semibold">Updated At:</span> <span>{editingItem.updated_at ? formatCustomDateTime(editingItem.updated_at) : " "}</span></div></div></div>)}
         </Form>
       </Drawer>
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterDesignationForm" type="submit">Apply</Button></div>}>

@@ -1797,7 +1797,7 @@ const SpotVerificationSection = ({ control, errors, formMethods, handlePreviewCl
 
     return actualList.map((m: any) => ({
       value: String(m.id),
-      label: `(${m.employee_id}) - ${m.name || 'N/A'}`,
+      label: `(${m.employee_id}) - ${m.name || ' '}`,
     }));
   }, [EmployeesList]);
 
@@ -2293,7 +2293,7 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
     return Array.isArray(data)
       ? data.map((m: any) => ({
         value: String(m.id),
-        label: `(${m.customer_code}) - ${m.name || 'N/A'}`,
+        label: `(${m.customer_code}) - ${m.name || ' '}`,
         status: m.status,
       }))
       : [];
@@ -2847,7 +2847,7 @@ const CompanyCreate = () => {
               const documentTypeOptions = Array.isArray(DocumentListData) ? DocumentListData.map((d: any) => ({ value: d.id, label: d.name })) : [];
               const allMembersForSelect = (MemberData?.data || []).map((m: any) => ({ value: String(m.id), label: `(${m.customer_code}) - ${m.name}` }));
               const employeeDataSource = EmployeesList?.data?.data || EmployeesList?.data || EmployeesList;
-              const allEmployeesForSelect = (Array.isArray(employeeDataSource) ? employeeDataSource : []).map((m: any) => ({ value: String(m.id), label: `(${m.employee_id}) - ${m.name || 'N/A'}` }));
+              const allEmployeesForSelect = (Array.isArray(employeeDataSource) ? employeeDataSource : []).map((m: any) => ({ value: String(m.id), label: `(${m.employee_id}) - ${m.name || ' '}` }));
               const allCompaniesForRefSelect = (AllCompaniesData?.data || []).map((c: any) => ({ value: String(c.id), label: `(${c.company_code}) - ${c.company_name}` }));
 
               const transformed = transformApiToFormSchema(actionResult, CountriesData, ContinentsData, allMembersForSelect, allEmployeesForSelect, allCompaniesForRefSelect, documentTypeOptions);

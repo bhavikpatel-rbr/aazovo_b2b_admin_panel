@@ -4,9 +4,9 @@ import {
   Control,
   Controller,
   FieldErrors,
-  UseFormReturn,
   useFieldArray,
   useForm,
+  UseFormReturn,
 } from "react-hook-form";
 import { NavLink, useNavigate, useParams } from "react-router-dom";
 
@@ -2203,29 +2203,29 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
         email: z.string().email("Invalid email format").optional().or(z.literal("")).nullable(),
         number: z.string().regex(phoneRegex, "Must be 7-15 digits").optional().or(z.literal("")).nullable(),
       })
-      .passthrough()
-      .superRefine((data, ctx) => {
-        const { person_name, company_name, email, designation, number } = data;
-        const isEntryStarted = [person_name, company_name, email, designation, number].some(
-          (value) => value != null && value !== ''
-        );
-        if (isEntryStarted) {
-          if (!person_name || person_name.trim() === '') {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: "Person Name is required.",
-              path: ['person_name'],
-            });
+        .passthrough()
+        .superRefine((data, ctx) => {
+          const { person_name, company_name, email, designation, number } = data;
+          const isEntryStarted = [person_name, company_name, email, designation, number].some(
+            (value) => value != null && value !== ''
+          );
+          if (isEntryStarted) {
+            if (!person_name || person_name.trim() === '') {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Person Name is required.",
+                path: ['person_name'],
+              });
+            }
+            if (!number || number.trim() === '') {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Contact Number is required.",
+                path: ['number'],
+              });
+            }
           }
-          if (!number || number.trim() === '') {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: "Contact Number is required.",
-              path: ['number'],
-            });
-          }
-        }
-      })
+        })
     ).optional(),
     // --- END: MODIFICATION FOR TEAM MANAGEMENT ---
 
@@ -2289,6 +2289,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       default: return <CompanyDetailsSection {...sectionProps} />;
     }
   };
+  const Navigate = useNavigate();   
 
   return (
     <>
@@ -2305,6 +2306,8 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
             <Button type="button" onClick={handlePrevious} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === 0}>Previous</Button>
             <Button type="button" onClick={handleNext} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === navigationKeys.length - 1}>Next</Button>
             <Button variant="solid" type="button" loading={isSubmitting} onClick={handleSubmit(internalFormSubmit)} disabled={isSubmitting}>{isEditMode ? "Update Partner" : "Create Partner"}</Button>
+            <Button type="button" onClick={(e) => Navigate('/business-entities/partner')} >Back</Button>
+
           </div>
         </div>
       </Card>

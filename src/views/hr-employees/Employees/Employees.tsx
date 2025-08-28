@@ -132,7 +132,7 @@ const headerToKeyMap: Record<string, keyof EmployeeItem | string> = { "ID": "id"
 const EMPLOYEE_CSV_HEADERS = Object.keys(headerToKeyMap);
 function exportEmployeesToCsv(filename: string, rows: EmployeeItem[]) {
     if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
-    const transformedRows = rows.map(row => { const statusText = EMPLOYEE_STATUS_OPTIONS.find(o => o.value === row.status)?.label || 'Blocked'; return { id: String(row.id) || "N/A", employeeId: row.employeeId || "N/A", name: row.name || "N/A", email: row.email || "N/A", mobile: row.mobile || "N/A", status: statusText, department: row.department || "N/A", designation: row.designation || "N/A", roles: Array.isArray(row.roles) ? row.roles.join(', ') : 'N/A', joiningDate: row.joiningDate ? dayjs(row.joiningDate).format("DD-MMM-YYYY") : "N/A" }; });
+    const transformedRows = rows.map(row => { const statusText = EMPLOYEE_STATUS_OPTIONS.find(o => o.value === row.status)?.label || 'Blocked'; return { id: String(row.id) || " ", employeeId: row.employeeId || " ", name: row.name || " ", email: row.email || " ", mobile: row.mobile || " ", status: statusText, department: row.department || " ", designation: row.designation || " ", roles: Array.isArray(row.roles) ? row.roles.join(', ') : ' ', joiningDate: row.joiningDate ? dayjs(row.joiningDate).format("DD-MMM-YYYY") : " " }; });
     const csvContent = [EMPLOYEE_CSV_HEADERS.join(','), ...transformedRows.map(row => EMPLOYEE_CSV_HEADERS.map(header => JSON.stringify(row[headerToKeyMap[header] as keyof typeof row] ?? '')).join(','))].join('\n');
     const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
@@ -371,13 +371,13 @@ const EmployeesListing = () => {
 
             const formattedData = Employees.data.map((emp: any) => ({
                 id: String(emp.id),
-                employeeId: emp.employee_id || 'N/A',
+                employeeId: emp.employee_id || ' ',
                 status: mapApiStatus(emp.status),
                 name: emp.name || 'Unknown',
                 email: emp.email || 'No Email',
                 mobile: emp.mobile_number ? `${emp.mobile_number_code || ''}${emp.mobile_number}`.trim() : null,
-                department: emp.department?.name || 'N/A',
-                designation: emp.designation?.name || 'N/A',
+                department: emp.department?.name || ' ',
+                designation: emp.designation?.name || ' ',
                 roles: Array.isArray(emp.roles) ? emp.roles.map((r: any) => r.display_name) : [],
                 avatar: emp.profile_pic_path ? emp.profile_pic_path.replace(/([^:]\/)\/+/g, "$1") : null,
                 createdAt: new Date(emp.created_at),
@@ -476,7 +476,7 @@ const EmployeesListing = () => {
     useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
     // Data for UI Selects
-    const userOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((u: any) => ({ value: String(u.id), label: `(${u.employee_id}) - ${u.name || 'N/A'}` })) : [], [getAllUserData]);
+    const userOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((u: any) => ({ value: String(u.id), label: `(${u.employee_id}) - ${u.name || ' '}` })) : [], [getAllUserData]);
     const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: any) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
     const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData?.data.map((d: any) => ({ value: d.name, label: d.name })) : [], [departmentsData?.data]);
     const designationOptions = useMemo(() => Array.isArray(designationsData?.data) ? designationsData?.data.map((d: any) => ({ value: d.name, label: d.name })) : [], [designationsData?.data]);

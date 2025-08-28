@@ -148,7 +148,7 @@ const EditLeadPage = () => {
   const productOptions = useMemo(() => productsMasterData.map(p => ({ value: p.id, label: p.name })), [productsMasterData]);
   const productSpecOptions = useMemo(() => ProductSpecificationsData.map(s => ({ value: s.id, label: s.name })), [ProductSpecificationsData]);
   const paymentTermOptions = useMemo(() => PaymentTermsData.map(pt => ({ value: pt.id, label: pt.term_name || pt.name })), [PaymentTermsData]);
-  const leadMemberOptions = useMemo(() => memberData.map(m => ({ value: m.id, label: `(${m.customer_code}) - ${m.name || 'N/A'}`})), [memberData]);
+  const leadMemberOptions = useMemo(() => memberData.map(m => ({ value: m.id, label: `(${m.customer_code}) - ${m.name || ' '}`})), [memberData]);
 
   const onSubmit = async (data: LeadFormData) => {
     if (!id) return;

@@ -228,11 +228,11 @@ function exportToCsv(filename: string, rows: PriceListItem[]) {
     margin: row.margin,
     sales_price: row.sales_price,
     status: row.status,
-    updated_by_name: row.updated_by_user?.name || "N/A",
-    updated_by_role: row.updated_by_user?.roles?.[0]?.display_name || "N/A",
+    updated_by_name: row.updated_by_user?.name || " ",
+    updated_by_role: row.updated_by_user?.roles?.[0]?.display_name || " ",
     updated_at: row.updated_at
       ? new Date(row.updated_at).toLocaleString()
-      : "N/A",
+      : " ",
   }));
   const csvContent = [
     CSV_HEADERS.join(","),
@@ -306,7 +306,7 @@ function exportToPdf(
   autoTable(doc, {
     head: [["Product Name", "Sales Price", "Qty"]],
     body: data.map((item) => [
-      item.product?.name || "N/A",
+      item.product?.name || " ",
       `${item.sales_price}`,
       item.qty,
     ]),
@@ -1083,7 +1083,7 @@ const PriceList = () => {
   const getAllUserDataOptions = useMemo(
     () =>
       Array.isArray(getAllUserData)
-        ? getAllUserData.map((b) => ({ value: b.id, label: `(${b.employee_id}) - ${b.name || 'N/A'}` }))
+        ? getAllUserData.map((b) => ({ value: b.id, label: `(${b.employee_id}) - ${b.name || ' '}` }))
         : [],
     [getAllUserData]
   );
@@ -1364,7 +1364,7 @@ const PriceList = () => {
               />
               <div className="truncate">
                 <span className="font-semibold">
-                  {row.product?.name || "N/A"}
+                  {row.product?.name || " "}
                 </span>
               </div>
             </div>
@@ -1632,9 +1632,9 @@ const PriceList = () => {
     const detailsText = selectedItemsData
       .map(
         (item) =>
-          `Product: ${item.product?.name || "N/A"}\n` +
+          `Product: ${item.product?.name || " "}\n` +
           `Sales Price: ${item.sales_price}\n` +
-          `Qty: ${rowQuantities[item.id] || "N/A"}`
+          `Qty: ${rowQuantities[item.id] || " "}`
       )
       .join("\n-----------------------------------\n");
 
@@ -1670,7 +1670,7 @@ const PriceList = () => {
     }
     const dataWithQty = selectedItemsData.map((item) => ({
       ...item,
-      qty: rowQuantities[item.id] || "N/A",
+      qty: rowQuantities[item.id] || " ",
     }));
     exportToPdf("selected-prices.pdf", "Price List Selection", dataWithQty);
     setSelectedRows([]);
@@ -1690,7 +1690,7 @@ const PriceList = () => {
       }.xlsx`;
     const dataWithQty = selectedItemsData.map((item) => ({
       ...item,
-      qty: rowQuantities[item.id] || "N/A",
+      qty: rowQuantities[item.id] || " ",
     }));
     try {
       await dispatch(
@@ -2216,11 +2216,11 @@ const PriceList = () => {
               </b>
               <br />
               <p className="text-sm font-semibold">
-                {editingPriceListItem.updated_by_user?.name || "N/A"}
+                {editingPriceListItem.updated_by_user?.name || " "}
               </p>
               <p>
                 {editingPriceListItem.updated_by_user?.roles[0]?.display_name ||
-                  "N/A"}
+                  " "}
               </p>
             </div>
             <div className="text-right">
@@ -2243,7 +2243,7 @@ const PriceList = () => {
                     minute: "2-digit",
                     hour12: true,
                   })}`
-                  : "N/A"}
+                  : " "}
               </span>
               <br />
               <span className="font-semibold">Updated At:</span>{" "}
@@ -2264,7 +2264,7 @@ const PriceList = () => {
                     minute: "2-digit",
                     hour12: true,
                   })}`
-                  : "N/A"}
+                  : " "}
               </span>
             </div>
           </div>
