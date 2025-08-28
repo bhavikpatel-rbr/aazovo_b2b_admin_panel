@@ -157,7 +157,7 @@ const ToolbarSkeleton = () => (
 );
 
 const TableSkeleton = ({ columns, pageSize }: { columns: ColumnDef<any>[], pageSize: number }) => (
-    <div className="border rounded-lg overflow-hidden dark:border-gray-700">
+    <div className=" rounded-lg overflow-hidden dark:border-gray-700">
         <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
@@ -171,7 +171,7 @@ const TableSkeleton = ({ columns, pageSize }: { columns: ColumnDef<any>[], pageS
             </thead>
             <tbody>
                 {Array.from({ length: pageSize }).map((_, rowIndex) => (
-                    <tr key={rowIndex} className="border-t dark:border-gray-700">
+                    <tr key={rowIndex} className=" dark:border-gray-700">
                          <td className="p-4 w-12"><Skeleton className="h-5 w-5" /></td>
                         {columns.map((col, colIndex) => (
                             <td key={colIndex} className="p-4">
@@ -1938,6 +1938,7 @@ const TransactionsTab: React.FC<{ company: CompanyItem }> = ({ company }) => {
     });
   }, [allTransactions, dateRange]);
 
+
   const handleResetFilter = () => setDateRange([null, null]);
   const formatDocTitle = (key: string) => {
     const customTitles: Record<string, string> = { pi_upload: "PO", imei_excel_sheet_miracle: "IMEI Sheet", invoice_upload: "Purchase Invoice", e_way_bill: "E-Way Bill" };
@@ -2953,6 +2954,7 @@ const CompanyListTable = () => {
     useState<CompanyItem | null>(null);
   const [isSubmittingBilling, setIsSubmittingBilling] = useState(false);
   const [isPendingRequestLoading, setIsPendingRequestLoading] = useState(false);
+console.log("PendingBillData",PendingBillData);
 
   const [viewerState, setViewerState] = useState<{
     isOpen: boolean;
@@ -4406,8 +4408,8 @@ const CompanyListTable = () => {
                             </td>
                         </tr>
                     ))
-                ) : PendingBillData?.data && PendingBillData.data.length > 0 ? (
-                PendingBillData?.data?.reverse()?.map((item: any) => (
+                ) : PendingBillData?.data && PendingBillData?.data?.length > 0 ? (
+                PendingBillData?.data?.map((item: any) => (
                   <tr key={item.id} className="border-b dark:border-gray-700">
                     <td className="py-3 px-4 text-sm font-medium">
                       {item.company_name}
