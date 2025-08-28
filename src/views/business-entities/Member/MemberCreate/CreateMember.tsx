@@ -2511,22 +2511,7 @@ const PersonalDetailsComponent = ({
             )}
           />
         </FormItem>
-
-        <FormItem
-          label="Address"
-          invalid={!!errors.address}
-          errorMessage={errors.address?.message}
-          className="md:col-span-3"
-        >
-          <Controller
-            name="address"
-            control={control}
-            render={({ field }) => (
-              <Input placeholder="Full Address" {...field} />
-            )}
-          />
-        </FormItem>
-        <FormItem
+         <FormItem
           label={isEditMode ? "Password (leave blank to keep current)" : "Password"}
           invalid={!!errors.password}
           errorMessage={errors.password?.message}
@@ -2543,6 +2528,22 @@ const PersonalDetailsComponent = ({
             )}
           />
         </FormItem>
+
+        <FormItem
+          label="Address"
+          invalid={!!errors.address}
+          errorMessage={errors.address?.message}
+          className="md:col-span-3"
+        >
+          <Controller
+            name="address"
+            control={control}
+            render={({ field }) => (
+              <Input placeholder="Full Address" {...field} />
+            )}
+          />
+        </FormItem>
+       
       </div>
     </Card>
   );

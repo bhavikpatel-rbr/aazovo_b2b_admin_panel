@@ -899,8 +899,11 @@ const CompanyDetailsSection = ({
 
   const companyLogoValue = watch("company_logo");
   const selectedCountry = watch("country_id");
-  const isIndiaSelected = selectedCountry?.value === '101'; // '101' is typically India's ID
+  const isIndiaSelected = selectedCountry?.value === '101' || selectedCountry?.value === '1' ; // '101' is typically India's ID
 
+  console.log("isIndiaSelected",isIndiaSelected);
+  console.log("selectedCountry?.value",selectedCountry?.value);
+  
   useEffect(() => {
     if (selectedCountry) {
       if (isIndiaSelected) {
@@ -982,14 +985,14 @@ const CompanyDetailsSection = ({
         </FormItem>
         <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>Landline</div>} invalid={!!errors.general_contact_number || !!errors.general_contact_number_code} errorMessage={(errors.general_contact_number?.message || (errors.general_contact_number_code as any)?.message) as string}>
           <div className="flex items-start gap-2">
-            <div className="w-3/5"> <Controller name="general_contact_number" control={control} render={({ field }) => (<Input placeholder="Company Landline" {...field} />)} /> </div>
+            <div className="w-3/3"> <Controller name="general_contact_number" control={control} render={({ field }) => (<Input placeholder="Company Landline" {...field} />)} /> </div>
           </div>
         </FormItem>
       </div>
 
       <hr className="my-6" />
       <h4 className="mb-4">Trade Information</h4>
-      <div className="grid md:grid-cols-4 gap-3">
+      <div className="grid md:grid-cols-2 gap-3">
         {isIndiaSelected ? (
           <>
             <FormItem label={<div>GST Number<span className="text-red-500"> *</span></div>} invalid={!!errors.gst_number} errorMessage={errors.gst_number?.message as string}><Controller name="gst_number" control={control} render={({ field }) => (<Input placeholder="GST Number" {...field} />)} /></FormItem>
