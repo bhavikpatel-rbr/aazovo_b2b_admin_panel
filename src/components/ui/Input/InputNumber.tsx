@@ -341,6 +341,7 @@ const InputNumber = forwardRef<HTMLInputElement, InputNumberProps>((props, ref) 
                         shape="circle"
                         onClick={handleClear}
                         disabled={isDisabled || readOnly}
+                        type="button" // Set type to "button" to prevent form submission
                          // aria-label="Clear" // Good for accessibility
                     />
                 )}
@@ -355,6 +356,7 @@ const InputNumber = forwardRef<HTMLInputElement, InputNumberProps>((props, ref) 
                         shape="square" // Or 'circle' if preferred and size allows
                         onClick={handleIncrement}
                         disabled={disableIncrement}
+                        type="button" // Set type to "button" to prevent form submission
                          // aria-label="Increment value"
                     />
                      <Button
@@ -365,6 +367,7 @@ const InputNumber = forwardRef<HTMLInputElement, InputNumberProps>((props, ref) 
                         shape="square" // Or 'circle' if preferred
                         onClick={handleDecrement}
                         disabled={disableDecrement}
+                        type="button" // Set type to "button" to prevent form submission
                          // aria-label="Decrement value"
                     />
                 </div>
@@ -383,6 +386,3 @@ const InputNumber = forwardRef<HTMLInputElement, InputNumberProps>((props, ref) 
 InputNumber.displayName = 'InputNumber';
 
 export default InputNumber;
-
-// Helper function (kept as it's used in ActionColumn)
-// function classNames(...classes: (string | boolean | undefined)[]) { return classes.filter(Boolean).join(' '); } // Assuming this is a global helper or imported elsewhere

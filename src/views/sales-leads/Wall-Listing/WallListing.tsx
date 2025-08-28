@@ -74,7 +74,7 @@ import { z } from "zod";
 // --- Type Definitions ---
 export type ApiWallItemFromSource = any;
 export type WallRecordStatus = | "Pending" | "Approved" | "Rejected" | "Expired" | "Fulfilled" | "Active" | string;
-export type WallIntent = "Buy" | "Sell" | "Exchange";
+export type WallIntent = "Buy" | "Sell" ;
 export type WallProductCondition = "New" | "Used" | "Refurbished" | string;
 export type WallItem = { id: number; product_name: string; company_name: string; companyId?: string; member_name: string; memberId?: string; member_email: string; member_phone: string; product_category: string; productCategoryId?: number; product_subcategory: string; subCategoryId?: number; product_description: string; product_specs: string; product_status: string; quantity: number; price: number; want_to: WallIntent | string; listing_type: string; shipping_options: string; payment_method: string; warranty: string; return_policy: string; listing_url: string; brand: string; brandId?: number; product_images: string[]; created_date: Date; updated_at: Date; visibility: string; priority: string; assigned_to: string; interaction_type: string; action: string; created_from: string; recordStatus?: WallRecordStatus; cartoonTypeId?: number | null; deviceCondition?: WallProductCondition | null; inquiry_count: number; share_count: number; is_bookmarked: boolean; updated_by_user?: { name: string; profile_pic_path?: string | null; roles: { display_name: string }[]; } | null; productId?: number; productSpecId?: number; memberTypeId?: number; createdById?: number; member?: any; };
 
@@ -116,8 +116,8 @@ const recordStatusColor: Record<WallRecordStatus, string> = {
 };
 const recordStatusOptions = Object.keys(recordStatusColor).map((s) => ({ value: s, label: s, }));
 const intentTagColor: Record<WallIntent, string> = { Sell: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100", Buy: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100", Exchange: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100", };
-const intentOptions: { value: WallIntent; label: string }[] = [{ value: "Buy", label: "Buy" }, { value: "Sell", label: "Sell" }, { value: "Exchange", label: "Exchange" },];
-const productApiStatusColor: Record<string, string> = { available: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-100", "low stock": "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100", "out of stock": "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100", discontinued: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100", "non-active": "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100", default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100", };
+const intentOptions: { value: WallIntent; label: string }[] = [{ value: "Buy", label: "Buy" }, { value: "Sell", label: "Sell" },];
+const productApiStatusColor: Record<string, string> = { available: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-100", "low stock": "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100", "out of stock": "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100", discontinued: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100", "non-active": "bg-gray-100 text-gray-500/20 dark:text-gray-100", default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100", };
 export const dummyCartoonTypes = [{ id: 1, name: "Master Carton" }, { id: 2, name: "Inner Carton" }];
 
 // ============================================================================
@@ -147,8 +147,8 @@ const AddNotificationDialog: React.FC<{ wallItem: WallItem; onClose: () => void;
     } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsLoading(false); }
   };
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} bodyOpenClassName="overflow-hidden">
-        <div className="flex flex-col h-full max-h-[90vh]">
+    <Dialog isOpen={true}  width ={700}onClose={onClose} onRequestClose={onClose} bodyOpenClassName="overflow-hidden">
+        <div className="flex flex-col h-full max-h-[90vh] min-h-[50vh]">
             <div className="px-6 py-4 border-b">
                 <h5 className="mb-0">Add Notification for "{wallItem.product_name}"</h5>
             </div>
@@ -202,8 +202,8 @@ const AssignTaskDialog: React.FC<{ wallItem: WallItem; onClose: () => void; getA
   };
 
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} bodyOpenClassName="overflow-hidden">
-        <div className="flex flex-col h-full max-h-[90vh]">
+    <Dialog isOpen={true}  width={700} onClose={onClose} onRequestClose={onClose} bodyOpenClassName="overflow-hidden">
+        <div className="flex flex-col h-full max-h-[90vh] min-h-[50vh]">
             <div className="px-6 py-4 border-b">
                 <h5 className="mb-0">Assign Task for "{wallItem.product_name}"</h5>
             </div>
@@ -254,7 +254,7 @@ const AddScheduleDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> 
     } catch (error: any) { toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsLoading(false); }
   };
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} bodyOpenClassName="overflow-hidden">
+    <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose} bodyOpenClassName="overflow-hidden">
         <div className="flex flex-col h-full max-h-[90vh]">
             <div className="px-6 py-4 border-b">
                 <h5 className="mb-0">Add Schedule for "{wallItem.product_name}"</h5>
@@ -294,8 +294,8 @@ const AddActivityDialog: React.FC<{ wallItem: WallItem; onClose: () => void; use
     } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsLoading(false); }
   };
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} bodyOpenClassName="overflow-hidden">
-        <div className="flex flex-col h-full max-h-[90vh]">
+    <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose} bodyOpenClassName="overflow-hidden">
+        <div className="flex flex-col h-full max-h-[90vh] min-h-[40vh]">
             <div className="px-6 py-4 border-b">
                 <h5 className="mb-0">Add Activity Log for "{wallItem.product_name}"</h5>
             </div>
@@ -320,6 +320,10 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
   const [data, setData] = useState<MatchingOpportunityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selected, setSelected] = useState<number[]>([]);
+
+  // State for client-side pagination
+  const [pageIndex, setPageIndex] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     const fetchOpportunities = async () => {
@@ -353,12 +357,32 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
     fetchOpportunities();
   }, [dispatch, wallItem.id]);
 
+  // Memoized slice of data for the current page
+  const paginatedData = useMemo(() => {
+    const start = (pageIndex - 1) * pageSize;
+    return data.slice(start, start + pageSize);
+  }, [data, pageIndex, pageSize]);
+
   const handleSelect = (id: number, checked: boolean) => {
     setSelected(prev => checked ? [...prev, id] : prev.filter(i => i !== id));
   };
+
+  // Select/Deselect all items on the *current* page
   const handleSelectAll = (checked: boolean) => {
-    setSelected(checked ? data.map(op => op.id) : []);
+    if (checked) {
+        const currentPageIds = paginatedData.map(op => op.id);
+        setSelected(prev => [...new Set([...prev, ...currentPageIds])]); // Add current page IDs without duplicates
+    } else {
+        const currentPageIds = new Set(paginatedData.map(op => op.id));
+        setSelected(prev => prev.filter(id => !currentPageIds.has(id))); // Remove current page IDs
+    }
   };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPageIndex(1); // Reset to first page
+  };
+
 
   const handleAction = (type: 'offer_demand' | 'lead' | 'email' | 'whatsapp' | 'copy') => {
     const selectedOps = data.filter(op => selected.includes(op.id));
@@ -411,9 +435,31 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
         break;
     }
   };
+  
+  // Derived state for the "select all" checkbox based on the current page's data
+  const allCurrentPageIds = useMemo(() => new Set(paginatedData.map(p => p.id)), [paginatedData]);
+  const selectedOnCurrentPageCount = useMemo(() => paginatedData.filter(p => selected.includes(p.id)).length, [selected, paginatedData]);
+  const isAllSelected = allCurrentPageIds.size > 0 && selectedOnCurrentPageCount === allCurrentPageIds.size;
+  const isSomeSelected = selectedOnCurrentPageCount > 0 && !isAllSelected;
 
   const columns: ColumnDef<MatchingOpportunityItem>[] = [
-    { id: 'select', header: ({ table }) => <Checkbox checked={table.getIsAllRowsSelected()} indeterminate={table.getIsSomeRowsSelected()} onChange={e => handleSelectAll(e)} />, cell: ({ row }) => <Checkbox checked={selected.includes(row.original.id)} onChange={e => handleSelect(row.original.id, e)} />, size: 40 },
+    { 
+      id: 'select', 
+      header: () => (
+        <Checkbox 
+          checked={isAllSelected} 
+          indeterminate={isSomeSelected} 
+          onChange={e => handleSelectAll(e.target.checked)} 
+        />
+      ), 
+      cell: ({ row }) => (
+        <Checkbox 
+          checked={selected.includes(row.original.id)} 
+          onChange={e => handleSelect(row.original.id, e.target.checked)} 
+        />
+      ), 
+      size: 40 
+    },
     { header: 'Supplier/Buyer', cell: ({ row }) => <div><span className="font-semibold">{row.original.member_name}</span><br /><span className="text-xs text-gray-500">{row.original.member_code}</span></div> },
     {
       header: 'Details', cell: ({ row }) => (
@@ -433,13 +479,23 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
     },
   ];
 
-  const [Pagesize, setPagesize] = useState(10);
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={1000} bodyOpenClassName="overflow-hidden">
       <div className="flex flex-col h-full max-h-[80vh]">
         <div className="px-6 py-4 border-b"><h5>Matching Opportunities for "{wallItem.product_name}"</h5></div>
         <div className="flex-grow overflow-y-auto px-6 py-4">
-          {isLoading ? <div className="flex justify-center items-center h-64"><Spinner size={40} /></div> : <DataTable columns={columns} data={data} noData={data.length === 0} pagingData={{ total: data.length, pageIndex: 1, pageSize: Pagesize }} onSelectChange={(e) => setPagesize(e)} />}
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64"><Spinner size={40} /></div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={paginatedData}
+              noData={data.length === 0}
+              pagingData={{ total: data.length, pageIndex: pageIndex, pageSize: pageSize }}
+              onPaginationChange={setPageIndex}
+              onSelectChange={handlePageSizeChange}
+            />
+          )}
         </div>
         <div className="px-6 py-4 border-t">
           {selected.length > 0 ? (
@@ -466,6 +522,7 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
     </Dialog>
   );
 };
+
 
 const ShareWallLinkDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
   const linkToShare = `${window.location.origin}/sales-leads/wall-item/${wallItem.id}`;
@@ -570,7 +627,7 @@ const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearF
         </Dropdown>
         <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
         <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
-        <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
+        {/* <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button> */}
         <Button menuName="wall_listing" isExport={true} icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
       </div>}
     </div>
@@ -695,6 +752,8 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const skeletonColumns: ColumnDef<WallItem>[] = useMemo(() => columns.map((column) => ({ ...column, cell: () => <Skeleton height={40} className="my-2" />, })), [columns]);
   const skeletonData = useMemo(() => Array.from({ length: tableData.pageSize }, (_, i) => ({ id: `skeleton-${i}` } as any)), [tableData.pageSize]);
 
+  console.log("getAllUserData",getAllUserData);
+  
   return (
     <>
       <Container className="h-auto">
@@ -712,7 +771,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               <Tooltip title="Click to show 'Buy' listings"><div onClick={() => handleCardClick('intent', 'Buy')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-violet-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbBox size={20} /></div><div className="flex flex-col">{renderCardContent(counts.buy, "text-violet-500")}<span className="font-semibold text-[11px]">Buy</span></div></Card></div></Tooltip>
               <Tooltip title="Click to show 'Sell' listings"><div onClick={() => handleCardClick('intent', 'Sell')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-pink-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbPackageExport size={20} /></div><div className="flex flex-col">{renderCardContent(counts.sell, "text-pink-500")}<span className="font-semibold text-[11px]">Sell</span></div></Card></div></Tooltip>
               <Tooltip title="Click to show active listings"><div onClick={() => handleCardClick('status', 'Active')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-green-300")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbCircleCheck size={20} /></div><div className="flex flex-col">{renderCardContent(counts.active, "text-green-500")}<span className="font-semibold text-[11px]">Active</span></div></Card></div></Tooltip>
-              <Tooltip title="Click to show non-active listings"><div onClick={() => handleCardClick('status', 'Non-Active')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-red-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={20} /></div><div className="flex flex-col">{renderCardContent(counts.non_active, "text-red-500")}<span className="font-semibold text-[11px]">Inactive</span></div></Card></div></Tooltip>
+              <Tooltip title="Click to show non-active listings"><div onClick={() => handleCardClick('status', 'Inactive')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-red-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={20} /></div><div className="flex flex-col">{renderCardContent(counts.non_active, "text-red-500")}<span className="font-semibold text-[11px]">Inactive</span></div></Card></div></Tooltip>
               <Tooltip title="Click to show pending listings"><div onClick={() => handleCardClick('status', 'Pending')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-orange-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbProgress size={20} /></div><div className="flex flex-col">{renderCardContent(counts.pending, "text-orange-500")}<span className="font-semibold text-[11px]">Pending</span></div></Card></div></Tooltip>
               <Tooltip title="Click to show rejected listings"><div onClick={() => handleCardClick('status', 'Rejected')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-red-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbBoxOff size={20} /></div><div className="flex flex-col">{renderCardContent(counts.rejected, "text-red-500")}<span className="font-semibold text-[11px]">Rejected</span></div></Card></div></Tooltip>
             </div>
@@ -777,7 +836,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               <FormItem label="Categories"><Controller name="categories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Categories..." options={ParentCategories.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               <FormItem label="Sub Categories"><Controller name="subcategories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Sub Cate..." options={subCategoriesForSelectedCategoryData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               <FormItem label="Brands"><Controller name="brands" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Brands..." options={BrandData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
-              <FormItem label="Availability Status"><Controller name="productStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Availability..." options={Object.keys(productApiStatusColor).filter((k) => k !== "default").map((s) => ({ label: s.charAt(0).toUpperCase() + s.slice(1), value: s }))} {...field} />)} /></FormItem>
+              {/* <FormItem label="Availability Status"><Controller name="productStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Availability..." options={Object.keys(productApiStatusColor).filter((k) => k !== "default").map((s) => ({ label: s.charAt(0).toUpperCase() + s.slice(1), value: s }))} {...field} />)} /></FormItem> */}
               <FormItem label="Created Date Range"><Controller name="dateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date | null, Date | null] | null} onChange={field.onChange} placeholder="Select date range" />)} /></FormItem>
               <FormItem label="Product Spec (Example)"><Controller name="productSpec" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Product Spec..." options={ProductSpecificationsData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               <FormItem label="Member Type (Example)"><Controller name="memberType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Member Type..." options={MemberTypeData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>

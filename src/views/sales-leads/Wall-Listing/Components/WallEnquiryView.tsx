@@ -212,8 +212,8 @@ const LeadsTabView = ({ leadsData }: { leadsData: LeadInfo | LeadInfo[] | null; 
     const [intentFilter, setIntentFilter] = useState<{ label: string, value: string } | null>(null);
     const [enquiryTypeFilter, setEnquiryTypeFilter] = useState<{ label: string, value: string } | null>(null);
 
-    const statusOptions = useMemo(() => [...new Set(leads.map(lead => lead.lead_status))].map(status => ({ label: status, value: status })), [leads]);
-    const intentOptions = useMemo(() => [...new Set(leads.map(lead => lead.lead_intent))].map(intent => ({ label: intent, value: intent })), [leads]);
+    const statusOptions = useMemo(() => [...new Set(leads.map(lead => lead.status))].map(status => ({ label: status, value: status })), [leads]);
+    const intentOptions = useMemo(() => [...new Set(leads.map(lead => lead.want_to))].map(intent => ({ label: intent, value: intent })), [leads]);
     const enquiryTypeOptions = useMemo(() => [...new Set(leads.map(lead => lead.enquiry_type).filter(Boolean))].map(type => ({ label: type, value: type })), [leads]);
 
     const filteredLeads = useMemo(() => {
@@ -237,27 +237,26 @@ const LeadsTabView = ({ leadsData }: { leadsData: LeadInfo | LeadInfo[] | null; 
                     <div className="flex items-center gap-2"><TbFilter size={20} /><h5 className="mb-0">Filters</h5></div>
                     <Button icon={<TbReload />} onClick={handleResetFilters} title="Clear Filters" disabled={!dateRange[0] && !statusFilter && !intentFilter && !enquiryTypeFilter} />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <DatePicker.DatePickerRange value={dateRange} onChange={setDateRange} placeholder="Filter by date" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-5">
+                    {/* <DatePicker.DatePickerRange value={dateRange} onChange={setDateRange} placeholder="Filter by date" /> */}
                     <Select isClearable placeholder="Filter by status" options={statusOptions} value={statusFilter} onChange={setStatusFilter} />
                     <Select isClearable placeholder="Filter by intent" options={intentOptions} value={intentFilter} onChange={setIntentFilter} />
-                    <Select isClearable placeholder="Filter by inquiry type" options={enquiryTypeOptions} value={enquiryTypeFilter} onChange={setEnquiryTypeFilter} />
+                    {/* <Select isClearable placeholder="Filter by inquiry type" options={enquiryTypeOptions} value={enquiryTypeFilter} onChange={setEnquiryTypeFilter} /> */}
                 </div>
             </Card>
             <Card>
                 <Table>
-                    <THead><Tr><Th>Lead ID</Th><Th>Want To</Th><Th>Inquiry Type</Th><Th>Qty</Th><Th>Status</Th><Th>Created By</Th><Th>Created At</Th></Tr></THead>
+                    <THead><Tr><Th>Lead ID</Th><Th>Want To</Th><Th>Qty</Th><Th>Status</Th></Tr></THead>
                     <TBody>
                         {filteredLeads.length > 0 ? (
                             filteredLeads.map(lead => (
                                 <Tr key={lead.id}>
-                                    <Td>#{lead.id}</Td>
-                                    <Td><Tag className={`${getStatusClass(lead.lead_intent)} font-semibold`}>{lead.lead_intent}</Tag></Td>
-                                    <Td>{lead.enquiry_type || ' '}</Td>
+                                    <Td>{lead.lead_number}</Td>
+                                    <Td><Tag className={`${getStatusClass(lead.want_to)} font-semibold`}>{lead.want_to}</Tag></Td>
+                                   
                                     <Td>{lead.qty}</Td>
-                                    <Td><Tag className={getStatusClass(lead.lead_status)}>{lead.lead_status}</Tag></Td>
-                                    <Td><div className="flex items-center gap-2"><Avatar size={28} src={lead.created_by_user?.profile_pic_path} shape="circle" /><span className="font-semibold">{lead.created_by_user?.name || ' '}</span></div></Td>
-                                    <Td>{dayjs(lead.created_at).format('DD MMM YYYY, h:mm A')}</Td>
+                                    <Td><Tag className={getStatusClass(lead.lead_status)}>{lead.status}</Tag></Td>
+                                    
                                 </Tr>
                             ))
                         ) : (<Tr><Td colSpan={7}><NoDataMessage message="No leads match the current filters." /></Td></Tr>)}
