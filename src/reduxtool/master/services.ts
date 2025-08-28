@@ -2392,7 +2392,11 @@ export const getpartnerByIdAsync = async (id: string | number) => {
 }
 export const addpartnerAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/partner`, unitData)
+    const response = await axiosInstance.post(`${config.apiURL}/partner`, unitData, {
+      headers: {
+        "Content-Type": "multipart/form-data"
+      }
+    })
     return response
   } catch (err) {
     return isAxiosError(err)
