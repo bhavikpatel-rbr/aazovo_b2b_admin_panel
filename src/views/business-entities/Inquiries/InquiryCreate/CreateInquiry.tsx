@@ -89,9 +89,12 @@ const inquiryFormSchema = z.object({
   id: z.number().optional().nullable(),
   company_name: z.string().trim().min(1, "Company Name is Required!"),
   name: z.string().trim().min(1, "Contact Person Name is Required!"),
-  email: z.string().trim().min(1, "Email is required!").email("Invalid email address"),
-  mobile_no: z.string().trim().min(1, "Mobile number is required!")
-    .regex(/^\+?[1-9]\d{1,14}$/, "Invalid mobile number (e.g., +1234567890)"),
+  // UPDATED: Email validation with an explicit message for better clarity.
+  email: z.string().trim().min(1, "Email is required!").email({ message: "Invalid email address format." }),
+  // UPDATED: Mobile number validation to restrict to 7-15 digits, optionally starting with a '+'.
+  mobile_no: z.string().trim()
+    .min(1, "Mobile number is required!")
+    .regex(/^\+?\d{7,15}$/, { message: "Must be 7-15 digits, optionally starting with '+'." }),
   inquiry_type: z.string().min(1, "Inquiry Type is required."),
   inquiry_subject: z.string().trim().min(1, "Inquiry Subject is required."),
   inquiry_priority: z.string().min(1, "Priority is required."),
@@ -478,7 +481,8 @@ const CreateInquiry = () => {
                 <Controller name="email" control={control} render={({ field }) => <Input {...field} type="email" placeholder="Enter Email Address" />} />
               </FormItem>
               <FormItem label={<>Contact Person Mobile <span className="text-red-500">*</span></>} invalid={!!errors.mobile_no} errorMessage={errors.mobile_no?.message} >
-                <Controller name="mobile_no" control={control} render={({ field }) => <Input {...field} placeholder="Enter Phone Number (e.g. +1...)" />} />
+                 {/* UPDATED: Added type="tel" for better mobile usability */}
+                <Controller name="mobile_no" control={control} render={({ field }) => <Input {...field} type="tel" placeholder="e.g. +1234567890" />} />
               </FormItem>
 
               {/* --- Row 2: Core Inquiry Details --- */}
@@ -506,7 +510,7 @@ const CreateInquiry = () => {
                     );
                     return (
                       <Select
-                        // isMulti
+                        isMulti
                         placeholder="Select Department(s)"
                         options={departmentOptions}
                         isLoading={masterLoadingStatus === 'loading'}
@@ -538,9 +542,9 @@ const CreateInquiry = () => {
               <FormItem label={<>Inquiry Date <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_date} errorMessage={errors.inquiry_date?.message as string} >
                 <Controller name="inquiry_date" control={control} render={({ field }) => (<DatePicker {...field} value={field.value} onChange={field.onChange} placeholder="Select Inquiry Date" />)} />
               </FormItem>
-              {/* <FormItem label={<>Status <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_status} errorMessage={errors.inquiry_status?.message} >
+              <FormItem label={<>Status <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_status} errorMessage={errors.inquiry_status?.message} >
                 <Controller name="inquiry_status" control={control} render={({ field }) => (<Select placeholder="Select Status" options={statusOptions} value={statusOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
-              </FormItem> */}
+              </FormItem>
               <FormItem label="Inquiry From" invalid={!!errors.inquiry_from} errorMessage={errors.inquiry_from?.message} >
                 <Controller name="inquiry_from" control={control} render={({ field }) => (<Select placeholder="Select Inquiry Source" options={inquiryFromOptions} value={inquiryFromOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} />
               </FormItem>
