@@ -411,7 +411,7 @@ const CategoryTableTools = ({
             </span>
           )}
         </Button>
-        <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
+        {/* <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button> */}
         <Button menuName="category" isExport={true} icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
       </div>
     </div>
@@ -618,7 +618,7 @@ const CategoryDetailView = ({
                 <DetailItem icon={<TbCategory2 />} label="Parent Category">
                   {category.parentCategoryName || <span className="text-gray-400 dark:text-gray-500">—</span>}
                 </DetailItem>
-                <DetailItem icon={<TbLink />} label="Slug / URL" isLink href={`/${category.slug}`}>
+                <DetailItem icon={<TbLink />} label="Slug / URL" >
                   /{category.slug}
                 </DetailItem>
                 <DetailItem icon={<TbClock />} label="Created At">
@@ -1365,7 +1365,7 @@ const Categories = () => {
                 <FormItem label="Parent Category" invalid={!!addFormMethods.formState.errors.parent_category} errorMessage={addFormMethods.formState.errors.parent_category?.message as string}> <Controller name="parent_category" control={addFormMethods.control} render={({ field }) => <UiSelect placeholder="Select Parent or None" options={parentCategoryOptions} value={parentCategoryOptions.find(opt => opt.value === field.value)} onChange={option => field.onChange(option ? option.value : null)} isClearable />} /> </FormItem>
 
                 <div className="flex gap-2">
-                  <FormItem className="w-full" label={<div>Web Icon (467 X 250)<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.web_icon} errorMessage={addFormMethods.formState.errors.web_icon?.message as string}>
+                  <FormItem className="w-full" label={<div>Web Icon (467 X 250)</div>} invalid={!!addFormMethods.formState.errors.web_icon} errorMessage={addFormMethods.formState.errors.web_icon?.message as string}>
                     <Controller name="web_icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) =>
                       <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const file = e.target.files?.[0] || null;
@@ -1378,7 +1378,7 @@ const Categories = () => {
                 </div>
 
                 <div className="flex gap-2">
-                  <FormItem className="w-full" label={<div>Mobile Icon (500 X 500)<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.mobile_icon} errorMessage={addFormMethods.formState.errors.mobile_icon?.message as string}>
+                  <FormItem className="w-full" label={<div>Mobile Icon (500 X 500)</div>} invalid={!!addFormMethods.formState.errors.mobile_icon} errorMessage={addFormMethods.formState.errors.mobile_icon?.message as string}>
                     <Controller name="mobile_icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) =>
                       <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const file = e.target.files?.[0] || null;
@@ -1391,7 +1391,7 @@ const Categories = () => {
                 </div>
 
                 <FormItem
-                  label={<div>Category Banner (Recommended: 1920x400)<span className="text-red-500"> * </span></div>}
+                  label={<div>Category Banner (Recommended: 1920x400)</div>}
                   invalid={!!addFormMethods.formState.errors.category_icon}
                   errorMessage={addFormMethods.formState.errors.category_icon?.message as string}
                 >
@@ -1417,8 +1417,8 @@ const Categories = () => {
             </div>
             <div style={{ display: activeAddTab === 'meta' ? 'block' : 'none' }}>
               <div className="flex flex-col gap-3">
-                <FormItem label={<div>Meta Title<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.meta_title} errorMessage={addFormMethods.formState.errors.meta_title?.message}> <Controller name="meta_title" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Title" />} /> </FormItem>
-                <FormItem label={<div>Meta Description<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.meta_descr} errorMessage={addFormMethods.formState.errors.meta_descr?.message}> <Controller name="meta_descr" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Meta Description" />} /> </FormItem>
+                <FormItem label={<div>Meta Title</div>} invalid={!!addFormMethods.formState.errors.meta_title} errorMessage={addFormMethods.formState.errors.meta_title?.message}> <Controller name="meta_title" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Title" />} /> </FormItem>
+                <FormItem label={<div>Meta Description</div>} invalid={!!addFormMethods.formState.errors.meta_descr} errorMessage={addFormMethods.formState.errors.meta_descr?.message}> <Controller name="meta_descr" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Meta Description" />} /> </FormItem>
                 <FormItem label="Meta Keywords" invalid={!!addFormMethods.formState.errors.meta_keyword} errorMessage={addFormMethods.formState.errors.meta_keyword?.message}> <Controller name="meta_keyword" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Keywords (comma-separated)" />} /> </FormItem>
               </div>
             </div>
@@ -1480,7 +1480,7 @@ const Categories = () => {
                 <FormItem label="Parent Category" invalid={!!editFormMethods.formState.errors.parent_category} errorMessage={editFormMethods.formState.errors.parent_category?.message as string}> <Controller name="parent_category" control={editFormMethods.control} render={({ field }) => <UiSelect placeholder="Select Parent or None" options={parentCategoryOptions} value={parentCategoryOptions.find(opt => opt.value === field.value)} onChange={option => field.onChange(option ? option.value : null)} isClearable />} /> </FormItem>
 
                 <div className="flex gap-2">
-                  <FormItem className="w-full" label={<div>Web Icon (467 X 250)<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.web_icon} errorMessage={editFormMethods.formState.errors.web_icon?.message as string}>
+                  <FormItem className="w-full" label={<div>Web Icon (467 X 250)</div>} invalid={!!editFormMethods.formState.errors.web_icon} errorMessage={editFormMethods.formState.errors.web_icon?.message as string}>
                     <Controller name="web_icon" control={editFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) =>
                       <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const file = e.target.files?.[0] || null;
@@ -1493,7 +1493,7 @@ const Categories = () => {
                   {editWebIconPreview && <div className="mb-2"><Avatar src={editWebIconPreview} size={70} className="rounded-sm" icon={<TbPhoto />} /></div>}
                 </div>
                 <div className="flex gap-2">
-                  <FormItem className="w-full" label={<div>Mobile Icon (500 X 500)<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.mobile_icon} errorMessage={editFormMethods.formState.errors.mobile_icon?.message as string}>
+                  <FormItem className="w-full" label={<div>Mobile Icon (500 X 500)</div>} invalid={!!editFormMethods.formState.errors.mobile_icon} errorMessage={editFormMethods.formState.errors.mobile_icon?.message as string}>
                     <Controller name="mobile_icon" control={editFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) =>
                       <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const file = e.target.files?.[0] || null;
@@ -1507,7 +1507,7 @@ const Categories = () => {
                 </div>
 
                 <FormItem
-                  label={<div>Category Banner (Recommended: 1920x400)<span className="text-red-500"> * </span></div>}
+                  label={<div>Category Banner (Recommended: 1920x400)</div>}
                   invalid={!!editFormMethods.formState.errors.category_icon}
                   errorMessage={editFormMethods.formState.errors.category_icon?.message as string}
                 >
@@ -1533,8 +1533,8 @@ const Categories = () => {
             </div>
             <div style={{ display: activeEditTab === 'meta' ? 'block' : 'none' }}>
               <div className="flex flex-col gap-4">
-                <FormItem label={<div>Meta Title<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.meta_title} errorMessage={editFormMethods.formState.errors.meta_title?.message}> <Controller name="meta_title" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} /> </FormItem>
-                <FormItem label={<div>Meta Description<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.meta_descr} errorMessage={editFormMethods.formState.errors.meta_descr?.message}> <Controller name="meta_descr" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea />} /> </FormItem>
+                <FormItem label={<div>Meta Title</div>} invalid={!!editFormMethods.formState.errors.meta_title} errorMessage={editFormMethods.formState.errors.meta_title?.message}> <Controller name="meta_title" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} /> </FormItem>
+                <FormItem label={<div>Meta Description</div>} invalid={!!editFormMethods.formState.errors.meta_descr} errorMessage={editFormMethods.formState.errors.meta_descr?.message}> <Controller name="meta_descr" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea />} /> </FormItem>
                 <FormItem label="Meta Keywords" invalid={!!editFormMethods.formState.errors.meta_keyword} errorMessage={editFormMethods.formState.errors.meta_keyword?.message}> <Controller name="meta_keyword" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} /> </FormItem>
               </div>
             </div>
