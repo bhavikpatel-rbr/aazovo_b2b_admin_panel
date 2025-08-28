@@ -467,10 +467,10 @@ const AddNotificationDialog: React.FC<{
     mode: "onChange",
   });
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Notification for {item.opportunity_id}</h5>
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+        <div className="max-h-[60vh] min-h-[40vh] overflow-y-auto pr-4 -mr-4">
           <FormItem
             label="Notification Title"
             invalid={!!errors.notification_title}
@@ -557,10 +557,10 @@ const AssignTaskDialog: React.FC<{
     mode: "onChange",
   });
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Assign Task for {item.opportunity_id}</h5>
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+        <div className="max-h-[60vh] min-h-[50vh] overflow-y-auto pr-4 -mr-4">
           <FormItem
             label="Title"
             invalid={!!errors.task_title}
@@ -683,10 +683,10 @@ const AddScheduleDialog: React.FC<{
     mode: "onChange",
   });
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Schedule for {item.opportunity_id}</h5>
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+        <div className="max-h-[60vh] min-h-[50vh] overflow-y-auto pr-4 -mr-4">
           <FormItem
             label="Event Title"
             invalid={!!errors.event_title}
@@ -805,10 +805,10 @@ const AddActivityDialog: React.FC<{
     mode: "onChange",
   });
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Activity for {item.opportunity_id}</h5>
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
+        <div className="max-h-[60vh]  min-h-[40vh] overflow-y-auto pr-4 -mr-4">
           <FormItem
             label="Activity"
             invalid={!!errors.item}
@@ -2404,16 +2404,37 @@ const OpportunitySelectedFooter = ({
 };
 
 const generateOpportunityMessage = (item: OpportunityItem): string => {
-  const parts = [
-    `Opportunity: ${item.opportunity_id}`,
-    `Product: ${item.product_name}`,
-    `Quantity: ${item.qty || ' '}`,
-    `Type: ${item.want_to || ' '}`,
-    `Company: ${item.company_name}`,
-    `Member: ${item.customer_name}`,
-    `Contact: ${item.mobile_no || item.email || 'Not Available'}`,
-    `Status: ${item.opportunity_status}`,
-  ];
+  const parts: string[] = [];
+
+  // These fields are likely always present, but we can still check
+  if (item.opportunity_id) {
+    parts.push(`Opportunity: ${item.opportunity_id}`);
+  }
+  if (item.product_name) {
+    parts.push(`Product: ${item.product_name}`);
+  }
+
+  // Special check for quantity to allow the number 0
+  if (item.qty !== null && item.qty !== undefined) {
+    parts.push(`Quantity: ${item.qty}`);
+  }
+
+  if (item.want_to) {
+    parts.push(`Type: ${item.want_to}`);
+  }
+ 
+  
+
+  // Handle contact info with a fallback
+  const contactInfo = item.mobile_no || item.email;
+  if (contactInfo) {
+    parts.push(`Contact: ${contactInfo}`);
+  }
+
+  if (item.opportunity_status) {
+    parts.push(`Status: ${item.opportunity_status}`);
+  }
+
   return parts.join('\n');
 };
 
@@ -3824,12 +3845,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
             return (
               <div className="flex items-start gap-3">
                 {" "}
-                <Avatar
-                  size={60}
-                  shape="square"
-                  src={item.product_image_url}
-                  className="bg-gray-100 dark:bg-gray-700"
-                />{" "}
+               
                 <div className="flex flex-col gap-0.5">
                   {" "}
                   <Tooltip title={item.product_name}>
@@ -3932,27 +3948,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                 </div>{" "}
                 <div className="pl-6 border-l ml-1.5 dark:border-gray-600 space-y-1.5">
                   {" "}
-                  <div className="flex items-center gap-2">
-                    {" "}
-                    <TbBuilding
-                      size={14}
-                      className="text-gray-400 dark:text-gray-500 flex-shrink-0"
-                    />{" "}
-                    <span className="font-medium text-gray-700 dark:text-gray-200">
-                      {" "}
-                      {row?.original.company_name}{" "}
-                    </span>{" "}
-                    <Tooltip
-                      title={item.member_verified ? "Verified" : "Not Verified"}
-                    >
-                      {" "}
-                      {item.member_verified ? (
-                        <BsCheckCircleFill className="text-emerald-500" />
-                      ) : (
-                        <BsXCircleFill className="text-red-500" />
-                      )}{" "}
-                    </Tooltip>{" "}
-                  </div>{" "}
+                 
                   <InfoLine icon={<TbFlag size={13} />} text={item.country} />{" "}
                   <InfoLine
                     icon={<TbBriefcase size={13} />}
@@ -4293,62 +4289,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
             </div>
           )}
 
-          {!isDashboard && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <Tooltip title="Click to show all opportunities">
-                <div onClick={() => handleCardClick("all")}>
-                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200 dark:border-blue-700")}>
-                    <div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100">
-                      <TbUsers size={24} />
-                    </div>
-                    <div>
-                      {renderCardContent(statusCounts.total)}
-                      <span className="text-xs">Total</span>
-                    </div>
-                  </Card>
-                </div>
-              </Tooltip>
-              <Tooltip title="Click to show active opportunities">
-                <div onClick={() => handleCardClick("active")}>
-                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200 dark:border-emerald-700")}>
-                    <div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100">
-                      <TbCircleCheck size={24} />
-                    </div>
-                    <div>
-                      {renderCardContent(statusCounts.active)}
-                      <span className="text-xs">Active</span>
-                    </div>
-                  </Card>
-                </div>
-              </Tooltip>
-              <Tooltip title="Click to show pending opportunities">
-                <div onClick={() => handleCardClick("pending")}>
-                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200 dark:border-yellow-700")}>
-                    <div className="p-2 rounded-md bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-100">
-                      <TbClockHour4 size={24} />
-                    </div>
-                    <div>
-                      {renderCardContent(statusCounts.pending)}
-                      <span className="text-xs">Pending</span>
-                    </div>
-                  </Card>
-                </div>
-              </Tooltip>
-              <Tooltip title="Click to show on-hold opportunities">
-                <div onClick={() => handleCardClick("on_hold")}>
-                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-gray-200 dark:border-gray-600")}>
-                    <div className="p-2 rounded-md bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100">
-                      <TbMinus size={24} />
-                    </div>
-                    <div>
-                      {renderCardContent(statusCounts.on_hold)}
-                      <span className="text-xs">On Hold</span>
-                    </div>
-                  </Card>
-                </div>
-              </Tooltip>
-            </div>
-          )}
+          
 
           <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
             <nav
