@@ -583,7 +583,7 @@ const preparePayloadForApi = (
     company_actual: getValue(formData.company_name) || "",
     company_code: formData.company_code || null,
     status: getValue(formData.status) || null,
-    continent_id: getValue(formData.continent_id) || '0',
+    continent_id: getValue(formData.continent_id) || '',
     country_id: getValue(formData.country_id) || null,
     state: formData.state || "",
     city: formData.city || "",
@@ -599,7 +599,7 @@ const preparePayloadForApi = (
     // botim: formData.botim || null,
     // skype: formData.skype || null,
     // we_chat: formData.we_chat || null,
-    linkedin_profile: formData.linkedin_profile || null,
+    linkedIn_profile: formData.linkedin_profile || null,
     facebook_profile: formData.facebook_profile || null,
     // instagram_profile: formData.instagram_profile || null,
     website: formData.website || null,
@@ -2367,7 +2367,17 @@ const PersonalDetailsComponent = ({
               name="mobile_no"
               control={control}
               render={({ field }) => (
-                <Input placeholder="Primary contact number" {...field} />
+                <Input
+                  placeholder="Primary contact number"
+                  {...field} // Spread the field props first
+                  // Then, override the onChange handler
+                  onChange={(e) => {
+                    // Remove any non-digit characters from the input
+                    const numericValue = e.target.value.replace(/\D/g, '');
+                    // Update the form state with the sanitized value
+                    field.onChange(numericValue);
+                  }}
+                />
               )}
             />
           </div>
@@ -2507,9 +2517,9 @@ const PersonalDetailsComponent = ({
             name="pincode"
             control={control}
             render={({ field }) => (
-              <Input 
-                placeholder="Enter pincode" 
-                {...field} 
+              <Input
+                placeholder="Enter pincode"
+                {...field}
                 onChange={(e) => {
                   const value = e.target.value;
                   // Allow only numeric input by replacing non-digit characters
@@ -2520,7 +2530,7 @@ const PersonalDetailsComponent = ({
             )}
           />
         </FormItem>
-         <FormItem
+        <FormItem
           label={isEditMode ? "Password (leave blank to keep current)" : "Password"}
           invalid={!!errors.password}
           errorMessage={errors.password?.message}
@@ -2552,7 +2562,7 @@ const PersonalDetailsComponent = ({
             )}
           />
         </FormItem>
-       
+
       </div>
     </Card>
   );
@@ -2593,7 +2603,14 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
               name="whatsapp_no"
               control={control}
               render={({ field }) => (
-                <Input placeholder="Enter WhatsApp number" {...field} />
+                <Input
+                  placeholder="Enter WhatsApp number"
+                  {...field}
+                  onChange={(e) => {
+                    const numericValue = e.target.value.replace(/\D/g, '');
+                    field.onChange(numericValue);
+                  }}
+                />
               )}
             />
           </div>
@@ -2626,7 +2643,14 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
               name="alternate_contact_number"
               control={control}
               render={({ field }) => (
-                <Input placeholder="Alternate contact" {...field} />
+                <Input
+                  placeholder="Alternate contact"
+                  {...field}
+                  onChange={(e) => {
+                    const numericValue = e.target.value.replace(/\D/g, '');
+                    field.onChange(numericValue);
+                  }}
+                />
               )}
             />
           </div>
@@ -2653,7 +2677,15 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
             name="landline_number"
             control={control}
             render={({ field }) => (
-              <Input type="tel" placeholder="Landline" {...field} />
+              <Input
+                type="tel"
+                placeholder="Landline"
+                {...field}
+                onChange={(e) => {
+                  const numericValue = e.target.value.replace(/\D/g, '');
+                  field.onChange(numericValue);
+                }}
+              />
             )}
           />
         </FormItem>
@@ -2666,7 +2698,15 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
             name="fax_number"
             control={control}
             render={({ field }) => (
-              <Input type="tel" placeholder="Fax" {...field} />
+              <Input
+                type="tel"
+                placeholder="Fax"
+                {...field}
+                onChange={(e) => {
+                  const numericValue = e.target.value.replace(/\D/g, '');
+                  field.onChange(numericValue);
+                }}
+              />
             )}
           />
         </FormItem>
@@ -2678,7 +2718,16 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
           <Controller
             name="botim"
             control={control}
-            render={({ field }) => <Input {...field} placeholder="Botim ID" />}
+            render={({ field }) => (
+              <Input
+                {...field}
+                placeholder="Botim ID"
+                onChange={(e) => {
+                  const numericValue = e.target.value.replace(/\D/g, '');
+                  field.onChange(numericValue);
+                }}
+              />
+            )}
           />
         </FormItem>
         <FormItem
@@ -2883,14 +2932,22 @@ const MemberFormComponent = (props: {
       name: z.string().trim().min(1, { message: "Name is Required!" }),
       email: z
         .string()
-        .trim().optional().nullable(),
+        .trim()
+        .email({ message: "Invalid email address" })
+        .optional()
+        .or(z.literal(""))
+        .nullable(),
       password: z
         .string()
         .optional()
         .refine((val) => !val || val.length >= 6, {
           message: "Password must be at least 6 characters if provided",
         }),
-      mobile_no: z.string().trim().min(1, "Mobile number is required"),
+      mobile_no: z
+        .string()
+        .trim()
+        .min(1, "Mobile number is required")
+        .regex(/^[0-9]*$/, { message: "Only numbers are allowed" }),
       contact_country_code: z
         .union([
           z.string(),
@@ -2929,6 +2986,21 @@ const MemberFormComponent = (props: {
       interested_category_ids: z
         .array(z.any())
         .min(1, { message: "Interested categories are required." }),
+
+      // Additional Validations for numeric and email fields
+      pincode: z.string().regex(/^[0-9]*$/, { message: "Only numbers are allowed" }).optional().or(z.literal("")),
+      whatsapp_no: z.string().regex(/^[0-9]*$/, { message: "Only numbers are allowed" }).optional().or(z.literal("")),
+      alternate_contact_number: z.string().regex(/^[0-9]*$/, { message: "Only numbers are allowed" }).optional().or(z.literal("")),
+      landline_number: z.string().regex(/^[0-9]*$/, { message: "Only numbers are allowed" }).optional().or(z.literal("")),
+      fax_number: z.string().regex(/^[0-9]*$/, { message: "Only numbers are allowed" }).optional().or(z.literal("")),
+      botim: z.string().regex(/^[0-9]*$/, { message: "Only numbers are allowed" }).optional().or(z.literal("")),
+      alternate_email: z
+        .string()
+        .trim()
+        .email({ message: "Invalid email address" })
+        .optional()
+        .or(z.literal(""))
+        .nullable(),
     })
     .passthrough();
   const formMethods = useForm<MemberFormSchema>({
