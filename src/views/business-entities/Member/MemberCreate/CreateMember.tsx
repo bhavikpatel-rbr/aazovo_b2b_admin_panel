@@ -2507,7 +2507,16 @@ const PersonalDetailsComponent = ({
             name="pincode"
             control={control}
             render={({ field }) => (
-              <Input placeholder="Enter pincode" {...field} />
+              <Input 
+                placeholder="Enter pincode" 
+                {...field} 
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Allow only numeric input by replacing non-digit characters
+                  const numericValue = value.replace(/\D/g, '');
+                  field.onChange(numericValue);
+                }}
+              />
             )}
           />
         </FormItem>

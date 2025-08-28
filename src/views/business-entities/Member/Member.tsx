@@ -1195,7 +1195,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
       </div>
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
       <DataTable menuName="member" selectable columns={filteredColumns} data={pageData} noData={!isLoading && pageData.length === 0} loading={isLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
-      <Drawer title="Filters" isOpen={isFilterDrawerOpen} width={500} onClose={() => setFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterMemberForm" type="submit">Apply</Button></div>}>
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} width={700} onClose={() => setFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterMemberForm" type="submit">Apply</Button></div>}>
         <UiForm id="filterMemberForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}>
           {/* START: Responsive Fix */}
           <div className="h-full overflow-y-auto">
