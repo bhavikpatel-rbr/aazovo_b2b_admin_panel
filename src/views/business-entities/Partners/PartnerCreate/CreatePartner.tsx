@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Control,
   Controller,
@@ -29,17 +29,16 @@ import {
   addpartnerAction,
   deletepartnerAction,
   editpartnerAction,
-  getCompanyAction,
   getContinentsAction,
-  getDocumentTypeAction,
   getCountriesAction,
+  getDocumentTypeAction,
   getpartnerAction,
   getpartnerByIdAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BiChevronRight } from "react-icons/bi";
-import { TbPlus, TbTrash, TbX, TbChevronLeft, TbChevronRight, TbFile, TbFileSpreadsheet, TbFileTypePdf } from "react-icons/tb";
+import { TbChevronLeft, TbChevronRight, TbFile, TbFileSpreadsheet, TbFileTypePdf, TbPlus, TbTrash, TbX } from "react-icons/tb";
 import { useSelector } from "react-redux";
 import { z } from "zod";
 
@@ -242,7 +241,6 @@ interface OtherDocItemFE {
   document?: File | string | null;
 }
 
-// FIX: Changed reference fields to simple strings
 interface ReferenceItemFE {
   id?: string;
   person_name?: string;
@@ -427,6 +425,7 @@ interface ApiSingleCompanyItem {
 
 
 // --- Helper to transform API data to CompanyFormSchema for EDIT mode ---
+// --- Helper to transform API data to CompanyFormSchema for EDIT mode ---
 const transformApiToFormSchema = (
   apiData: ApiSingleCompanyItem,
   documentTypeOptions: { label: string; value: any }[],
@@ -456,6 +455,10 @@ const transformApiToFormSchema = (
     return countryOptions.find(c => String(c.value) === String(id));
   }
 
+  // Helper to safely convert a value to a string for form inputs.
+  const toString = (value: any): string => (value !== null && value !== undefined) ? String(value) : "";
+
+
   return {
     id: apiData.id,
     partner_name: apiData.partner_name,
@@ -464,17 +467,19 @@ const transformApiToFormSchema = (
     alternate_email_id: apiData.alternate_email_id,
     support_email: apiData.support_email,
     notification_email: apiData.notification_email,
-    primary_contact_number: apiData.primary_contact_number,
+
+    primary_contact_number: toString(apiData.primary_contact_number),
     primary_contact_number_code: toSelectObject(apiData.primary_contact_number_code),
-    general_contact_number: apiData.general_contact_number,
+    general_contact_number: toString(apiData.general_contact_number),
     general_contact_number_code: toSelectObject(apiData.general_contact_number_code),
-    alternate_contact_number: apiData.alternate_contact_number,
+    alternate_contact_number: toString(apiData.alternate_contact_number),
     alternate_contact_number_code: toSelectObject(apiData.alternate_contact_number_code),
+
     ownership_type: toSelectObject(apiData.ownership_type),
     partner_address: apiData.partner_address,
     city: apiData.city,
     state: apiData.state,
-    zip_code: apiData.zip_code,
+    zip_code: toString(apiData.zip_code),
     country_id: findCountryById(apiData.country_id),
     continent_id: toSelectObjectFromId(apiData.continent_id, apiData.continent?.name),
     join_us_as: toSelectObject(apiData.join_us_as),
@@ -483,8 +488,8 @@ const transformApiToFormSchema = (
     pan_number: apiData.pan_number,
     trn_number: apiData.trn_number,
     tan_number: apiData.tan_number,
-    establishment_year: apiData.establishment_year,
-    no_of_employees: apiData.no_of_employees,
+    establishment_year: toString(apiData.establishment_year),
+    no_of_employees: toString(apiData.no_of_employees),
     partner_website: apiData.partner_website,
     partner_logo: apiData.partner_logo,
     status: toSelectObject(apiData.status),
@@ -517,25 +522,31 @@ const transformApiToFormSchema = (
     other_document_verified: toBoolean(apiData.other_document_verified),
     other_document_remark: apiData.other_document_remark,
 
-    primary_account_number: apiData.primary_account_number,
+    primary_account_number: toString(apiData.primary_account_number),
     primary_benificeiry_name: apiData.primary_benificeiry_name,
     primary_bank_name: apiData.primary_bank_name,
     primary_ifsc_code: apiData.primary_ifsc_code,
     primary_bank_verification_photo: apiData.primary_bank_verification_photo,
-    secondary_account_number: apiData.secondary_account_number,
+    secondary_account_number: toString(apiData.secondary_account_number),
     secondary_benificeiry_name: apiData.secondary_benificeiry_name,
     secondary_bank_name: apiData.secondary_bank_name,
     secondary_ifsc_code: apiData.secondary_ifsc_code,
     secondary_bank_verification_photo: apiData.secondary_bank_verification_photo,
     partner_bank_details: apiData.partner_bank_details?.map((b: any) => ({
-      bank_account_number: b.bank_account_number,
+      bank_account_number: toString(b.bank_account_number),
       bank_name: b.bank_name,
       ifsc_code: b.ifsc_code,
       type: toSelectObject(b.type),
       verification_photo: b.verification_photo,
     })),
 
-    partner_certificate: apiData.partner_certificate,
+    // --- START: THE FIX IS HERE ---
+    partner_certificate: apiData.partner_certificate?.map((cert: any) => ({
+      ...cert,
+      certificate_id: toString(cert.certificate_id),
+    })),
+    // --- END: THE FIX IS HERE ---
+
     partner_offices: apiData.partner_offices?.map((b: any) => ({
       office_type: toSelectObject(b.office_type),
       office_name: b.office_name,
@@ -543,11 +554,11 @@ const transformApiToFormSchema = (
       country_id: findCountryById(b.country_id),
       state: b.state,
       city: b.city,
-      zip_code: b.zip_code,
+      zip_code: toString(b.zip_code),
       gst_number: b.gst_number,
       contact_person: b.contact_person,
       office_email: b.office_email,
-      office_phone: b.office_phone
+      office_phone: toString(b.office_phone)
     })),
     member: apiData.partner_team_members?.map((m: any) => ({
       id: m.id,
@@ -555,20 +566,19 @@ const transformApiToFormSchema = (
       company_name: m.company_name,
       email: m.email,
       designation: m.designation,
-      number: m.number,
+      number: toString(m.number),
     })),
     billing_documents: apiData.billing_documents?.map((doc: any) => ({
       id: doc.id,
       document_name: documentTypeOptions.find(opt => String(opt.value) === String(doc.document_name)),
       document: doc.document
     })),
-    // FIX: Correctly map reference data from API to simple text fields
     partner_references: apiData.partner_references?.map((ref: any) => ({
       id: ref.id,
       person_name: ref.person_name,
       company_name: ref.company_name,
       email: ref.email,
-      number: ref.number,
+      number: toString(ref.number),
       remark: ref.remark,
     })),
     USER_ACCESS: toBoolean(apiData.kyc_verified),
@@ -581,28 +591,47 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
   const apiPayload = new FormData();
   const data: any = { ...formData };
 
-  const append = (key: string, value: any) => {
+  // This helper function is the single source of truth for converting form values
+  // into FormData-compatible primitives.
+  const appendValue = (key: string, value: any) => {
+    // 1. Prioritize File objects: If it's a file, append it and we're done.
+    // This also handles cases where a file might not have been selected (null/undefined).
+    if (value instanceof File) {
+      apiPayload.append(key, value);
+      return;
+    }
+
+    // 2. Handle null, undefined by appending an empty string.
     if (value === null || value === undefined) {
       apiPayload.append(key, "");
-    } else if (typeof value === 'boolean') {
-      apiPayload.append(key, value ? "1" : "0");
-    } else if (value instanceof File) {
-      apiPayload.append(key, value);
-    } else if (typeof value === 'object' && !Array.isArray(value) && value.value !== undefined) {
-      apiPayload.append(key, value.value);
-    } else if (Array.isArray(value)) {
-      const simpleValues = value.map(item => (typeof item === 'object' && item.value) ? item.value : item);
-      apiPayload.append(key, simpleValues.join(','));
-    } else {
-      apiPayload.append(key, String(value));
+      return;
     }
+
+    // 3. Handle our {label, value} objects from Select components.
+    if (typeof value === 'object' && !Array.isArray(value) && value.value !== undefined) {
+      // If the inner value is also null/undefined, append empty string.
+      apiPayload.append(key, value.value ?? "");
+      return;
+    }
+
+    // 4. Handle booleans, converting to '1' or '0'.
+    if (typeof value === 'boolean') {
+      apiPayload.append(key, value ? "1" : "0");
+      return;
+    }
+
+    // 5. For everything else (strings, numbers), convert to string and append.
+    // This will correctly handle values that are already strings or numbers from inputs.
+    apiPayload.append(key, String(value));
   };
 
+
   if (isEditMode && data.id) {
-    apiPayload.append("id", String(data.id));
-    apiPayload.append("_method", "PUT");
+    appendValue("id", data.id);
+    appendValue("_method", "PUT");
   }
 
+  // --- Main Fields ---
   const simpleFields: (keyof CompanyFormSchema)[] = [
     "partner_name", "company_name", "partner_address", "support_email", "status",
     "gst_number", "pan_number", "country_id", "join_us_as", "continent_id",
@@ -611,18 +640,19 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
     "general_contact_number_code", "alternate_email_id", "alternate_contact_number",
     "alternate_contact_number_code", "ownership_type", "tan_number", "trn_number",
     "establishment_year", "no_of_employees", "partner_website", "notification_email",
-    "primary_account_number","primary_benificeiry_name","secondary_benificeiry_name", "primary_bank_name", "primary_ifsc_code",
+    "primary_account_number", "primary_benificeiry_name", "secondary_benificeiry_name", "primary_bank_name", "primary_ifsc_code",
     "secondary_account_number", "secondary_bank_name", "secondary_ifsc_code",
     "billing_cycle"
   ];
-  simpleFields.forEach(key => append(key, data[key]));
+  simpleFields.forEach(key => appendValue(key, data[key]));
 
-  append("kyc_verified", data.USER_ACCESS);
-  append("enable_billing", data.BILLING_FIELD);
-  append("partner_logo", data.partner_logo);
-  append("primary_bank_verification_photo", data.primary_bank_verification_photo);
-  append("secondary_bank_verification_photo", data.secondary_bank_verification_photo);
+  appendValue("kyc_verified", data.USER_ACCESS);
+  appendValue("enable_billing", data.BILLING_FIELD);
+  appendValue("partner_logo", data.partner_logo);
+  appendValue("primary_bank_verification_photo", data.primary_bank_verification_photo);
+  appendValue("secondary_bank_verification_photo", data.secondary_bank_verification_photo);
 
+  // --- KYC Documents ---
   const kycDocsConfig = [
     { feFile: "agreement_file", beFile: "agreement_file", feVerify: "agreement_verified", beVerify: "agreement_verified", feRemark: "agreement_remark", beRemark: "agreement_remark" },
     { feFile: "office_photo_file", beFile: "office_photo_file", feVerify: "office_photo_verified", beVerify: "office_photo_verified", feRemark: "office_photo_remark", beRemark: "office_photo_remark" },
@@ -635,71 +665,78 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
     { feFile: "other_document_file", beFile: "other_document_file", feVerify: "other_document_verified", beVerify: "other_document_verified", feRemark: "other_document_remark", beRemark: "other_document_remark" },
   ];
   kycDocsConfig.forEach((doc: any) => {
-    append(doc.beFile, data[doc.feFile]);
-    append(doc.beVerify, data[doc.feVerify]);
-    append(doc.beRemark, data[doc.feRemark]);
+    appendValue(doc.beFile, data[doc.feFile]);
+    appendValue(doc.beVerify, data[doc.feVerify]);
+    appendValue(doc.beRemark, data[doc.feRemark]);
   });
 
+  // --- Array Fields ---
   (data.partner_bank_details || []).forEach((bank: any, index: number) => {
-    if (bank.bank_account_number) {
-      append(`partner_bank_details[${index}][bank_account_number]`, bank.bank_account_number);
-      append(`partner_bank_details[${index}][bank_name]`, bank.bank_name);
-      append(`partner_bank_details[${index}][ifsc_code]`, bank.ifsc_code);
-      append(`partner_bank_details[${index}][type]`, bank.type);
-      append(`partner_bank_details[${index}][verification_photo]`, bank.verification_photo);
+    if (bank.bank_account_number || bank.bank_name) {
+      appendValue(`partner_bank_details[${index}][bank_account_number]`, bank.bank_account_number);
+      appendValue(`partner_bank_details[${index}][bank_name]`, bank.bank_name);
+      appendValue(`partner_bank_details[${index}][ifsc_code]`, bank.ifsc_code);
+      appendValue(`partner_bank_details[${index}][type]`, bank.type);
+      appendValue(`partner_bank_details[${index}][verification_photo]`, bank.verification_photo);
     }
   });
 
   (data.partner_certificate || []).forEach((cert: any, index: number) => {
-    if (cert.certificate_id) {
-      append(`partner_certificate[${index}][certificate_id]`, cert.certificate_id);
-      append(`partner_certificate[${index}][certificate_name]`, cert.certificate_name);
-      append(`partner_certificate[${index}][upload_certificate]`, cert.upload_certificate);
+    if (cert.certificate_id || cert.certificate_name) {
+      appendValue(`partner_certificate[${index}][certificate_id]`, cert.certificate_id);
+      appendValue(`partner_certificate[${index}][certificate_name]`, cert.certificate_name);
+      appendValue(`partner_certificate[${index}][upload_certificate]`, cert.upload_certificate);
     }
   });
 
   (data.member || []).forEach((member: any, index: number) => {
-    append(`partner_team_members[${index}][person_name]`, member.person_name);
-    append(`partner_team_members[${index}][company_name]`, member.company_name);
-    append(`partner_team_members[${index}][email]`, member.email);
-    append(`partner_team_members[${index}][designation]`, member.designation);
-    append(`partner_team_members[${index}][number]`, member.number);
+    if (member.person_name) {
+      appendValue(`partner_team_members[${index}][person_name]`, member.person_name);
+      appendValue(`partner_team_members[${index}][company_name]`, member.company_name);
+      appendValue(`partner_team_members[${index}][email]`, member.email);
+      appendValue(`partner_team_members[${index}][designation]`, member.designation);
+      appendValue(`partner_team_members[${index}][number]`, member.number);
+    }
   });
 
-  // FIX: Prepare reference payload with simple text fields
   (data.partner_references || []).forEach((ref: any, index: number) => {
-    append(`partner_references[${index}][person_name]`, ref.person_name);
-    append(`partner_references[${index}][company_name]`, ref.company_name);
-    append(`partner_references[${index}][email]`, ref.email);
-    append(`partner_references[${index}][number]`, ref.number);
-    append(`partner_references[${index}][remark]`, ref.remark);
+    if (ref.person_name) {
+      appendValue(`partner_references[${index}][person_name]`, ref.person_name);
+      appendValue(`partner_references[${index}][company_name]`, ref.company_name);
+      appendValue(`partner_references[${index}][email]`, ref.email);
+      appendValue(`partner_references[${index}][number]`, ref.number);
+      appendValue(`partner_references[${index}][remark]`, ref.remark);
+    }
   });
 
   (data.billing_documents || []).forEach((doc: any, index: number) => {
-    if (doc.id) {
-      append(`billing_documents[${index}][id]`, doc.id);
+    if (doc.document_name) {
+      if (doc.id) {
+        appendValue(`billing_documents[${index}][id]`, doc.id);
+      }
+      appendValue(`billing_documents[${index}][document_name]`, doc.document_name);
+      appendValue(`billing_documents[${index}][document]`, doc.document);
     }
-    append(`billing_documents[${index}][document_name]`, doc.document_name);
-    append(`billing_documents[${index}][document]`, doc.document);
   });
 
   (data.partner_offices || []).forEach((office: any, index: number) => {
-    append(`partner_offices[${index}][office_type]`, office.office_type);
-    append(`partner_offices[${index}][office_name]`, office.office_name);
-    append(`partner_offices[${index}][country_id]`, office.country_id);
-    append(`partner_offices[${index}][state]`, office.state);
-    append(`partner_offices[${index}][city]`, office.city);
-    append(`partner_offices[${index}][zip_code]`, office.zip_code);
-    append(`partner_offices[${index}][gst_number]`, office.gst_number);
-    append(`partner_offices[${index}][address]`, office.address);
-    append(`partner_offices[${index}][contact_person]`, office.contact_person);
-    append(`partner_offices[${index}][office_email]`, office.office_email);
-    append(`partner_offices[${index}][office_phone]`, office.office_phone);
+    if (office.office_name) {
+      appendValue(`partner_offices[${index}][office_type]`, office.office_type);
+      appendValue(`partner_offices[${index}][office_name]`, office.office_name);
+      appendValue(`partner_offices[${index}][country_id]`, office.country_id);
+      appendValue(`partner_offices[${index}][state]`, office.state);
+      appendValue(`partner_offices[${index}][city]`, office.city);
+      appendValue(`partner_offices[${index}][zip_code]`, office.zip_code);
+      appendValue(`partner_offices[${index}][gst_number]`, office.gst_number);
+      appendValue(`partner_offices[${index}][address]`, office.address);
+      appendValue(`partner_offices[${index}][contact_person]`, office.contact_person);
+      appendValue(`partner_offices[${index}][office_email]`, office.office_email);
+      appendValue(`partner_offices[${index}][office_phone]`, office.office_phone);
+    }
   });
 
   return apiPayload;
 };
-
 // --- Navigator Component ---
 const companyNavigationList = [
   { label: "Partner Details", link: "PartnerDetails" },
@@ -757,13 +794,13 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
   useEffect(() => {
     // When country changes, clear the irrelevant trade info fields
     if (watchedCountry) {
-        if (isIndiaSelected) {
-            setValue('trn_number', '', { shouldValidate: true });
-            setValue('tan_number', '', { shouldValidate: true });
-        } else {
-            setValue('gst_number', '', { shouldValidate: true });
-            setValue('pan_number', '', { shouldValidate: true });
-        }
+      if (isIndiaSelected) {
+        setValue('trn_number', '', { shouldValidate: true });
+        setValue('tan_number', '', { shouldValidate: true });
+      } else {
+        setValue('gst_number', '', { shouldValidate: true });
+        setValue('pan_number', '', { shouldValidate: true });
+      }
     }
   }, [isIndiaSelected, watchedCountry, setValue]);
 
@@ -1241,13 +1278,13 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
             )}
           />
           {partnerLogoValue && (
-             <div className="mt-2 group relative w-24 h-24">
-               <img
-                 src={typeof partnerLogoValue === 'string' ? partnerLogoValue : URL.createObjectURL(partnerLogoValue)}
-                 alt="logo preview"
-                 className="h-full w-full object-contain border rounded-md"
-               />
-               <Button
+            <div className="mt-2 group relative w-24 h-24">
+              <img
+                src={typeof partnerLogoValue === 'string' ? partnerLogoValue : URL.createObjectURL(partnerLogoValue)}
+                alt="logo preview"
+                className="h-full w-full object-contain border rounded-md"
+              />
+              <Button
                 type="button"
                 shape="circle"
                 size="sm"
@@ -1257,8 +1294,8 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
                 color="red-500"
                 className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
                 title="Remove Logo"
-               />
-             </div>
+              />
+            </div>
           )}
         </FormItem>
         <FormItem
@@ -1302,9 +1339,14 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
         return (
           <Card key={item.id} className="mb-4 rounded-md border border-black" bodyClass="p-4">
             <div className="grid md:grid-cols-10 gap-3 items-center">
-              <FormItem label="Certificate ID" className="col-span-3">
+              <FormItem
+                label="Certificate ID"
+                className="col-span-3"
+                invalid={!!errors.partner_certificate?.[index]?.certificate_id}
+                errorMessage={errors.partner_certificate?.[index]?.certificate_id?.message}
+              >
                 <Controller
-                  name={`partner_certificate.${index}.certificate_id]`}
+                  name={`partner_certificate[${index}].certificate_id`}
                   control={control}
                   render={({ field }) => (
                     <Input placeholder="e.g., 12345" {...field} />
@@ -1313,7 +1355,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
               </FormItem>
               <FormItem label="Certificate Name" className="col-span-3">
                 <Controller
-                  name={`partner_certificate.${index}.certificate_name]`}
+                  name={`partner_certificate[${index}].certificate_name`}
                   control={control}
                   render={({ field }) => (
                     <Input placeholder="e.g., ISO 9001" {...field} />
@@ -1322,7 +1364,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
               </FormItem>
               <FormItem label="Upload Certificate" className="col-span-3">
                 <Controller
-                  name={`partner_certificate.${index}.upload_certificate]`}
+                  name={`partner_certificate[${index}].upload_certificate`}
                   control={control}
                   render={({ field: { onChange, ref } }) => (
                     <Input
@@ -1393,20 +1435,20 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
       {branchFields.map((item, index) => (
         <Card key={item.id} className="mb-4 border rounded-md border-black relative">
           <div className="grid md:grid-cols-4 gap-4 p-4">
-            <FormItem label="Office Type"><Controller name={`partner_offices[${index}][office_type]`} control={control} render={({ field }) => <Select placeholder="Select Office Type" options={officeTypeOptions} {...field} />} /></FormItem>
-            <FormItem label="Office Name"><Controller name={`partner_offices[${index}][office_name]`} control={control} render={({ field }) => <Input placeholder="e.g. Main Office" {...field} />} /></FormItem>
-            <FormItem label="Contact Person"><Controller name={`partner_offices[${index}][contact_person]`} control={control} render={({ field }) => <Input placeholder="Contact Person Name" {...field} />} /></FormItem>
-            <FormItem label="Office Email"><Controller name={`partner_offices[${index}][office_email]`} control={control} render={({ field }) => <Input type="email" placeholder="office@example.com" {...field} />} /></FormItem>
-            <FormItem label="Office Phone" invalid={!!errors.partner_offices?.[index]?.office_phone}>
-              <Controller name={`partner_offices[${index}][office_phone]`} control={control} render={({ field }) => <Input type="tel" placeholder="Office Phone" {...field} />} />
+            <FormItem label="Office Type"><Controller name={`partner_offices[${index}].office_type`} control={control} render={({ field }) => <Select placeholder="Select Office Type" options={officeTypeOptions} {...field} />} /></FormItem>
+            <FormItem label="Office Name" invalid={!!errors.partner_offices?.[index]?.office_name} errorMessage={errors.partner_offices?.[index]?.office_name?.message}><Controller name={`partner_offices[${index}].office_name`} control={control} render={({ field }) => <Input placeholder="e.g. Main Office" {...field} />} /></FormItem>
+            <FormItem label="Contact Person" invalid={!!errors.partner_offices?.[index]?.contact_person} errorMessage={errors.partner_offices?.[index]?.contact_person?.message}><Controller name={`partner_offices[${index}].contact_person`} control={control} render={({ field }) => <Input placeholder="Contact Person Name" {...field} />} /></FormItem>
+            <FormItem label="Office Email" invalid={!!errors.partner_offices?.[index]?.office_email} errorMessage={errors.partner_offices?.[index]?.office_email?.message}><Controller name={`partner_offices[${index}].office_email`} control={control} render={({ field }) => <Input type="email" placeholder="office@example.com" {...field} />} /></FormItem>
+            <FormItem label="Office Phone" invalid={!!errors.partner_offices?.[index]?.office_phone} errorMessage={errors.partner_offices?.[index]?.office_phone?.message}>
+              <Controller name={`partner_offices[${index}].office_phone`} control={control} render={({ field }) => <Input type="tel" placeholder="Office Phone" {...field} />} />
             </FormItem>
-            <FormItem label="GST/REG Number"><Controller name={`partner_offices[${index}][gst_number]`} control={control} render={({ field }) => <Input placeholder="GST or Registration Number" {...field} />} /></FormItem>
+            <FormItem label="GST/REG Number"><Controller name={`partner_offices[${index}].gst_number`} control={control} render={({ field }) => <Input placeholder="GST or Registration Number" {...field} />} /></FormItem>
             <div className="col-span-4 grid md:grid-cols-4 gap-4 border-t pt-4 mt-2">
-              <FormItem label="Country"><Controller name={`partner_offices[${index}][country_id]`} control={control} render={({ field }) => <Select placeholder="Select Country" options={countryOptions} {...field} />} /></FormItem>
-              <FormItem label="State"><Controller name={`partner_offices[${index}][state]`} control={control} render={({ field }) => <Input placeholder="Enter state" {...field} />} /></FormItem>
-              <FormItem label="City"><Controller name={`partner_offices[${index}][city]`} control={control} render={({ field }) => <Input placeholder="Enter city" {...field} />} /></FormItem>
-              <FormItem label="Post Code"><Controller name={`partner_offices[${index}][zip_code]`} control={control} render={({ field }) => <Input placeholder="Post Code" {...field} />} /></FormItem>
-              <FormItem label="Address" className="md:col-span-4"><Controller name={`partner_offices[${index}][address]`} control={control} render={({ field }) => <Input placeholder="Full Address" {...field} />} /></FormItem>
+              <FormItem label="Country"><Controller name={`partner_offices[${index}].country_id`} control={control} render={({ field }) => <Select placeholder="Select Country" options={countryOptions} {...field} />} /></FormItem>
+              <FormItem label="State"><Controller name={`partner_offices[${index}].state`} control={control} render={({ field }) => <Input placeholder="Enter state" {...field} />} /></FormItem>
+              <FormItem label="City"><Controller name={`partner_offices[${index}].city`} control={control} render={({ field }) => <Input placeholder="Enter city" {...field} />} /></FormItem>
+              <FormItem label="Post Code"><Controller name={`partner_offices[${index}].zip_code`} control={control} render={({ field }) => <Input placeholder="Post Code" {...field} />} /></FormItem>
+              <FormItem label="Address" className="md:col-span-4"><Controller name={`partner_offices[${index}].address`} control={control} render={({ field }) => <Input placeholder="Full Address" {...field} />} /></FormItem>
             </div>
           </div>
           <div className="absolute right-2 top-2">
@@ -1569,7 +1611,6 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
           return (
             <div key={doc.name}>
               <label className="flex items-center gap-2 mb-1">
-                {/* FIX: Disable checkbox if no file is uploaded */}
                 <Controller
                   name={doc.enabledName}
                   control={control}
@@ -1582,7 +1623,6 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                   )}
                 />
                 {doc.label}
-                {/* {doc.isConditionallyRequired && <span className="text-red-500">*</span>} */}
               </label>
               <FormItem
                 invalid={!!(errors as any)[doc.name]}
@@ -1688,25 +1728,25 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
   const renderPreviewWithRemove = (fileValue: File | string | null, onRemove: () => void) => {
     if (!fileValue) return null;
     const isFileObject = fileValue instanceof File;
-    return(
-        <div className="mt-2 group relative w-24 h-24">
-            {isImageUrl(fileValue) || (isFileObject && fileValue.type.startsWith('image/')) ? (
-                <img src={isFileObject ? URL.createObjectURL(fileValue) : String(fileValue)} alt="Bank photo" className="h-full w-full object-contain border rounded-md" />
-            ) : (
-                <DocumentPlaceholder fileName={isFileObject ? fileValue.name : 'document'} fileUrl={isFileObject ? URL.createObjectURL(fileValue) : String(fileValue)} />
-            )}
-            <Button
-                type="button"
-                shape="circle"
-                size="sm"
-                icon={<TbTrash />}
-                onClick={onRemove}
-                variant="solid"
-                color="red-500"
-                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Remove Photo"
-            />
-        </div>
+    return (
+      <div className="mt-2 group relative w-24 h-24">
+        {isImageUrl(fileValue) || (isFileObject && fileValue.type.startsWith('image/')) ? (
+          <img src={isFileObject ? URL.createObjectURL(fileValue) : String(fileValue)} alt="Bank photo" className="h-full w-full object-contain border rounded-md" />
+        ) : (
+          <DocumentPlaceholder fileName={isFileObject ? fileValue.name : 'document'} fileUrl={isFileObject ? URL.createObjectURL(fileValue) : String(fileValue)} />
+        )}
+        <Button
+          type="button"
+          shape="circle"
+          size="sm"
+          icon={<TbTrash />}
+          onClick={onRemove}
+          variant="solid"
+          color="red-500"
+          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+          title="Remove Photo"
+        />
+      </div>
     );
   }
 
@@ -1714,7 +1754,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
     <Card id="bankDetails">
       <h4 className="mb-6">Bank Details (Primary)</h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
-        <FormItem label="Primary Beneficiary Name">
+        <FormItem label="Primary Beneficiary Name" invalid={!!errors.primary_benificeiry_name} errorMessage={errors.primary_benificeiry_name?.message}>
           <Controller
             name="primary_benificeiry_name"
             control={control} render={({ field }) => (
@@ -1730,7 +1770,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
             )}
           />
         </FormItem>
-        <FormItem label="Primary Bank Name">
+        <FormItem label="Primary Bank Name" invalid={!!errors.primary_bank_name} errorMessage={errors.primary_bank_name?.message}>
           <Controller
             name="primary_bank_name"
             control={control}
@@ -1769,7 +1809,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
       </div>
       <hr className="my-3" /> <h4 className="mb-6">Bank Details (Secondary)</h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
-        <FormItem label="Secondary Beneficiary Name">
+        <FormItem label="Secondary Beneficiary Name" invalid={!!errors.secondary_benificeiry_name} errorMessage={errors.secondary_benificeiry_name?.message}>
           <Controller
             name="secondary_benificeiry_name"
             control={control} render={({ field }) => (
@@ -1785,7 +1825,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
             )}
           />
         </FormItem>
-        <FormItem label="Secondary Bank Name">
+        <FormItem label="Secondary Bank Name" invalid={!!errors.secondary_bank_name} errorMessage={errors.secondary_bank_name?.message}>
           <Controller
             name="secondary_bank_name"
             control={control}
@@ -1851,7 +1891,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 items-start">
               <FormItem label={`Type`}>
                 <Controller
-                  name={`partner_bank_details[${index}][type]`}
+                  name={`partner_bank_details[${index}].type`}
                   control={control}
                   render={({ field }) => (
                     <Select
@@ -1864,7 +1904,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
               </FormItem>
               <FormItem label={`Account Number`}>
                 <Controller
-                  name={`partner_bank_details[${index}][bank_account_number]`}
+                  name={`partner_bank_details[${index}].bank_account_number`}
                   control={control}
                   render={({ field }) => (
                     <Input placeholder="Account No." {...field} />
@@ -1873,7 +1913,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
               </FormItem>
               <FormItem label={`Bank Name`}>
                 <Controller
-                  name={`partner_bank_details[${index}][bank_name]`}
+                  name={`partner_bank_details[${index}].bank_name`}
                   control={control}
                   render={({ field }) => (
                     <Input type="text" {...field} placeholder="Enter Bank Name" />
@@ -1882,7 +1922,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
               </FormItem>
               <FormItem label={`IFSC Code`}>
                 <Controller
-                  name={`partner_bank_details[${index}][ifsc_code]`}
+                  name={`partner_bank_details[${index}].ifsc_code`}
                   control={control}
                   render={({ field }) => (
                     <Input placeholder="IFSC" {...field} />
@@ -1894,7 +1934,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
                 className="md:col-span-2"
               >
                 <Controller
-                  name={`partner_bank_details[${index}][verification_photo]`}
+                  name={`partner_bank_details[${index}].verification_photo`}
                   control={control}
                   render={({ field: { onChange, ref } }) => (
                     <Input
@@ -1928,8 +1968,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
 
 
 // --- ReferenceSection ---
-// FIX: Changed to use simple text inputs instead of dropdowns
-const ReferenceSection = ({ control }: FormSectionBaseProps) => {
+const ReferenceSection = ({ control, errors }: FormSectionBaseProps) => {
   const { fields, append, remove } = useFieldArray({
     control,
     name: "partner_references",
@@ -1946,15 +1985,15 @@ const ReferenceSection = ({ control }: FormSectionBaseProps) => {
       {fields.map((item, index) => (
         <Card key={item.id} className="mb-4 border-black relative rounded-md">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4 p-4">
-            <FormItem label="Person Name">
-              <Controller name={`partner_references[${index}][person_name]`} control={control} render={({ field }) => <Input placeholder="Person Name" {...field} />} />
+            <FormItem label="Person Name" invalid={!!errors.partner_references?.[index]?.person_name} errorMessage={errors.partner_references?.[index]?.person_name?.message}>
+              <Controller name={`partner_references[${index}].person_name`} control={control} render={({ field }) => <Input placeholder="Person Name" {...field} />} />
             </FormItem>
-            <FormItem label="Company Name">
-              <Controller name={`partner_references[${index}][company_name]`} control={control} render={({ field }) => <Input placeholder="Company Name" {...field} />} />
+            <FormItem label="Company Name" invalid={!!errors.partner_references?.[index]?.company_name} errorMessage={errors.partner_references?.[index]?.company_name?.message}>
+              <Controller name={`partner_references[${index}].company_name`} control={control} render={({ field }) => <Input placeholder="Company Name" {...field} />} />
             </FormItem>
-            <FormItem label="Email"><Controller name={`partner_references[${index}][email]`} control={control} render={({ field }) => <Input type="email" placeholder="Email ID" {...field} />} /></FormItem>
-            <FormItem label="Contact Number"><Controller name={`partner_references[${index}][number]`} control={control} render={({ field }) => <Input placeholder="Contact Number" {...field} />} /></FormItem>
-            <FormItem label="Remark" className="sm:col-span-full"><Controller name={`partner_references[${index}][remark]`} control={control} render={({ field }) => <Input placeholder="Add remarks here..." {...field} />} /></FormItem>
+            <FormItem label="Email" invalid={!!errors.partner_references?.[index]?.email} errorMessage={errors.partner_references?.[index]?.email?.message}><Controller name={`partner_references[${index}].email`} control={control} render={({ field }) => <Input type="email" placeholder="Email ID" {...field} />} /></FormItem>
+            <FormItem label="Contact Number" invalid={!!errors.partner_references?.[index]?.number} errorMessage={errors.partner_references?.[index]?.number?.message}><Controller name={`partner_references[${index}].number`} control={control} render={({ field }) => <Input placeholder="Contact Number" {...field} />} /></FormItem>
+            <FormItem label="Remark" className="sm:col-span-full"><Controller name={`partner_references[${index}].remark`} control={control} render={({ field }) => <Input placeholder="Add remarks here..." {...field} />} /></FormItem>
           </div>
           <div className="absolute right-2 top-2">
             <Button type="button" variant="plain" size="sm" icon={<TbTrash size={16} />} onClick={() => remove(index)}>Remove</Button>
@@ -1988,14 +2027,14 @@ const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) =>
           <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ document_name: undefined, document: undefined })}>Add Document</Button>
         </div>
         {fields.map((item, index) => {
-          const documentValue = watch(`billing_documents[${index}][document]`);
+          const documentValue = watch(`billing_documents[${index}].document`);
           const isFileObject = documentValue instanceof File;
           return (
             <Card key={item.id} className="border-black rounded-md" bodyClass="p-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
                 <FormItem label="Document Name" className="md:col-span-1">
                   <Controller
-                    name={`billing_documents[${index}][document_name]`}
+                    name={`billing_documents[${index}].document_name`}
                     control={control}
                     render={({ field }) => <Select
                       options={documentTypes}
@@ -2007,7 +2046,7 @@ const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) =>
                 <div className="md:col-span-2 grid grid-cols-2 gap-4 items-start">
                   <FormItem label="Upload Document" className="col-span-1">
                     <Controller
-                      name={`billing_documents[${index}][document]`}
+                      name={`billing_documents[${index}].document`}
                       control={control}
                       render={({ field: { onChange, ref } }) => <Input type="file" ref={ref} accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" onChange={(e) => onChange(e.target.files?.[0])} />}
                     />
@@ -2053,7 +2092,7 @@ const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) =>
 };
 
 // --- MemberManagementSection ---
-const MemberManagementSection = ({ control }: FormSectionBaseProps) => {
+const MemberManagementSection = ({ control, errors }: FormSectionBaseProps) => {
   const { fields, append, remove } = useFieldArray({
     control,
     name: "member",
@@ -2070,11 +2109,11 @@ const MemberManagementSection = ({ control }: FormSectionBaseProps) => {
       {fields.map((item, index) => (
         <Card key={item.id} className="mb-4 border-black relative rounded-md">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 p-4 items-start">
-            <FormItem label="Person Name"><Controller name={`member[${index}][person_name]`} control={control} render={({ field }) => <Input placeholder="Person Name" {...field} />} /></FormItem>
-            <FormItem label="Company Name"><Controller name={`member[${index}][company_name]`} control={control} render={({ field }) => <Input placeholder="Company Name" {...field} />} /></FormItem>
-            <FormItem label="Email ID"><Controller name={`member[${index}][email]`} control={control} render={({ field }) => <Input type="email" placeholder="Email ID" {...field} />} /></FormItem>
-            <FormItem label="Designation"><Controller name={`member[${index}][designation]`} control={control} render={({ field }) => <Input placeholder="e.g., CEO" {...field} />} /></FormItem>
-            <FormItem label="Contact Number"><Controller name={`member[${index}][number]`} control={control} render={({ field }) => <Input type="tel" placeholder="Contact Number" {...field} />} /></FormItem>
+            <FormItem label="Person Name" invalid={!!errors.member?.[index]?.person_name} errorMessage={errors.member?.[index]?.person_name?.message}><Controller name={`member[${index}].person_name`} control={control} render={({ field }) => <Input placeholder="Person Name" {...field} />} /></FormItem>
+            <FormItem label="Company Name"><Controller name={`member[${index}].company_name`} control={control} render={({ field }) => <Input placeholder="Company Name" {...field} />} /></FormItem>
+            <FormItem label="Email ID" invalid={!!errors.member?.[index]?.email} errorMessage={errors.member?.[index]?.email?.message}><Controller name={`member[${index}].email`} control={control} render={({ field }) => <Input type="email" placeholder="Email ID" {...field} />} /></FormItem>
+            <FormItem label="Designation" invalid={!!errors.member?.[index]?.designation} errorMessage={errors.member?.[index]?.designation?.message}><Controller name={`member[${index}].designation`} control={control} render={({ field }) => <Input placeholder="e.g., CEO" {...field} />} /></FormItem>
+            <FormItem label="Contact Number" invalid={!!errors.member?.[index]?.number} errorMessage={errors.member?.[index]?.number?.message}><Controller name={`member[${index}].number`} control={control} render={({ field }) => <Input type="tel" placeholder="Contact Number" {...field} />} /></FormItem>
             <div className="absolute right-2 top-2">
               <Button type="button" variant="plain" size="sm" icon={<TbTrash size={16} />} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10" onClick={() => remove(index)}>Remove</Button>
             </div>
@@ -2098,14 +2137,18 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   const { onFormSubmit, defaultValues, isEditMode, onDelete, isSubmitting } = props;
   const [activeSection, setActiveSection] = useState<string>(companyNavigationList[0].link);
 
+  // --- START: Enhanced Zod Schema with FIX ---
   const phoneRegex = /^\d{7,15}$/;
-  const optionalPhoneValidation = z.string().optional().or(z.literal('')).refine(val => !val || phoneRegex.test(val), { message: "Must be 7-15 digits if provided" });
+  const nameRegex = /^[a-zA-Z\s.'-]+$/;
+  const companyNameRegex = /^[a-zA-Z0-9\s.'\-&]+$/;
+  const addressComponentRegex = /^[a-zA-Z0-9\s.,'-]+$/;
+  const postalCodeRegex = /^[a-zA-Z0-9-]{3,10}$/;
   const selectObjectSchema = z.object({ value: z.any(), label: z.any() }).nullable().optional();
 
-  // Refined Zod Schema for perfect validation
   const companySchema = z.object({
-    partner_name: z.string().trim().min(1, "Partner Name is required"),
-    company_name: z.string().trim().min(1, "Company Name is required"),
+    // --- REQUIRED FIELDS ---
+    partner_name: z.string().trim().min(1, "Partner Name is required").regex(nameRegex, "Invalid characters in partner name"),
+    company_name: z.string().trim().min(1, "Company Name is required").regex(companyNameRegex, "Invalid characters in company name"),
     status: selectObjectSchema.refine(val => val?.value, "Status is required"),
     ownership_type: selectObjectSchema.refine(val => val?.value, "Ownership Type is required"),
     industrial_expertise: selectObjectSchema.refine(val => val?.value, "Industrial Expertise is required"),
@@ -2114,19 +2157,66 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     primary_email_id: z.string().trim().min(1, "Primary Email is required").email("Invalid email format"),
     primary_contact_number: z.string().trim().min(1, "Primary contact is required").regex(phoneRegex, "Must be 7-15 digits"),
     primary_contact_number_code: selectObjectSchema.refine(val => val?.value, "Country code is required"),
+
+    // --- OPTIONAL FIELDS with validation ---
+    state: z.string().regex(addressComponentRegex, "Invalid characters in state name").optional().or(z.literal("")).nullable(),
+    city: z.string().regex(addressComponentRegex, "Invalid characters in city name").optional().or(z.literal("")).nullable(),
+    zip_code: z.string().regex(postalCodeRegex, "Invalid postal code format").optional().or(z.literal("")).nullable(), // Postal Code
+    alternate_email_id: z.string().email("Invalid email format").optional().or(z.literal("")).nullable(),
+    alternate_contact_number: z.string().regex(phoneRegex, "Must be 7-15 digits").optional().or(z.literal("")).nullable(),
+    general_contact_number: z.string().regex(phoneRegex, "Must be 7-15 digits").optional().or(z.literal("")).nullable(), // Landline
+    partner_website: z.string().url("Invalid URL format").optional().or(z.literal("")).nullable(),
     establishment_year: z.string().trim().regex(/^\d{4}$/, "Invalid year format (YYYY).").optional().or(z.literal("")).nullable(),
+
+    // Bank Details
+    primary_benificeiry_name: z.string().regex(nameRegex, "Invalid characters in name").optional().or(z.literal("")).nullable(),
+    primary_bank_name: z.string().regex(nameRegex, "Invalid characters in bank name").optional().or(z.literal("")).nullable(),
+    secondary_benificeiry_name: z.string().regex(nameRegex, "Invalid characters in name").optional().or(z.literal("")).nullable(),
+    secondary_bank_name: z.string().regex(nameRegex, "Invalid characters in bank name").optional().or(z.literal("")).nullable(),
+
+    // --- ARRAY FIELDS ---
+    // --- ADD THIS ---
+    partner_certificate: z.array(z.object({
+      certificate_id: z.string()
+        .regex(/^\d*$/, "Certificate ID must only contain numbers") // Allows empty string or numbers
+        .optional().nullable(),
+    }).passthrough()).optional(),
+    // --- END ADD ---
+
+    partner_offices: z.array(z.object({
+      office_name: z.string().regex(companyNameRegex, "Invalid office name format").optional().or(z.literal("")).nullable(),
+      contact_person: z.string().regex(nameRegex, "Invalid person name format").optional().or(z.literal("")).nullable(),
+      office_email: z.string().email("Invalid email format").optional().or(z.literal("")).nullable(),
+      office_phone: z.string().regex(phoneRegex, "Must be 7-15 digits").optional().or(z.literal("")).nullable(),
+    }).passthrough()).optional(),
+
+    partner_references: z.array(z.object({
+      person_name: z.string().regex(nameRegex, "Invalid person name format").optional().or(z.literal("")).nullable(),
+      company_name: z.string().regex(companyNameRegex, "Invalid company name format").optional().or(z.literal("")).nullable(),
+      email: z.string().email("Invalid email format").optional().or(z.literal("")).nullable(),
+      number: z.string().regex(phoneRegex, "Must be 7-15 digits").optional().or(z.literal("")).nullable(),
+    }).passthrough()).optional(),
+
+    member: z.array(z.object({
+      person_name: z.string().regex(nameRegex, "Invalid person name format").optional().or(z.literal("")).nullable(),
+      designation: z.string().regex(nameRegex, "Invalid designation format").optional().or(z.literal("")).nullable(),
+      email: z.string().email("Invalid email format").optional().or(z.literal("")).nullable(),
+      number: z.string().regex(phoneRegex, "Must be 7-15 digits").optional().or(z.literal("")).nullable(),
+    }).passthrough()).optional(),
+
   }).passthrough().superRefine((data, ctx) => {
     // Dynamic validation based on country
     const isIndia = String(data.country_id?.value) === '101';
     if (isIndia) {
-        if(!data.gst_number || data.gst_number.trim() === '') {
-            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "GST Number is required for India.", path: ["gst_number"] });
-        }
-        if(!data.pan_number || data.pan_number.trim() === '') {
-            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Number is required for India.", path: ["pan_number"] });
-        }
+      if (!data.gst_number || data.gst_number.trim() === '') {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "GST Number is required for India.", path: ["gst_number"] });
+      }
+      if (!data.pan_number || data.pan_number.trim() === '') {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Number is required for India.", path: ["pan_number"] });
+      }
     }
   });
+  // --- END: Enhanced Zod Schema ---
 
 
   const formMethods = useForm<CompanyFormSchema>({
@@ -2232,7 +2322,6 @@ const CreatePartner = () => {
         try {
           const actionResult = await dispatch(getpartnerByIdAction(id)).unwrap();
           if (actionResult) {
-            // FIX: Remove unused partner/company options from transformer call
             setInitialData(transformApiToFormSchema(actionResult, documentTypeOptions, countryOptions));
           } else {
             toast.push(<Notification type="danger" title="Fetch Error">Partner data not found.</Notification>);
