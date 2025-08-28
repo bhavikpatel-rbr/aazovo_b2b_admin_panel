@@ -546,7 +546,7 @@ const StyledActionColumn = ({ onEdit, onViewDetail, onOpenModal, onSendEmail, on
       <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add Schedule</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("activity", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add Activity</span></Dropdown.Item>
+      <Dropdown.Item onClick={() => onOpenModal("activity", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add to active</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("match_opportunity", rowData)} className="flex items-center gap-2"><TbBulb size={18} /> <span className="text-xs">Match Opportunity</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("share", rowData)} className="flex items-center gap-2"><TbShare size={18} /> <span className="text-xs">Share Wall Link</span></Dropdown.Item>
     </Dropdown>

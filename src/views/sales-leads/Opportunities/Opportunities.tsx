@@ -2520,7 +2520,7 @@ const MainRowActionColumn = ({
           className="flex items-center gap-2"
         >
           {" "}
-          <TbAlarm size={18} /> <span className="text-xs">View Alert</span>{" "}
+          <TbAlarm size={18} /> <span className="text-xs">View Remarks</span>{" "}
         </Dropdown.Item>{" "} */}
         {/* <Dropdown.Item
           onClick={() => onOpenModal("Opportunity", item)}

@@ -973,7 +973,7 @@ const AccountDocumentActionColumn = ({
           onClick={() => onOpenModal("activity", rowData)}
         >
           <TbTagStarred size={18} />{" "}
-          <span className="text-xs">Add Activity</span>
+          <span className="text-xs">Add to active</span>
         </Dropdown.Item>
       </Dropdown>
     </div>

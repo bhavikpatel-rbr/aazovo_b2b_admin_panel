@@ -2822,13 +2822,13 @@ const CompanyActionColumn = ({
           onClick={() => onOpenModal("alert", rowData)}
           className="flex items-center gap-2"
         >
-          <TbAlarm /> View Alert
+          <TbAlarm /> View Remarks
         </Dropdown.Item>
         <Dropdown.Item
           onClick={() => onOpenModal("activity", rowData)}
           className="flex items-center gap-2"
         >
-          <TbTagStarred /> Add Activity
+          <TbTagStarred /> Add to active
         </Dropdown.Item>
         <Dropdown.Item
           onClick={() => onOpenModal("document", rowData)}

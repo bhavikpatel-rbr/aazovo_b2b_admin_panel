@@ -241,7 +241,7 @@ const ActionColumn = ({ rowData, onOpenModal }: {
                 <Dropdown.Item onClick={() => onOpenModal('whatsapp', rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /><span className="text-sm">Send Whatsapp</span></Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal('notification', rowData)} className="flex items-center gap-2"><TbBell size={18} /><span className="text-sm">Add Notification</span></Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal('schedule', rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18} /><span className="text-sm">Add Schedule</span></Dropdown.Item>
-                <Dropdown.Item onClick={() => onOpenModal('activity', rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /><span className="text-sm">Add Activity</span></Dropdown.Item>
+                <Dropdown.Item onClick={() => onOpenModal('activity', rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /><span className="text-sm">Add to active</span></Dropdown.Item>
             </Dropdown>
         </div>
     );
