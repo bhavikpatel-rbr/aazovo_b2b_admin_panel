@@ -1321,7 +1321,7 @@ const ViewCompanyDetailDialog: React.FC<{
                 {renderDetailItem("Address", office.address)}{" "}
                 {renderDetailItem("City", office.city)}{" "}
                 {renderDetailItem("State", office.state)}{" "}
-                {renderDetailItem("Zip Code", office.zip_code)}{" "}
+                {renderDetailItem("Postal Code", office.zip_code)}{" "}
                 {renderDetailItem("GST Number", office.gst_number)}{" "}
               </div>
             ))}{" "}
@@ -1412,7 +1412,7 @@ const AddCompanyNotificationDialog: React.FC<{
     }
   };
   return (
-    <Dialog isOpen={true} onClose={onClose}>
+    <Dialog isOpen={true}  width={700} onClose={onClose}>
       <h5 className="mb-4">Notify User about: {company.company_name}</h5>
       <UiForm onSubmit={handleSubmit(onSend)}>
         <div className="overflow-y-auto max-h-[60vh] pr-4">
@@ -1467,6 +1467,7 @@ const AddCompanyNotificationDialog: React.FC<{
             Cancel
           </Button>
           <Button
+          style={{ marginLeft: 5 }}
             variant="solid"
             type="submit"
             loading={isLoading}
@@ -1503,7 +1504,7 @@ const AddCompanyScheduleDialog: React.FC<{
   });
 
   return (
-    <Dialog isOpen={true} onClose={onClose}>
+    <Dialog isOpen={true}  width={700} onClose={onClose}>
       <h5 className="mb-4">Add Schedule for {company.company_name}</h5>
       <UiForm onSubmit={handleSubmit(onSubmit)}>
         <UiFormItem
@@ -1659,7 +1660,7 @@ const AssignCompanyTaskDialog: React.FC<{
     }
   };
   return (
-    <Dialog isOpen={true} onClose={onClose}>
+    <Dialog isOpen={true}  width={700} onClose={onClose}>
       <h5 className="mb-4">Assign Task for {company.company_name}</h5>
       <UiForm onSubmit={handleSubmit(onAssignTask)}>
         <div className="overflow-y-auto max-h-[60vh] pr-4">
@@ -1674,7 +1675,7 @@ const AssignCompanyTaskDialog: React.FC<{
               render={({ field }) => <Input {...field} autoFocus />}
             />
           </UiFormItem>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+         
             <UiFormItem
               label="Assign To"
               invalid={!!errors.assign_to}
@@ -1718,7 +1719,7 @@ const AssignCompanyTaskDialog: React.FC<{
                 )}
               />
             </UiFormItem>
-          </div>
+         
           <UiFormItem
             label="Due Date (Optional)"
             invalid={!!errors.due_date}
@@ -1770,7 +1771,7 @@ const ViewCompanyMembersDialog: React.FC<{
   company: CompanyItem;
   onClose: () => void;
 }> = ({ company, onClose }) => (
-  <Dialog isOpen={true} onClose={onClose} width={600}>
+  <Dialog isOpen={true} onClose={onClose} width={700}>
     {" "}
     <h5 className="mb-4">Members of {company.company_name}</h5>{" "}
     <div className="max-h-96 overflow-y-auto">
@@ -2107,7 +2108,7 @@ const AddActivityDialog: React.FC<{
   };
 
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <Dialog isOpen={true} onClose={onClose} width={700} onRequestClose={onClose}>
       <h5 className="mb-4">Add Activity Log for "{company.company_name}"</h5>
       <Form onSubmit={handleSubmit(onAddActivity)}>
         <FormItem
@@ -4372,7 +4373,7 @@ console.log("PendingBillData",PendingBillData);
       <Dialog
         isOpen={isPendingRequestModalOpen}
         onClose={() => setPendingRequestModalOpen(false)}
-        width={800}
+        width={700}
       >
         <h5 className="mb-4">Pending Enable Billing Requests</h5>
         <div className="max-h-[60vh] overflow-y-auto">
@@ -4396,7 +4397,7 @@ console.log("PendingBillData",PendingBillData);
             <tbody>
               {isPendingRequestLoading ? (
                     Array.from({ length: 3 }).map((_, i) => (
-                        <tr key={i} className="border-b dark:border-gray-700 animate-pulse">
+                        <tr key={i} className="dark:border-gray-700 animate-pulse">
                             <td className="py-3 px-4"><Skeleton className="h-4 w-3/4" /></td>
                             <td className="py-3 px-4"><Skeleton className="h-4 w-1/2" /></td>
                             <td className="py-3 px-4"><Skeleton className="h-8 w-20" /></td>

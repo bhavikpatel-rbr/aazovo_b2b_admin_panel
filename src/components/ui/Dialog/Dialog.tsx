@@ -2,21 +2,18 @@ import Modal from 'react-modal'
 import classNames from 'classnames'
 import CloseButton from '../CloseButton'
 import { motion } from 'framer-motion'
-import useWindowSize from '../hooks/useWindowSize'
 import type ReactModal from 'react-modal'
-import type { MouseEvent } from 'react'
+import type { MouseEvent, CSSProperties } from 'react'
 
 export interface DialogProps extends ReactModal.Props {
     closable?: boolean
     contentClassName?: string
     height?: string | number
     onClose?: (e: MouseEvent<HTMLSpanElement>) => void
-    width?: number
+    width?: string | number
 }
 
 const Dialog = (props: DialogProps) => {
-    const currentSize = useWindowSize()
-
     const {
         bodyOpenClassName,
         children,
@@ -24,13 +21,14 @@ const Dialog = (props: DialogProps) => {
         closable = true,
         closeTimeoutMS = 150,
         contentClassName,
+        // We get width and height directly to check if they are undefined
         height,
+        width,
         isOpen,
         onClose,
         overlayClassName,
         portalClassName,
         style,
-        width = 520,
         ...rest
     } = props
 
@@ -46,31 +44,45 @@ const Dialog = (props: DialogProps) => {
         />
     )
 
-    const contentStyle = {
-        content: {
-            inset: 'unset',
-        },
+    // --- Conditional Style Logic ---
+    // Start with base styles that are always applied
+    const dynamicContentStyle: CSSProperties = {
+        inset: 'unset',
+        maxWidth: '90vw', // Always responsive
+        maxHeight: '90vh', // Always responsive
+    }
+
+    // If a width is provided, use it as a fixed width.
+    // Otherwise, set a minimum width.
+    if (width !== undefined) {
+        dynamicContentStyle.width = width
+    } else {
+        dynamicContentStyle.minWidth = 700
+    }
+
+    // If a height is provided, use it as a fixed height.
+    // Otherwise, set a minimum height.
+    if (height !== undefined) {
+        dynamicContentStyle.height = height
+    } else {
+        dynamicContentStyle.minHeight = 700
+    }
+    // --- End of Conditional Style Logic ---
+
+
+    // Combine our dynamic styles with any user-provided styles
+    const finalStyle = {
+        content: dynamicContentStyle,
         ...style,
     }
 
-    if (width !== undefined) {
-        contentStyle.content.width = width
-
-        if (
-            typeof currentSize.width !== 'undefined' &&
-            currentSize.width <= width
-        ) {
-            contentStyle.content.width = 'auto'
-        }
-    }
-
-    if (height !== undefined) {
-        contentStyle.content.height = height
-    }
-
-    const defaultDialogContentClass = 'dialog-content'
-
-    const dialogClass = classNames(defaultDialogContentClass, contentClassName)
+    // Classes for the inner container to enable scrolling
+    const dialogClass = classNames(
+        'dialog-content',
+        'h-full', // Take full height of the container
+        'overflow-auto', // Add scrollbars if inner content overflows
+        contentClassName
+    )
 
     return (
         <Modal
@@ -88,7 +100,7 @@ const Dialog = (props: DialogProps) => {
             bodyOpenClassName={classNames('dialog-open', bodyOpenClassName)}
             ariaHideApp={false}
             isOpen={isOpen}
-            style={{ ...contentStyle }}
+            style={finalStyle} // Use the final calculated style
             closeTimeoutMS={closeTimeoutMS}
             {...rest}
         >

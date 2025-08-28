@@ -260,7 +260,7 @@ interface ReferenceItemFE {
   person_name?: string;
   company_id?: { label: string; value: string };
   number?: string;
-  number_code?: string
+  number_code?: { label: string; value: string };
   remark?: string;
 }
 interface CompanyMemberItemFE {
@@ -501,7 +501,7 @@ const transformApiToFormSchema = (
 
     company_certificate: apiData.company_certificate?.map(cert => ({
       id: String(cert.id),
-      certificate_id: cert.certificate_id,
+      certificate_id: String(cert.certificate_id),
       certificate_name: cert.certificate_name || '',
       upload_certificate: cert.upload_certificate || cert.upload_certificate_path || null,
     })) || [],
@@ -590,7 +590,7 @@ const transformApiToFormSchema = (
 
     company_members: apiData.company_member_management?.map(m => ({
       member_id: findOptionByValue(allMembers, m.member_id),
-      designation: m.designation || '',
+      designation: m.designation || 'Sales Executive',
       person_name: m.person_name || '',
       number: m.number || '',
     })) || [],
@@ -608,12 +608,12 @@ const transformApiToFormSchema = (
       photo_upload: item.photo_upload || null,
       remark: item.remark || '',
     })) || [],
-    company_references: apiData.company_references?.map(ref => ({
+  company_references: apiData.company_references?.map(ref => ({
       id: String(ref.id),
       person_name: ref.person_name || '',
       company_id: findOptionByValue(allCompaniesForRef, ref.company_id),
       number: ref.number || '',
-      number_code: ref.number_code || '',
+      number_code: ref.number_code ? { label: String(ref.number_code), value: String(ref.number_code) } : undefined,
       remark: ref.remark || '',
     })) || [],
   };
@@ -951,7 +951,7 @@ const CompanyDetailsSection = ({
           <Controller name="state" control={control} render={({ field }) => (<Input placeholder="Enter state" {...field} />)} />
         </FormItem>
         <FormItem label={<div>Postal Code</div>} invalid={!!errors.zip_code} errorMessage={errors.zip_code?.message as string}>
-          <Controller name="zip_code" control={control} render={({ field }) => <Input placeholder="ZIP / Postal Code" {...field} />} />
+          <Controller name="zip_code" control={control} render={({ field }) => <Input placeholder="Postal Code" {...field} />} />
         </FormItem>
         <FormItem label={<div>Company Address</div>} invalid={!!errors.company_address} errorMessage={errors.company_address?.message as string} className="md:col-span-5">
           <Controller name="company_address" control={control} render={({ field }) => (<Input placeholder="Company Address" {...field} />)} />
@@ -1155,8 +1155,8 @@ const CompanyDetailsSection = ({
                 <FormItem label={`City ${index + 1}`} invalid={!!errors.office_info?.[index]?.city} errorMessage={errors.office_info?.[index]?.city?.message as string}>
                   <Controller name={`office_info.${index}.city`} control={control} render={({ field }) => (<Input placeholder="Enter city" {...field} />)} />
                 </FormItem>
-                <FormItem label={`ZIP Code ${index + 1}`} invalid={!!errors.office_info?.[index]?.zip_code} errorMessage={errors.office_info?.[index]?.zip_code?.message as string}>
-                  <Controller name={`office_info.${index}.zip_code`} control={control} render={({ field }) => (<Input placeholder="ZIP Code" {...field} />)} />
+                <FormItem label={`Postal Code ${index + 1}`} invalid={!!errors.office_info?.[index]?.zip_code} errorMessage={errors.office_info?.[index]?.zip_code?.message as string}>
+                  <Controller name={`office_info.${index}.zip_code`} control={control} render={({ field }) => (<Input placeholder="Postal Code" {...field} />)} />
                 </FormItem>
               </div>
             </div>
@@ -2121,7 +2121,7 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
                 />
               </FormItem>
               <FormItem label={`Designation ${index + 1}`} invalid={!!errors.company_members?.[index]?.designation} errorMessage={errors.company_members?.[index]?.designation?.message as string}>
-                <Controller name={`company_members.${index}.designation`} control={control} render={({ field }) => (<Input placeholder="Designation" {...field} />)} />
+                <Controller name={`company_members.${index}.designation`} control={control} render={({ field }) => (<Input  disabled placeholder="Sales Executive" {...field} />)} />
               </FormItem>
               <FormItem label={`Person Name ${index + 1}`} invalid={!!errors.company_members?.[index]?.person_name} errorMessage={errors.company_members?.[index]?.person_name?.message as string}>
                 <Controller name={`company_members.${index}.person_name`} control={control} render={({ field }) => (<Input placeholder="Display Name" {...field} />)} />
@@ -2306,11 +2306,11 @@ const companySchema = z.object({
   })
   ).optional(),
 
-  company_references: z.array(z.object({
+ company_references: z.array(z.object({
     person_name: z.string().optional().nullable(),
     company_id: z.any().optional().nullable(),
     number: z.string().optional().nullable(),
-    number_code: z.string().optional().nullable(),
+    number_code: z.object({ value: z.string(), label: z.string() }).optional().nullable(),
     remark: z.string().optional().nullable(),
   })).optional(),
 

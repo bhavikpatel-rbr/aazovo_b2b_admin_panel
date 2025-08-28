@@ -164,6 +164,7 @@ const AddTaskModal = ({
     return (
         <Dialog
             isOpen={isOpen}
+            width={700}
             onClose={handleClose}
             onRequestClose={handleClose}
         >
@@ -189,7 +190,7 @@ const AddTaskModal = ({
                                 )}
                             />
                         </FormItem>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       
                             <FormItem
                                 label="Assign To"
                                 invalid={!!errors.assign_to}
@@ -219,7 +220,9 @@ const AddTaskModal = ({
                                     )}
                                 />
                             </FormItem>
-                            <FormItem
+                            
+                        
+                        <FormItem
                                 label="Priority"
                                 invalid={!!errors.priority}
                                 errorMessage={errors.priority?.message}
@@ -241,7 +244,6 @@ const AddTaskModal = ({
                                     )}
                                 />
                             </FormItem>
-                        </div>
                         <FormItem
                             label="Due Date (Optional)"
                             invalid={!!errors.due_date}

@@ -2144,7 +2144,7 @@ const AssignTaskDialog = ({
   };
 
   return (
-    <Dialog isOpen={true} onClose={onClose}>
+    <Dialog isOpen={true}  width={700} onClose={onClose}>
       <h5 className="mb-4">Assign Task for Doc: {document.document_number}</h5>
       <UiForm onSubmit={handleSubmit(onAssignTask)}>
         <UiFormItem
@@ -2158,7 +2158,7 @@ const AssignTaskDialog = ({
             render={({ field }) => <Input {...field} autoFocus />}
           />
         </UiFormItem>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
           <UiFormItem
             label="Assign To"
             invalid={!!errors.assign_to}
@@ -2182,7 +2182,9 @@ const AssignTaskDialog = ({
               )}
             />
           </UiFormItem>
-          <UiFormItem
+          
+        
+        <UiFormItem
             label="Priority"
             invalid={!!errors.priority}
             errorMessage={errors.priority?.message}
@@ -2202,7 +2204,6 @@ const AssignTaskDialog = ({
               )}
             />
           </UiFormItem>
-        </div>
         <UiFormItem
           label="Due Date (Optional)"
           invalid={!!errors.due_date}
