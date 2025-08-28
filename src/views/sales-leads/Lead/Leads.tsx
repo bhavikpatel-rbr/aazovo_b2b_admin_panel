@@ -546,14 +546,6 @@ const enquiryTypeColor: Record<EnquiryType | "default" | string, string> = {
 };
 
 // --- Dummy/Static Data ---
-const dummyProducts = [
-  { id: 1, name: "iPhone 15 Pro" },
-  { id: 2, name: "Galaxy S24 Ultra" },
-];
-const dummySalesPersons = [
-  { id: "SP001", name: "Alice Wonder" },
-  { id: "SP002", name: "Bob Builder" },
-];
 const dummyUsers = [
   { value: "user1", label: "Alice Johnson" },
   { value: "user2", label: "Bob Williams" },
@@ -2716,11 +2708,17 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     [getAllUserData]
   );
 
+  // --- FIX: Improved data mapping to be more robust and use real user data ---
   const mappedLeads: LeadListItem[] = useMemo(() => {
     if (!Array.isArray(LeadsData?.data?.data)) return [];
-    return LeadsData?.data?.data.map((apiLead: any): LeadListItem => {
+    return LeadsData.data.data.map((apiLead: any): LeadListItem => {
       const buyerInfo = apiLead.lead_member_detail || (typeof apiLead.lead_info?.buyer === 'object' && !Array.isArray(apiLead.lead_info.buyer) ? apiLead.lead_info.buyer : null);
       const sellerInfo = apiLead.source_supplier || (typeof apiLead.lead_info?.seller === 'object' && !Array.isArray(apiLead.lead_info.seller) ? apiLead.lead_info.seller : null);
+
+      const assignedId = apiLead.assigned_saled_id ?? apiLead.sales_person_id;
+      const salesPerson = Array.isArray(getAllUserData)
+        ? getAllUserData.find((user: any) => user.id === assignedId)
+        : null;
 
       return {
         id: apiLead.id,
@@ -2735,10 +2733,10 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         lead_intent: (apiLead.want_to as LeadIntent) || apiLead.lead_intent || "Buy",
         qty: apiLead.qty,
         target_price: apiLead.target_price,
-        assigned_sales_person_id: apiLead.sales_person_id,
+        assigned_sales_person_id: assignedId,
         sales_person_id: apiLead.sales_person_id,
         assigned_saled_id: apiLead.assigned_saled_id,
-        salesPersonName: apiLead.sales_person_name,
+        salesPersonName: salesPerson?.name || apiLead.sales_person_name,
         createdAt: new Date(apiLead.created_at),
         updatedAt: apiLead.updated_at ? new Date(apiLead.updated_at) : undefined,
         source_supplier_id: apiLead.source_member_id,
@@ -2751,14 +2749,16 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         formId: apiLead.form_id,
       }
     });
-  }, [LeadsData?.data?.data]);
+  }, [LeadsData?.data?.data, getAllUserData]); // Dependency on getAllUserData is crucial
 
   const { pageData, total, allFilteredAndSortedData } = useMemo((): {
     pageData: LeadListItem[];
     total: number;
     allFilteredAndSortedData: LeadListItem[];
   } => {
+    
     let processedData = mappedLeads;
+    console.log("processedData",processedData);
     if (filterCriteria.dateRange?.[0] || filterCriteria.dateRange?.[1]) {
       const [start, end] = filterCriteria.dateRange.map((d) =>
         d ? dayjs(d) : null
@@ -2801,12 +2801,14 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         (item) => !!item.productId && productIds.has(item.productId)
       );
     }
+    // --- FIX: Corrected filtering logic for sales person IDs ---
     if (filterCriteria.filterSalesPersonIds?.length) {
       const spIds = new Set(filterCriteria.filterSalesPersonIds);
       processedData = processedData.filter(
         (item) =>
-          !!item.assigned_sales_person_id &&
-          spIds.has(String(item.assigned_sales_person_id))
+          item.assigned_sales_person_id !== null &&
+          item.assigned_sales_person_id !== undefined &&
+          spIds.has(item.assigned_sales_person_id)
       );
     }
     if (tableData.query && tableData.query.trim() !== "") {
@@ -2900,6 +2902,18 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
       count++;
     return count;
   }, [filterCriteria]);
+
+  // --- NEW: Create dynamic product options for the filter dropdown ---
+  const productOptions = useMemo(() => {
+    if (!Array.isArray(mappedLeads)) return [];
+    const products = new Map<number, string>();
+    mappedLeads.forEach(lead => {
+      if (lead.productId && lead.productName && !products.has(lead.productId)) {
+        products.set(lead.productId, lead.productName.trim());
+      }
+    });
+    return Array.from(products, ([id, name]) => ({ value: id, label: name }));
+  }, [mappedLeads]);
 
   const handleSetTableData = useCallback(
     (data: Partial<TableQueries>) =>
@@ -3648,16 +3662,14 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
             label="Sales Person"
             errorMessage={assignFormMethods.formState.errors.salesPersonId?.message}
           >
+            {/* --- FIX: Use real user data instead of dummy data --- */}
             <Controller
               name="salesPersonId"
               control={assignFormMethods.control}
               render={({ field }) => (
                 <UiSelect
-                  options={dummySalesPersons.map((sp) => ({
-                    value: sp.id,
-                    label: sp.name,
-                  }))}
-                  value={dummySalesPersons.find((sp) => sp.id === field.value) ?? null}
+                  options={getAllUserDataOptions}
+                  value={getAllUserDataOptions.find((sp) => sp.value === field.value) ?? null}
                   onChange={(opt: any) => field.onChange(opt?.value)}
                   placeholder="Select Sales Person"
                 />
@@ -3808,27 +3820,25 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               )}
             />
           </FormItem>
-          <FormItem label="Product (Sourced)">
+          {/* --- FIX: Use dynamic productOptions instead of dummy data --- */}
+          <FormItem label="Product">
             <Controller
               name="filterProductIds"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <UiSelect
                   isMulti
-                  options={dummyProducts.map((p) => ({
-                    value: p.id,
-                    label: p.name,
-                  }))}
-                  value={dummyProducts
-                    .filter((o) => field.value?.includes(o.value))
-                    .map((p) => ({ value: p.id, label: p.name }))}
+                  options={productOptions}
+                  value={productOptions.filter((o) => field.value?.includes(o.value))}
                   onChange={(opts: any) =>
                     field.onChange(opts?.map((o: any) => o.value) || [])
                   }
+                  placeholder="Select products..."
                 />
               )}
             />
           </FormItem>
+          {/* --- FIX: Use real user data (getAllUserDataOptions) instead of dummy data --- */}
           <FormItem label="Sales Person">
             <Controller
               name="filterSalesPersonIds"
@@ -3836,16 +3846,12 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               render={({ field }) => (
                 <UiSelect
                   isMulti
-                  options={dummySalesPersons.map((p) => ({
-                    value: p.id,
-                    label: p.name,
-                  }))}
-                  value={dummySalesPersons
-                    .filter((o) => field.value?.includes(String(o.value)))
-                    .map((p) => ({ value: p.id, label: p.name }))}
+                  options={getAllUserDataOptions}
+                  value={getAllUserDataOptions.filter((o) => field.value?.includes(o.value))}
                   onChange={(opts: any) =>
                     field.onChange(opts?.map((o: any) => o.value) || [])
                   }
+                  placeholder="Select sales people..."
                 />
               )}
             />

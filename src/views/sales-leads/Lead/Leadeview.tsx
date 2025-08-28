@@ -227,8 +227,7 @@ const LeadView = () => {
         { key: 'seller_details', label: 'Seller details' },
         { key: 'buyer_details', label: 'Buyer details' },
         { key: 'opportunity_details', label: 'Opportunity details' },
-        { key: 'account', label: 'Account' },
-        { key: 'lead_logs', label: 'Lead Logs' },
+       
     ];
 
     useEffect(() => {
@@ -267,10 +266,7 @@ const LeadView = () => {
                 return <MemberDetailsTab title="Buyer Details" member={lead.lead_member_detail} />;
             case 'opportunity_details':
                 return <OpportunityDetailsTab opportunities={lead.opportunity} />;
-            case 'account':
-                return <EmptyState title="Account Information" message="Account and financial details will be displayed here." />;
-            case 'lead_logs':
-                return <EmptyState title="Lead Logs" message="A complete history of actions taken on this lead will appear here." />;
+           
             default:
                 return <ProductDetailsTab lead={lead} />;
         }

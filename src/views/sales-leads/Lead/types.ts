@@ -97,10 +97,9 @@ export const leadStatusOptions: { value: LeadStatus, label: string }[] = [
 ];
 
 export const enquiryTypeOptions: { value: EnquiryType, label: string }[] = [
-  { value: "Wall Listing", label: "Wall Listing" },
-  { value: "Manual Lead", label: "Manual Lead" },
-  { value: "From Inquiry", label: "From Inquiry" },
-  { value: "Other", label: "Other" },
+  { value: "Wall lead", label: "Wall lead" },
+  { value: "Manual lead", label: "Manual Lead" },
+  { value: "Product lead", label: "Product lead" }
 ];
 
 export const leadIntentOptions: { value: LeadIntent, label: string }[] = [
@@ -137,7 +136,7 @@ export const editLeadFormSchema = z.object({
   payment_term_id: z.number().nullish().optional(),
   location: z.string().nullish().optional(),
   eta: z.date().nullish().optional(),
-  
+
   // Hidden fields required for the payload
   lead_intent: z.string(),
   lead_status: z.string(),
