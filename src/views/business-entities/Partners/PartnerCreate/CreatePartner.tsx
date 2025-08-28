@@ -2141,7 +2141,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   const nameRegex = /^[a-zA-Z\s.'-]+$/;
   const companyNameRegex = /^[a-zA-Z0-9\s.'\-&]+$/;
   const addressComponentRegex = /^[a-zA-Z0-9\s.,'-]+$/;
-  const postalCodeRegex =  /^\d{1,100}$/;
+  const postalCodeRegex = /^\d{1,100}$/;
   const selectObjectSchema = z.object({ value: z.any(), label: z.any() }).nullable().optional();
 
   const companySchema = z.object({
@@ -2174,13 +2174,11 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     secondary_bank_name: z.string().regex(nameRegex, "Invalid characters in bank name").optional().or(z.literal("")).nullable(),
 
     // --- ARRAY FIELDS ---
-    // --- ADD THIS ---
     partner_certificate: z.array(z.object({
       certificate_id: z.string()
         .regex(/^\d*$/, "Certificate ID must only contain numbers") // Allows empty string or numbers
         .optional().nullable(),
     }).passthrough()).optional(),
-    // --- END ADD ---
 
     partner_offices: z.array(z.object({
       office_name: z.string().regex(companyNameRegex, "Invalid office name format").optional().or(z.literal("")).nullable(),
@@ -2196,12 +2194,40 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       number: z.string().regex(phoneRegex, "Must be 7-15 digits").optional().or(z.literal("")).nullable(),
     }).passthrough()).optional(),
 
-    member: z.array(z.object({
-      person_name: z.string().regex(nameRegex, "Invalid person name format").optional().or(z.literal("")).nullable(),
-      designation: z.string().regex(nameRegex, "Invalid designation format").optional().or(z.literal("")).nullable(),
-      email: z.string().email("Invalid email format").optional().or(z.literal("")).nullable(),
-      number: z.string().regex(phoneRegex, "Must be 7-15 digits").optional().or(z.literal("")).nullable(),
-    }).passthrough()).optional(),
+    // --- START: MODIFICATION FOR TEAM MANAGEMENT ---
+    member: z.array(
+      z.object({
+        person_name: z.string().regex(nameRegex, "Invalid person name format").optional().or(z.literal("")).nullable(),
+        company_name: z.string().regex(companyNameRegex, "Invalid company name format").optional().or(z.literal("")).nullable(),
+        designation: z.string().regex(nameRegex, "Invalid designation format").optional().or(z.literal("")).nullable(),
+        email: z.string().email("Invalid email format").optional().or(z.literal("")).nullable(),
+        number: z.string().regex(phoneRegex, "Must be 7-15 digits").optional().or(z.literal("")).nullable(),
+      })
+      .passthrough()
+      .superRefine((data, ctx) => {
+        const { person_name, company_name, email, designation, number } = data;
+        const isEntryStarted = [person_name, company_name, email, designation, number].some(
+          (value) => value != null && value !== ''
+        );
+        if (isEntryStarted) {
+          if (!person_name || person_name.trim() === '') {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: "Person Name is required.",
+              path: ['person_name'],
+            });
+          }
+          if (!number || number.trim() === '') {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: "Contact Number is required.",
+              path: ['number'],
+            });
+          }
+        }
+      })
+    ).optional(),
+    // --- END: MODIFICATION FOR TEAM MANAGEMENT ---
 
   }).passthrough().superRefine((data, ctx) => {
     // Dynamic validation based on country
