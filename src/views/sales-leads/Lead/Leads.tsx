@@ -915,16 +915,6 @@ type Member = {
   member_code: string;
 };
 
-// type LeadListItem = {
-//     lead_number: string;
-//     productName: string;
-//     customerName: string; // Could be buyer's name
-//     qty: number;
-//     target_price: number;
-//     seller?: Member;
-//     buyer?: Member;
-// };
-
 // --- REUSABLE HELPER COMPONENTS (from the example) ---
 
 const StatBox: React.FC<{
@@ -2654,14 +2644,9 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     data: null,
   });
 
-  // --- START: NEW STATE FOR START PROCESS MODAL ---
   const [isStartProcessModalOpen, setIsStartProcessModalOpen] = useState(false);
   const [leadForProcess, setLeadForProcess] = useState<LeadListItem | null>(null);
-  // --- END: NEW STATE ---
-
-  // --- START: NEW STATE FOR PENDING LEADS ---
   const [isPendingLeadsModalOpen, setIsPendingLeadsModalOpen] = useState(false);
-  // --- END: NEW STATE ---
 
   const handleOpenModal = useCallback(
     (type: LeadModalType, leadData: LeadListItem) =>
@@ -2679,7 +2664,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         await Promise.all([
           dispatch(getLeadAction()),
           dispatch(getAllUsersAction()),
-          dispatch(getFormBuilderAction()), // Fetches forms for the new modal
+          dispatch(getFormBuilderAction()),
         ]);
       } catch (error) {
         console.error("Failed to fetch initial data:", error);
@@ -2733,19 +2718,21 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
 
   const mappedLeads: LeadListItem[] = useMemo(() => {
     if (!Array.isArray(LeadsData?.data?.data)) return [];
-    return LeadsData?.data?.data.map(
-      (apiLead: any): LeadListItem => ({
-        id: apiLead.id,
+    return LeadsData?.data?.data.map((apiLead: any): LeadListItem => {
+      const buyerInfo = apiLead.lead_member_detail || (typeof apiLead.lead_info?.buyer === 'object' && !Array.isArray(apiLead.lead_info.buyer) ? apiLead.lead_info.buyer : null);
+      const sellerInfo = apiLead.source_supplier || (typeof apiLead.lead_info?.seller === 'object' && !Array.isArray(apiLead.lead_info.seller) ? apiLead.lead_info.seller : null);
 
+      return {
+        id: apiLead.id,
         lead_number: apiLead.lead_number || `LD-${apiLead.id}`,
         lead_status: apiLead.status || apiLead.lead_status || "New",
         enquiry_type: apiLead.lead_type || apiLead.enquiry_type || "Other",
         lead_info: apiLead.lead_info,
         productId: apiLead.product?.id,
         productName: apiLead.product?.name ?? " ",
-        customerId: String(apiLead.customer?.id ?? apiLead.customer_id ?? " "),
-        customerName: apiLead.customer?.name ?? " ",
-        lead_intent: (apiLead.want_to as LeadIntent) || "Buy",
+        customerId: String(buyerInfo?.id ?? apiLead.customer?.id ?? " "),
+        customerName: buyerInfo?.name ?? apiLead.customer?.name ?? " ",
+        lead_intent: (apiLead.want_to as LeadIntent) || apiLead.lead_intent || "Buy",
         qty: apiLead.qty,
         target_price: apiLead.target_price,
         assigned_sales_person_id: apiLead.sales_person_id,
@@ -2757,13 +2744,13 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         source_supplier_id: apiLead.source_member_id,
         sourceSupplierName: apiLead.source_supplier?.name,
         rawApiData: apiLead,
-        buyer: apiLead.lead_info?.buyer,
-        seller: apiLead.lead_info?.seller,
-        member_email: apiLead.customer?.email,
-        member_phone: apiLead.customer?.mobile_no,
+        buyer: buyerInfo,
+        seller: sellerInfo,
+        member_email: buyerInfo?.email || apiLead.customer?.email,
+        member_phone: buyerInfo?.mobile_no || apiLead.customer?.mobile_no,
         formId: apiLead.form_id,
-      })
-    );
+      }
+    });
   }, [LeadsData?.data?.data]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo((): {
@@ -2864,6 +2851,41 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     };
   }, [mappedLeads, tableData, filterCriteria]);
 
+  // --- MODIFIED: Calculate STATIC dashboard counts based on the complete dataset ---
+  const dashboardCounts = useMemo(() => {
+    const counts = {
+      total: 0,
+      today: 0,
+      new: 0,
+      deal_done: 0,
+      cancelled: 0,
+      product_lead: 0,
+      wall_lead: 0,
+      manual_lead: 0,
+    };
+
+    // Use mappedLeads which is the full, unfiltered list
+    mappedLeads.forEach(lead => {
+      counts.total++;
+
+      if (dayjs(lead.createdAt).isSame(dayjs(), 'day')) {
+        counts.today++;
+      }
+
+      // Use 'lead_status' and check for common variants for robustness
+      if (lead.lead_status === 'New') counts.new++;
+      if (lead.lead_status === 'Deal Done' || lead.lead_status === 'Won') counts.deal_done++;
+      if (lead.lead_status === 'Cancelled' || lead.lead_status === 'Lost') counts.cancelled++;
+
+      // Check enquiry type
+      if (lead.enquiry_type === 'Product lead') counts.product_lead++;
+      if (lead.enquiry_type === 'Wall lead') counts.wall_lead++;
+      if (lead.enquiry_type === 'Manual lead') counts.manual_lead++;
+    });
+
+    return counts;
+  }, [mappedLeads]); // This now ONLY depends on the full list of leads
+
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filterCriteria.filterStatuses?.length) count++;
@@ -2894,7 +2916,6 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     [navigate]
   );
 
-  // --- UPDATED: New handleStartProcess function to open the modal ---
   const handleStartProcess = useCallback((lead: LeadListItem) => {
     setLeadForProcess(lead);
     setIsStartProcessModalOpen(true);
@@ -3027,7 +3048,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
       setIsSubmittingDrawer(false);
     }
   }, [dispatch, editingLeadForDrawer, closeChangeStatusDrawer]);
-  const openViewDialog = useCallback((lead: LeadListItem) => { navigate(`/sales-leads/lead/view/${lead.id}`) }, []);
+  const openViewDialog = useCallback((lead: LeadListItem) => { navigate(`/sales-leads/lead/view/${lead.id}`) }, [navigate]);
   const closeViewDialog = useCallback(() => setLeadToView(null), []);
 
   const handleOpenExportModal = useCallback(() => {
@@ -3138,18 +3159,34 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     },
     [handleSetTableData, closeFilterDrawer]
   );
+
   const onClearFilters = useCallback(() => {
     const defaults = filterFormSchema.parse({});
     filterFormMethods.reset(defaults);
     setFilterCriteria(defaults);
     handleSetTableData({ pageIndex: 1, query: "" });
-    dispatch(getLeadAction());
     setIsFilterDrawerOpen(false);
-  }, [filterFormMethods, handleSetTableData, dispatch]);
-  const handleCardClick = (status: LeadStatus) => {
-    onClearFilters();
-    setFilterCriteria({ ...filterFormSchema.parse({}), filterStatuses: [status] });
-  };
+  }, [filterFormMethods, handleSetTableData]);
+
+  const handleCardFilterClick = useCallback((filterType: 'status' | 'enquiryType', value: string) => {
+    const newFilterCriteria: FilterFormData = {
+      ...filterFormSchema.parse({}),
+      [filterType === 'status' ? 'filterStatuses' : 'filterEnquiryTypes']: [value],
+    };
+    setFilterCriteria(newFilterCriteria);
+    handleSetTableData({ pageIndex: 1 });
+  }, [handleSetTableData]);
+
+  const handleTodayFilterClick = useCallback(() => {
+    const today = new Date();
+    const newFilterCriteria: FilterFormData = {
+      ...filterFormSchema.parse({}),
+      dateRange: [today, today],
+    };
+    setFilterCriteria(newFilterCriteria);
+    handleSetTableData({ pageIndex: 1 });
+  }, [handleSetTableData]);
+
   const handleRemoveFilter = useCallback(
     (key: keyof FilterFormData, value: string) => {
       setFilterCriteria((prev) => {
@@ -3222,7 +3259,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
             <div className="flex flex-col gap-1.5 text-xs">
               {hasBuyer ? (
                 <div>
-                  <div className="font-bold text-gray-800 dark:text-gray-200">Buyer : {buyer.member_code || ''}</div>
+                  <div className="font-bold text-gray-800 dark:text-gray-200">Buyer: {buyer.member_code || buyer.customer_code || ''}</div>
                   <div className="truncate">{buyer.name}</div>
                 </div>
               ) : (
@@ -3233,7 +3270,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
 
               {hasSeller ? (
                 <div>
-                  <div className="font-bold text-gray-800 dark:text-gray-200">Supplier : {seller.member_code || ''}</div>
+                  <div className="font-bold text-gray-800 dark:text-gray-200">Supplier: {seller.member_code || seller.customer_code || ''}</div>
                   <div className="truncate">{seller.name}</div>
                 </div>
               ) : (
@@ -3365,69 +3402,70 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               </div>
             </div>
           )}
+          {/* --- MODIFIED: Use the stable dashboardCounts for rendering cards --- */}
           {!isDashboard && (
             <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-8 mb-4 gap-2 ">
               <Tooltip title="Click to show all leads">
                 <div onClick={onClearFilters}>
                   <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}>
                     <div className="h-9 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbTrophy size={20} /></div>
-                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.total, "text-blue-500")}<span className="font-semibold text-[10px]">Total</span></div>
+                    <div className="flex flex-col">{renderCardContent(dashboardCounts.total, "text-blue-500")}<span className="font-semibold text-[10px]">Total</span></div>
                   </Card>
                 </div>
               </Tooltip>
               <Tooltip title="Click to show leads from today">
-                <div onClick={() => { }}>
+                <div onClick={handleTodayFilterClick}>
                   <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}>
                     <div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbCalendar size={20} /></div>
-                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.today, "text-violet-500")}<span className="font-semibold text-[10px]">Today</span></div>
+                    <div className="flex flex-col">{renderCardContent(dashboardCounts.today, "text-violet-500")}<span className="font-semibold text-[10px]">Today</span></div>
                   </Card>
                 </div>
               </Tooltip>
-              <Tooltip title="Click to show active leads">
-                <div onClick={() => handleCardClick("New")}>
+              <Tooltip title="Click to show new leads">
+                <div onClick={() => handleCardFilterClick('status', 'New')}>
                   <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}>
                     <div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbCircleCheck size={20} /></div>
-                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.new, "text-green-500")}<span className="font-semibold text-[10px]">New</span></div>
+                    <div className="flex flex-col">{renderCardContent(dashboardCounts.new, "text-green-500")}<span className="font-semibold text-[10px]">New</span></div>
                   </Card>
                 </div>
               </Tooltip>
               <Tooltip title="Click to show 'Deal Done' leads">
-                <div onClick={() => handleCardClick("Won")}>
+                <div onClick={() => handleCardFilterClick('status', 'Deal Done')}>
                   <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}>
                     <div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbFlag size={20} /></div>
-                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.deal_done, "text-green-500")}<span className="font-semibold text-[10px]">Deal Done</span></div>
+                    <div className="flex flex-col">{renderCardContent(dashboardCounts.deal_done, "text-green-500")}<span className="font-semibold text-[10px]">Deal Done</span></div>
                   </Card>
                 </div>
               </Tooltip>
               <Tooltip title="Click to show 'Cancelled' leads">
-                <div onClick={() => handleCardClick("Lost")}>
+                <div onClick={() => handleCardFilterClick('status', 'Cancelled')}>
                   <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}>
                     <div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbFlagX size={20} /></div>
-                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.cancelled, "text-red-500")}<span className="font-semibold text-[10px]">Cancelled</span></div>
+                    <div className="flex flex-col">{renderCardContent(dashboardCounts.cancelled, "text-red-500")}<span className="font-semibold text-[10px]">Cancelled</span></div>
                   </Card>
                 </div>
               </Tooltip>
               <Tooltip title="Click to show Product leads">
-                <div onClick={() => handleCardClick("Product Info")}>
+                <div onClick={() => handleCardFilterClick('enquiryType', 'Product lead')}>
                   <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}>
                     <div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbBox size={20} /></div>
-                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.product_lead, "text-violet-500")}<span className="font-semibold text-[10px]">Product Lead</span></div>
+                    <div className="flex flex-col">{renderCardContent(dashboardCounts.product_lead, "text-violet-500")}<span className="font-semibold text-[10px]">Product Lead</span></div>
                   </Card>
                 </div>
               </Tooltip>
               <Tooltip title="Click to show Wall leads">
-                <div onClick={() => handleCardClick("Wall Listing")}>
+                <div onClick={() => handleCardFilterClick('enquiryType', 'Wall lead')}>
                   <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200")}>
                     <div className="h-9 w-8 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbListDetails size={20} /></div>
-                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.wall_lead, "text-pink-500")}<span className="font-semibold text-[10px]">Wall Lead</span></div>
+                    <div className="flex flex-col">{renderCardContent(dashboardCounts.wall_lead, "text-pink-500")}<span className="font-semibold text-[10px]">Wall Lead</span></div>
                   </Card>
                 </div>
               </Tooltip>
               <Tooltip title="Click to show Manual leads">
-                <div onClick={() => handleCardClick("Manual Lead")}>
+                <div onClick={() => handleCardFilterClick('enquiryType', 'Manual lead')}>
                   <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200")}>
                     <div className="h-9 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbPennant size={20} /></div>
-                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.manual_lead, "text-orange-500")}<span className="font-semibold text-[10px]">Manual Lead</span></div>
+                    <div className="flex flex-col">{renderCardContent(dashboardCounts.manual_lead, "text-orange-500")}<span className="font-semibold text-[10px]">Manual Lead</span></div>
                   </Card>
                 </div>
               </Tooltip>
@@ -3839,11 +3877,9 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           Are you sure you want to delete lead{" "}
           <strong>{itemToDelete?.lead_number}</strong>? This action cannot be
           undone.
-          3260032
         </p>
       </ConfirmDialog>
 
-      {/* --- ADDED: Render the new modals --- */}
       <StartProcessModal
         isOpen={isStartProcessModalOpen}
         onClose={() => setIsStartProcessModalOpen(false)}
