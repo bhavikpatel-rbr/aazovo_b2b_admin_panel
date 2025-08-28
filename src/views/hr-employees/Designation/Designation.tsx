@@ -1,70 +1,70 @@
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
-import cloneDeep from "lodash/cloneDeep";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import cloneDeep from "lodash/cloneDeep";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
-import Tooltip from "@/components/ui/Tooltip";
+import DebouceInput from "@/components/shared/DebouceInput";
+import StickyFooter from "@/components/shared/StickyFooter";
+import { Avatar, Card, Checkbox, Dialog, Drawer, Dropdown, Form, FormItem, Input, Skeleton, Tag } from "@/components/ui";
 import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
-import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, Dialog } from "@/components/ui";
+import toast from "@/components/ui/toast";
+import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
 import {
-  TbPencil,
   TbChecks,
-  TbSearch,
-  TbFilter,
-  TbPlus,
   TbCloudUpload,
-  TbReload,
-  TbUsers,
+  TbColumns,
+  TbFilter,
+  TbPencil,
+  TbPlus,
   TbPresentation,
   TbPresentationAnalytics,
   TbPresentationOff,
-  TbUserX,
-  TbUser,
+  TbReload,
+  TbSearch,
   TbTrash,
-  TbColumns,
-  TbX,
+  TbUser,
   TbUserCircle,
+  TbUsers,
+  TbUserX,
+  TbX,
 } from "react-icons/tb";
 
 // Types
+import type { TableQueries } from "@/@types/common";
 import type {
-  OnSortParam,
   ColumnDef,
+  OnSortParam,
   Row,
 } from "@/components/shared/DataTable";
-import type { TableQueries } from "@/@types/common";
 
 // Redux
-import { useAppDispatch } from "@/reduxtool/store";
-import {
-  getDesignationsAction,
-  addDesignationAction,
-  editDesignationAction,
-  deleteDesignationAction,
-  deleteAllDesignationsAction,
-  getEmployeesAction,
-  getDepartmentsAction,
-  submitExportReasonAction,
-  getReportingTo,
-} from "@/reduxtool/master/middleware";
-import { useSelector, shallowEqual } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
-import classNames from "classnames";
+import {
+  addDesignationAction,
+  deleteAllDesignationsAction,
+  deleteDesignationAction,
+  editDesignationAction,
+  getDepartmentsAction,
+  getDesignationsAction,
+  getEmployeesAction,
+  getReportingTo,
+  submitExportReasonAction,
+} from "@/reduxtool/master/middleware";
+import { useAppDispatch } from "@/reduxtool/store";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 import { getMenuRights } from "@/utils/getMenuRights";
+import classNames from "classnames";
+import { shallowEqual, useSelector } from "react-redux";
 
 // --- Define Types ---
 export type DesignationItem = {
@@ -223,6 +223,46 @@ function exportDesignationsToCsv(filename: string, rows: DesignationItem[]) {
   );
   return false;
 }
+
+// --- Skeleton Component ---
+const DesignationListingSkeleton = () => (
+  <Container className="h-auto">
+    <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+        <Skeleton className="h-8 w-48 mb-2 sm:mb-0" />
+        <Skeleton className="h-10 w-28" />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Card key={i} bodyClass="flex gap-2 p-2">
+            <Skeleton className="h-12 w-12 rounded-md" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-5 w-10" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          </Card>
+        ))}
+      </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full mb-4">
+        <Skeleton className="h-10 flex-grow" />
+        <div className="flex gap-1">
+          <Skeleton className="h-10 w-10" />
+          <Skeleton className="h-10 w-10" />
+          <Skeleton className="h-10 w-24" />
+          <Skeleton className="h-10 w-28" />
+        </div>
+      </div>
+      <div className="mt-4 flex-grow overflow-auto">
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+      </div>
+    </AdaptiveCard>
+  </Container>
+);
+
 
 // --- ActionColumn Component ---
 const ActionColumn = ({
@@ -425,9 +465,9 @@ const DesignationListing = () => {
     reportingTo = [],
     Employees = [],
     departmentsData = [],
-    status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
 
+  const [masterLoadingStatus, setmasterLoadingStatus] = useState(false)
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<DesignationItem | null>(null);
@@ -468,9 +508,16 @@ const DesignationListing = () => {
   // --- END MODIFICATION ---
 
   useEffect(() => {
-    dispatch(getDesignationsAction());
-    dispatch(getEmployeesAction());
-    dispatch(getDepartmentsAction());
+
+    setmasterLoadingStatus(true)
+    Promise.all([
+      dispatch(getDesignationsAction()),
+      dispatch(getEmployeesAction()),
+      dispatch(getDepartmentsAction())
+    ]).finally(() => setmasterLoadingStatus(false))
+    // dispatch(getDesignationsAction());
+    // dispatch(getEmployeesAction());
+    // dispatch(getDepartmentsAction());
   }, [dispatch]);
 
   const departmentOptions: SelectOption[] = useMemo(
@@ -922,10 +969,15 @@ const DesignationListing = () => {
     </>
   );
 
-  const tableIsLoading = masterLoadingStatus === "loading" || isSubmitting || isDeleting;
+  const tableIsLoading = masterLoadingStatus || isDeleting;
+  const isLoading = masterLoadingStatus;
   const counts = rawDesignationsData?.counts || {};
   const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-2";
+
+  if (isLoading) {
+    return <DesignationListingSkeleton />;
+  }
 
   return (
     <>
