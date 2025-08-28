@@ -789,8 +789,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
   const { watch, setValue } = formMethods;
 
   const watchedCountry = watch("country_id");
-  const isIndiaSelected = String(watchedCountry?.value) === '101';
-
+  const isIndiaSelected = String(watchedCountry?.value) === "1";
   useEffect(() => {
     // When country changes, clear the irrelevant trade info fields
     if (watchedCountry) {
