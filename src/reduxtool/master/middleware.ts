@@ -5123,7 +5123,7 @@ export const addNotificationAction = createAsyncThunk<any, any>(
   }
 )
 
-export const getAllUsersAction = createAsyncThunk<any, any>(
+export const getAllUsersAction = createAsyncThunk<any>(
   "auth/get-all-usersAction",
   async (data, { rejectWithValue, dispatch }) => {
     try {

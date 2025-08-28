@@ -506,7 +506,7 @@ const CreateInquiry = () => {
                     );
                     return (
                       <Select
-                        isMulti
+                        // isMulti
                         placeholder="Select Department(s)"
                         options={departmentOptions}
                         isLoading={masterLoadingStatus === 'loading'}
