@@ -153,12 +153,12 @@ function exportChangeLogsToCsv(filename: string, rows: ChangeLogItem[]) {
       `"${row.id}"`,
       `"${new Date(row.timestamp).toLocaleString()}"`,
       `"${row.user?.name || row.userName}"`,
-      `"${row.user?.email || 'N/A'}"`,
-      `"${row.user?.roles?.[0]?.display_name || 'N/A'}"`,
+      `"${row.user?.email || ' '}"`,
+      `"${row.user?.roles?.[0]?.display_name || ' '}"`,
       `"${row.action}"`,
       `"${row.entity}"`,
       `"${String(row.description || '').replace(/"/g, '""')}"`,
-      `"${row.ip || 'N/A'}"`,
+      `"${row.ip || ' '}"`,
       `"${row.is_blocked === 1 ? 'Yes' : 'No'}"`,
     ].join(separator))
   ].join('\n');
@@ -637,7 +637,7 @@ const ActivityLog = () => {
               minute: "2-digit",
               hour12: true,
             })}`
-            : "N/A";
+            : " ";
           return (
             <div className="text-xs">
               <span className="text-gray-700">{formattedDate}</span>
@@ -661,7 +661,7 @@ const ActivityLog = () => {
   const cardClass = "rounded-lg transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg dark:hover:shadow-gray-900/50";
 
   const formatTimestamp = (dateString: string | null | undefined) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return ' ';
     return new Date(dateString).toLocaleString('en-US', {
       year: 'numeric', month: 'long', day: 'numeric',
       hour: '2-digit', minute: '2-digit', second: '2-digit'
@@ -769,7 +769,7 @@ const ActivityLog = () => {
                 {viewingItem.user ? (
                   <div className="flex items-center gap-2 -my-1">
                     <span>
-                      {`${viewingItem.user.name} (${viewingItem.user.roles?.[0]?.display_name || 'N/A'})`}
+                      {`${viewingItem.user.name} (${viewingItem.user.roles?.[0]?.display_name || ' '})`}
                     </span>
                   </div>
                 ) : (

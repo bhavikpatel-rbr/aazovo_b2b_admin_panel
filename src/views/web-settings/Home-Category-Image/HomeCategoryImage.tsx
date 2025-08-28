@@ -198,18 +198,18 @@ function exportHomeCategoriesToCsv(filename: string, rows: HomeCategoryItem[]) {
     const preparedRows: HomeCategoryExportItem[] = rows.map((row) => ({
         id: row.id,
         category_id: row.category_id,
-        category_name: row.category_name || 'N/A',
-        view_more: row.view_more || 'N/A',
+        category_name: row.category_name || ' ',
+        view_more: row.view_more || ' ',
         imageCount: row.images.length,
         imageUrlsString: row.images.map((img) => img.url).join('; '),
         created_at_formatted: row.created_at
             ? new Date(row.created_at).toLocaleString()
-            : 'N/A',
-        updated_by_name: row.updated_by_name || 'N/A',
-        updated_by_role: row.updated_by_role || 'N/A',
+            : ' ',
+        updated_by_name: row.updated_by_name || ' ',
+        updated_by_role: row.updated_by_role || ' ',
         updated_at_formatted: row.updated_at
             ? new Date(row.updated_at).toLocaleString()
-            : 'N/A',
+            : ' ',
     }))
 
     const separator = ','
@@ -1130,11 +1130,11 @@ const HomeCategoriesListing = () => {
                         props.row.original
                     const formattedDate = updated_at
                         ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString('en-US', { month: 'short' })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
-                        : 'N/A'
+                        : ' '
                     return (
                         <div className="text-xs">
                             <span>
-                                {updated_by_user?.name || 'N/A'}
+                                {updated_by_user?.name || ' '}
                                 {updated_by_user?.roles[0]?.display_name && (
                                     <>
                                         <br />
@@ -1532,11 +1532,11 @@ const HomeCategoriesListing = () => {
                                     <br />
                                     <p className="text-sm font-semibold">
                                         {editingItem.updated_by_user?.name ||
-                                            'N/A'}
+                                            ' '}
                                     </p>
                                     <p>
                                         {editingItem.updated_by_user?.roles[0]
-                                            ?.display_name || 'N/A'}
+                                            ?.display_name || ' '}
                                     </p>
                                 </div>
                                 <div className="text-right">
@@ -1557,7 +1557,7 @@ const HomeCategoriesListing = () => {
                                                   minute: '2-digit',
                                                   hour12: true,
                                               })}`
-                                            : 'N/A'}
+                                            : ' '}
                                     </span>
                                     <br />
                                     <span className="font-semibold">
@@ -1576,7 +1576,7 @@ const HomeCategoriesListing = () => {
                                                   minute: '2-digit',
                                                   hour12: true,
                                               })}`
-                                            : 'N/A'}
+                                            : ' '}
                                     </span>
                                 </div>
                             </div>

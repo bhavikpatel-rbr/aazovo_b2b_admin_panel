@@ -225,14 +225,14 @@ const CSV_KEYS_ROW_DATA_EXPORT: (keyof RowDataExportItem)[] = ["id", "countryNam
 function exportRowDataToCsvLogic(filename: string, rows: RowDataItem[], countryOptions: SelectOption[], categoryOptions: SelectOption[], brandOptions: SelectOption[]) {
   if (!rows || !rows.length) { return false; }
   const preparedRows: RowDataExportItem[] = rows.map((row) => ({
-    ...row, email: row.email || "N/A", company_name: row.company_name || "N/A", city: row.city || "N/A", remarks: row.remarks || "N/A", updated_by_name: row.updated_by_name || "N/A", updated_by_role: row.updated_by_role || "N/A",
+    ...row, email: row.email || " ", company_name: row.company_name || " ", city: row.city || " ", remarks: row.remarks || " ", updated_by_name: row.updated_by_name || " ", updated_by_role: row.updated_by_role || " ",
     countryNameDisplay: countryOptions.find((c) => c.value === String(row.country_id))?.label || String(row.country_id),
     categoryNameDisplay: categoryOptions.find((c) => c.value === String(row.category_id))?.label || String(row.category_id),
     brandNameDisplay: brandOptions.find((b) => b.value === String(row.brand_id))?.label || String(row.brand_id),
     statusDisplay: STATUS_OPTIONS_UI.find((s) => s.value === row.status)?.label || row.status,
     qualityDisplay: QUALITY_LEVELS_UI.find((q) => q.value === row.quality)?.label || row.quality,
-    created_at_formatted: row.created_at ? new Date(row.created_at).toLocaleString() : "N/A",
-    updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : "N/A",
+    created_at_formatted: row.created_at ? new Date(row.created_at).toLocaleString() : " ",
+    updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : " ",
   }));
   const separator = ",";
   const csvContent = CSV_HEADERS_ROW_DATA.join(separator) + "\n" + preparedRows.map((row) => CSV_KEYS_ROW_DATA_EXPORT.map((k) => { let cell = row[k as keyof RowDataExportItem]; if (cell === null || cell === undefined) cell = ""; else cell = String(cell).replace(/"/g, '""'); if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`; return cell; }).join(separator)).join("\n");
@@ -391,7 +391,7 @@ const RowDataListing = () => {
   const isDataReady = !initialLoading;
 
   const formatDate = (dateString?: string | null) => {
-    if (!dateString) return "N/A";
+    if (!dateString) return " ";
     const date = new Date(dateString);
     return `${date.getDate()} ${date.toLocaleString("en-US", { month: "short" })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
   };
@@ -692,7 +692,7 @@ const RowDataListing = () => {
       <RowDataSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting && selectedItems.length > 0} />
       <Drawer title={editingItem ? "Edit Raw Data" : "Add New Raw Data"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={520} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="rowDataForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? editingItem ? "Saving..." : "Adding..." : "Save"}</Button></div>}>
         <Form id="rowDataForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 relative pb-28">{renderDrawerForm()}
-          {editingItem && (<div className="absolute bottom-0 w-full"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br /><p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p><p>{editingItem.updated_by_user?.roles?.[0].display_name || "N/A"}</p></div><div className="text-right"><br /><span className="font-semibold">Created At:</span> <span>{formatDate(editingItem.created_at)}</span><br /><span className="font-semibold">Updated At:</span> <span>{formatDate(editingItem.updated_at)}</span></div></div></div>)}
+          {editingItem && (<div className="absolute bottom-0 w-full"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br /><p className="text-sm font-semibold">{editingItem.updated_by_user?.name || " "}</p><p>{editingItem.updated_by_user?.roles?.[0].display_name || " "}</p></div><div className="text-right"><br /><span className="font-semibold">Created At:</span> <span>{formatDate(editingItem.created_at)}</span><br /><span className="font-semibold">Updated At:</span> <span>{formatDate(editingItem.updated_at)}</span></div></div></div>)}
         </Form>
       </Drawer>
       <Dialog isOpen={!!viewingItem} onClose={closeViewDialog} onRequestClose={closeViewDialog} width={800}>

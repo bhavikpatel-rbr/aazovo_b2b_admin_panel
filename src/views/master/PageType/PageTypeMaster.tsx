@@ -53,7 +53,7 @@ const statusOptions: SelectOption[] = [{ value: 'Active', label: 'Active' }, { v
 function exportToCsvMemberType(filename: string, rows: MemberTypeItem[]) {
     if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; }
     const CSV_HEADERS = ["ID", "Page Type Name", "Status", "Updated By", "Updated Role", "Updated At"];
-    const preparedRows = (rows || []).map(row => ({ id: row.id, name: row.name, status: row.status, updated_by_name: row.updated_by_user?.name || "N/A", updated_by_role: row.updated_by_user?.roles?.[0]?.display_name || "N/A", updated_at: row.updated_at ? new Date(row.updated_at).toLocaleString() : "N/A", }));
+    const preparedRows = (rows || []).map(row => ({ id: row.id, name: row.name, status: row.status, updated_by_name: row.updated_by_user?.name || " ", updated_by_role: row.updated_by_user?.roles?.[0]?.display_name || " ", updated_at: row.updated_at ? new Date(row.updated_at).toLocaleString() : " ", }));
     const csvContent = [CSV_HEADERS.join(','), ...preparedRows.map(row => [row.id, `"${String(row.name).replace(/"/g, '""')}"`, row.status, `"${String(row.updated_by_name).replace(/"/g, '""')}"`, `"${String(row.updated_by_role).replace(/"/g, '""')}"`, `"${String(row.updated_at).replace(/"/g, '""')}"`].join(','))].join('\n');
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
@@ -195,7 +195,7 @@ const MemberTypeMaster = () => {
                             }
                         />
                         <div>
-                            <span>{updated_by_user?.name || "N/A"}</span>
+                            <span>{updated_by_user?.name || " "}</span>
                             <div className="text-xs">
                                 <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
                             </div>
@@ -365,11 +365,11 @@ const MemberTypeMaster = () => {
                             </b>
                             <br />
                             <p className="text-sm font-semibold">
-                                {editingMemberType.updated_by_user?.name || "N/A"}
+                                {editingMemberType.updated_by_user?.name || " "}
                             </p>
                             <p>
                                 {editingMemberType.updated_by_user?.roles[0]?.display_name ||
-                                    "N/A"}
+                                    " "}
                             </p>
                         </div>
                         <div className="text-right">
@@ -392,7 +392,7 @@ const MemberTypeMaster = () => {
                                         minute: "2-digit",
                                         hour12: true,
                                     })}`
-                                    : "N/A"}
+                                    : " "}
                             </span>
                             <br />
                             <span className="font-semibold">Updated At:</span>{" "}
@@ -414,7 +414,7 @@ const MemberTypeMaster = () => {
                                         minute: "2-digit",
                                         hour12: true,
                                     })}`
-                                    : "N/A"}
+                                    : " "}
                             </span>
                         </div>
                     </div>

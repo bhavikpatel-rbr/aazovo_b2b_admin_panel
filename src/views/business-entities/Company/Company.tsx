@@ -543,7 +543,7 @@ function exportToCsv(filename: string, rows: CompanyItem[]) {
     status: row.status,
     primary_contact_number: `${row.primary_contact_number_code} ${row.primary_contact_number}`,
     primary_email_id: row.primary_email_id,
-    country: row.country?.name || "N/A",
+    country: row.country?.name || " ",
     state: row.state,
     city: row.city,
     kyc_verified: row.kyc_verified ? "Yes" : "No",
@@ -551,7 +551,7 @@ function exportToCsv(filename: string, rows: CompanyItem[]) {
     pan_number: row.pan_number,
     created_at: row.created_at
       ? dayjs(row.created_at).format("DD MMM YYYY")
-      : "N/A",
+      : " ",
   }));
   const csvContent = [
     CSV_HEADERS.join(","),
@@ -933,7 +933,7 @@ const CompanyAlertModal: React.FC<{
             ) : alerts.length > 0 ? (
               <div className="space-y-8">
                 {alerts.map((alert, index) => {
-                  const userName = alert?.created_by_user?.name || "N/A";
+                  const userName = alert?.created_by_user?.name || " ";
                   const userInitial = userName.charAt(0).toUpperCase();
                   return (
                     <div
@@ -1180,7 +1180,7 @@ const ViewCompanyDetailDialog: React.FC<{
               "Alternate Contact",
               company.alternate_contact_number
                 ? `${company.alternate_contact_number_code} ${company.alternate_contact_number}`
-                : "N/A"
+                : " "
             )}{" "}
             {renderDetailItem("Website", company.company_website, true)}{" "}
           </div>{" "}
@@ -1222,7 +1222,7 @@ const ViewCompanyDetailDialog: React.FC<{
               "Billing Due Date",
               company.due_after_3_months_date
                 ? dayjs(company.due_after_3_months_date).format("D MMM YYYY")
-                : "N/A"
+                : " "
             )}{" "}
           </div>{" "}
         </Card>
@@ -1240,7 +1240,7 @@ const ViewCompanyDetailDialog: React.FC<{
                 {renderDetailItem("Account Number", bank.bank_account_number)}{" "}
                 {renderDetailItem("IFSC Code", bank.ifsc_code)}{" "}
                 {renderDetailItem("SWIFT Code", bank.swift_code)}{" "}
-                {renderDetailItem("Type", bank.type || "N/A")}{" "}
+                {renderDetailItem("Type", bank.type || " ")}{" "}
                 {bank.verification_photo &&
                   renderDetailItem(
                     "Verification Photo",
@@ -1946,7 +1946,7 @@ const TransactionsTab: React.FC<{ company: CompanyItem }> = ({ company }) => {
     return customTitles[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
   };
   const formatTransactionId = (id: number | undefined | null): string => {
-    if (id === null || id === undefined) return "N/A";
+    if (id === null || id === undefined) return " ";
     return String(id).padStart(5, '0');
   };
 
@@ -3567,7 +3567,7 @@ console.log("PendingBillData",PendingBillData);
                     className="no-underline "
                   >
                     <h6 className="text-xs font-semibold text-blue-600">
-                      {company_code || "N/A"}
+                      {company_code || " "}
                     </h6>
                     <span className="text-xs font-semibold leading-1">
                       {company_name}
@@ -3576,10 +3576,10 @@ console.log("PendingBillData",PendingBillData);
                 </div>
               </div>
               <span className="text-xs mt-1">
-                <b>Ownership Type:</b> {ownership_type || "N/A"}
+                <b>Ownership Type:</b> {ownership_type || " "}
               </span>{" "}
               <div className="text-xs text-gray-500">
-                {country?.name || "N/A"}
+                {country?.name || " "}
               </div>{" "}
             </div>
           );
@@ -3695,7 +3695,7 @@ console.log("PendingBillData",PendingBillData);
           } = row.original;
           const formattedDate = due_after_3_months_date
             ? dayjs(due_after_3_months_date).format("D MMM, YYYY")
-            : "N/A";
+            : " ";
 
           function formatDueDateInDays(dueDateString: any) {
 
@@ -3717,7 +3717,7 @@ console.log("PendingBillData",PendingBillData);
             } else if (diffDays === -1) {
               return `Yesterday (1 day overdue)`;
             } else {
-              return `N/A`;
+              return ` `;
             }
           }
           return (

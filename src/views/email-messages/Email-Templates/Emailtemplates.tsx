@@ -289,11 +289,11 @@ function exportToCsv(filename: string, rows: EmailTemplateItem[]) {
     departmentName: row.departmentName,
     designationName: row.designationName,
     status: row.status,
-    updated_by_name: row.updated_by_user?.name || "N/A",
-    updated_by_role: row.updated_by_user?.roles?.[0]?.display_name || "N/A",
+    updated_by_name: row.updated_by_user?.name || " ",
+    updated_by_role: row.updated_by_user?.roles?.[0]?.display_name || " ",
     updated_at_formatted: row.updated_at
       ? dayjs(row.updated_at).format("DD/MM/YYYY hh:mm A")
-      : "N/A",
+      : " ",
   }));
   const separator = ",";
   const csvContent =
@@ -1239,28 +1239,28 @@ const EmailTemplatesListing = () => {
           subCategoryOptions.find(
             (sc) => sc.value === String(item.sub_category_id)
           )?.label ||
-          (item.sub_category_id ? String(item.sub_category_id) : "N/A"),
+          (item.sub_category_id ? String(item.sub_category_id) : " "),
         brandName:
           item.brand?.name ||
           brandOptions.find((b) => b.value === String(item.brand_id))
             ?.label ||
-          (item.brand_id ? String(item.brand_id) : "N/A"),
+          (item.brand_id ? String(item.brand_id) : " "),
         roleName:
           item.role?.name ||
           roleOptions.find((r) => r.value === String(item.role_id))?.label ||
-          (item.role_id ? String(item.role_id) : "N/A"),
+          (item.role_id ? String(item.role_id) : " "),
         departmentName:
           item.department?.name ||
           departmentOptions.find(
             (d) => d.value === String(item.department_id)
           )?.label ||
-          (item.department_id ? String(item.department_id) : "N/A"),
+          (item.department_id ? String(item.department_id) : " "),
         designationName:
           item.designation?.name ||
           designationOptions.find(
             (d) => d.value === String(item.designation_id)
           )?.label ||
-          (item.designation_id ? String(item.designation_id) : "N/A"),
+          (item.designation_id ? String(item.designation_id) : " "),
       }))
       : [];
 
@@ -1429,12 +1429,12 @@ const EmailTemplatesListing = () => {
           <Tooltip
             title={
               props.row.original.subCategoryName ||
-              (props.getValue() ? String(props.getValue()) : "N/A")
+              (props.getValue() ? String(props.getValue()) : " ")
             }
           >
             <span className="truncate block max-w-[120px]">
               {props.row.original.subCategoryName ||
-                (props.getValue() ? String(props.getValue()) : "N/A")}
+                (props.getValue() ? String(props.getValue()) : " ")}
             </span>
           </Tooltip>
         ),
@@ -1447,12 +1447,12 @@ const EmailTemplatesListing = () => {
           <Tooltip
             title={
               props.row.original.departmentName ||
-              (props.getValue() ? String(props.getValue()) : "N/A")
+              (props.getValue() ? String(props.getValue()) : " ")
             }
           >
             <span className="truncate block max-w-[120px]">
               {props.row.original.departmentName ||
-                (props.getValue() ? String(props.getValue()) : "N/A")}
+                (props.getValue() ? String(props.getValue()) : " ")}
             </span>
           </Tooltip>
         ),
@@ -1502,7 +1502,7 @@ const EmailTemplatesListing = () => {
               />
               <div>
                 <span className="font-semibold">
-                  {updated_by_user?.name || "N/A"}
+                  {updated_by_user?.name || " "}
                 </span>
                 <div className="text-xs">
                   {updated_by_user?.roles?.[0]?.display_name || ""}
@@ -2025,11 +2025,11 @@ const EmailTemplatesListing = () => {
                   </b>
                   <br />
                   <p className="text-sm font-semibold">
-                    {editingTemplate.updated_by_user?.name || "N/A"}
+                    {editingTemplate.updated_by_user?.name || " "}
                   </p>
                   <p>
                     {editingTemplate.updated_by_user?.roles?.[0]
-                      ?.display_name || "N/A"}
+                      ?.display_name || " "}
                   </p>
                 </div>
                 <div className="text-right">
@@ -2040,7 +2040,7 @@ const EmailTemplatesListing = () => {
                       ? dayjs(editingTemplate.created_at).format(
                         "D MMM YYYY, h:mm A"
                       )
-                      : "N/A"}
+                      : " "}
                   </span>
                   <br />
                   <span className="font-semibold">Updated At:</span>{" "}
@@ -2049,7 +2049,7 @@ const EmailTemplatesListing = () => {
                       ? dayjs(editingTemplate.updated_at).format(
                         "D MMM YYYY, h:mm A"
                       )
-                      : "N/A"}
+                      : " "}
                   </span>
                 </div>
               </div>

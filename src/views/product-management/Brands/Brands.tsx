@@ -706,9 +706,9 @@ const Brands = () => {
                     SEO & Meta
                   </h6>
                   <div className="space-y-3">
-                    <DialogDetailRow label="Meta Title" value={brandToView.metaTitle || 'N/A'} />
-                    <DialogDetailRow label="Meta Description" value={brandToView.metaDescription || 'N/A'} preWrap />
-                    <DialogDetailRow label="Meta Keywords" value={brandToView.metaKeyword || 'N/A'} />
+                    <DialogDetailRow label="Meta Title" value={brandToView.metaTitle || ' '} />
+                    <DialogDetailRow label="Meta Description" value={brandToView.metaDescription || ' '} preWrap />
+                    <DialogDetailRow label="Meta Keywords" value={brandToView.metaKeyword || ' '} />
                   </div>
                 </div>
               )}

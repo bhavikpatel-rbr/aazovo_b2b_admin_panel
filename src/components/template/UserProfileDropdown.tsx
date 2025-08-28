@@ -289,9 +289,9 @@ console.log("response",response.payload);
                 <IoMdCheckmarkCircle className="text-blue-500" />
               </div>
               <div className="mt-2 flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-                <span>{userData?.department?.name || "N/A"}</span>
+                <span>{userData?.department?.name || " "}</span>
                 <br />
-                <span>{userData?.designation?.name || "N/A"}</span>
+                <span>{userData?.designation?.name || " "}</span>
               </div>
             </div>
           </div>

@@ -40,7 +40,7 @@ const DetailItem = ({ label, value }: { label: string; value: React.ReactNode })
     <div className="mb-4">
         <p className="text-gray-500 dark:text-gray-400 font-semibold">{label}</p>
         <p className="text-gray-700 dark:text-gray-200">
-            {value !== null && value !== undefined && value !== '' ? value : 'N/A'}
+            {value !== null && value !== undefined && value !== '' ? value : ' '}
         </p>
     </div>
 );
@@ -126,14 +126,14 @@ const ProfileSettings = () => {
                     <DetailItem label="Portal Email" value={profileData.portal_email} />
                     <DetailItem label="Email Verified" value={profileData.email_verified === "true" ? "Yes" : "No"} />
                     <DetailItem label="Mobile No." value={profileData.mobile_no} />
-                    <DetailItem label="Joining Date" value={profileData.joining_date ? dayjs(profileData.joining_date).format('MMMM D, YYYY') : 'N/A'} />
-                    <DetailItem label="Date of Birth" value={profileData.dob ? dayjs(profileData.dob).format('MMMM D, YYYY') : 'N/A'} />
+                    <DetailItem label="Joining Date" value={profileData.joining_date ? dayjs(profileData.joining_date).format('MMMM D, YYYY') : ' '} />
+                    <DetailItem label="Date of Birth" value={profileData.dob ? dayjs(profileData.dob).format('MMMM D, YYYY') : ' '} />
                     <DetailItem label="Gender" value={profileData.gender} />
                     <DetailItem label="Department ID" value={profileData.department_id} /> {/* Consider mapping to name */}
                     <DetailItem label="Designation ID" value={profileData.designation_id} /> {/* Consider mapping to name */}
                     <DetailItem label="Created At" value={dayjs(profileData.created_at).format('MMMM D, YYYY h:mm A')} />
                     <DetailItem label="Last Updated" value={dayjs(profileData.updated_at).format('MMMM D, YYYY h:mm A')} />
-                    <DetailItem label="Last Login" value={profileData.last_login_at ? dayjs(profileData.last_login_at).format('MMMM D, YYYY h:mm A') : 'N/A'} />
+                    <DetailItem label="Last Login" value={profileData.last_login_at ? dayjs(profileData.last_login_at).format('MMMM D, YYYY h:mm A') : ' '} />
                     {/* Add more DetailItem components for ALL other fields you want to display */}
                     {/* For example:
                     <DetailItem label="Nationality" value={profileData.nationality} />

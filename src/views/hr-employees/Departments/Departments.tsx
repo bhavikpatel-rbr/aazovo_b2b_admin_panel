@@ -160,11 +160,11 @@ function exportDepartmentsToCsv(filename: string, rows: DepartmentItem[]) {
     id: row.id,
     name: row.name,
     status: row.status,
-    updated_by_name: row.updated_by_user?.name || "N/A",
-    updated_by_role: row.updated_by_user?.roles?.[0]?.display_name || "N/A",
+    updated_by_name: row.updated_by_user?.name || " ",
+    updated_by_role: row.updated_by_user?.roles?.[0]?.display_name || " ",
     updated_at_formatted: row.updated_at
       ? new Date(row.updated_at).toLocaleString()
-      : "N/A",
+      : " ",
   }));
 
   const separator = ",";
@@ -788,7 +788,7 @@ const DepartmentListing = () => {
         size: 220,
         cell: (props) => {
           const { updated_at, updated_by_user } = props.row.original;
-          const formattedDate = updated_at ? formatCustomDateTime(updated_at) : "N/A";
+          const formattedDate = updated_at ? formatCustomDateTime(updated_at) : " ";
 
           return (
             <div className="flex items-center gap-2">
@@ -801,7 +801,7 @@ const DepartmentListing = () => {
                 onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
               />
               <div>
-                <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
+                <span className='font-semibold'>{updated_by_user?.name || ' '}</span>
                 <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
                 <div className="text-xs text-gray-500">{formattedDate}</div>
               </div>
@@ -1077,8 +1077,8 @@ const DepartmentListing = () => {
               <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                 <div>
                   <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
-                  <p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p>
-                  <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
+                  <p className="text-sm font-semibold">{editingItem.updated_by_user?.name || " "}</p>
+                  <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || " "}</p>
                 </div>
                 <div className="text-right">
                   <br />
@@ -1086,14 +1086,14 @@ const DepartmentListing = () => {
                   <span>
                     {editingItem.created_at
                       ? formatCustomDateTime(editingItem.created_at)
-                      : "N/A"}
+                      : " "}
                   </span>
                   <br />
                   <span className="font-semibold">Updated At:</span>{" "}
                   <span>
                     {editingItem.updated_at
                       ? formatCustomDateTime(editingItem.updated_at)
-                      : "N/A"}
+                      : " "}
                   </span>
                 </div>
               </div>

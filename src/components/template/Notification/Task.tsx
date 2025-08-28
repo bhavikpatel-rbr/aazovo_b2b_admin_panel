@@ -512,7 +512,7 @@ const _Tasks = ({ className }: { className?: string }) => {
             Array.isArray(getAllUserData)
                 ? getAllUserData.map((user: any) => ({
                     value: String(user.id),
-                    label: `(${user.employee_id}) - ${user.name || 'N/A'}`,
+                    label: `(${user.employee_id}) - ${user.name || ' '}`,
                 }))
                 : [],
         [getAllUserData]
@@ -570,7 +570,7 @@ const _Tasks = ({ className }: { className?: string }) => {
                             {loadingStatus !== 'loading' && filteredTasks.length > 0 && (
                                 <div className="flex flex-col gap-4">
                                     {filteredTasks.map((task) => {
-                                        const assignedToText = task.assign_to_users?.length > 3 ? `${task.assign_to_users.slice(0, 3).map(u => u.name).join(', ')} +${task.assign_to_users.length - 3}` : task.assign_to_users?.map(u => u.name).join(', ') || 'N/A';
+                                        const assignedToText = task.assign_to_users?.length > 3 ? `${task.assign_to_users.slice(0, 3).map(u => u.name).join(', ')} +${task.assign_to_users.length - 3}` : task.assign_to_users?.map(u => u.name).join(', ') || ' ';
                                         return (
                                             <div key={task.id} className="relative pl-4 pr-3 py-2 hover:shadow-lg transition-shadow duration-200 min-h-0">
                                                 {/* Priority Indicator Bar */}

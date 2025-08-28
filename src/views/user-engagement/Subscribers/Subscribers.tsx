@@ -619,7 +619,7 @@ const SubscribersListing = () => {
   const { control, handleSubmit, reset, formState: { errors, isValid } } = formMethods;
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema) });
-  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: `(${b.employee_id}) - ${b.name || 'N/A'}` })) : [], [getAllUserData]);
+  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: `(${b.employee_id}) - ${b.name || ' '}` })) : [], [getAllUserData]);
   const handleOpenModal = useCallback((type: ModalType, itemData: SubscriberItem) => { setModalState({ isOpen: true, type, data: itemData }); }, []);
   const handleCloseModal = useCallback(() => { setModalState({ isOpen: false, type: null, data: null }); }, []);
 
@@ -870,11 +870,11 @@ const SubscribersListing = () => {
       },
       {
         header: "Type", accessorKey: "subscriptionTypes", id: "subscriptionTypes", enableSorting: false,
-        cell: (props) => { const types = props.getValue() as string[]; if (!types || types.length === 0) return "N/A"; return (<div className="flex flex-wrap gap-1 max-w-[200px]">{types.map((type) => (<Tag key={type} className="capitalize whitespace-nowrap">{type}</Tag>))}</div>); },
+        cell: (props) => { const types = props.getValue() as string[]; if (!types || types.length === 0) return " "; return (<div className="flex flex-wrap gap-1 max-w-[200px]">{types.map((type) => (<Tag key={type} className="capitalize whitespace-nowrap">{type}</Tag>))}</div>); },
       },
       {
         header: "Status", accessorKey: "status", id: "status",
-        cell: (props) => { const statusVal = props.getValue() as string; return (<Tag className={`capitalize whitespace-nowrap text-center ${statusColors[statusVal] || statusColors.default}`}>{statusVal || "N/A"}</Tag>); },
+        cell: (props) => { const statusVal = props.getValue() as string; return (<Tag className={`capitalize whitespace-nowrap text-center ${statusColors[statusVal] || statusColors.default}`}>{statusVal || " "}</Tag>); },
       },
       {
         header: "Subscription Date", accessorKey: "subscribedDate", id: "subscribedDate", enableSorting: true, size: 180,
@@ -887,7 +887,7 @@ const SubscribersListing = () => {
           return (
             <div className="flex items-center gap-2">
               <Tooltip title="View Profile Picture"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /></Tooltip>
-              <div><span className="font-semibold">{updated_by_user?.name || "N/A"}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ""}</div><div className="text-xs text-gray-500">{formatCustomDateTime(raw_updated_at)}</div></div>
+              <div><span className="font-semibold">{updated_by_user?.name || " "}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ""}</div><div className="text-xs text-gray-500">{formatCustomDateTime(raw_updated_at)}</div></div>
             </div>
           );
         },

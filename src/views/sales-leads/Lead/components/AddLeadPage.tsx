@@ -167,7 +167,7 @@ const AddLeadPage = () => {
     if (!Array.isArray(memberData)) return [];
     return memberData.map((member) => ({
       value: member.id,
-      label: `(${member.customer_code}) - ${member.name || "N/A"}`,
+      label: `(${member.customer_code}) - ${member.name || " "}`,
     }));
   }, [memberData]);
 

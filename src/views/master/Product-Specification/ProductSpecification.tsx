@@ -56,7 +56,7 @@ const statusOptions: SelectOption[] = [{ value: 'Active', label: 'Active' }, { v
 function exportToCsvProductSpec(filename: string, rows: ProductSpecificationItem[]) {
   if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; }
   const CSV_HEADERS = ["ID", "Spec Name", "Country", "Status", "Notes", "Updated By", "Updated Role", "Updated At"];
-  const preparedRows = rows.map(row => ({ id: row.id, name: row.name, countryName: row.country?.name || "N/A", status: row.status, note_details: row.note_details || "N/A", updated_by_name: row.updated_by_user?.name || "N/A", updated_by_role: row.updated_by_user?.roles[0]?.display_name || "N/A", updated_at: row.updated_at ? new Date(row.updated_at).toLocaleString() : "N/A", }));
+  const preparedRows = rows.map(row => ({ id: row.id, name: row.name, countryName: row.country?.name || " ", status: row.status, note_details: row.note_details || " ", updated_by_name: row.updated_by_user?.name || " ", updated_by_role: row.updated_by_user?.roles[0]?.display_name || " ", updated_at: row.updated_at ? new Date(row.updated_at).toLocaleString() : " ", }));
   const csvContent = [CSV_HEADERS.join(','), ...preparedRows.map(row => [row.id, `"${String(row.name).replace(/"/g, '""')}"`, `"${String(row.countryName).replace(/"/g, '""')}"`, row.status, `"${String(row.note_details).replace(/"/g, '""')}"`, `"${String(row.updated_by_name).replace(/"/g, '""')}"`, `"${String(row.updated_by_role).replace(/"/g, '""')}"`, `"${String(row.updated_at).replace(/"/g, '""')}"`].join(','))].join('\n');
   const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement("a");
@@ -185,7 +185,7 @@ const ProductSpecification = () => {
   const columns: ColumnDef<ProductSpecificationItem>[] = useMemo(() => [
     { header: 'Flag Icon', accessorKey: 'icon_full_path', enableSorting: false, size: 80, cell: (props) => { const { icon_full_path } = props.row.original; return icon_full_path ? (<Avatar src={icon_full_path} size={30} shape="circle" icon={<TbPhoto />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(icon_full_path)} />) : (<span className="text-gray-400">-</span>); } },
     { header: "Spec Name", accessorKey: "name", enableSorting: true, size: 200 },
-    { header: "Country", accessorKey: "country.name", enableSorting: true, size: 150, cell: (props) => props.row.original.country?.name || 'N/A' },
+    { header: "Country", accessorKey: "country.name", enableSorting: true, size: 150, cell: (props) => props.row.original.country?.name || ' ' },
     {
       header: "Updated Info",
       accessorKey: "updated_at",
@@ -206,7 +206,7 @@ const ProductSpecification = () => {
               }
             />
             <div>
-              <span>{updated_by_user?.name || "N/A"}</span>
+              <span>{updated_by_user?.name || " "}</span>
               <div className="text-xs">
                 <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
               </div>
@@ -381,11 +381,11 @@ const ProductSpecification = () => {
               </b>
               <br />
               <p className="text-sm font-semibold">
-                {editingItem.updated_by_user?.name || "N/A"}
+                {editingItem.updated_by_user?.name || " "}
               </p>
               <p>
                 {editingItem.updated_by_user?.roles[0]?.display_name ||
-                  "N/A"}
+                  " "}
               </p>
             </div>
             <div className="text-right">
@@ -408,7 +408,7 @@ const ProductSpecification = () => {
                     minute: "2-digit",
                     hour12: true,
                   })}`
-                  : "N/A"}
+                  : " "}
               </span>
               <br />
               <span className="font-semibold">Updated At:</span>{" "}
@@ -430,7 +430,7 @@ const ProductSpecification = () => {
                     minute: "2-digit",
                     hour12: true,
                   })}`
-                  : "N/A"}
+                  : " "}
               </span>
             </div>
           </div>

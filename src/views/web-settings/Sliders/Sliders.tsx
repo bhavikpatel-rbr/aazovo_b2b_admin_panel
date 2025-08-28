@@ -63,7 +63,7 @@ import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Utility Functions ---
 function formatCustomDateTime(dateString: string | null | undefined): string {
-  if (!dateString) return 'N/A';
+  if (!dateString) return ' ';
   try {
     const date = new Date(dateString);
     return `${date.getDate()} ${date.toLocaleString("en-US", { month: "short" })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
@@ -131,7 +131,7 @@ function exportToCsvSlider(filename: string, rows: SliderItem[]) {
   if (!rows || !rows.length) return false;
   const CSV_HEADERS = ["ID", "Title", "Subtitle", "Button Text", "Image URL", "Display Page", "Link", "Source", "Status", "Index Position", "Slider Color", "Created At", "Updated By", "Updated Role", "Updated At",];
   type SliderCsvItem = Omit<SliderItem, "image" | "created_at" | "updated_at"> & { imageUrl: string | null; created_at_f: string; updated_at_f: string; updatedByName?: string; updatedByRole?: string };
-  const transformedRows: SliderCsvItem[] = rows.map((item) => ({ ...item, imageUrl: item.imageFullPath, updatedByName: item.updated_by_user?.name || "N/A", updatedByRole: item.updated_by_user?.roles?.[0]?.display_name || "N/A", created_at_f: new Date(item.created_at).toLocaleString(), updated_at_f: new Date(item.updated_at).toLocaleString(), }));
+  const transformedRows: SliderCsvItem[] = rows.map((item) => ({ ...item, imageUrl: item.imageFullPath, updatedByName: item.updated_by_user?.name || " ", updatedByRole: item.updated_by_user?.roles?.[0]?.display_name || " ", created_at_f: new Date(item.created_at).toLocaleString(), updated_at_f: new Date(item.updated_at).toLocaleString(), }));
   const csvKeys: (keyof SliderCsvItem)[] = ["id", "title", "subtitle", "buttonText", "imageUrl", "displayPage", "link", "source", "status", "indexPosition", "sliderColor", "created_at_f", "updatedByName", "updatedByRole", "updated_at_f",];
   const separator = ",";
   const csvContent = CSV_HEADERS.join(separator) + "\n" + transformedRows.map((row) => csvKeys.map((k) => { let cell = (row as any)[k] === null || (row as any)[k] === undefined ? "" : String((row as any)[k]).replace(/"/g, '""'); if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`; return cell; }).join(separator)).join("\n");
@@ -378,10 +378,10 @@ const Sliders = () => {
   // --- Column Definitions ---
   const baseColumns: ColumnDef<SliderItem>[] = useMemo(() => [
     { header: "Image", accessorKey: "imageFullPath", enableSorting: false, size: 60, cell: (props) => { const { imageFullPath, title } = props.row.original; return (<Avatar size={40} shape="circle" src={imageFullPath || undefined} icon={<TbPhoto />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => imageFullPath && openImageViewer(imageFullPath)}>{!imageFullPath && title ? title.charAt(0).toUpperCase() : ""}</Avatar>); }, },
-    { header: "Index", accessorKey: "indexPosition", enableSorting: true, size: 80, cell: (props) => props.row.original.indexPosition ?? "N/A", },
+    { header: "Index", accessorKey: "indexPosition", enableSorting: true, size: 80, cell: (props) => props.row.original.indexPosition ?? " ", },
     { header: "Title", accessorKey: "title", enableSorting: true, size: 220 },
     { header: "Display Page", accessorKey: "displayPage", enableSorting: true, size: 180, cell: (props) => displayPageOptionsConst.find((p) => p.value === props.row.original.displayPage)?.label || props.row.original.displayPage, },
-    { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; return (<div className="flex items-center gap-2"> <Avatar src={updated_by_user?.profile_pic_path || undefined} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path || null)} /> <div> <span>{updated_by_user?.name || 'N/A'}</span> <div className="text-xs"><b>{updated_by_user?.roles?.[0]?.display_name || ''}</b></div> <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div> </div> </div>); }, },
+    { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; return (<div className="flex items-center gap-2"> <Avatar src={updated_by_user?.profile_pic_path || undefined} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path || null)} /> <div> <span>{updated_by_user?.name || ' '}</span> <div className="text-xs"><b>{updated_by_user?.roles?.[0]?.display_name || ''}</b></div> <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div> </div> </div>); }, },
     { header: "Status", accessorKey: "status", enableSorting: true, size: 80, cell: (props) => { const status = props.row.original.status; return (<Tag className={classNames("capitalize font-semibold", statusColor[status] || statusColor.Inactive)}>{status}</Tag>); }, },
     { header: "Actions", id: "action", size: 80, meta: { cellClass: "text-center" }, cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />), },
   ], [openImageViewer, openEditDrawer, handleDeleteClick]);
@@ -427,11 +427,11 @@ const Sliders = () => {
             </b>
             <br />
             <p className="text-sm font-semibold">
-              {currentSlider.updated_by_user?.name || "N/A"}
+              {currentSlider.updated_by_user?.name || " "}
             </p>
             <p>
               {currentSlider.updated_by_user?.roles[0]?.display_name ||
-                "N/A"}
+                " "}
             </p>
           </div>
           <div className="text-right">
@@ -454,7 +454,7 @@ const Sliders = () => {
                   minute: "2-digit",
                   hour12: true,
                 })}`
-                : "N/A"}
+                : " "}
             </span>
             <br />
             <span className="font-semibold">Updated At:</span>{" "}
@@ -476,7 +476,7 @@ const Sliders = () => {
                   minute: "2-digit",
                   hour12: true,
                 })}`
-                : "N/A"}
+                : " "}
             </span>
           </div>
         </div>

@@ -181,7 +181,7 @@ const DetailItem = ({ label, value }: { label: string; value: React.ReactNode })
         <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
         <div className="text-sm font-semibold">
             {(value === '' || value === undefined || value === null) ?
-                <span className="text-gray-400 dark:text-gray-500">N/A</span> : value
+                <span className="text-gray-400 dark:text-gray-500"> </span> : value
             }
         </div>
     </div>
@@ -198,7 +198,7 @@ const ListAsTags = ({ list }: { list: (string | number)[] | undefined | null }) 
     }
 
     if (!Array.isArray(items) || items.length === 0) {
-        return <span className="text-gray-400 dark:text-gray-500">N/A</span>;
+        return <span className="text-gray-400 dark:text-gray-500"> </span>;
     }
     return (
         <div className="flex flex-wrap gap-1">
@@ -208,7 +208,7 @@ const ListAsTags = ({ list }: { list: (string | number)[] | undefined | null }) 
 };
 
 const formatDate = (dateString?: string | null, includeTime = false) => {
-    if (!dateString) return <span className="text-gray-400 dark:text-gray-500">N/A</span>;
+    if (!dateString) return <span className="text-gray-400 dark:text-gray-500"> </span>;
     const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
     if (includeTime) {
         options.hour = '2-digit';
@@ -228,11 +228,11 @@ const renderPermission = (value?: boolean | null | string) => {
     if (value) {
         return <span className="capitalize">{String(value)}</span>;
     }
-    return <span className="text-gray-400 dark:text-gray-500">N/A</span>;
+    return <span className="text-gray-400 dark:text-gray-500"> </span>;
 };
 
 const renderLink = (url?: string | null, text?: string) => {
-    if (!url) return <span className="text-gray-400 dark:text-gray-500">N/A</span>;
+    if (!url) return <span className="text-gray-400 dark:text-gray-500"> </span>;
     const isUrl = url.startsWith('http://') || url.startsWith('https://');
     if (isUrl) {
         return (
@@ -390,7 +390,7 @@ const OfferDemandDetailDialog = ({ item, type, isOpen, onClose }: { item: any, t
                     <span className="font-semibold">{user.name}</span>
                 </div>
             ) : (
-                <span className="text-sm text-gray-400 dark:text-gray-500">N/A</span>
+                <span className="text-sm text-gray-400 dark:text-gray-500"> </span>
             )}
         </div>
     );
@@ -540,20 +540,20 @@ const MemberViewPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div className="flex items-center gap-4 md:col-span-1">
                         <div>
-                            <h5 className="font-bold">{memberData.customer_code || 'N/A'} - {memberData.name || 'N/A'}</h5>
+                            <h5 className="font-bold">{memberData.customer_code || ' '} - {memberData.name || ' '}</h5>
                             <Tag className={`mt-2 ${statusColorMap[currentStatus] || ''} capitalize`}>{memberData.status}</Tag>
                             <div className="text-sm mt-2 space-y-1">
-                                <div className="flex items-center gap-2"><TbMail className="text-gray-400" /><p>{memberData.email || 'N/A'}</p></div>
+                                <div className="flex items-center gap-2"><TbMail className="text-gray-400" /><p>{memberData.email || ' '}</p></div>
                                 <div className="flex items-center gap-2"><TbPhone className="text-gray-400" /><p>{memberData.number_code}{memberData.number}</p></div>
-                                <div className="flex items-center gap-2"><TbGlobe className="text-gray-400" /><p>{memberData.country?.name || 'N/A'}</p></div>
+                                <div className="flex items-center gap-2"><TbGlobe className="text-gray-400" /><p>{memberData.country?.name || ' '}</p></div>
                             </div>
                         </div>
                     </div>
                     <div className="text-xs space-y-1.5 md:col-span-1 mt-5">
-                        <p><b>Temp. Company:</b> {memberData.company_temp || 'N/A'}</p>
-                        <p><b>Actual Company:</b> {memberData.company_actual || 'N/A'}</p>
-                        <p><b>Business Type:</b> {memberData.business_type || 'N/A'}</p>
-                        <p><b>RM:</b> {memberData.relationship_manager?.name || 'N/A'}</p>
+                        <p><b>Temp. Company:</b> {memberData.company_temp || ' '}</p>
+                        <p><b>Actual Company:</b> {memberData.company_actual || ' '}</p>
+                        <p><b>Business Type:</b> {memberData.business_type || ' '}</p>
+                        <p><b>RM:</b> {memberData.relationship_manager?.name || ' '}</p>
                         
                     </div>
                      <div className="text-xs space-y-1.5 md:col-span-1">
@@ -570,7 +570,7 @@ const MemberViewPage = () => {
     {memberData.subcategory && memberData.subcategory.split(',').map(s => s.trim()).join(', ')}
 
     {/* Display a fallback if NEITHER exists */}
-    {(!memberData.category && !memberData.subcategory) && 'N/A'}
+    {(!memberData.category && !memberData.subcategory) && ' '}
 </p>
 
                          <span className="flex items-center gap-1 ">
@@ -712,7 +712,7 @@ const MemberViewPage = () => {
                                 {memberData.dynamic_member_profiles?.length > 0 ? (
                                     memberData.dynamic_member_profiles.map((p: any) => (
                                         <Tr key={p.id}>
-                                            <Td>{p.member_type?.name || 'N/A'}</Td>
+                                            <Td>{p.member_type?.name || ' '}</Td>
                                             <Td><ListAsTags list={p.brand_names} /></Td>
                                             
                                             <Td><ListAsTags list={p.sub_category_names} /></Td>

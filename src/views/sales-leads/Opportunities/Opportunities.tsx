@@ -283,7 +283,7 @@ export type OpportunityItem = {
 const formatCustomDateTime = (
   date: string | Date | null | undefined
 ): string => {
-  if (!date) return "N/A";
+  if (!date) return " ";
   return dayjs(date).format("D MMM YYYY, h:mm A");
 };
 
@@ -961,7 +961,7 @@ const ViewOpportunitiesDialog: React.FC<{
         return (
           <div>
             <p>Qty: <span className="font-semibold">{qty}</span></p>
-            <p>Price: <span className="font-semibold">{price ? `$${price}` : 'N/A'}</span></p>
+            <p>Price: <span className="font-semibold">{price ? `$${price}` : ' '}</span></p>
           </div>
         );
       }
@@ -1909,10 +1909,10 @@ const FormattedDate: React.FC<{ dateString?: string; label?: string }> = ({
   label,
 }) => {
   const text = formatCustomDateTime(dateString);
-  if (text === "N/A") {
+  if (text === " ") {
     return (
       <span className="text-xs text-gray-500 dark:text-gray-400">
-        {label ? `${label}: N/A` : "N/A"}
+        {label ? `${label}:  ` : " "}
       </span>
     );
   }
@@ -2407,8 +2407,8 @@ const generateOpportunityMessage = (item: OpportunityItem): string => {
   const parts = [
     `Opportunity: ${item.opportunity_id}`,
     `Product: ${item.product_name}`,
-    `Quantity: ${item.qty || 'N/A'}`,
-    `Type: ${item.want_to || 'N/A'}`,
+    `Quantity: ${item.qty || ' '}`,
+    `Type: ${item.want_to || ' '}`,
     `Company: ${item.company_name}`,
     `Member: ${item.customer_name}`,
     `Contact: ${item.mobile_no || item.email || 'Not Available'}`,
@@ -2587,13 +2587,13 @@ const ExpandedOpportunityDetails: React.FC<{
           <InfoLine
             icon={<TbTag size={14} />}
             label="Category"
-            text={`${item.product_category || "N/A"}${item.product_subcategory ? ` > ${item.product_subcategory}` : ""
+            text={`${item.product_category || " "}${item.product_subcategory ? ` > ${item.product_subcategory}` : ""
               }`}
           />
           <InfoLine
             icon={<TbTag size={14} />}
             label="Brand"
-            text={item.brand || "N/A"}
+            text={item.brand || " "}
           />
           {item.product_specs && (
             <InfoLine
@@ -2605,12 +2605,12 @@ const ExpandedOpportunityDetails: React.FC<{
           <InfoLine
             icon={<TbChecklist size={14} />}
             label="Qty"
-            text={item.qty?.toString() || "N/A"}
+            text={item.qty?.toString() || " "}
           />
           <InfoLine
             icon={<TbProgressCheck size={14} />}
             label="Product Status"
-            text={item.product_status_listing || "N/A"}
+            text={item.product_status_listing || " "}
           />
           <InfoLine
             icon={<TbExchange size={14} />}
@@ -2771,7 +2771,7 @@ const ExpandedOpportunityDetails: React.FC<{
           <InfoLine
             icon={<TbRadar2 size={14} />}
             label="Matches"
-            text={item.matches_found_count || "N/A"}
+            text={item.matches_found_count || " "}
           />
           <InfoLine
             icon={<TbTargetArrow size={14} />}
@@ -2856,7 +2856,7 @@ const SpbActionToolbar: React.FC<{
     const individualMessages = items.map(item => {
       const prefix = matchType === "Buy" ? "WTB" : "WTS";
       let messageParts: string[] = [
-        `${prefix} - ${item.product_name || "N/A"}(${item.color}) | ${item.qty || "N/A"
+        `${prefix} - ${item.product_name || " "}(${item.color}) | ${item.qty || " "
         } ${item.unit || ""}unit`,
       ];
 
@@ -2877,7 +2877,7 @@ const SpbActionToolbar: React.FC<{
           );
           break;
         case "wtb":
-          messageParts.push(item.product_name || "N/A");
+          messageParts.push(item.product_name || " ");
           break;
         case "default":
           if (customMessage) {
@@ -3049,7 +3049,7 @@ const SpbSummaryRow: React.FC<SpbSummaryRowProps> = ({
   console.log(item, 'item');
 
   const memberName = `Member: (${item.customer_code}) ${item.customer_name}` || `Member ID: ${item.customer_id}`;
-  const memberPhone = `Phone: ${item.mobile_no || 'N/A'}`;
+  const memberPhone = `Phone: ${item.mobile_no || ' '}`;
   // const createDate = `Date: ${formatCustomDateTime(item.created_at)}`;
   const prodColor = `Color: ${item.color}`;
 
@@ -3309,7 +3309,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
       Array.isArray(getAllUserData)
         ? getAllUserData.map((user: any) => ({
           value: user.id,
-          label: `(${user.employee_id}) - ${user.name || 'N/A'}`,
+          label: `(${user.employee_id}) - ${user.name || ' '}`,
         }))
         : [],
     [getAllUserData]
@@ -3408,7 +3408,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
       return {
         id: String(apiItem.id),
         opportunity_id: apiItem.opportunity_id || `OPP-${apiItem.id}`,
-        product_name: apiItem.product_name || "N/A",
+        product_name: apiItem.product_name || " ",
         status: uiStatus,
         opportunity_status: uiOppStatus,
         match_score: apiItem.match_score ?? 0,
@@ -3424,9 +3424,9 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
         product_status_listing: apiItem.product_status || apiItem.product_status_listing,
         want_to: apiItem.want_to || undefined,
         member: apiItem.member || {},
-        company_name: apiItem.company_name || "N/A",
+        company_name: apiItem.company_name || " ",
         company_id: apiItem.company_id || undefined,
-        customer_name: apiItem.customer_name || "N/A",
+        customer_name: apiItem.customer_name || " ",
         member_id: apiItem.member_id || undefined,
         email: apiItem.email || undefined,
         mobile_no: apiItem.phonecode && apiItem.mobile_no ? `${apiItem.phonecode}${apiItem.mobile_no}` : apiItem.mobile_no || undefined,
@@ -3555,7 +3555,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
   if (!autoSpbData) return [];
 
   const transformedData: OpportunityItem[] = [];
-  const autospbNumber = autoMatchData?.autospbNumber || "N/A";
+  const autospbNumber = autoMatchData?.autospbNumber || " ";
 
   // Loop through each product group (the key is the product_id)
   for (const groupId in autoSpbData) {
@@ -3890,7 +3890,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
           size: 100,
           cell: ({ row: { original: item } }) => (
             <div className="flex items-center text-center gap-2">
-              <span className="font-semibold text-base">{item.qty ?? "N/A"}</span>
+              <span className="font-semibold text-base">{item.qty ?? " "}</span>
               <Tag
                 className={classNames(
                   "capitalize text-[15px] px-1.5 py-0.5",
@@ -3962,7 +3962,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                     icon={<TbPhone size={13} />}
                     text={
                       <div className="flex items-center gap-1.5">
-                        <span>{item.number || "N/A"}</span>
+                        <span>{item.number || " "}</span>
                         {item.number && (
                           <Tooltip title="Copy number">
                             <button

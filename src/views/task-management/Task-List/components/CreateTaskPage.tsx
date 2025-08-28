@@ -321,7 +321,7 @@ const CreateTaskPage = () => {
         attachmentsToSet.map((att) => ({
           id: String(att.id),
           name: att.attachment_name,
-          size: "N/A",
+          size: " ",
           src: 'https://api.omcommunication.co/api/storage/' + att.attachment_path,
           type: att.attachment_type,
         }))

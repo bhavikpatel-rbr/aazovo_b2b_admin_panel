@@ -112,7 +112,7 @@ const EmployeeProfileHeader: React.FC<{ employee: Employee }> = ({
 }) => {
     const status = employee.status || 'default'
     const statusClass = employeeStatusColor[status] || employeeStatusColor.default
-    const roleName = employee.roles?.[0]?.display_name ?? 'N/A'
+    const roleName = employee.roles?.[0]?.display_name ?? ' '
     const navigate = useNavigate()
     return (
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">

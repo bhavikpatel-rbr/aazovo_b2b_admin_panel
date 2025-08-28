@@ -134,13 +134,13 @@ function exportToCsvDocument(filename: string, rows: DocumentItem[]) {
   const preparedRows = rows.map((row) => ({
     id: row.id,
     name: row.name,
-    documentTypeNameForCsv: row.document_type_name || "N/A",
+    documentTypeNameForCsv: row.document_type_name || " ",
     status: row.status,
-    updated_by_name: row.updated_by_user?.name || "N/A",
-    updated_by_role: row.updated_by_user?.roles[0]?.display_name || "N/A",
+    updated_by_name: row.updated_by_user?.name || " ",
+    updated_by_role: row.updated_by_user?.roles[0]?.display_name || " ",
     updated_at: row.updated_at
       ? new Date(row.updated_at).toLocaleString()
-      : "N/A",
+      : " ",
   }));
   const csvContent = [
     CSV_HEADERS.join(","),
@@ -583,7 +583,7 @@ const Documents = () => {
                 }
               />
               <div>
-                <span>{updated_by_user?.name || "N/A"}</span>
+                <span>{updated_by_user?.name || " "}</span>
                 <div className="text-xs">
                   <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
                 </div>
@@ -655,7 +655,7 @@ const Documents = () => {
       document_type_name:
         documentTypeOptionsForSelect.find(
           (opt) => opt.value === String(doc.document_type)
-        )?.label || "N/A",
+        )?.label || " ",
     }));
     let processedData: DocumentItem[] = cloneDeep(sourceDataWithDerivedFields);
     if (activeFilters.names?.length) {
@@ -1291,11 +1291,11 @@ const Documents = () => {
               </b>
               <br />
               <p className="text-sm font-semibold">
-                {editingDocument.updated_by_user?.name || "N/A"}
+                {editingDocument.updated_by_user?.name || " "}
               </p>
               <p>
                 {editingDocument.updated_by_user?.roles[0]?.display_name ||
-                  "N/A"}
+                  " "}
               </p>
             </div>
             <div className="text-right">
@@ -1318,7 +1318,7 @@ const Documents = () => {
                     minute: "2-digit",
                     hour12: true,
                   })}`
-                  : "N/A"}
+                  : " "}
               </span>
               <br />
               <span className="font-semibold">Updated At:</span>{" "}
@@ -1340,7 +1340,7 @@ const Documents = () => {
                     minute: "2-digit",
                     hour12: true,
                   })}`
-                  : "N/A"}
+                  : " "}
               </span>
             </div>
           </div>

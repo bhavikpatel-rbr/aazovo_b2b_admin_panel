@@ -189,7 +189,7 @@ const EditTaskPage = () => {
             setAttachments(taskData.attachments?.map(att => ({
                 id: att.id || `srv-${att.serverPath || att.name}`, // Use server ID or generate one
                 name: att.name,
-                size: att.size || 'N/A',
+                size: att.size || ' ',
                 // IMPORTANT: Construct the actual src URL based on your API
                 src: att.src || (att.serverPath ? `YOUR_API_BASE_URL/attachments/${att.serverPath}` : '/img/icons/file-generic.png'),
                 serverPath: att.serverPath,

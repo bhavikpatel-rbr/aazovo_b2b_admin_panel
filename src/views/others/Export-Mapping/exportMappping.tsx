@@ -124,8 +124,8 @@ const transformApiDataToExportMappingItem = (
             id: apiData?.id,
             userId: null,
             userName: apiData?.user?.name || 'System / Unknown',
-            userRole: apiData?.user?.roles[0]?.display_name || 'N/A',
-            exportFrom: apiData?.exported_from || 'N/A',
+            userRole: apiData?.user?.roles[0]?.display_name || ' ',
+            exportFrom: apiData?.exported_from || ' ',
             fileName: apiData?.file_name,
             reason: apiData?.reason,
             exportDate: new Date(apiData?.created_at),
@@ -168,7 +168,7 @@ const ActionColumn = ({ data }: { data: ExportMappingItem }) => {
                     </figure>
                     <h6 className="text-base font-semibold mt-4">Exported From</h6>
                     <p className="mb-2 mt-1"><span className="font-semibold text-black dark:text-white">Module:{' '}</span><span>{data.exportFrom}</span></p>
-                    {data.exportFrom !== 'N/A' && (<Tag className="border border-emerald-600 text-emerald-600 bg-transparent inline-block w-auto mt-1">{data.exportFrom}</Tag>)}
+                    {data.exportFrom !== ' ' && (<Tag className="border border-emerald-600 text-emerald-600 bg-transparent inline-block w-auto mt-1">{data.exportFrom}</Tag>)}
                     <Card className="!mt-8 bg-gray-100 dark:bg-gray-700 border-none">
                         <h6 className="text-base font-semibold">Exported Log</h6>
                         <p className="mt-2"><span className="font-semibold text-black dark:text-white">Date:{' '}</span><span>{!isNaN(data.exportDate.getTime()) && formatCustomDateTime(data.exportDate)}</span></p>
@@ -415,7 +415,7 @@ const ExportMapping = () => {
 
     const columns: ColumnDef<ExportMappingItem>[] = useMemo(() => [
         { header: 'Exported By', accessorKey: 'userName', enableSorting: true, size: 200, cell: (props) => { const { userName, userRole, profile_pic_path } = props.row.original; return (<div className="flex items-center gap-2"><Avatar src={profile_pic_path || userIconPlaceholder} size="sm" shape="circle" className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(profile_pic_path || userIconPlaceholder)} icon={<TbUserCircle />} /><div><span className="font-semibold block truncate max-w-[150px]">{userName}</span><span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[150px]">{userRole}</span></div></div>) }, },
-        { header: 'Exported From', accessorKey: 'exportFrom', enableSorting: true, size: 220, cell: (props) => { const { exportFrom, fileName } = props.row.original; return (<div className="flex flex-col"><span className="font-semibold truncate max-w-[180px]">{exportFrom}</span><Tooltip title={fileName} placement="top"><span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px] block">{fileName || 'N/A'}</span></Tooltip></div>) }, },
+        { header: 'Exported From', accessorKey: 'exportFrom', enableSorting: true, size: 220, cell: (props) => { const { exportFrom, fileName } = props.row.original; return (<div className="flex flex-col"><span className="font-semibold truncate max-w-[180px]">{exportFrom}</span><Tooltip title={fileName} placement="top"><span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px] block">{fileName || ' '}</span></Tooltip></div>) }, },
         { header: 'Reason', accessorKey: 'reason', enableSorting: false, size: 250, cell: (props) => (<Tooltip title={props.row.original.reason || ''} placement="top"><span className="truncate block max-w-[230px] text-justify">{props.row.original.reason || '–'}</span></Tooltip>), },
         { header: 'Date', accessorKey: 'exportDate', enableSorting: true, size: 220, cell: (props) => { const date = new Date(props.row.original.exportDate); return (<span className="text-sm">{!isNaN(date.getTime()) && formatCustomDateTime(date)}</span>) }, },
         { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => <ActionColumn data={props.row.original} />, },
@@ -431,7 +431,7 @@ const ExportMapping = () => {
         if (countsLoading) {
             return <Skeleton width={50} height={20} />;
         }
-        return count !== undefined ? String(count) : "N/A";
+        return count !== undefined ? String(count) : " ";
     };
 
     return (
@@ -475,7 +475,7 @@ const ExportMapping = () => {
                                         <TbUserUp size={24} />
                                     </div>
                                     <div>
-                                        <h6 className="text-pink-500 truncate">{countsLoading ? <Skeleton width={80} height={20} /> : (apiExportMappings?.counts?.top_user || "N/A")}</h6>
+                                        <h6 className="text-pink-500 truncate">{countsLoading ? <Skeleton width={80} height={20} /> : (apiExportMappings?.counts?.top_user || " ")}</h6>
                                         <span className="font-semibold text-xs">Top User</span>
                                     </div>
                                 </Card>
@@ -488,7 +488,7 @@ const ExportMapping = () => {
                                         <TbBookUpload size={24} />
                                     </div>
                                     <div>
-                                        <h6 className="text-green-500 truncate">{countsLoading ? <Skeleton width={80} height={20} /> : (apiExportMappings?.counts?.top_module || "N/A")}</h6>
+                                        <h6 className="text-green-500 truncate">{countsLoading ? <Skeleton width={80} height={20} /> : (apiExportMappings?.counts?.top_module || " ")}</h6>
                                         <span className="font-semibold text-xs">Top Module</span>
                                     </div>
                                 </Card>

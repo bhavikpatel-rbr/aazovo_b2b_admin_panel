@@ -138,7 +138,7 @@ const AddLeadPage = () => {
   const productOptions = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map(p => ({ value: p.id, label: p.name })) : [], [productsMasterData]);
   const productSpecOptions = useMemo(() => Array.isArray(ProductSpecificationsData) ? ProductSpecificationsData.map(spec => ({ value: spec.id, label: spec.name })) : [], [ProductSpecificationsData]);
   const paymentTermOptions = useMemo(() => Array.isArray(PaymentTermsData) ? PaymentTermsData.map(pt => ({ value: pt.id, label: pt.term_name || pt.name })) : [], [PaymentTermsData]);
-  const leadMemberOptions = useMemo(() => Array.isArray(memberData) ? memberData.map(m => ({ value: m.id, label: `(${m.customer_code}) - ${m.name || 'N/A'}` })) : [], [memberData]);
+  const leadMemberOptions = useMemo(() => Array.isArray(memberData) ? memberData.map(m => ({ value: m.id, label: `(${m.customer_code}) - ${m.name || ' '}` })) : [], [memberData]);
 
   const onSubmit = async (data: LeadFormData) => {
     setIsSubmitting(true);

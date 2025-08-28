@@ -707,7 +707,7 @@ function exportRequestFeedbacksToCsv(
       row.status,
     rating:
       RATING_OPTIONS.find((r) => r.value === String(row.rating || ""))?.label ||
-      (row.rating ? String(row.rating) : "N/A"),
+      (row.rating ? String(row.rating) : " "),
     created_at: new Date(row.created_at).toLocaleDateString(),
   }));
   const separator = ",";
@@ -1311,10 +1311,10 @@ const RequestAndFeedbackListing = () => {
         cell: (props) => (
           <div className="flex flex-col gap-1 text-xs">
             <span className="font-semibold">
-              {props.getValue<string>() || "N/A"}
+              {props.getValue<string>() || " "}
             </span>
-            <span className="">{props.row.original.email || "N/A"}</span>
-            <span className="">{props.row.original.mobile_no || "N/A"}</span>
+            <span className="">{props.row.original.email || " "}</span>
+            <span className="">{props.row.original.mobile_no || " "}</span>
           </div>
         ),
       },
@@ -1326,7 +1326,7 @@ const RequestAndFeedbackListing = () => {
           <Tag className="capitalize">
             {TYPE_OPTIONS.find((t) => t.value === props.getValue())?.label ||
               props.getValue() ||
-              "N/A"}
+              " "}
           </Tag>
         ),
       },
@@ -1336,7 +1336,7 @@ const RequestAndFeedbackListing = () => {
         size: 150,
         cell: (props) => (
           <div className="truncate w-36" title={props.getValue() as string}>
-            {(props.getValue() as string) || "N/A"}
+            {(props.getValue() as string) || " "}
           </div>
         ),
       },
@@ -1355,7 +1355,7 @@ const RequestAndFeedbackListing = () => {
             >
               {STATUS_OPTIONS_FORM.find((opt) => opt.value === s)?.label ||
                 s ||
-                "N/A"}
+                " "}
             </Tag>
           );
         },
@@ -1365,7 +1365,7 @@ const RequestAndFeedbackListing = () => {
         accessorKey: "rating",
         size: 80,
         cell: (props) =>
-          props.getValue() ? `${props.getValue()} Star(s)` : "N/A",
+          props.getValue() ? `${props.getValue()} Star(s)` : " ",
       },
       {
         header: "Date",
@@ -1374,7 +1374,7 @@ const RequestAndFeedbackListing = () => {
         cell: (props) =>
           props.getValue()
             ? new Date(props.getValue<string>()).toLocaleDateString()
-            : "N/A",
+            : " ",
       },
       {
         header: "Actions",

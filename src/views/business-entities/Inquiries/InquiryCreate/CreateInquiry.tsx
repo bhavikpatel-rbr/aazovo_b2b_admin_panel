@@ -218,7 +218,7 @@ const CreateInquiry = () => {
   const { departmentsData, usersData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
 
   const departmentOptions = useMemo(() => departmentsData?.data?.map((c: ApiLookupItem) => ({ value: String(c.id), label: c.name })) || [], [departmentsData]);
-  const usersDataOptions = useMemo(() => Array.isArray(usersData) ? usersData.map((sp: ApiLookupItem) => ({ value: String(sp.id), label: `(${sp.employee_id}) - ${sp.name || 'N/A'}` })) : [], [usersData]);
+  const usersDataOptions = useMemo(() => Array.isArray(usersData) ? usersData.map((sp: ApiLookupItem) => ({ value: String(sp.id), label: `(${sp.employee_id}) - ${sp.name || ' '}` })) : [], [usersData]);
 
   const inquiryTypeOptions = [{ value: "New Product Inquiry", label: "New Product Inquiry" }, { value: "Services Inquiry", label: "Services Inquiry" }, { value: "Price Quotation", label: "Price Quotation" }, { value: "General Inquiry", label: "General Inquiry" }, { value: "Marketing Inquiry", label: "Marketing Inquiry" }, { value: "Membership Inquiry", label: "Membership Inquiry" }, { value: "Partnership Inquiry", label: "Partnership Inquiry" }, { value: "Others", label: "Others" }];
   const priorityOptions = [{ value: "Low", label: "Low" }, { value: "Medium", label: "Medium" }, { value: "High", label: "High" }];

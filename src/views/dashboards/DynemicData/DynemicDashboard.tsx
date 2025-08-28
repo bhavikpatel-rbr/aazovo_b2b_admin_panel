@@ -131,7 +131,7 @@ const CompaniesDashboardView = ({ data, isLoading }: { data: any, isLoading: boo
                         <Avatar shape="circle" src={company.company_logo} />
                         <div>
                             <p className="font-semibold text-sm">{company.company_name}</p>
-                            <p className="text-xs text-gray-500">{company.primary_business_type || 'N/A'}</p>
+                            <p className="text-xs text-gray-500">{company.primary_business_type || ' '}</p>
                         </div>
                     </div>
                     <Tag className="font-bold">{company.profile_completion}%</Tag>
@@ -221,7 +221,7 @@ const ProductsDashboardView = ({ data, isLoading }: { data: any, isLoading: bool
                     <Avatar shape="square" src={product.thumb_image_full_path} />
                     <div>
                         <p className="font-semibold text-sm">{product.name}</p>
-                        <p className="text-xs text-gray-500">{get(product, 'brand.name', 'N/A')}</p>
+                        <p className="text-xs text-gray-500">{get(product, 'brand.name', ' ')}</p>
                     </div>
                 </div>
                 <Tag className="font-bold">{get(product, 'opportunities.total', 0)}</Tag>
@@ -250,7 +250,7 @@ const PartnersDashboardView = ({ data, isLoading }: { data: any, isLoading: bool
                     <Avatar shape="circle" src={partner.partner_logo} />
                     <div>
                         <p className="font-semibold text-sm">{partner.partner_name}</p>
-                        <p className="text-xs text-gray-500">{partner.primary_business_type || 'N/A'}</p>
+                        <p className="text-xs text-gray-500">{partner.primary_business_type || ' '}</p>
                     </div>
                 </div>
                 <Tag className="font-bold">{partner.profile_completion}%</Tag>
@@ -277,7 +277,7 @@ const TeamsDashboardView = ({ data, isLoading }: { data: any, isLoading: boolean
                     <Avatar shape="circle" src={member.profile_pic_path} />
                     <div>
                         <p className="font-semibold text-sm">{member.name}</p>
-                        <p className="text-xs text-gray-500">{get(member, 'designation.name', 'N/A')}</p>
+                        <p className="text-xs text-gray-500">{get(member, 'designation.name', ' ')}</p>
                     </div>
                 </div>
                 <Tag className="font-bold">{get(member, 'opportunities.total', 0)}</Tag>

@@ -1614,7 +1614,7 @@ const EmailCampaignListing = () => {
         enableSorting: true,
         cell: (props) =>
           props.row.original.campaign_name || (
-            <span className="italic text-gray-400">N/A</span>
+            <span className="italic text-gray-400"> </span>
           ),
       },
       {
@@ -1666,7 +1666,7 @@ const EmailCampaignListing = () => {
           const s = props.getValue<CampaignApiStatus>();
           const statusLabel =
             CAMPAIGN_STATUS_OPTIONS_FILTER.find((opt) => opt.value === s)
-              ?.label || (s === null ? "Draft" : String(s || "N/A"));
+              ?.label || (s === null ? "Draft" : String(s || " "));
           return (
             <Tag
               className={classNames(
@@ -2440,7 +2440,7 @@ const EmailCampaignListing = () => {
               )?.label ||
                 (viewingItem.status === null
                   ? "Draft"
-                  : String(viewingItem.status || "N/A"))}
+                  : String(viewingItem.status || " "))}
             </p>
             {viewingItem.schedule_at && (
               <p>

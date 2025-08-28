@@ -261,7 +261,7 @@ const HeaderCard: React.FC<{ lead: VerifiedLead }> = ({ lead }) => (
         <StatBox value={<div className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-md">
           <TbBuildingStore className="text-gray-500 dark:text-gray-400" />
           <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">
-            {lead?.customer?.company_actual || 'N/A'}
+            {lead?.customer?.company_actual || ' '}
           </span>
         </div>} label="Actual Company" className="col-span-2 sm:col-span-1 sm:border-l" />
 
@@ -275,7 +275,7 @@ const ProductDetailsTab: React.FC<{ lead: VerifiedLead }> = ({ lead }) => (
     <h5 className="font-semibold mb-4">Product Details</h5>
     <InfoRow label="Product Name">{lead?.product.name}</InfoRow>
     <InfoRow label="Quantity">{lead?.qty}</InfoRow>
-    <InfoRow label="Target Price">{`$${lead?.target_price || 'N/A'}`}</InfoRow>
+    <InfoRow label="Target Price">{`$${lead?.target_price || ' '}`}</InfoRow>
     <InfoRow label="Color">{lead?.color}</InfoRow>
     <InfoRow label="Device Condition">{lead?.device_condition}</InfoRow>
     <InfoRow label="Product Spec">{lead?.product_spec?.name}</InfoRow>
@@ -531,16 +531,16 @@ const PendingLeadsModal = ({
 <span className="font-semibold">{item?.lead_type == "Manual lead" ? `ML-${item?.id?.toString().padStart(5, '0')}` : item.lead_type == "Product lead" ? `PL-${item?.id?.toString().padStart(5, '0')}` : item.lead_type == "Wall lead" ? `WL-${item?.id?.toString().padStart(5, '0')}` : null}</span>
                         {/* {item?.lead_number || `LD-${item?.id}`} */}
                       </Table.Td>
-                      <Table.Td>{item?.product?.name || "N/A"}</Table.Td>
+                      <Table.Td>{item?.product?.name || " "}</Table.Td>
                       <Table.Td>
                         <div className="text-xs">
                           <p>
                             <strong>B:</strong>{" "}
-                            {item?.lead_info?.buyer?.name || "N/A"}
+                            {item?.lead_info?.buyer?.name || " "}
                           </p>
                           <p>
                             <strong>S:</strong>{" "}
-                            {item?.lead_info?.seller?.name || "N/A"}
+                            {item?.lead_info?.seller?.name || " "}
                           </p>
                         </div>
                       </Table.Td>
@@ -751,19 +751,19 @@ function exportToCsv(filename: string, rows: AccountDocumentListItem[]) {
   }
 
   const transformedRows: AccountDocExportItem[] = rows.map((row) => ({
-    leadNumber: row.leadNumber || "N/A",
-    companyName: row.companyName || "N/A",
-    memberName: row.memberName || "N/A",
+    leadNumber: row.leadNumber || " ",
+    companyName: row.companyName || " ",
+    memberName: row.memberName || " ",
     status: row.status
       ? row.status.charAt(0).toUpperCase() + row.status.slice(1)
-      : "N/A",
-    formType: row.formType || "N/A",
-    documentNumber: row.documentNumber || "N/A",
-    invoiceNumber: row.invoiceNumber || "N/A",
-    userName: row.userName || "N/A",
+      : " ",
+    formType: row.formType || " ",
+    documentNumber: row.documentNumber || " ",
+    invoiceNumber: row.invoiceNumber || " ",
+    userName: row.userName || " ",
     createdAtFormatted: row.createdAt
       ? dayjs(row.createdAt).format("DD/MM/YYYY HH:mm")
-      : "N/A",
+      : " ",
   }));
 
   const separator = ",";
@@ -896,7 +896,7 @@ const AccountDocumentActionColumn = ({
   const navigate = useNavigate();
 
   const handleFillUpClick = () => {
-    if (rowData.formId && rowData.formId !== 'N/A') {
+    if (rowData.formId && rowData.formId !== ' ') {
       navigate(`/fill-up-form/${rowData.id}/${rowData.formId}`);
     } else {
       toast.push(
@@ -1127,7 +1127,7 @@ const AddScheduleDialog: React.FC<any> = ({ document, onClose }) => {
       date_time: null as any,
       remind_from: null,
       notes: `Regarding document for ${document.companyName || document.company?.company_name
-        } (Lead: ${document.leadNumber || "N/A"})`,
+        } (Lead: ${document.leadNumber || " "})`,
     },
     mode: "onChange",
   });
@@ -1288,7 +1288,7 @@ const DetailItem = ({
         {label}
       </span>
       <div className="text-sm text-gray-600 dark:text-gray-300 mt-1 sm:mt-0 w-full">
-        {children || value || <span className="italic text-gray-400">N/A</span>}
+        {children || value || <span className="italic text-gray-400"> </span>}
       </div>
     </div>
   );
@@ -1316,7 +1316,7 @@ const InfoItem = ({
         </p>
         <div className="text-sm font-medium text-gray-800 dark:text-gray-100">
           {children || value || (
-            <span className="italic text-gray-400">N/A</span>
+            <span className="italic text-gray-400"> </span>
           )}
         </div>
       </div>
@@ -1350,7 +1350,7 @@ const FilledFormViewer = ({
               const value = getFieldValue(field, section.id);
               if (value === undefined || value === null || value === '') {
                 return (
-                  <DetailItem key={field.name} label={field.label} value="N/A" />
+                  <DetailItem key={field.name} label={field.label} value=" " />
                 );
               }
 
@@ -1362,7 +1362,7 @@ const FilledFormViewer = ({
                         <a href={value} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                           View/Download File
                         </a>
-                      ) : ('N/A')}
+                      ) : (' ')}
                     </DetailItem>
                   );
                 case 'multi_checkbox':
@@ -1483,7 +1483,7 @@ const ViewDocumentDialog = ({
   const statusKey = (status?.toLowerCase().replace(/ /g, "_") ??
     "pending") as keyof typeof accountDocumentStatusColor;
   const statusColor = accountDocumentStatusColor[statusKey] || "bg-gray-100";
-  const statusLabel = status?.replace(/_/g, " ") || "N/A";
+  const statusLabel = status?.replace(/_/g, " ") || " ";
 
   const canVerify = status && status !== 'approved' && status !== 'rejected';
 
@@ -1508,7 +1508,7 @@ const ViewDocumentDialog = ({
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Document details for{" "}
               <span className="font-semibold text-gray-700 dark:text-gray-200">
-                {company?.company_name || member?.name || "N/A"}
+                {company?.company_name || member?.name || " "}
               </span>
             </p>
           </div>
@@ -2490,7 +2490,7 @@ const AccountDocumentAlertModal = ({
             ) : alerts.length > 0 ? (
               <div className="space-y-8">
                 {alerts.map((alert, index) => {
-                  const userName = alert?.created_by_user?.name || "N/A";
+                  const userName = alert?.created_by_user?.name || " ";
                   const userInitial = userName.charAt(0).toUpperCase();
                   return (
                     <div
@@ -3014,7 +3014,7 @@ const AccountDocument = () => {
       Array.isArray(getAllUserData)
         ? getAllUserData.map((b: any) => ({
           value: b.id,
-          label: `(${b.employee_id}) - ${b.name || "N/A"}`,
+          label: `(${b.employee_id}) - ${b.name || " "}`,
         }))
         : [],
     [getAllUserData]
@@ -3122,7 +3122,7 @@ const AccountDocument = () => {
       id: String(item.id),
       status: (item.status?.toLowerCase() ||
         "pending") as AccountDocumentStatus,
-      leadNumber: item.lead_id ? `LD-${item.lead_id}` : (item.document_number?.startsWith("LD-") ? item.document_number : "N/A"),
+      leadNumber: item.lead_id ? `LD-${item.lead_id}` : (item.document_number?.startsWith("LD-") ? item.document_number : " "),
       enquiryType: item.member?.interested_in?.toLowerCase().includes("sell")
         ? "sales"
         : "purchase",
@@ -3139,12 +3139,12 @@ const AccountDocument = () => {
         String(item.created_by_user?.id) ||
         null,
       userName: item.created_by_user?.name || "System",
-      companyDocumentType: item.company_document || "N/A",
+      companyDocumentType: item.company_document || " ",
       documentType: String(item.document_type),
-      documentNumber: item.document_number || "N/A",
-      invoiceNumber: item.invoice_number || "N/A",
-      formType: item.form?.form_name || "N/A",
-      formId: item.form?.id || "N/A",
+      documentNumber: item.document_number || " ",
+      invoiceNumber: item.invoice_number || " ",
+      formType: item.form?.form_name || " ",
+      formId: item.form?.id || " ",
       createdAt: item.created_at,
     }));
 
@@ -3434,7 +3434,7 @@ const AccountDocument = () => {
         cell: (props) => {
           const { formType } = props.row.original;
           return (
-            <span className="text-xs font-semibold">{formType || "N/A"}</span>
+            <span className="text-xs font-semibold">{formType || " "}</span>
           );
         },
       },

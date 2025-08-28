@@ -165,7 +165,7 @@ type ExportReasonFormData = z.infer<typeof exportReasonSchema>
 const CSV_HEADERS_JOB = ['ID', 'Job Title', 'Status', 'Department Name', 'Location', 'Experience', 'Vacancies', 'Created At', 'Updated At', 'Updated By']
 type JobPostExportItem = Omit<JobPostItem, 'created_at' | 'updated_at' | 'description' | 'job_plateforms' | 'created_by_user' | 'updated_by_user'> & { job_department_name?: string; created_at_formatted?: string; updated_at_formatted?: string; updated_by_name?: string }
 const CSV_KEYS_JOB: (keyof JobPostExportItem)[] = ['id', 'job_title', 'status', 'job_department_name', 'location', 'experience', 'vacancies', 'created_at_formatted', 'updated_at_formatted', 'updated_by_name']
-function exportJobPostsToCsv(filename: string, rows: JobPostItem[], departmentOptions: JobDepartmentOption[]) { if (!rows || !rows.length) { return false } const transformedRows: JobPostExportItem[] = rows.map((row) => ({ id: row.id, job_title: row.job_title, status: row.status, job_department_name: departmentOptions.find((d) => String(d.value) === String(row.job_department_id))?.label || String(row.job_department_id), location: row.location, experience: row.experience, vacancies: String(row.vacancies), created_at_formatted: row.created_at ? new Date(row.created_at).toLocaleString() : 'N/A', updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : 'N/A', updated_by_name: row.updated_by_user?.name || 'N/A' })); const separator = ','; const csvContent = CSV_HEADERS_JOB.join(separator) + '\n' + transformedRows.map((row) => { return CSV_KEYS_JOB.map((k) => { let cell = row[k as keyof JobPostExportItem]; if (cell === null || cell === undefined) { cell = '' } else { cell = String(cell).replace(/"/g, '""'); if (String(cell).search(/("|,|\n)/g) >= 0) { cell = `"${cell}"` } } return cell }).join(separator) }).join('\n'); const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute('href', url); link.setAttribute('download', filename); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); return true } return false }
+function exportJobPostsToCsv(filename: string, rows: JobPostItem[], departmentOptions: JobDepartmentOption[]) { if (!rows || !rows.length) { return false } const transformedRows: JobPostExportItem[] = rows.map((row) => ({ id: row.id, job_title: row.job_title, status: row.status, job_department_name: departmentOptions.find((d) => String(d.value) === String(row.job_department_id))?.label || String(row.job_department_id), location: row.location, experience: row.experience, vacancies: String(row.vacancies), created_at_formatted: row.created_at ? new Date(row.created_at).toLocaleString() : ' ', updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : ' ', updated_by_name: row.updated_by_user?.name || ' ' })); const separator = ','; const csvContent = CSV_HEADERS_JOB.join(separator) + '\n' + transformedRows.map((row) => { return CSV_KEYS_JOB.map((k) => { let cell = row[k as keyof JobPostExportItem]; if (cell === null || cell === undefined) { cell = '' } else { cell = String(cell).replace(/"/g, '""'); if (String(cell).search(/("|,|\n)/g) >= 0) { cell = `"${cell}"` } } return cell }).join(separator) }).join('\n'); const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute('href', url); link.setAttribute('download', filename); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); return true } return false }
 
 // ============================================================================
 // --- MODALS SECTION ---
@@ -393,7 +393,7 @@ const JobPostsListing = () => {
     const navigate = useNavigate();
     const { jobPostsData = { data: [], counts: {} }, departmentsData = { data: [] }, getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
     const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData.data.map((dept: JobDepartmentListItem) => ({ value: String(dept.id), label: dept.name })) : [], [departmentsData?.data]);
-    const userOptions: SelectOption[] = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(user => ({ value: String(user.id), label: `(${user.employee_id}) - ${user.name || 'N/A'}` })) : [], [getAllUserData]);
+    const userOptions: SelectOption[] = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(user => ({ value: String(user.id), label: `(${user.employee_id}) - ${user.name || ' '}` })) : [], [getAllUserData]);
     console.log("departmentsData", departmentsData?.data);
 
     const [initialLoading, setInitialLoading] = useState(true);
@@ -525,7 +525,7 @@ const JobPostsListing = () => {
             size: 200,
             cell: (props) => {
                 const { updated_at, updated_by_user } = props.row.original;
-                const formattedDate = updated_at ? formatCustomDateTime(updated_at) : 'N/A';
+                const formattedDate = updated_at ? formatCustomDateTime(updated_at) : ' ';
                 return (
                     <div className="flex items-center gap-2">
                         <Avatar
@@ -537,7 +537,7 @@ const JobPostsListing = () => {
                             onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
                         />
                         <div>
-                            <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
+                            <span className='font-semibold'>{updated_by_user?.name || ' '}</span>
                             <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
                             <div className="text-xs text-gray-500">{formattedDate}</div>
                         </div>
@@ -576,7 +576,7 @@ const JobPostsListing = () => {
                     </div>
                 ))}
             </div>
-            {currentEditingItem && (<div className=""><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded"><div><b className="font-semibold text-primary">Latest Update:</b><p className="text-sm font-semibold mt-1">{currentEditingItem.updated_by_user?.name || 'N/A'}</p><p>{currentEditingItem.updated_by_user?.roles?.[0]?.display_name || 'N/A'}</p></div><div className="text-right"><br /><span className="font-semibold">Created At:</span> <span>{currentEditingItem.created_at ? `${new Date(currentEditingItem.created_at).getDate()} ${new Date(currentEditingItem.created_at).toLocaleString('en-US', { month: 'short' })} ${new Date(currentEditingItem.created_at).getFullYear()}, ${new Date(currentEditingItem.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'N/A'}</span><br /><span className="font-semibold">Updated At:</span> <span>{currentEditingItem.updated_at ? `${new Date(currentEditingItem.updated_at).getDate()} ${new Date(currentEditingItem.updated_at).toLocaleString('en-US', { month: 'short' })} ${new Date(currentEditingItem.updated_at).getFullYear()}, ${new Date(currentEditingItem.updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'N/A'}</span></div></div></div>)}
+            {currentEditingItem && (<div className=""><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded"><div><b className="font-semibold text-primary">Latest Update:</b><p className="text-sm font-semibold mt-1">{currentEditingItem.updated_by_user?.name || ' '}</p><p>{currentEditingItem.updated_by_user?.roles?.[0]?.display_name || ' '}</p></div><div className="text-right"><br /><span className="font-semibold">Created At:</span> <span>{currentEditingItem.created_at ? `${new Date(currentEditingItem.created_at).getDate()} ${new Date(currentEditingItem.created_at).toLocaleString('en-US', { month: 'short' })} ${new Date(currentEditingItem.created_at).getFullYear()}, ${new Date(currentEditingItem.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : ' '}</span><br /><span className="font-semibold">Updated At:</span> <span>{currentEditingItem.updated_at ? `${new Date(currentEditingItem.updated_at).getDate()} ${new Date(currentEditingItem.updated_at).toLocaleString('en-US', { month: 'short' })} ${new Date(currentEditingItem.updated_at).getFullYear()}, ${new Date(currentEditingItem.updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : ' '}</span></div></div></div>)}
         </>)
     }
 

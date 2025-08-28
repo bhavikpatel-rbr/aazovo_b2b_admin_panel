@@ -1,4 +1,4 @@
-export function formatCustomDateTime(dateInput, fallback = 'N/A') {
+export function formatCustomDateTime(dateInput, fallback = ' ') {
   // 1. Handle empty or null input gracefully
   if (!dateInput) {
     return fallback;
