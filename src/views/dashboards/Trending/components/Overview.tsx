@@ -1,6 +1,6 @@
 import type { TableQueries } from '@/@types/common'
 import { DataTable, DebouceInput } from '@/components/shared'
-import { Avatar, Badge, Table, Tag } from '@/components/ui'
+import { Avatar, Badge, Table, Tag, Pagination } from '@/components/ui'
 import Card from '@/components/ui/Card'
 import Select from '@/components/ui/Select'
 import THead from '@/components/ui/Table/THead'
@@ -309,15 +309,7 @@ const CategorySummaryChart = ({ data, loading }: SummaryChartProps) => {
         return (
             <div className="h-[250px] flex flex-col items-center justify-center text-center text-gray-400 dark:text-gray-500">
                 <BarChart4 className="w-16 h-16 mb-2" strokeWidth={1.5} />
-                <div className="h-[250px] w-full mt-4 px-4 pb-6 flex items-end justify-around">
-                    <Skeleton className="w-8 h-[60%] rounded-t" />
-                    <Skeleton className="w-8 h-[80%] rounded-t" />
-                    <Skeleton className="w-8 h-[50%] rounded-t" />
-                    <Skeleton className="w-8 h-[70%] rounded-t" />
-                    <Skeleton className="w-8 h-[90%] rounded-t" />
-                    <Skeleton className="w-8 h-[40%] rounded-t" />
-                    <Skeleton className="w-8 h-[75%] rounded-t" />
-                </div>
+                <p>No summary data to display.</p>
             </div>
         )
     }
@@ -793,7 +785,7 @@ const WallListingDetails = ({ data }: { data: any }) => {
 // --- END: Wall Listing Component ---
 
 // --- START: Account Documents Component ---
-const AccountDocumentsTable = ({ data, loading }: { data: any[], loading: boolean }) => {
+const AccountDocumentsTable = ({ data, loading }: { data: any[]; loading: boolean }) => {
     const [queries, setQueries] = useState<TableQueries>({
         total: data.length,
         pageIndex: 1,
@@ -801,6 +793,17 @@ const AccountDocumentsTable = ({ data, loading }: { data: any[], loading: boolea
         query: '',
         sort: { order: '', key: '' },
     });
+    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+    const toggleRow = (docNo: string) => {
+        const newExpandedRows = new Set(expandedRows);
+        if (newExpandedRows.has(docNo)) {
+            newExpandedRows.delete(docNo);
+        } else {
+            newExpandedRows.add(docNo);
+        }
+        setExpandedRows(newExpandedRows);
+    };
 
     const handleInputChange = (val: string) => {
         setQueries(prev => ({ ...prev, query: val, pageIndex: 1 }));
@@ -820,7 +823,7 @@ const AccountDocumentsTable = ({ data, loading }: { data: any[], loading: boolea
         if (query) {
             const lowercasedQuery = query.toLowerCase();
             filteredData = filteredData.filter(doc =>
-                doc.firm_name.toLowerCase().includes(lowercasedQuery) ||
+                (doc.firm_name || '').toLowerCase().includes(lowercasedQuery) ||
                 doc.doc_no.toLowerCase().includes(lowercasedQuery)
             );
         }
@@ -832,41 +835,6 @@ const AccountDocumentsTable = ({ data, loading }: { data: any[], loading: boolea
         };
     }, [data, queries]);
 
-    const columns = useMemo(() => [
-        {
-            header: 'Doc No.',
-            accessorKey: 'doc_no',
-            cell: (props: any) => <span className="font-mono">{props.row.original.doc_no}</span>,
-        },
-        {
-            header: 'Firm Name',
-            accessorKey: 'firm_name',
-        },
-        {
-            header: 'Progress',
-            accessorKey: 'total_filled_questions',
-            cell: (props: any) => {
-                const { total_filled_questions, total_questions } = props.row.original;
-                const percentage = total_questions > 0 ? (total_filled_questions / total_questions) * 100 : 0;
-                const isCompleted = total_filled_questions === total_questions;
-                return (
-                    <div className="flex items-center gap-2">
-                        <span className="font-semibold">{`${total_filled_questions}/${total_questions}`}</span>
-                        <Badge className={isCompleted ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-700 border border-amber-200'}>
-                            {isCompleted && <CheckCircle2 size={12} className="mr-1" />}
-                            {percentage.toFixed(0)}%
-                        </Badge>
-                    </div>
-                );
-            },
-        },
-        {
-            header: 'Created At',
-            accessorKey: 'created_at',
-            cell: (props: any) => dayjs(props.row.original.created_at).format('DD MMM YYYY, hh:mm A'),
-        },
-    ], []);
-
     return (
         <div>
             <DebouceInput
@@ -876,23 +844,115 @@ const AccountDocumentsTable = ({ data, loading }: { data: any[], loading: boolea
                 onChange={(e) => handleInputChange(e.target.value)}
             />
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                <DataTable
-                    columns={columns}
-                    data={paginatedData}
-                    loading={loading}
-                    pagingData={{
-                        total: total,
-                        pageIndex: queries.pageIndex,
-                        pageSize: queries.pageSize,
-                    }}
-                    onPaginationChange={handlePaginationChange}
-                    onSelectChange={handleSelectChange}
-                />
+                {loading ? (
+                    <AccountDocSkeleton />
+                ) : (
+                    <Table>
+                        <THead>
+                            <Tr>
+                                <Th className="w-12"></Th>
+                                <Th>Doc No.</Th>
+                                <Th>Firm Name</Th>
+                                <Th>Invoice No.</Th>
+                                <Th>Progress</Th>
+                                <Th>Created At</Th>
+                            </Tr>
+                        </THead>
+                        <tbody>
+                            {paginatedData.length > 0 ? paginatedData.map((doc) => {
+                                const { total_filled_questions, total_questions, doc_no } = doc;
+                                const percentage = total_questions > 0 ? (total_filled_questions / total_questions) * 100 : 0;
+                                const isCompleted = total_filled_questions === total_questions && total_questions > 0;
+                                const isExpanded = expandedRows.has(doc_no);
+
+                                return (
+                                    <Fragment key={`${doc_no}-${doc.created_at}`}>
+                                        <Tr
+                                            className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                                            onClick={() => toggleRow(doc_no)}
+                                        >
+                                            <Td>
+                                                <span className="flex items-center justify-center text-gray-400">
+                                                    <ChevronRight size={16} className={classNames('transition-transform duration-200', isExpanded ? 'rotate-90' : '')}/>
+                                                </span>
+                                            </Td>
+                                            <Td><span className="font-mono">{doc.doc_no}</span></Td>
+                                            <Td>{doc.firm_name || <em className="text-gray-400">N/A</em>}</Td>
+                                            <Td>{doc.invoice_no || <em className="text-gray-400">N/A</em>}</Td>
+                                            <Td>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-semibold">{`${total_filled_questions}/${total_questions}`}</span>
+                                                    {/* <Badge className={isCompleted ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-700 border border-amber-200'}>
+                                                        {isCompleted && <CheckCircle2 size={12} className="mr-1" />}
+                                                        {percentage.toFixed(0)}%
+                                                    </Badge> */}
+                                                </div>
+                                            </Td>
+                                            <Td>{dayjs(doc.created_at).format('DD MMM YYYY, hh:mm A')}</Td>
+                                        </Tr>
+                                        {isExpanded && (
+                                            <Tr>
+                                                <Td colSpan={5} className="p-0 !border-b-0">
+                                                    <div className="p-4 bg-gray-50 dark:bg-gray-900/50">
+                                                        <h6 className="mb-3 text-sm font-semibold text-gray-600 dark:text-gray-300">Sections Summary</h6>
+                                                        {doc.sections_summary?.length > 0 ? (
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                                {doc.sections_summary.map((section: any, index: number) => (
+                                                                    <div key={index} className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                                                                        <div className="flex justify-between items-center text-xs mb-1">
+                                                                            <span className="font-semibold truncate pr-2" title={section.title}>{section.title}</span>
+                                                                            <span className="text-gray-500 dark:text-gray-400 font-mono flex-shrink-0">{section.filled_questions}/{section.total_questions}</span>
+                                                                        </div>
+                                                                        <div className="w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700">
+                                                                            <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${section.total_questions > 0 ? (section.filled_questions / section.total_questions) * 100 : 0}%` }}></div>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-sm text-gray-400 text-center py-2">No section summary available for this document.</p>
+                                                        )}
+                                                    </div>
+                                                </Td>
+                                            </Tr>
+                                        )}
+                                    </Fragment>
+                                )
+                            }) : (
+                                <Tr><Td colSpan={5} className="text-center py-10 text-gray-500">No documents found.</Td></Tr>
+                            )}
+                        </tbody>
+                    </Table>
+                )}
             </div>
+            {!loading && total > 0 && (
+                <div className="flex items-center justify-between mt-4">
+                    <Pagination
+                        currentPage={queries.pageIndex}
+                        total={total}
+                        pageSize={queries.pageSize}
+                        onChange={handlePaginationChange}
+                    />
+                    <div style={{ minWidth: 130 }}>
+                        <Select
+                            size="sm"
+                            isSearchable={false}
+                            value={{ value: queries.pageSize, label: `${queries.pageSize} / page` }}
+                            options={[
+                                { value: 10, label: '10 / page' },
+                                { value: 20, label: '20 / page' },
+                                { value: 50, label: '50 / page' },
+                            ]}
+                            onChange={(option) => handleSelectChange(option.value)}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 // --- END: Account Documents Component ---
+
 
 const CHART_COLORS = ['#3B82F6', '#10B981', '#F97316', '#8B5CF6', '#EC4899', '#6366F1', '#F59E0B', '#06B6D4'];
 const categoryThemes = {
@@ -1055,7 +1115,6 @@ const Overview = () => {
             <Card>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <h5 className="capitalize">{currentCategory.title || currentCategory.label} Summary</h5>
-                    {/* <Select className="min-w-[160px]" size="sm" defaultValue={{ label: 'All Time', value: 'All' }} options={[{ label: 'All Time', value: 'All' }, { label: 'Today', value: 'Today' }, { label: 'This Week', value: 'Weekly' }, { label: 'This Month', value: 'Monthly' }]} /> */}
                 </div>
                 <CategorySummaryChart data={currentCategory.summaryData} loading={isLoading} />
             </Card>
@@ -1073,69 +1132,29 @@ const Overview = () => {
                     </p>
                 </div>
 
-                {isLoading ? (
-                    <>
-                        <Td>
-                            <div className="flex items-center gap-2">
-                                <Skeleton className="h-8 w-8 rounded-full" />
-                                <div className="flex flex-col gap-1.5 w-full">
-                                    <Skeleton className="h-3 w-20 rounded" />
-                                    <Skeleton className="h-3 w-40 rounded" />
-                                </div>
-                            </div>
-                        </Td>
-                        <Td>
-                            <div className="flex flex-col gap-1.5">
-                                <Skeleton className="h-3 w-32 rounded" />
-                                <Skeleton className="h-3 w-24 rounded" />
-                            </div>
-                        </Td>
-                        <Td>
-                            <div className="flex flex-col gap-1.5">
-                                <Skeleton className="h-3 w-full rounded" />
-                                <Skeleton className="h-3 w-full rounded" />
-                                <Skeleton className="h-5 w-16 rounded-md mt-1" />
-                            </div>
-                        </Td>
-                        <Td>
-                            <div className="flex flex-col gap-2">
-                                <Skeleton className="h-3 w-20 rounded" />
-                                <Skeleton className="h-3 w-24 rounded" />
-                                <Skeleton className="h-2.5 w-full rounded-full" />
-                            </div>
-                        </Td>
-                        <Td>
-                            <div className="flex flex-col items-center gap-2">
-                                <Skeleton className="h-6 w-36 rounded-md" />
-                                <Skeleton className="h-6 w-36 rounded-md" />
-                                <Skeleton className="h-6 w-36 rounded-md" />
-                            </div>
-                        </Td>
-                    </>
-                ) : (
-                    selectedCategory === 'ProductOpportunities' ? (
-                        <ProductOpportunitiesTable data={currentCategory.tableData} onSearch={handleOpportunitySearch} />
+                {selectedCategory === 'ProductOpportunities' ? (
+                    isLoading ? <ProductOpportunitySkeleton /> : <ProductOpportunitiesTable data={currentCategory.tableData} onSearch={handleOpportunitySearch} />
+                ) :
+                    selectedCategory === 'Tasks' ? (
+                        isLoading ? <TaskTableSkeleton /> : <TasksByStatusTable data={currentCategory.fullData} />
                     ) :
-                        selectedCategory === 'Tasks' ? (
-                            <TasksByStatusTable data={currentCategory.fullData} />
+                        selectedCategory === 'Leads' ? (
+                            <>
+                                <DebouceInput className="w-full md:w-1/3 mb-4" placeholder="Search by Salesperson or Product..." prefix={<Search />} onChange={(e) => handleLeadSearch(e.target.value)} />
+                                {isLoading ? <TableSkeleton columns={[{header: 'Salesperson'},{header: 'Product'},{header: 'Status'},{header: 'Buyer'},{header: 'Supplier'},{header: 'Created At'}]} skeletonRow={<SalespersonSkeletonRow />} /> : <LeadsBySalespersonTable data={currentCategory.tableData} />}
+                            </>
                         ) :
-                            selectedCategory === 'Leads' ? (
-                                <>
-                                    <DebouceInput className="w-full md:w-1/3 mb-4" placeholder="Search by Salesperson or Product..." prefix={<Search />} onChange={(e) => handleLeadSearch(e.target.value)} />
-                                    <LeadsBySalespersonTable data={currentCategory.tableData} />
-                                </>
+                            selectedCategory === 'WallListing' ? (
+                                isLoading ? <WallListingSkeleton /> : <WallListingDetails data={currentCategory.wallData} />
                             ) :
-                                selectedCategory === 'WallListing' ? (
-                                    <WallListingDetails data={currentCategory.wallData} />
-                                ) :
-                                    selectedCategory === 'Company' ? (
-                                        <AccountDocumentsTable data={currentCategory.tableData} loading={isLoading} />
-                                    ) : (
-                                        <div className="text-center p-8 border border-dashed rounded-lg">
-                                            <p className="text-gray-500">Component for {currentCategory.title || currentCategory.label} is not implemented yet.</p>
-                                        </div>
-                                    )
-                )}
+                                selectedCategory === 'Company' ? (
+                                    <AccountDocumentsTable data={currentCategory.tableData} loading={isLoading} />
+                                ) : (
+                                    <div className="text-center p-8 border border-dashed rounded-lg">
+                                        <p className="text-gray-500">Component for {currentCategory.title || currentCategory.label} is not implemented yet.</p>
+                                    </div>
+                                )
+                }
             </Card>
         </div>
     )
