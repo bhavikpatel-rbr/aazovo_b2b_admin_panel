@@ -111,8 +111,8 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  Row,
   useReactTable,
+  Row,
   VisibilityState,
 } from "@tanstack/react-table";
 import type { ChangeEvent, ReactNode } from "react";
@@ -2081,7 +2081,18 @@ const OpportunityFilterDrawer: React.FC<{
         <Form id="filterOpportunityForm" onSubmit={handleSubmit(onSubmit)}>
           {/* START: Responsive Fix */}
           <div className="h-full overflow-y-auto">
-            <div className=" flex flex-col gap-6">
+            <div className="flex flex-col gap-6">
+              {/* Member Name/Code Search Bar */}
+              <FormItem label="Member Name / Code">
+                <Controller
+                  name="memberName"
+                  control={control}
+                  render={({ field }) => (
+                    <Input {...field} placeholder="Search by name or code..." />
+                  )}
+                />
+              </FormItem>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormItem label="Seller/Buyer">
                   <Controller name="wantTo" control={control} render={({ field }) => (
@@ -2307,12 +2318,22 @@ const ActiveFiltersDisplay = ({
     );
   };
 
-  const renderTextTag = (key: string, value: string) => (
-    <Tag key={key} prefix className="capitalize">
-      {key.replace(/s$/, '')}: {value}
-      <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(key, value)} />
-    </Tag>
-  );
+  const renderTextTag = (key: string, value: string) => {
+    const labelMapping: Record<string, string> = {
+        states: 'State',
+        cities: 'City',
+        pincodes: 'Pincode',
+        memberName: 'Member'
+    };
+    const label = labelMapping[key] || key;
+    return (
+        <Tag key={key} prefix>
+            {label}: {value}
+            <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(key, value)} />
+        </Tag>
+    );
+  };
+
 
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
@@ -2323,7 +2344,7 @@ const ActiveFiltersDisplay = ({
         if (Array.isArray(value)) {
           return value.map(item => renderTag(key, item));
         }
-        if (['states', 'cities', 'pincodes'].includes(key)) {
+        if (['states', 'cities', 'pincodes', 'memberName'].includes(key)) {
           return renderTextTag(key, value as string);
         }
         if (key === 'kycVerified') {
@@ -3467,6 +3488,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
     productStatuses: [],
     productSpecs: [],
     wantTo: [],
+    memberName: '',
   }), []);
 
   const [filters, setFilters] = useState(initialFilterState);
@@ -3572,6 +3594,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
           product: filters.products.join(','),
           product_status: filters.productStatuses.join(','),
           product_spec: filters.productSpecs.join(','),
+          member_name: filters.memberName,
         };
 
         let want_to_filter = [...filters.wantTo];
@@ -4300,7 +4323,7 @@ console.log("apiItem",apiItem);
           ),
         },
         {
-          header: "Match/Product",
+          header: "Opportunity Name",
           accessorKey: "product_name",
           size: 300,
           cell: ({ row }) => {
@@ -4335,7 +4358,7 @@ console.log("apiItem",apiItem);
           },
         },
         {
-          header: "Parties",
+          header: "Members",
           accessorKey: "company_name",
           size: 300,
           cell: ({ row }) => {
