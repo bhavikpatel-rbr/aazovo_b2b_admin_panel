@@ -219,6 +219,18 @@ const AccountDocSkeleton = () => (
         </tbody>
     </Table>
 )
+
+const ChartSkeleton = () => (
+    <div className="h-[250px] w-full mt-4 px-4 pb-6 flex items-end justify-around">
+        <Skeleton className="w-8 h-[60%] rounded-t" />
+        <Skeleton className="w-8 h-[80%] rounded-t" />
+        <Skeleton className="w-8 h-[50%] rounded-t" />
+        <Skeleton className="w-8 h-[70%] rounded-t" />
+        <Skeleton className="w-8 h-[90%] rounded-t" />
+        <Skeleton className="w-8 h-[40%] rounded-t" />
+        <Skeleton className="w-8 h-[75%] rounded-t" />
+    </div>
+);
 // --- END: SKELETON COMPONENTS ---
 
 type StatisticCategory =
@@ -285,15 +297,27 @@ const StatisticCard = (props: StatisticCardProps) => {
 
 type SummaryChartProps = {
     data: { name: string; value: number; fill: string }[]
+    loading: boolean
 }
 
-const CategorySummaryChart = ({ data }: SummaryChartProps) => {
+const CategorySummaryChart = ({ data, loading }: SummaryChartProps) => {
+    if (loading) {
+        return <ChartSkeleton />
+    }
+
     if (!data || data.length === 0) {
         return (
             <div className="h-[250px] flex flex-col items-center justify-center text-center text-gray-400 dark:text-gray-500">
                 <BarChart4 className="w-16 h-16 mb-2" strokeWidth={1.5} />
-                <p className='text-lg font-semibold text-gray-600 dark:text-gray-300'>No Summary Data</p>
-                <p className='text-sm'>There is no data to display in the chart.</p>
+                <div className="h-[250px] w-full mt-4 px-4 pb-6 flex items-end justify-around">
+                    <Skeleton className="w-8 h-[60%] rounded-t" />
+                    <Skeleton className="w-8 h-[80%] rounded-t" />
+                    <Skeleton className="w-8 h-[50%] rounded-t" />
+                    <Skeleton className="w-8 h-[70%] rounded-t" />
+                    <Skeleton className="w-8 h-[90%] rounded-t" />
+                    <Skeleton className="w-8 h-[40%] rounded-t" />
+                    <Skeleton className="w-8 h-[75%] rounded-t" />
+                </div>
             </div>
         )
     }
@@ -926,7 +950,7 @@ const Overview = () => {
         const filteredSalespersonData = rawData.filter((sp: SalespersonData) => sp.sales_person_name.toLowerCase().includes(leadSearchQuery.toLowerCase()) || sp.latest_10_leads.some(l => l.product_name.toLowerCase().includes(leadSearchQuery.toLowerCase()))).map((sp: SalespersonData) => ({ ...sp, latest_10_leads: leadSearchQuery ? sp.latest_10_leads.filter(l => l.product_name.toLowerCase().includes(leadSearchQuery.toLowerCase())) : sp.latest_10_leads }))
         return { totalCount, summaryData, tableData: filteredSalespersonData }
     }, [DashboardLeadsData, leadSearchQuery])
-    
+
     const accountDocAPIData = useMemo(() => {
         const counts = DashboardAccountDocData?.counts || {};
         const summaryData = [
@@ -946,7 +970,7 @@ const Overview = () => {
         const taskCounts = DashboardTaskData?.counts || {}
 
         const opportunityChartData = (DashboardOpportunityData?.data || [])
-            .slice(0, 10) 
+            .slice(0, 10)
             .map((p: any) => ({
                 name: p.product_name.replace('IPHONE', 'IP').substring(0, 15),
                 value: p.score,
@@ -954,7 +978,7 @@ const Overview = () => {
             }));
 
         const wallListingChartData = (DashboardWallData?.country_wise || [])
-            .slice(0, 10) 
+            .slice(0, 10)
             .map((c: any) => ({
                 name: c.country_name,
                 value: c.total,
@@ -965,7 +989,7 @@ const Overview = () => {
             ProductOpportunities: {
                 label: 'ProductOpportunities' as StatisticCategory,
                 title: 'Product Opportunities',
-                icon: <Shuffle size={28} strokeWidth={1.5}/>,
+                icon: <Shuffle size={28} strokeWidth={1.5} />,
                 theme: categoryThemes.ProductOpportunities,
                 totalCount: DashboardOpportunityData?.data?.length || 0,
                 summaryData: opportunityChartData,
@@ -992,7 +1016,7 @@ const Overview = () => {
             WallListing: {
                 label: 'WallListing' as StatisticCategory,
                 title: 'Wall Enquiries',
-                icon: <LayoutGrid size={28} strokeWidth={1.5}/>,
+                icon: <LayoutGrid size={28} strokeWidth={1.5} />,
                 theme: categoryThemes.WallListing,
                 totalCount: DashboardWallData?.counts?.total || 0,
                 summaryData: wallListingChartData,
@@ -1005,7 +1029,7 @@ const Overview = () => {
             Company: {
                 label: 'Company' as StatisticCategory,
                 title: 'Account Document',
-                icon: <Building2 size={28} strokeWidth={1.5}/>,
+                icon: <Building2 size={28} strokeWidth={1.5} />,
                 theme: categoryThemes.Company,
                 totalCount: accountDocAPIData.totalCount,
                 summaryData: accountDocAPIData.summaryData,
@@ -1033,7 +1057,7 @@ const Overview = () => {
                     <h5 className="capitalize">{currentCategory.title || currentCategory.label} Summary</h5>
                     {/* <Select className="min-w-[160px]" size="sm" defaultValue={{ label: 'All Time', value: 'All' }} options={[{ label: 'All Time', value: 'All' }, { label: 'Today', value: 'Today' }, { label: 'This Week', value: 'Weekly' }, { label: 'This Month', value: 'Monthly' }]} /> */}
                 </div>
-                <CategorySummaryChart data={currentCategory.summaryData} />
+                <CategorySummaryChart data={currentCategory.summaryData} loading={isLoading} />
             </Card>
 
             <Card>
@@ -1050,12 +1074,44 @@ const Overview = () => {
                 </div>
 
                 {isLoading ? (
-                    selectedCategory === 'ProductOpportunities' ? <ProductOpportunitySkeleton /> :
-                        selectedCategory === 'Tasks' ? <TaskTableSkeleton /> :
-                            selectedCategory === 'Leads' ? <TableSkeleton columns={[{ header: 'Salesperson' }]} skeletonRow={<SalespersonSkeletonRow />} rowCount={2} /> :
-                                selectedCategory === 'WallListing' ? <WallListingSkeleton /> :
-                                    selectedCategory === 'Company' ? <AccountDocSkeleton /> :
-                                        <Skeleton className="h-64 w-full" />
+                    <>
+                        <Td>
+                            <div className="flex items-center gap-2">
+                                <Skeleton className="h-8 w-8 rounded-full" />
+                                <div className="flex flex-col gap-1.5 w-full">
+                                    <Skeleton className="h-3 w-20 rounded" />
+                                    <Skeleton className="h-3 w-40 rounded" />
+                                </div>
+                            </div>
+                        </Td>
+                        <Td>
+                            <div className="flex flex-col gap-1.5">
+                                <Skeleton className="h-3 w-32 rounded" />
+                                <Skeleton className="h-3 w-24 rounded" />
+                            </div>
+                        </Td>
+                        <Td>
+                            <div className="flex flex-col gap-1.5">
+                                <Skeleton className="h-3 w-full rounded" />
+                                <Skeleton className="h-3 w-full rounded" />
+                                <Skeleton className="h-5 w-16 rounded-md mt-1" />
+                            </div>
+                        </Td>
+                        <Td>
+                            <div className="flex flex-col gap-2">
+                                <Skeleton className="h-3 w-20 rounded" />
+                                <Skeleton className="h-3 w-24 rounded" />
+                                <Skeleton className="h-2.5 w-full rounded-full" />
+                            </div>
+                        </Td>
+                        <Td>
+                            <div className="flex flex-col items-center gap-2">
+                                <Skeleton className="h-6 w-36 rounded-md" />
+                                <Skeleton className="h-6 w-36 rounded-md" />
+                                <Skeleton className="h-6 w-36 rounded-md" />
+                            </div>
+                        </Td>
+                    </>
                 ) : (
                     selectedCategory === 'ProductOpportunities' ? (
                         <ProductOpportunitiesTable data={currentCategory.tableData} onSearch={handleOpportunitySearch} />
