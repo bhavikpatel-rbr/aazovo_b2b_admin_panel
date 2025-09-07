@@ -321,6 +321,25 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
   const [isLoading, setIsLoading] = useState(true);
   const [selected, setSelected] = useState<number[]>([]);
 
+  // --- START: Pagination State ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return data.slice(startIndex, startIndex + pageSize);
+  }, [data, currentPage, pageSize]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1); // Reset to first page when page size changes
+  };
+  // --- END: Pagination State ---
+
   useEffect(() => {
     const fetchOpportunities = async () => {
       if (!wallItem.id) { setIsLoading(false); return; }
@@ -356,9 +375,19 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
   const handleSelect = (id: number, checked: boolean) => {
     setSelected(prev => checked ? [...prev, id] : prev.filter(i => i !== id));
   };
+  
+  // --- START: Modified handleSelectAll for pagination ---
   const handleSelectAll = (checked: boolean) => {
-    setSelected(checked ? data.map(op => op.id) : []);
+    const pageIds = paginatedData.map(op => op.id);
+    if (checked) {
+      // Add all IDs from the current page to the selection, avoiding duplicates
+      setSelected(prev => [...new Set([...prev, ...pageIds])]);
+    } else {
+      // Remove all IDs from the current page from the selection
+      setSelected(prev => prev.filter(id => !pageIds.includes(id)));
+    }
   };
+  // --- END: Modified handleSelectAll ---
 
   const handleAction = (type: 'offer_demand' | 'lead' | 'email' | 'whatsapp' | 'copy') => {
     const selectedOps = data.filter(op => selected.includes(op.id));
@@ -412,8 +441,29 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
     }
   };
 
+  // --- START: Logic for header checkbox state ---
+  const isAllOnPageSelected = paginatedData.length > 0 && paginatedData.every(op => selected.includes(op.id));
+  const isSomeOnPageSelected = paginatedData.some(op => selected.includes(op.id)) && !isAllOnPageSelected;
+  // --- END: Logic for header checkbox state ---
+
   const columns: ColumnDef<MatchingOpportunityItem>[] = [
-    { id: 'select', header: ({ table }) => <Checkbox checked={table.getIsAllRowsSelected()} indeterminate={table.getIsSomeRowsSelected()} onChange={e => handleSelectAll(e)} />, cell: ({ row }) => <Checkbox checked={selected.includes(row.original.id)} onChange={e => handleSelect(row.original.id, e)} />, size: 40 },
+    {
+      id: 'select',
+      header: () => (
+        <Checkbox
+          checked={isAllOnPageSelected}
+          indeterminate={isSomeOnPageSelected}
+          onChange={e => handleSelectAll(e)}
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={selected.includes(row.original.id)}
+          onChange={e => handleSelect(row.original.id, e)}
+        />
+      ),
+      size: 40
+    },
     { header: 'Supplier/Buyer', cell: ({ row }) => <div><span className="font-semibold">{row.original.member_name}</span><br /><span className="text-xs text-gray-500">{row.original.member_code}</span></div> },
     {
       header: 'Details', cell: ({ row }) => (
@@ -433,13 +483,27 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
     },
   ];
 
-  const [Pagesize, setPagesize] = useState(10);
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={1000} bodyOpenClassName="overflow-hidden">
       <div className="flex flex-col h-full max-h-[80vh]">
         <div className="px-6 py-4 border-b"><h5>Matching Opportunities for "{wallItem.product_name}"</h5></div>
         <div className="flex-grow overflow-y-auto px-6 py-4">
-          {isLoading ? <div className="flex justify-center items-center h-64"><Spinner size={40} /></div> : <DataTable columns={columns} data={data} noData={data.length === 0} pagingData={{ total: data.length, pageIndex: 1, pageSize: Pagesize }} onSelectChange={(e) => setPagesize(e)} />}
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64"><Spinner size={40} /></div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={paginatedData}
+              noData={data.length === 0}
+              pagingData={{
+                total: data.length,
+                pageIndex: currentPage,
+                pageSize: pageSize
+              }}
+              onPaginationChange={handlePageChange}
+              onSelectChange={handlePageSizeChange}
+            />
+          )}
         </div>
         <div className="px-6 py-4 border-t">
           {selected.length > 0 ? (
@@ -466,6 +530,7 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
     </Dialog>
   );
 };
+
 
 const ShareWallLinkDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
   const linkToShare = `${window.location.origin}/sales-leads/wall-item/${wallItem.id}`;
