@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate, NavLink } from "react-router-dom";
+import { useNavigate, NavLink, useLocation } from "react-router-dom";
 import dayjs from "dayjs";
+import { z } from "zod";
 
 // UI Components
 import Input from "@/components/ui/Input";
@@ -19,14 +20,6 @@ import Spinner from "@/components/ui/Spinner";
 // Icons
 import { BiChevronRight } from "react-icons/bi";
 
-// Types and Schema
-import type { LeadFormData } from "../types"; // Ensure this path is correct
-import {
-  leadFormSchema,
-  leadIntentOptions,
-  deviceConditionOptions as baseDeviceConditionOptions,
-} from "../types"; // Ensure this path is correct
-
 // Redux
 import { useAppDispatch } from "@/reduxtool/store";
 import {
@@ -39,16 +32,55 @@ import {
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector } from "react-redux";
 
+// --- START: Inferred Types & Schemas (based on your code) ---
+// This section is added to make the component self-contained for this example.
+// In your actual project, you would import these from your central types file.
+
+export const leadIntentOptions = [
+    { value: "Buy", label: "Buy" },
+    { value: "Sell", label: "Sell" },
+];
+
+export const baseDeviceConditionOptions = [
+    { value: "New", label: "New" },
+    { value: "Used", label: "Used" },
+    { value: "Refurbished", label: "Refurbished" },
+];
+
+export const leadFormSchema = z.object({
+  lead_intent: z.string().min(1, "Lead intent is required."),
+  member_id: z.number().nullable().refine(val => val !== null, "Lead member is required."),
+  source_supplier_id: z.number().nullable().optional(),
+  product_id: z.number().nullable().refine(val => val !== null, "Product name is required."),
+  qty: z.number().nullable().refine(val => val !== null, "Quantity is required."),
+  target_price: z.number().nullable().optional(),
+  lead_status: z.string().optional(),
+  product_spec_id: z.number().nullable().optional(),
+  source_qty: z.number().nullable().optional(),
+  source_price: z.number().nullable().optional(),
+  source_product_status: z.string().nullable().optional(),
+  source_device_condition: z.string().nullable().optional(),
+  source_device_type: z.string().nullable().optional(),
+  source_color: z.string().nullable().optional(),
+  source_cartoon_type_id: z.number().nullable().optional(),
+  source_dispatch_status: z.string().nullable().optional(),
+  source_payment_term_id: z.number().nullable().optional(),
+  source_eta: z.date().nullable().optional(),
+  source_location: z.string().nullable().optional(),
+  source_internal_remarks: z.string().nullable().optional(),
+});
+export type LeadFormData = z.infer<typeof leadFormSchema>;
+// --- END: Inferred Types & Schemas ---
+
+
 const productStatusOptions = [
   { value: "Non-active", label: "Non-active" },
   { value: "Active", label: "Active" },
 ];
-
 const cartoonTypeOptions = [
   { value: 1, label: "Master Carton" },
   { value: 2, label: "Non - Master Carton" },
 ];
-
 const deviceConditionOptions = [
   ...baseDeviceConditionOptions,
   { value: "Old", label: "Old" },
@@ -56,6 +88,7 @@ const deviceConditionOptions = [
 
 const AddLeadPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useAppDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
@@ -75,30 +108,10 @@ const AddLeadPage = () => {
     reset,
     watch,
     formState: { errors, isDirty },
+    setValue,
   } = useForm<LeadFormData>({
     resolver: zodResolver(leadFormSchema),
-    defaultValues: {
-      member_id: null,
-      lead_intent: null,
-      product_id: null,
-      product_spec_id: null,
-      qty: null,
-      target_price: null,
-      lead_status: "New", // Default status for new leads
-      source_supplier_id: null,
-      source_qty: null,
-      source_price: null,
-      source_product_status: null,
-      source_device_condition: null,
-      source_device_type: null,
-      source_color: null,
-      source_cartoon_type_id: null,
-      source_dispatch_status: null,
-      source_payment_term_id: null,
-      source_eta: null,
-      source_location: null,
-      source_internal_remarks: null,
-    },
+    defaultValues: { lead_status: "New" }, // Keep the default status
     mode: "onChange",
   });
 
@@ -111,9 +124,9 @@ const AddLeadPage = () => {
   }, [leadIntentValue]);
 
   const sourceMemberLabel = useMemo(() => {
-    if (leadIntentValue === "Buy") return <div>Source Member (Supplier)<span className="text-red-500"> *</span></div>;
-    if (leadIntentValue === "Sell") return <div>Source Member (Buyer)<span className="text-red-500"> *</span></div>;
-    return <div>Source Member (Supplier)<span className="text-red-500"> *</span></div>;
+    if (leadIntentValue === "Buy") return <div>Source Member (Supplier)</div>;
+    if (leadIntentValue === "Sell") return <div>Source Member (Buyer)</div>;
+    return <div>Source Member (Supplier)</div>;
   }, [leadIntentValue]);
 
   useEffect(() => {
@@ -126,12 +139,8 @@ const AddLeadPage = () => {
           dispatch(getPaymentTermAction()),
         ]);
       } catch (error) {
-        console.error("Failed to fetch dropdown data for Add Lead page:", error);
-        toast.push(
-          <Notification title="Data Load Error" type="danger">
-            Could not load selection options.
-          </Notification>
-        );
+        console.error("Failed to fetch dropdown data:", error);
+        toast.push(<Notification title="Data Load Error" type="danger">Could not load selection options.</Notification>);
       } finally {
         setInitialDataFetched(true);
       }
@@ -139,48 +148,38 @@ const AddLeadPage = () => {
     fetchDropdownData();
   }, [dispatch]);
 
-  const productOptions = useMemo(() => {
-    if (!Array.isArray(productsMasterData)) return [];
-    return productsMasterData.map((product) => ({
-      value: product.id,
-      label: product.name,
-    }));
-  }, [productsMasterData]);
+  // Handle incoming data from navigation to pre-fill the form
+  useEffect(() => {
+    const prefillData = location.state;
+    if (prefillData && initialDataFetched) {
+      setValue('member_id', Number(prefillData.buyerId) || null);
+      setValue('source_supplier_id', Number(prefillData.supplierId) || null);
+      setValue('product_id', Number(prefillData.productId) || null);
+      setValue('lead_intent', prefillData.want_to === 'Sell' ? 'Sell' : 'Buy');
+      setValue('qty', Number(prefillData.qty) || null);
+      setValue('target_price', Number(prefillData.price) || null);
+      setValue('source_qty', Number(prefillData.qty) || null);
+      setValue('source_price', Number(prefillData.price) || null);
+      setValue('source_product_status', prefillData.product_status);
+      setValue('source_device_condition', prefillData.device_condition);
+      setValue('source_color', prefillData.color);
+      setValue('source_location', prefillData.location);
+      setValue('product_spec_id', prefillData.product_spec_id || null);
+      setValue('source_payment_term_id', prefillData.payment_term || null);
+    }
+  }, [location.state, setValue, initialDataFetched]);
 
-  const productSpecOptions = useMemo(() => {
-    if (!Array.isArray(ProductSpecificationsData)) return [];
-    return ProductSpecificationsData.map((spec) => ({
-      value: spec.id,
-      label: spec.name,
-    }));
-  }, [ProductSpecificationsData]);
-
-  const paymentTermOptions = useMemo(() => {
-    if (!Array.isArray(PaymentTermsData)) return [];
-    return PaymentTermsData.map((pt) => ({
-      value: pt.id,
-      label: pt.term_name || pt.name,
-    }));
-  }, [PaymentTermsData]);
-
-  const leadMemberOptions = useMemo(() => {
-    if (!Array.isArray(memberData)) return [];
-    return memberData.map((member) => ({
-      value: member.id,
-      label: `(${member.customer_code}) - ${member.name || " "}`,
-    }));
-  }, [memberData]);
+  const productOptions = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map(p => ({ value: p.id, label: p.name })) : [], [productsMasterData]);
+  const productSpecOptions = useMemo(() => Array.isArray(ProductSpecificationsData) ? ProductSpecificationsData.map(spec => ({ value: spec.id, label: spec.name })) : [], [ProductSpecificationsData]);
+  const paymentTermOptions = useMemo(() => Array.isArray(PaymentTermsData) ? PaymentTermsData.map(pt => ({ value: pt.id, label: pt.term_name || pt.name })) : [], [PaymentTermsData]);
+  const leadMemberOptions = useMemo(() => Array.isArray(memberData) ? memberData.map(m => ({ value: m.id, label: `(${m.customer_code}) - ${m.name || ' '}` })) : [], [memberData]);
 
   const onSubmit = async (data: LeadFormData) => {
     setIsSubmitting(true);
-
-    const cartoonTypeLabel =
-      cartoonTypeOptions.find(
-        (option) => option.value === data.source_cartoon_type_id
-      )?.label || null;
+    const cartoonTypeLabel = cartoonTypeOptions.find(option => option.value === data.source_cartoon_type_id)?.label || null;
 
     const apiPayload = {
-      lead_type:'Manual lead',
+      lead_type: 'Manual lead',
       lead_intent: data.lead_intent,
       lead_member: data.member_id,
       product_id: data.product_id,
@@ -205,19 +204,11 @@ const AddLeadPage = () => {
 
     try {
       await dispatch(addLeadAction(apiPayload)).unwrap();
-      toast.push(
-        <Notification title="Success" type="success">
-          Lead created successfully.
-        </Notification>
-      );
+      toast.push(<Notification title="Success" type="success">Lead created successfully.</Notification>);
       reset();
-      navigate("/sales-leads/lead"); // Navigate to the leads list page
+      navigate("/sales/leads");
     } catch (error: any) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          {error.message || "Failed to create lead."}
-        </Notification>
-      );
+      toast.push(<Notification title="Error" type="danger">{error.message || "Failed to create lead."}</Notification>);
     } finally {
       setIsSubmitting(false);
     }
@@ -225,361 +216,86 @@ const AddLeadPage = () => {
 
   const handleCancel = () => {
     if (isDirty) setCancelConfirmOpen(true);
-    else navigate("/sales-leads/lead");
+    else navigate("/sales/leads");
   };
 
   const isLoadingInitialData = masterLoadingStatus === "loading" && !initialDataFetched;
 
   if (isLoadingInitialData) {
-    return (
-      <Container className="flex justify-center items-center h-full">
-        <Spinner size="xl" />
-      </Container>
-    );
+    return <Container className="flex justify-center items-center h-full"><Spinner size="xl" /></Container>;
   }
 
   return (
     <Container className="h-full">
       <div className="flex gap-1 items-end mb-3">
-        <NavLink to="/sales-leads/lead">
-          <h6 className="font-semibold hover:text-primary">Leads</h6>
-        </NavLink>
-        <BiChevronRight size={22} color="black" />
+        <NavLink to="/sales/leads"><h6 className="font-semibold hover:text-primary">Leads</h6></NavLink>
+        <BiChevronRight size={22} />
         <h6 className="font-semibold text-primary">Add New Lead</h6>
       </div>
       <FormContainer>
         <form onSubmit={handleSubmit(onSubmit)}>
           <AdaptableCard className="mb-4">
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2">
-              <FormItem
-                label="Lead Intent"
-                invalid={!!errors.lead_intent}
-                errorMessage={errors.lead_intent?.message}
-              >
-                <Controller
-                  name="lead_intent"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Intent"
-                      options={leadIntentOptions}
-                      value={leadIntentOptions.find((o) => o.value === field.value)}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                      isClearable
-                    />
-                  )}
-                />
+              <FormItem label="Lead Intent" invalid={!!errors.lead_intent} errorMessage={errors.lead_intent?.message}>
+                <Controller name="lead_intent" control={control} render={({ field }) => (<UiSelect placeholder="Select Intent" options={leadIntentOptions} value={leadIntentOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />)} />
               </FormItem>
-              <FormItem
-                label={leadMemberLabel}
-                invalid={!!errors.member_id}
-                errorMessage={errors.member_id?.message}
-              >
-                <Controller
-                  name="member_id"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Member"
-                      options={leadMemberOptions}
-                      value={leadMemberOptions.find((o) => o.value === field.value)}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                    />
-                  )}
-                />
+              <FormItem label={leadMemberLabel} invalid={!!errors.member_id} errorMessage={errors.member_id?.message}>
+                <Controller name="member_id" control={control} render={({ field }) => (<UiSelect placeholder="Select Member" options={leadMemberOptions} value={leadMemberOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} />
               </FormItem>
-
-              <FormItem
-                label={sourceMemberLabel}
-                invalid={!!errors.source_supplier_id}
-                errorMessage={errors.source_supplier_id?.message}
-              >
-                <Controller
-                  name="source_supplier_id"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Source Member"
-                      options={leadMemberOptions}
-                      value={leadMemberOptions.find((o) => o.value === field.value)}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                      isClearable
-                    />
-                  )}
-                />
+              <FormItem label={sourceMemberLabel} invalid={!!errors.source_supplier_id} errorMessage={errors.source_supplier_id?.message}>
+                <Controller name="source_supplier_id" control={control} render={({ field }) => (<UiSelect placeholder="Select Source Member" options={leadMemberOptions} value={leadMemberOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />)} />
               </FormItem>
-
-              <FormItem
-                label={<div>Product Name<span className="text-red-500"> *</span></div>}
-                invalid={!!errors.product_id}
-                errorMessage={errors.product_id?.message}
-              >
-                <Controller
-                  name="product_id"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Product"
-                      options={productOptions}
-                      value={productOptions.find((o) => o.value === field.value)}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={masterLoadingStatus === "loading" && productOptions.length === 0}
-                      isClearable
-                    />
-                  )}
-                />
+              <FormItem label={<div>Product Name<span className="text-red-500"> *</span></div>} invalid={!!errors.product_id} errorMessage={errors.product_id?.message}>
+                <Controller name="product_id" control={control} render={({ field }) => (<UiSelect placeholder="Select Product" options={productOptions} value={productOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isLoading={isLoadingInitialData} isClearable />)} />
               </FormItem>
-              <FormItem
-                label={<div>Quantity<span className="text-red-500"> *</span></div>}
-                invalid={!!errors.qty}
-                errorMessage={errors.qty?.message}
-              >
-                <Controller
-                  name="qty"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber
-                      placeholder="Enter quantity"
-                      {...field}
-                      value={field.value ?? undefined}
-                      onChange={(val) => field.onChange(val ?? null)}
-                    />
-                  )}
-                />
+              <FormItem label={<div>Quantity<span className="text-red-500"> *</span></div>} invalid={!!errors.qty} errorMessage={errors.qty?.message}>
+                <Controller name="qty" control={control} render={({ field }) => (<InputNumber placeholder="Enter quantity" {...field} value={field.value ?? undefined} onChange={(val) => field.onChange(val ?? null)} />)} />
               </FormItem>
-              <FormItem
-                label="Price ($)"
-                invalid={!!errors.target_price}
-                errorMessage={errors.target_price?.message}
-              >
-                <Controller
-                  name="target_price"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber
-                      placeholder="Enter price"
-                      {...field}
-                      value={field.value ?? undefined}
-                      onChange={(val) => field.onChange(val ?? null)}
-                      step={0.01}
-                    />
-                  )}
-                />
+              <FormItem label="Price ($)" invalid={!!errors.target_price} errorMessage={errors.target_price?.message}>
+                <Controller name="target_price" control={control} render={({ field }) => (<InputNumber placeholder="Enter target price" {...field} value={field.value ?? undefined} onChange={(val) => field.onChange(val ?? null)} step={0.01} />)} />
               </FormItem>
-              <FormItem
-                label="Product Status"
-                invalid={!!errors.source_product_status}
-                errorMessage={errors.source_product_status?.message}
-              >
-                <Controller
-                  name="source_product_status"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Product Status"
-                      options={productStatusOptions}
-                      value={productStatusOptions.find((o) => o.value === field.value)}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                      isClearable
-                    />
-                  )}
-                />
+              <FormItem label="Product Status" invalid={!!errors.source_product_status} errorMessage={errors.source_product_status?.message}>
+                <Controller name="source_product_status" control={control} render={({ field }) => (<UiSelect placeholder="Select Product Status" options={productStatusOptions} value={productStatusOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />)} />
               </FormItem>
-              <FormItem
-                label="Product Spec"
-                invalid={!!errors.product_spec_id}
-                errorMessage={errors.product_spec_id?.message}
-              >
-                <Controller
-                  name="product_spec_id"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Specification"
-                      options={productSpecOptions}
-                      value={productSpecOptions.find((o) => o.value === field.value)}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={masterLoadingStatus === "loading" && productSpecOptions.length === 0}
-                      isClearable
-                    />
-                  )}
-                />
+              <FormItem label="Product Spec" invalid={!!errors.product_spec_id} errorMessage={errors.product_spec_id?.message}>
+                <Controller name="product_spec_id" control={control} render={({ field }) => (<UiSelect placeholder="Select Specification" options={productSpecOptions} value={productSpecOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isLoading={isLoadingInitialData} isClearable />)} />
               </FormItem>
-              <FormItem
-                label="Device Condition"
-                invalid={!!errors.source_device_condition}
-                errorMessage={errors.source_device_condition?.message}
-              >
-                <Controller
-                  name="source_device_condition"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Condition"
-                      options={deviceConditionOptions}
-                      value={deviceConditionOptions.find((o) => o.value === field.value)}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                      isClearable
-                    />
-                  )}
-                />
+              <FormItem label="Device Type" invalid={!!errors.source_device_type} errorMessage={errors.source_device_type?.message}>
+                <Controller name="source_device_type" control={control} render={({ field }) => (<Input placeholder="e.g., Mobile Phone, Laptop" {...field} value={field.value ?? ""} />)} />
               </FormItem>
-              <FormItem
-                label="Color"
-                invalid={!!errors.source_color}
-                errorMessage={errors.source_color?.message}
-              >
-                <Controller
-                  name="source_color"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="e.g., Space Gray"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  )}
-                />
+              <FormItem label="Device Condition" invalid={!!errors.source_device_condition} errorMessage={errors.source_device_condition?.message}>
+                <Controller name="source_device_condition" control={control} render={({ field }) => (<UiSelect placeholder="Select Condition" options={deviceConditionOptions} value={deviceConditionOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />)} />
               </FormItem>
-              <FormItem
-                label="Cartoon Type"
-                invalid={!!errors.source_cartoon_type_id}
-                errorMessage={errors.source_cartoon_type_id?.message}
-              >
-                <Controller
-                  name="source_cartoon_type_id"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Cartoon Type"
-                      options={cartoonTypeOptions}
-                      value={cartoonTypeOptions.find((o) => o.value === field.value)}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                      isClearable
-                    />
-                  )}
-                />
+              <FormItem label="Color" invalid={!!errors.source_color} errorMessage={errors.source_color?.message}>
+                <Controller name="source_color" control={control} render={({ field }) => (<Input placeholder="e.g., Space Gray" {...field} value={field.value ?? ""} />)} />
               </FormItem>
-              <FormItem
-                label="Dispatch Status"
-                invalid={!!errors.source_dispatch_status}
-                errorMessage={errors.source_dispatch_status?.message}
-              >
-                <Controller
-                  name="source_dispatch_status"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="e.g., Ready to Ship"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  )}
-                />
+              <FormItem label="Cartoon Type" invalid={!!errors.source_cartoon_type_id} errorMessage={errors.source_cartoon_type_id?.message}>
+                <Controller name="source_cartoon_type_id" control={control} render={({ field }) => (<UiSelect placeholder="Select Cartoon Type" options={cartoonTypeOptions} value={cartoonTypeOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />)} />
               </FormItem>
-              <FormItem
-                label="Payment Term"
-                invalid={!!errors.source_payment_term_id}
-                errorMessage={errors.source_payment_term_id?.message}
-              >
-                <Controller
-                  name="source_payment_term_id"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Payment Term"
-                      options={paymentTermOptions}
-                      value={paymentTermOptions.find((o) => o.value === field.value)}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={masterLoadingStatus === "loading" && paymentTermOptions.length === 0}
-                      isClearable
-                    />
-                  )}
-                />
+              <FormItem label="Dispatch Status" invalid={!!errors.source_dispatch_status} errorMessage={errors.source_dispatch_status?.message}>
+                <Controller name="source_dispatch_status" control={control} render={({ field }) => (<Input placeholder="e.g., Ready to Ship" {...field} value={field.value ?? ""} />)} />
               </FormItem>
-              <FormItem
-                label="ETA"
-                invalid={!!errors.source_eta}
-                errorMessage={errors.source_eta?.message as string}
-              >
-                <Controller
-                  name="source_eta"
-                  control={control}
-                  render={({ field }) => (
-                    <DatePicker
-                      placeholder="Select ETA"
-                      value={field.value ? (dayjs(field.value).isValid() ? dayjs(field.value).toDate() : null) : null}
-                      onChange={(date) => field.onChange(date)}
-                    />
-                  )}
-                />
+              <FormItem label="Payment Term" invalid={!!errors.source_payment_term_id} errorMessage={errors.source_payment_term_id?.message}>
+                <Controller name="source_payment_term_id" control={control} render={({ field }) => (<UiSelect placeholder="Select Payment Term" options={paymentTermOptions} value={paymentTermOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isLoading={isLoadingInitialData} isClearable />)} />
               </FormItem>
-              <FormItem
-                label="Location"
-                invalid={!!errors.source_location}
-                errorMessage={errors.source_location?.message}
-              >
-                <Controller
-                  name="source_location"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="e.g., Warehouse A"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  )}
-                />
+              <FormItem label="ETA" invalid={!!errors.source_eta} errorMessage={errors.source_eta?.message as string}>
+                <Controller name="source_eta" control={control} render={({ field }) => (<DatePicker placeholder="Select ETA" value={field.value ? dayjs(field.value).toDate() : null} onChange={(date) => field.onChange(date)} />)} />
               </FormItem>
-              <FormItem
-                label="Internal Remarks"
-                invalid={!!errors.source_internal_remarks}
-                errorMessage={errors.source_internal_remarks?.message}
-                className="md:col-span-2 lg:col-span-4"
-              >
-                <Controller
-                  name="source_internal_remarks"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      textArea
-                      rows={3}
-                      placeholder="Internal notes..."
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  )}
-                />
+              <FormItem label="Location" invalid={!!errors.source_location} errorMessage={errors.source_location?.message}>
+                <Controller name="source_location" control={control} render={({ field }) => (<Input placeholder="e.g., Warehouse A" {...field} value={field.value ?? ""} />)} />
+              </FormItem>
+              <FormItem label="Internal Remarks" invalid={!!errors.source_internal_remarks} errorMessage={errors.source_internal_remarks?.message} className="md:col-span-2 lg:col-span-4">
+                <Controller name="source_internal_remarks" control={control} render={({ field }) => (<Input textArea rows={3} placeholder="Internal notes..." {...field} value={field.value ?? ""} />)} />
               </FormItem>
             </div>
           </AdaptableCard>
-
           <div className="mt-6 flex justify-end gap-2">
-            <Button type="button" onClick={handleCancel} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="solid"
-              loading={isSubmitting}
-              disabled={isSubmitting || isLoadingInitialData}
-            >
-              Save
-            </Button>
+            <Button type="button" onClick={handleCancel} disabled={isSubmitting}>Cancel</Button>
+            <Button type="submit" variant="solid" loading={isSubmitting} disabled={isSubmitting || isLoadingInitialData}>Save</Button>
           </div>
         </form>
       </FormContainer>
-      <ConfirmDialog
-        isOpen={cancelConfirmOpen}
-        type="warning"
-        title="Discard Changes?"
-        onClose={() => setCancelConfirmOpen(false)}
-        onConfirm={() => {
-          setCancelConfirmOpen(false);
-          navigate("/sales-leads/lead");
-        }}
-        onCancel={() => setCancelConfirmOpen(false)}
-      >
+      <ConfirmDialog isOpen={cancelConfirmOpen} type="warning" title="Discard Changes?" onClose={() => setCancelConfirmOpen(false)} onConfirm={() => { setCancelConfirmOpen(false); navigate("/sales/leads"); }} onCancel={() => setCancelConfirmOpen(false)}>
         <p>Unsaved changes will be lost.</p>
       </ConfirmDialog>
     </Container>

@@ -197,6 +197,8 @@ export type ApiOpportunityItem = {
 };
 export type AutoSpbApiItem = {
   id: number;
+  customer_id: number | null;
+  customer_name: string | null;
   customer_code: string | null;
   phonecode: string | null;
   mobile_no: string | null;
@@ -284,7 +286,7 @@ const formatCustomDateTime = (
   date: string | Date | null | undefined
 ): string => {
   if (!date) return " ";
-  return dayjs(date).format("D MMM YYYY, h:mm A");
+  return dayjs(date).format("D MMM YY, h:mm A");
 };
 
 // --- Form Schemas ---
@@ -3067,12 +3069,8 @@ const SpbSummaryRow: React.FC<SpbSummaryRowProps> = ({
   isSelected,
   onToggleSelect,
 }) => {
-  console.log(item, 'item');
-
-  const memberName = `Member: (${item.customer_code}) ${item.customer_name}` || `Member ID: ${item.customer_id}`;
-  const memberPhone = `Phone: ${item.mobile_no || ' '}`;
-  // const createDate = `Date: ${formatCustomDateTime(item.created_at)}`;
-  const prodColor = `Color: ${item.color}`;
+  const memberName = item.customer_name || `Member Code: ${item.customer_code}`;
+  const memberDisplay = `(${item.customer_code}) ${memberName}`;
 
   return (
     <label
@@ -3090,8 +3088,8 @@ const SpbSummaryRow: React.FC<SpbSummaryRowProps> = ({
           onClick={(e) => e.stopPropagation()}
         />
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-xs text-gray-800 dark:text-gray-100 truncate">
-            {memberName} | {memberPhone} | {prodColor} | {item.qty}
+          <p className="font-semibold text-xs text-gray-800 dark:text-gray-100 truncate" title={`${memberDisplay} | Qty: ${item.qty}`}>
+            {memberDisplay} | Qty: {item.qty}
           </p>
         </div>
       </div>
@@ -3104,11 +3102,48 @@ interface ExpandedAutoSpbDetailsProps {
 const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
   row,
 }) => {
+  const navigate = useNavigate();
   const [selectedBuyItems, setSelectedBuyItems] = useState<AutoSpbApiItem[]>([]);
   const [selectedSellItems, setSelectedSellItems] = useState<AutoSpbApiItem[]>([]);
 
   const buyItems = row.original._rawSpbBuyItems || [];
   const sellItems = row.original._rawSpbSellItems || [];
+
+  const handleCreateLead = useCallback(() => {
+    if (selectedBuyItems.length !== 1 || selectedSellItems.length !== 1) {
+      toast.push(<Notification title="Invalid Selection" type="warning" duration={4000}>Please select exactly one buyer and one seller to create a lead.</Notification>);
+      return;
+    }
+
+    const buyer = selectedBuyItems[0];
+    const seller = selectedSellItems[0];
+    const productId = row.original.id.replace('spb-match-', '');
+    const leadQty = Math.min(Number(buyer.qty) || Infinity, Number(seller.qty) || Infinity);
+
+    // This state object structure matches what the provided AddLeadPage.tsx expects
+    const prefillState = {
+      buyerId: buyer.customer_id,
+      supplierId: seller.customer_id,
+      productId: Number(productId),
+      want_to: 'Buy', // The lead is from the perspective of the Buyer
+      qty: leadQty === Infinity ? null : leadQty,
+      price: Number(seller.price) || null, // The seller's price becomes the target price
+      product_status: seller.product_status,
+      device_condition: seller.device_condition,
+      color: seller.color,
+      location: seller.location,
+      // The AddLeadPage expects IDs for these, which are not available in AutoSpbApiItem as IDs.
+      // Passing null to avoid errors. The user can select them manually on the lead page.
+      product_spec_id: null,
+      payment_term: null,
+    };
+
+    toast.push(<Notification title="Redirecting..." type="info">Preparing to create a new lead.</Notification>);
+    
+    // Navigate to the Add Lead page with the pre-filled data in the state
+    navigate('/sales-leads/wall-item/lead/add', { state: prefillState });
+
+  }, [selectedBuyItems, selectedSellItems, row.original, navigate]);
 
   const handleToggleBuyItem = (itemToToggle: AutoSpbApiItem) => {
     setSelectedBuyItems((prev) =>
@@ -3146,9 +3181,9 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
             {buyItems.length > 0 &&
               <label className="flex items-center gap-2 text-xs cursor-pointer">
                 <Checkbox
-                  checked={selectedBuyItems.length === buyItems.length}
+                  checked={selectedBuyItems.length === buyItems.length && buyItems.length > 0}
                   indeterminate={selectedBuyItems.length > 0 && selectedBuyItems.length < buyItems.length}
-                  onChange={(e) => handleSelectAll('Buy', e)}
+                  onChange={(checked) => handleSelectAll('Buy', checked)}
                 />
                 <span>Select All</span>
               </label>
@@ -3184,9 +3219,9 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
             {sellItems.length > 0 &&
               <label className="flex items-center gap-2 text-xs cursor-pointer">
                 <Checkbox
-                  checked={selectedSellItems.length === sellItems.length}
+                  checked={selectedSellItems.length === sellItems.length && sellItems.length > 0}
                   indeterminate={selectedSellItems.length > 0 && selectedSellItems.length < sellItems.length}
-                  onChange={(e) => handleSelectAll('Sell', e)}
+                  onChange={(checked) => handleSelectAll('Sell', checked)}
                 />
                 <span>Select All</span>
               </label>
@@ -3214,6 +3249,15 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
             <SpbActionToolbar items={selectedSellItems} matchType="Sell" />
           </div>
         </div>
+      </div>
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+        <Button
+          variant="solid"
+          onClick={handleCreateLead}
+          disabled={!(selectedBuyItems.length === 1 && selectedSellItems.length === 1)}
+        >
+          Create Lead
+        </Button>
       </div>
     </Card>
   );
