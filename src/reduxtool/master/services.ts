@@ -2882,6 +2882,27 @@ export const getDashboardCompanyAsync = async () => {
   }
 }
 
+export const getDashboardMemberAsync = async () => {
+  try {
+    // const response = await axiosInstance.get(`${config.apiURL}/get-company/${id}`);
+    const response = await axiosInstance.get(`${config.apiURL}/dashboard/dashboardmembers`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
+export const getDashboardProductAsync = async () => {
+  try {
+    // const response = await axiosInstance.get(`${config.apiURL}/get-company/${id}`);
+    const response = await axiosInstance.get(`${config.apiURL}/dashboard/dashboardproducts`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
+
 export const deleteOfferAsync = async (OfferData: any) => {
   try {
     const response = await axiosInstance.delete(`${config.apiURL}/offer/${OfferData}`)

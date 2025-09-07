@@ -138,7 +138,9 @@ import {
   getWallListingAction,
   getPageAction,
   getDashboardCountsAction,
-  getDashboardCompanyAction
+  getDashboardCompanyAction,
+  getDashboardMemberAction,
+  getDashboardProductAction
 } from "./middleware";
 
 const INITIAL_STATE: any = {
@@ -833,6 +835,14 @@ const masterSlice = createSlice({
     builder.addCase(getDashboardCompanyAction.fulfilled, (state, { payload }) => ({
       ...state,
       DashboardCompanyData: payload,
+    }));
+    builder.addCase(getDashboardMemberAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      DashboardMemberData: payload,
+    }));
+    builder.addCase(getDashboardProductAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      DashboardProductData: payload,
     }));
   },
 

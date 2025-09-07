@@ -2,13 +2,17 @@ import { DataTable, DebouceInput } from '@/components/shared';
 import { Avatar, Dialog, Table, Tag, Tooltip } from '@/components/ui';
 import Card from '@/components/ui/Card';
 import Select from '@/components/ui/Select';
+import THead from '@/components/ui/Table/THead';
 import Td from '@/components/ui/Table/Td';
+import Th from '@/components/ui/Table/Th';
 import Tr from '@/components/ui/Table/Tr';
 import { masterSelector } from '@/reduxtool/master/masterSlice';
 import {
     getCompanyAction,
     getDashboardCompanyAction,
     getDashboardCountsAction,
+    getDashboardMemberAction,
+    getDashboardProductAction,
     getEmployeesListingAction,
     getMemberAction,
     getpartnerAction,
@@ -34,6 +38,180 @@ import {
     TbUsersGroup,
 } from 'react-icons/tb';
 import { useSelector } from 'react-redux';
+
+// --- START: SKELETON COMPONENTS ---
+
+// 1. Base Skeleton Block
+const Skeleton = ({ className }: { className?: string }) => {
+    return (
+        <div
+            className={classNames('animate-pulse bg-gray-200 dark:bg-gray-600', className)}
+        />
+    )
+}
+
+// 2. Generic Table Skeleton
+const TableSkeleton = ({ columns, skeletonRow, rowCount = 5 }: { columns: any[], skeletonRow: ReactNode, rowCount?: number }) => {
+    return (
+        <Table>
+            <THead>
+                <Tr>
+                    {columns.map((col) => (
+                        <Th key={col.id || col.header} style={{ width: col.size }}>
+                            {col.header}
+                        </Th>
+                    ))}
+                </Tr>
+            </THead>
+            <tbody>
+                {Array.from({ length: rowCount }).map((_, i) => (
+                    <Tr key={i}>{skeletonRow}</Tr>
+                ))}
+            </tbody>
+        </Table>
+    );
+};
+
+// 3. Specific Skeleton Rows for each table
+
+const CompanySkeletonRow = () => (
+    <>
+        <Td>
+            <div className="flex items-center gap-2">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <div className='flex flex-col gap-1.5 w-full'>
+                    <Skeleton className="h-3 w-20 rounded" />
+                    <Skeleton className="h-3 w-40 rounded" />
+                </div>
+            </div>
+        </Td>
+        <Td>
+            <div className="flex flex-col gap-1.5">
+                <Skeleton className="h-3 w-32 rounded" />
+                <Skeleton className="h-3 w-24 rounded" />
+            </div>
+        </Td>
+        <Td>
+            <div className="flex flex-col gap-1.5">
+                <Skeleton className="h-3 w-full rounded" />
+                <Skeleton className="h-3 w-full rounded" />
+                <Skeleton className="h-5 w-16 rounded-md mt-1" />
+            </div>
+        </Td>
+        <Td>
+            <div className="flex flex-col gap-2">
+                <Skeleton className="h-3 w-20 rounded" />
+                <Skeleton className="h-3 w-24 rounded" />
+                <Skeleton className="h-2.5 w-full rounded-full" />
+            </div>
+        </Td>
+        <Td>
+            <div className="flex flex-col items-center gap-2">
+                <Skeleton className="h-6 w-36 rounded-md" />
+                <Skeleton className="h-6 w-36 rounded-md" />
+                <Skeleton className="h-6 w-36 rounded-md" />
+            </div>
+        </Td>
+    </>
+);
+
+const MemberSkeletonRow = () => (
+    <>
+        <Td>
+            <div className='flex flex-col gap-1.5 w-full'>
+                <Skeleton className="h-3 w-16 rounded" />
+                <Skeleton className="h-3 w-32 rounded" />
+            </div>
+        </Td>
+        <Td>
+            <div className='flex flex-col gap-1.5 w-full'>
+                <Skeleton className="h-3 w-20 rounded" />
+                <Skeleton className="h-3 w-40 rounded" />
+            </div>
+        </Td>
+        <Td>
+            <Skeleton className="h-5 w-16 rounded-md" />
+        </Td>
+        <Td>
+            <div className="flex flex-col gap-2">
+                <Skeleton className="h-3 w-24 rounded" />
+                <Skeleton className="h-3 w-20 rounded" />
+                <Skeleton className="h-1.5 w-full rounded-full" />
+            </div>
+        </Td>
+        <Td>
+            <div className="flex flex-col gap-1.5">
+                <Skeleton className="h-3 w-28 rounded" />
+                <Skeleton className="h-3 w-36 rounded" />
+            </div>
+        </Td>
+        <Td>
+            <div className="flex flex-col items-center gap-2">
+                <Skeleton className="h-6 w-36 rounded-md" />
+                <Skeleton className="h-6 w-36 rounded-md" />
+                <Skeleton className="h-6 w-36 rounded-md" />
+            </div>
+        </Td>
+    </>
+);
+
+const ProductSkeletonRow = () => (
+    <>
+        <Td><Skeleton className="h-4 w-10 mx-auto rounded" /></Td>
+        <Td>
+            <div className="flex items-center gap-3">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <Skeleton className="h-4 w-48 rounded" />
+            </div>
+        </Td>
+        <Td><Skeleton className="h-4 w-24 rounded" /></Td>
+        <Td><Skeleton className="h-4 w-24 rounded" /></Td>
+        <Td><Skeleton className="h-4 w-20 rounded" /></Td>
+        <Td><Skeleton className="h-5 w-16 rounded-md" /></Td>
+        <Td>
+            <div className="flex flex-col items-center gap-2">
+                <Skeleton className="h-6 w-36 rounded-md" />
+                <Skeleton className="h-6 w-36 rounded-md" />
+                <Skeleton className="h-6 w-36 rounded-md" />
+            </div>
+        </Td>
+    </>
+);
+
+const PartnerSkeletonRow = () => <CompanySkeletonRow />; // Same structure as Company
+
+const TeamSkeletonRow = () => (
+    <>
+        <Td><Skeleton className="h-5 w-16 rounded-md" /></Td>
+        <Td>
+            <div className="flex items-center gap-2">
+                <Skeleton className="h-7 w-7 rounded-full" />
+                <div className='flex flex-col gap-1.5'>
+                    <Skeleton className="h-3 w-24 rounded" />
+                    <Skeleton className="h-3 w-32 rounded" />
+                </div>
+            </div>
+        </Td>
+        <Td><Skeleton className="h-4 w-28 rounded" /></Td>
+        <Td><Skeleton className="h-4 w-28 rounded" /></Td>
+        <Td>
+            <div className="flex gap-1">
+                <Skeleton className="h-4 w-12 rounded" />
+                <Skeleton className="h-4 w-12 rounded" />
+            </div>
+        </Td>
+        <Td><Skeleton className="h-4 w-32 rounded" /></Td>
+        <Td>
+            <div className="flex flex-col items-center gap-2">
+                <Skeleton className="h-6 w-36 rounded-md" />
+                <Skeleton className="h-6 w-36 rounded-md" />
+                <Skeleton className="h-6 w-36 rounded-md" />
+            </div>
+        </Td>
+    </>
+);
+
+// --- END: SKELETON COMPONENTS ---
 
 type StatisticCategory =
     | 'Companies'
@@ -123,36 +301,49 @@ const Bar = ({
     );
 };
 
+
 const Overview = () => {
     const [selectedCategory, setSelectedCategory] =
         useState<StatisticCategory>('Companies');
     const dispatch = useAppDispatch();
     const {
         DashboardCompanyData: CompanyData,
-        MemberData,
-        ProductsData,
+        DashboardMemberData: MemberData,
+        DashboardProductData: ProductsData,
         partnerData,
         EmployeesList: Employees,
-        DashBoardCount
+        DashBoardCount,
+        loading
     } = useSelector(masterSelector);
 
-    console.log(CompanyData, "CompanyData");
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        dispatch(getCompanyAction());
-        dispatch(getMemberAction());
-        dispatch(getProductsAction());
-        dispatch(getpartnerAction());
-        dispatch(getEmployeesListingAction());
-        dispatch(getDashboardCountsAction());
-        dispatch(getDashboardCompanyAction());
+        const fetchData = async () => {
+            setIsLoading(true);
+            await Promise.all([
+                dispatch(getCompanyAction()),
+                dispatch(getMemberAction()),
+                dispatch(getProductsAction()),
+                dispatch(getpartnerAction()),
+                dispatch(getEmployeesListingAction()),
+                dispatch(getDashboardCountsAction()),
+                dispatch(getDashboardCompanyAction()),
+                dispatch(getDashboardMemberAction()),
+                dispatch(getDashboardProductAction()),
+            ]);
+            setIsLoading(false);
+        };
+        fetchData();
     }, [dispatch]);
+
 
     const statusColor = {
         Active: 'bg-green-200 text-green-600',
         Verified: 'bg-blue-200 text-blue-600',
         Pending: 'bg-orange-200 text-orange-600',
         Inactive: 'bg-red-200 text-red-600',
+        Unregistered: 'bg-red-200 text-red-600'
     };
 
     const getCompanyStatusClass = (statusValue?: string): string => {
@@ -171,32 +362,41 @@ const Overview = () => {
     };
 
     const companyColumns = [
-        { header: 'Company Info', accessorKey: 'company_name', id: 'companyInfo', size: 220, cell: ({ row }: any) => { const { company_name, ownership_type, primary_business_type, country, city, state, company_logo, company_code } = row.original; return (<div className="flex flex-col"> <div className="flex items-center gap-2"> <Avatar src={company_logo ? `${company_logo}` : undefined} size="sm" shape="circle" icon={<TbUserCircle />} /> <div> <h6 className="text-xs font-semibold"><em className="text-blue-600">{company_code || " "}</em></h6> <span className="text-xs font-semibold leading-1">{company_name}</span> </div> </div> <span className="text-xs mt-1"><b>Ownership Type:</b> {ownership_type || " "}</span> <span className="text-xs mt-1"><b>Primary Business Type:</b> {primary_business_type || " "}</span> <div className="text-xs text-gray-500">{city}, {state}, {country?.name || " "}</div> </div>); }, },
+        { header: 'Company Info', accessorKey: 'company_name', id: 'companyInfo', size: 220, cell: ({ row }: any) => { const { company_name, ownership_type, primary_business_type, city, state, company_logo, company_code } = row.original; const addressParts = [city, state].filter(Boolean); const addressString = addressParts.length > 0 ? addressParts.join(', ') : ''; return (<div className="flex flex-col"> <div className="flex items-center gap-2"> <Avatar src={company_logo ? `${company_logo}` : undefined} size="sm" shape="circle" icon={<TbUserCircle />} /> <div> <h6 className="text-xs font-semibold"><em className="text-blue-600">{company_code || " "}</em></h6> <span className="text-xs font-semibold leading-1">{company_name}</span> </div> </div> <span className="text-xs mt-1"><b>Ownership Type:</b> {ownership_type || " "}</span> <span className="text-xs mt-1"><b>Primary Business Type:</b> {primary_business_type || " "}</span> <div className="text-xs text-gray-500">{addressString}</div> </div>); }, },
         { header: 'Contact', accessorKey: 'owner_name', id: 'contact', size: 180, cell: (props: any) => { const { owner_name, primary_contact_number, primary_email_id, company_website, primary_contact_number_code } = props.row.original; return (<div className="text-xs flex flex-col gap-0.5"> {owner_name && (<span><b>Owner: </b> {owner_name}</span>)} {primary_contact_number && (<span>{primary_contact_number_code} {primary_contact_number}</span>)} {primary_email_id && (<a href={`mailto:${primary_email_id}`} className="text-blue-600 hover:underline">{primary_email_id}</a>)} {company_website && (<a href={company_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{company_website}</a>)} </div>); }, },
         { header: 'Legal IDs & Status', accessorKey: 'status', id: 'legal', size: 180, cell: ({ row }: any) => { const { gst_number, pan_number, status } = row.original; return (<div className="flex flex-col gap-0.5 text-[11px]"> {gst_number && <div><b>GST:</b> <span className="break-all">{gst_number}</span></div>} {pan_number && <div><b>PAN:</b> <span className="break-all">{pan_number}</span></div>} <Tag className={`${getCompanyStatusClass(status)} capitalize mt-1 self-start !text-[11px] px-2 py-1`}>{status}</Tag> </div>); }, },
-        { header: 'Profile & Scores', accessorKey: 'profile_completion', id: 'profile', size: 190, cell: ({ row }: any) => { const { members_count = 0, teams_count = 0, profile_completion = 0, kyc_verified, enable_billing, due_after_3_months_date } = row.original; const formattedDate = due_after_3_months_date ? dayjs(due_after_3_months_date).format('D MMM, YYYY') : " "; return (<div className="flex flex-col gap-1 text-xs"> <span><b>Members:</b> {members_count}</span> <span><b>Teams:</b> {teams_count}</span> <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${kyc_verified ? "Yes" : "No"}`}>{kyc_verified ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <div className="flex gap-1 items-center"><b>Billing:</b><Tooltip title={`Billing: ${enable_billing ? "Yes" : "No"}`}>{enable_billing ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <span><b>Billing Due:</b> {formattedDate}</span> <Tooltip title={`Profile Completion ${profile_completion}%`}> <div className="h-2.5 w-full rounded-full bg-gray-300"> <div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${profile_completion}%` }}></div> </div> </Tooltip> </div>); }, },
-
+        { header: 'Profile & Scores', accessorKey: 'profile_completion', id: 'profile', size: 190, cell: ({ row }: any) => { const { teams_count = 0, kyc_verified, enable_billing, billing_due, members_summary } = row.original; const members_count = members_summary?.total || 0; const profile_completion = members_summary?.profile_completion || 0; const formattedDate = billing_due ? dayjs(billing_due).format('D MMM, YYYY') : " "; return (<div className="flex flex-col gap-1 text-xs"> <span><b>Members:</b> {members_count}</span> <span><b>Teams:</b> {teams_count}</span> <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${kyc_verified ? "Yes" : "No"}`}>{kyc_verified ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <div className="flex gap-1 items-center"><b>Billing:</b><Tooltip title={`Billing: ${enable_billing ? "Yes" : "No"}`}>{enable_billing ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <span><b>Billing Due:</b> {formattedDate}</span> <Tooltip title={`Profile Completion ${profile_completion}%`}> <div className="h-2.5 w-full rounded-full bg-gray-300"> <div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${profile_completion}%` }}></div> </div> </Tooltip> </div>); }, },
+        { header: 'Business', accessorKey: 'wallCount', size: 180, meta: { HeaderClass: 'text-center' }, cell: (props: any) => { return (<div className='flex flex-col gap-4 text-center items-center '> <Tooltip title={`Buy: ${props.row.original?.walls?.buy || 0} | Sell: ${props.row.original?.walls?.sell || 0} | Total: ${props.row.original?.walls?.total || 0}`} className='text-xs'> <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.walls?.buy || 0} | {props?.row?.original?.walls?.sell || 0} | {props?.row?.original?.walls?.total || 0} </div> </Tooltip> <Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'> <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div> </Tooltip> <Tooltip title={`Success: ${props.row.original?.leads?.success || 0} | Lost: ${props.row.original?.leads?.lost || 0} | Total: ${props.row.original?.leads?.total || 0}`} className='text-xs'> <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.leads?.success || 0} | {props?.row?.original?.leads?.lost || 0} | {props?.row?.original?.leads?.total || 0} </div> </Tooltip> </div>) } },
+    ];
+   
+    const memberColumns = [
         {
-            header: 'Business', accessorKey: 'wallCount', size: 180, meta: { HeaderClass: 'text-center' }, cell: (props: any) => {
-
-                console.log(props?.row?.original?.walls, "propspropspropsprops");
-
-                return (
-                    <div className='flex flex-col gap-4 text-center items-center '>
-                        <Tooltip title={`Buy: ${props.row.original?.walls?.buy || 0} | Sell: ${props.row.original?.walls?.sell || 0} | Total: ${props.row.original?.walls?.total || 0}`} className='text-xs'> <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.walls?.buy || 0} | {props?.row?.original?.walls?.sell || 0} | {props?.row?.original?.walls?.total || 0} </div> </Tooltip> <Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'> <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div> </Tooltip> <Tooltip title={`Success: ${props.row.original?.leads?.success || 0} | Lost: ${props.row.original?.leads?.lost || 0} | Total: ${props.row.original?.leads?.total || 0}`} className='text-xs'> <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.leads?.success || 0} | {props?.row?.original?.leads?.lost || 0} | {props?.row?.original?.leads?.total || 0} </div> </Tooltip> </div>)
-            }
+            header: "Member", accessorKey: "name", id: 'member', size: 180,
+            cell: (props: any) => (<div className="flex flex-col gap-1"><div className="flex items-center gap-1.5"><div className="text-xs"><b className="text-xs text-blue-500"><em>{props.row.original.id || ""}</em></b><br /><b className="texr-xs">{props.row.original.name || ""}</b></div></div><div className="text-xs"><div className="text-xs text-gray-500">{props.row.original.email || "No Email"}</div><div className="text-xs text-gray-500">{props.row.original.number || ""}</div><div className="text-xs text-gray-500">{props.row.original.country?.name || ""}</div></div></div>),
+        },
+        {
+            header: "Company", accessorKey: "company_name", id: 'company', size: 200,
+            cell: (props: any) => (<div className="ml-2 rtl:mr-2 text-xs"><b className="text-xs "><em className="text-blue-500">{props.row.original.customer_code || ""}</em></b><div className="text-xs flex gap-1"><MdCheckCircle size={20} className="text-green-500" /><b className="">{props.row.original.company_name || "N/A"}</b></div></div>),
+        },
+        {
+            header: "Status", accessorKey: "status", id: 'status', size: 140,
+            cell: (props: any) => { const { status, created_at } = props.row.original; return (<div className="flex flex-col text-xs"><Tag className={`${statusColor[status as keyof typeof statusColor] || 'bg-gray-200'} inline capitalize`}>{status || ""}</Tag><span className="mt-0.5"><div className="text-[10px] text-gray-500 mt-0.5">Joined Date: {dayjs(created_at).format('D MMM, YYYY') || " "}</div></span></div>); },
+        },
+        {
+            header: "Profile", accessorKey: "grade", id: 'profile', size: 220,
+            cell: (props: any) => (<div className="text-xs flex flex-col"><span><b>RM: </b>{props.row.original.name || ""}</span><span><b>Grade: {props.row.original.grade || "N/A"}</b></span><span><b>Business Opportunity: {props.row.original.business_opportunity || "N/A"}</b></span><Tooltip title={`Profile: ${props.row.original.profile_completion || 0}%`}><div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1"><div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${props.row.original.profile_completion || 0}%` }}></div></div></Tooltip></div>),
+        },
+        {
+            header: "Preferences", accessorKey: "business_type", id: 'preferences', size: 300,
+            cell: (props: any) => { const [isOpen, setIsOpen] = useState<boolean>(false); const openDialog = () => setIsOpen(true); const closeDialog = () => setIsOpen(false); return (<div className="flex flex-col gap-1"><span className="text-xs"><b className="text-xs">Business Type: {props.row.original.business_type || "N/A"}</b></span><span className="text-xs flex items-center gap-1"><span onClick={openDialog}><TbInfoCircle size={16} className="text-blue-500 cursor-pointer" /></span><b className="text-xs">Brands: {props.row.original.favourite_brands || "N/A"}</b></span><span className="text-xs"><span className="text-[11px]"><b className="text-xs">Interested: </b>{props.row.original.interested_in || "N/A"}</span></span><Dialog width={620} isOpen={isOpen} onRequestClose={closeDialog} onClose={closeDialog}><h6>Dynamic Profile</h6><Table className="mt-6"><thead className="bg-gray-100 rounded-md"><Tr><Td width={130}>Member Type</Td><Td>Brands</Td><Td>Category</Td><Td>Sub Category</Td></Tr></thead><tbody><Tr><Td>INS - PREMIUM</Td><Td><span className="flex gap-0.5 flex-wrap"><Tag>Apple</Tag><Tag>Samsung</Tag><Tag>POCO</Tag></span></Td><Td><Tag>Electronics</Tag></Td><Td><span className="flex gap-0.5 flex-wrap"><Tag>Mobile</Tag><Tag>Laptop</Tag></span></Td></Tr></tbody></Table></Dialog></div>); },
+        },
+        {
+            header: 'Business', accessorKey: 'wall_total', size: 180, meta: { HeaderClass: 'text-center' },
+            cell: (props: any) => (<div className='flex flex-col gap-4 text-center items-center '><Tooltip title={`Buy: ${props.row.original?.wall_buy || 0} | Sell: ${props.row.original?.wall_sell || 0} | Total: ${props.row.original?.wall_total || 0}`} className='text-xs'><div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.wall_buy || 0} | {props?.row?.original?.wall_sell || 0} | {props?.row?.original?.wall_total || 0} </div></Tooltip><Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'><div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div></Tooltip><Tooltip title={`Success: ${props.row.original?.lead_success || 0} | Lost: ${props.row.original?.lead_lost || 0} | Total: ${props.row.original?.lead_total || 0}`} className='text-xs'><div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.lead_success || 0} | {props?.row?.original?.lead_lost || 0} | {props?.row?.original?.lead_total || 0} </div></Tooltip></div>)
         },
     ];
 
-    const memberColumns = [
-        { header: "Member", accessorKey: "member_name", id: 'member', size: 180, cell: (props: any) => (<div className="flex flex-col gap-1"><div className="flex items-center gap-1.5"><div className="text-xs"><b className="text-xs text-blue-500"><em>{props.row.original.id || ""}</em></b> <br /><b className="texr-xs">{props.row.original.name || ""}</b></div></div><div className="text-xs"><div className="text-xs text-gray-500">{props.row.original.email || ""}</div><div className="text-xs text-gray-500">{props.row.original.number || ""}</div><div className="text-xs text-gray-500">{props.row.original.country?.name || ""}</div></div></div>), },
-        { header: "Company", accessorKey: "company_name", id: 'company', size: 200, cell: (props: any) => (<div className="ml-2 rtl:mr-2 text-xs"><b className="text-xs "><em className="text-blue-500">{props.row.original.company_id_actual || ""}</em></b><div className="text-xs flex gap-1"><MdCheckCircle size={20} className="text-green-500" /><b className="">{props.row.original.company_name || "Unique Enterprise"}</b></div></div>), },
-        { header: "Status", accessorKey: "member_status", id: 'status', size: 140, cell: (props: any) => { const { status: member_status, created_at } = props.row.original; return (<div className="flex flex-col text-xs"><Tag className={`${statusColor[member_status as keyof typeof statusColor]} inline capitalize`}>{member_status || ""}</Tag><span className="mt-0.5"><div className="text-[10px] text-gray-500 mt-0.5">Joined Date: {dayjs(created_at).format('D MMM, YYYY') || " "}</div></span></div>); }, },
-        { header: "Profile", accessorKey: "profile_completion", id: 'profile', size: 220, cell: (props: any) => (<div className="text-xs flex flex-col"><span><b>RM: </b>{props.row.original.name || ""}</span><span><b>Grade: {props.row.original.member_grade || ""}</b></span><span><b>Business Opportunity: {props.row.original.business_opportunity || ""}</b></span><Tooltip title={`Profile: ${props.row.original.profile_completion || 0}%`}><div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1"><div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${props.row.original.profile_completion || 0}%`, }}></div></div></Tooltip></div>), },
-        { header: "Preferences", accessorKey: "associated_brands", id: 'preferences', size: 300, cell: (props: any) => { const [isOpen, setIsOpen] = useState<boolean>(false); const openDialog = () => setIsOpen(true); const closeDialog = () => setIsOpen(false); return (<div className="flex flex-col gap-1"><span className="text-xs"><b className="text-xs">Business Type: {props.row.original.business_type || ""}</b></span><span className="text-xs flex items-center gap-1"><span onClick={openDialog}><TbInfoCircle size={16} className="text-blue-500 cursor-pointer" /></span><b className="text-xs">Brands: {props.row.original.brand_name || ""}</b></span><span className="text-xs"><span className="text-[11px]"><b className="text-xs">Interested: </b>{props.row.original.interested_in}</span></span><Dialog width={620} isOpen={isOpen} onRequestClose={closeDialog} onClose={closeDialog}><h6>Dynamic Profile</h6><Table className="mt-6"><thead className="bg-gray-100 rounded-md"><Tr><Td width={130}>Member Type</Td><Td>Brands</Td><Td>Category</Td><Td>Sub Category</Td></Tr></thead><tbody><Tr><Td>INS - PREMIUM</Td><Td><span className="flex gap-0.5 flex-wrap"><Tag>Apple</Tag><Tag>Samsung</Tag><Tag>POCO</Tag></span></Td><Td><Tag>Electronics</Tag></Td><Td><span className="flex gap-0.5 flex-wrap"><Tag>Mobile</Tag><Tag>Laptop</Tag></span></Td></Tr></tbody></Table></Dialog></div>); }, },
-        { header: 'Business', accessorKey: 'wallCount', size: 180, meta: { HeaderClass: 'text-center' }, cell: (props: any) => (<div className='flex flex-col gap-4 text-center items-center '> <Tooltip title={`Buy: ${props.row.original?.walls?.buy || 0} | Sell: ${props.row.original?.walls?.sell || 0} | Total: ${props.row.original?.walls?.total || 0}`} className='text-xs'> <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.walls?.buy || 0} | {props?.row?.original?.walls?.sell || 0} | {props?.row?.original?.walls?.total || 0} </div> </Tooltip> <Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'> <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div> </Tooltip> <Tooltip title={`Success: ${props.row.original?.leads?.success || 0} | Lost: ${props.row.original?.leads?.lost || 0} | Total: ${props.row.original?.leads?.total || 0}`} className='text-xs'> <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.leads?.success || 0} | {props?.row?.original?.leads?.lost || 0} | {props?.row?.original?.leads?.total || 0} </div> </Tooltip> </div>) },
-    ];
-
+    // --- START: CORRECTED productColumns SECTION ---
     const productStatusColor: Record<string, string> = {
         active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
         inactive: 'bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-100',
@@ -204,16 +404,85 @@ const Overview = () => {
         draft: 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-100',
         rejected: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100',
     };
-
+    
     const productColumns = [
-        { header: "ID", accessorKey: "id", size: 60, meta: { tdClass: "text-center", thClass: "text-center" }, cell: ({ getValue }: any) => getValue().toString().padStart(6, '0'), },
-        { header: "Product", id: "productInfo", size: 300, cell: (props: any) => (<div className="flex items-center gap-3"> <Avatar size={30} shape="circle" src={props.row.original.thumbImageFullPath || undefined} icon={<TbBox />} /> <Tooltip title={props.row.original.name}> <div className="truncate"><span className="font-semibold">{props.row.original.name}</span><div className="text-xs text-gray-500">SKU: {props.row.original.skuCode || "-"}</div></div> </Tooltip> </div>), },
-        { header: "Category", accessorKey: "categoryName", cell: (props: any) => props.row.original.category.name || "-", },
-        { header: "Sub Cat", accessorKey: "subCategoryName", cell: (props: any) => props.row.original?.sub_category?.name || "-", },
-        { header: "Brand", accessorKey: "brandName", cell: (props: any) => props.row.original.brandName || "-", },
-        { header: "Status", accessorKey: "status", cell: (props: any) => (<Tag className={`${productStatusColor[props.row.original.status] || "bg-gray-200"} capitalize font-semibold border-0`}>{props.row.original.status}</Tag>), },
-        { header: 'Business', accessorKey: 'wallCount', size: 180, meta: { HeaderClass: 'text-center' }, cell: (props: any) => (<div className='flex flex-col gap-4 text-center items-center '> <Tooltip title={`Buy: ${props.row.original?.walls?.buy || 0} | Sell: ${props.row.original?.walls?.sell || 0} | Total: ${props.row.original?.walls?.total || 0}`} className='text-xs'> <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.walls?.buy || 0} | {props?.row?.original?.walls?.sell || 0} | {props?.row?.original?.walls?.total || 0} </div> </Tooltip> <Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'> <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div> </Tooltip> <Tooltip title={`Success: ${props.row.original?.leads?.success || 0} | Lost: ${props.row.original?.leads?.lost || 0} | Total: ${props.row.original?.leads?.total || 0}`} className='text-xs'> <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.leads?.success || 0} | {props?.row?.original?.leads?.lost || 0} | {props?.row?.original?.leads?.total || 0} </div> </Tooltip> </div>) },
+        { 
+            header: "ID", 
+            accessorKey: "id",
+            size: 60, 
+            meta: { tdClass: "text-center", thClass: "text-center" }, 
+            cell: ({ getValue }: any) => getValue().toString().padStart(6, '0'), 
+        },
+        { 
+            header: "Product", 
+            id: "productInfo", 
+            size: 300, 
+            cell: (props: any) => (
+                <div className="flex items-center gap-3">
+                    <Avatar size={30} shape="circle" src={props.row.original.icon_full_path || undefined} icon={<TbBox />} />
+                    <Tooltip title={props.row.original.name}>
+                        <div className="truncate">
+                            <span className="font-semibold">{props.row.original.name}</span>
+                            <div className="text-xs text-gray-500">SKU: {props.row.original.sku_code || "-"}</div>
+                        </div>
+                    </Tooltip>
+                </div>
+            ), 
+        },
+        { 
+            header: "Category", 
+            accessorKey: "category.name",
+            cell: (props: any) => props.row.original.category?.name || "-",
+        },
+        { 
+            header: "Sub Cat", 
+            accessorKey: "sub_category.name",
+            cell: (props: any) => props.row.original.sub_category?.name || "-",
+        },
+        { 
+            header: "Brand", 
+            accessorKey: "brand.name",
+            cell: (props: any) => props.row.original.brand?.name || "-",
+        },
+        { 
+            header: "Status", 
+            accessorKey: "status",
+            cell: (props: any) => {
+                const statusKey = props.row.original.status?.toLowerCase() || '';
+                return (
+                    <Tag className={`${productStatusColor[statusKey] || "bg-gray-200"} capitalize font-semibold border-0`}>
+                        {props.row.original.status}
+                    </Tag>
+                )
+            }, 
+        },
+        { 
+            header: 'Business', 
+            accessorKey: 'walls.total',
+            size: 180, 
+            meta: { HeaderClass: 'text-center' }, 
+            cell: (props: any) => (
+                <div className='flex flex-col gap-4 text-center items-center '>
+                    <Tooltip title={`Buy: ${props.row.original?.walls?.buy || 0} | Sell: ${props.row.original?.walls?.sell || 0} | Total: ${props.row.original?.walls?.total || 0}`} className='text-xs'>
+                        <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'>
+                            Wall Listing: {props?.row?.original?.walls?.buy || 0} | {props?.row?.original?.walls?.sell || 0} | {props?.row?.original?.walls?.total || 0}
+                        </div>
+                    </Tooltip>
+                    <Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'>
+                        <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'>
+                            Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0}
+                        </div>
+                    </Tooltip>
+                    <Tooltip title={`Success: ${props.row.original?.leads?.success || 0} | Lost: ${props.row.original?.leads?.lost || 0} | Total: ${props.row.original?.leads?.total || 0}`} className='text-xs'>
+                        <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'>
+                            Leads: {props?.row?.original?.leads?.success || 0} | {props?.row?.original?.leads?.lost || 0} | {props?.row?.original?.leads?.total || 0}
+                        </div>
+                    </Tooltip>
+                </div>
+            ) 
+        },
     ];
+    // --- END: CORRECTED productColumns SECTION ---
 
     const getPartnerStatusClass = (statusValue: string): string => {
         if (!statusValue) return 'bg-gray-200 text-gray-600';
@@ -227,7 +496,6 @@ const Overview = () => {
         };
         return partnerStatusColors[lowerCaseStatus] || 'bg-gray-200 text-gray-600';
     };
-
     const partnerColumns = [
         { header: "Partner Info", accessorKey: "partner_name", id: 'partnerInfo', size: 220, cell: ({ row }: any) => (<div className="flex flex-col"> <div className="flex items-center gap-2"> <Avatar src={row.original.partner_logo ? `${row.original.partner_logo}` : ''} size="md" shape="circle" icon={<TbUserCircle />} /> <div> <h6 className="text-xs font-semibold">{row.original.partner_code}</h6> <span className="text-xs font-semibold">{row.original.partner_name}</span> </div> </div> <span className="text-xs mt-1"><b>Type:</b> {row.original.ownership_type}</span> <div className="text-xs text-gray-500">{row.original.city}, {row.original.state}, {row.original.country?.name}</div> </div>), },
         { header: "Contact", accessorKey: "owner_name", id: 'contact', size: 180, cell: ({ row }: any) => (<div className="text-xs flex flex-col gap-0.5"> {row.original.owner_name && <span><b>Owner:</b> {row.original.owner_name}</span>} {row.original.primary_contact_number && <span>{row.original.primary_contact_number_code} {row.original.primary_contact_number}</span>} {row.original.primary_email_id && <a href={`mailto:${row.original.primary_email_id}`} className="text-blue-600 hover:underline">{row.original.primary_email_id}</a>} {row.original.partner_website && <a href={row.original.partner_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{row.original.partner_website}</a>} </div>) },
@@ -235,14 +503,12 @@ const Overview = () => {
         { header: "Profile & Scores", size: 190, accessorKey: 'profile_completion', id: 'profile', cell: ({ row }: any) => (<div className="flex flex-col gap-1.5 text-xs"> <span><b>Teams:</b> {row.original.teams_count || 0}</span> <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${row.original.kyc_verified ? 'Yes' : 'No'}`}>{row.original.kyc_verified ? <MdCheckCircle className="text-green-500 text-lg" /> : <MdCancel className="text-red-500 text-lg" />}</Tooltip></div> <Tooltip title={`Profile Completion ${row.original.profile_completion}%`}> <div className="h-2.5 w-full rounded-full bg-gray-300"><div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${row.original.profile_completion}%` }}></div></div> </Tooltip> </div>) },
         { header: 'Business', accessorKey: 'wallCount', size: 180, meta: { HeaderClass: 'text-center' }, cell: (props: any) => (<div className='flex flex-col gap-4 text-center items-center '> <Tooltip title={`Buy: ${props.row.original?.walls?.buy || 0} | Sell: ${props.row.original?.walls?.sell || 0} | Total: ${props.row.original?.walls?.total || 0}`} className='text-xs'> <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.walls?.buy || 0} | {props?.row?.original?.walls?.sell || 0} | {props?.row?.original?.walls?.total || 0} </div> </Tooltip> <Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'> <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div> </Tooltip> <Tooltip title={`Success: ${props.row.original?.leads?.success || 0} | Lost: ${props.row.original?.leads?.lost || 0} | Total: ${props.row.original?.leads?.total || 0}`} className='text-xs'> <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.leads?.success || 0} | {props?.row?.original?.leads?.lost || 0} | {props?.row?.original?.leads?.total || 0} </div> </Tooltip> </div>) },
     ];
-
     const employeeStatusColor = {
         active: 'bg-blue-500',
         inactive: 'bg-emerald-500',
         on_leave: 'bg-amber-500',
         terminated: 'bg-red-500',
     };
-
     const teamColumns = [
         { header: "Status", accessorKey: "status", cell: (props: any) => { const { status } = props.row.original || {}; const displayStatus = status?.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toLowerCase()) || ''; return (<Tag className={`${employeeStatusColor[displayStatus as keyof typeof employeeStatusColor]} text-white capitalize`}>{displayStatus}</Tag>); }, },
         { header: "Name", accessorKey: "name", cell: (props: any) => { const { name, email, mobile_number, profile_pic_path } = props.row.original || {}; return (<div className="flex items-center"><Avatar size={28} shape="circle" src={profile_pic_path} icon={<TbUserCircle />}>{!profile_pic_path ? name?.charAt(0).toUpperCase() : ""}</Avatar><div className="ml-2 rtl:mr-2"><span className="font-semibold">{name}</span><div className="text-xs text-gray-500">{email}</div><div className="text-xs text-gray-500">{mobile_number}</div></div></div>); }, },
@@ -265,61 +531,11 @@ const Overview = () => {
             <section className="block gap-4 w-full">
                 <section>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 rounded-2xl py-3 mt-4">
-                        <StatisticCard
-                            title="Companies"
-                            value={DashBoardCount?.companies || 0}
-                            icon={<MdOutlineBusinessCenter className="h-5" />}
-                            label="Companies"
-                            active={selectedCategory === 'Companies'}
-                            onClick={() => setSelectedCategory('Companies')}
-                            colorClass="bg-red-100"
-                            activeBgColor="bg-red-200"
-                            iconBg="bg-red-400"
-                        />
-                        <StatisticCard
-                            title="Members"
-                            value={DashBoardCount?.customers || 0}
-                            icon={<TbUserCircle className="h-5" />}
-                            label="Members"
-                            active={selectedCategory === 'Members'}
-                            onClick={() => setSelectedCategory('Members')}
-                            colorClass="bg-green-100"
-                            activeBgColor="bg-green-200"
-                            iconBg="bg-green-400"
-                        />
-                        <StatisticCard
-                            title="Products"
-                            value={DashBoardCount?.products || 0}
-                            icon={<TbCube3dSphere className="h-5" />}
-                            label="Products"
-                            active={selectedCategory === 'Products'}
-                            onClick={() => setSelectedCategory('Products')}
-                            colorClass="bg-blue-100"
-                            activeBgColor="bg-blue-200"
-                            iconBg="bg-blue-400"
-                        />
-                        <StatisticCard
-                            title="Partners"
-                            value={DashBoardCount?.partners || 0}
-                            icon={<TbHeartHandshake className="h-5" />}
-                            label="Partners"
-                            active={selectedCategory === 'Partners'}
-                            onClick={() => setSelectedCategory('Partners')}
-                            colorClass="bg-pink-100"
-                            activeBgColor="bg-pink-200"
-                            iconBg="bg-pink-400"
-                        />
-                        <StatisticCard
-                            title="Teams"
-                            value={DashBoardCount?.users || 0}
-                            icon={<TbUsersGroup className="h-5" />}
-                            label="Teams"
-                            active={selectedCategory === 'Teams'}
-                            onClick={() => setSelectedCategory('Teams')}
-                            colorClass="bg-orange-100"
-                            activeBgColor="bg-orange-200"
-                            iconBg="bg-orange-400"
-                        />
+                        <StatisticCard title="Companies" value={DashBoardCount?.companies || 0} icon={<MdOutlineBusinessCenter className="h-5" />} label="Companies" active={selectedCategory === 'Companies'} onClick={() => setSelectedCategory('Companies')} colorClass="bg-red-100" activeBgColor="bg-red-200" iconBg="bg-red-400" />
+                        <StatisticCard title="Members" value={DashBoardCount?.customers || 0} icon={<TbUserCircle className="h-5" />} label="Members" active={selectedCategory === 'Members'} onClick={() => setSelectedCategory('Members')} colorClass="bg-green-100" activeBgColor="bg-green-200" iconBg="bg-green-400" />
+                        <StatisticCard title="Products" value={DashBoardCount?.products || 0} icon={<TbCube3dSphere className="h-5" />} label="Products" active={selectedCategory === 'Products'} onClick={() => setSelectedCategory('Products')} colorClass="bg-blue-100" activeBgColor="bg-blue-200" iconBg="bg-blue-400" />
+                        <StatisticCard title="Partners" value={DashBoardCount?.partners || 0} icon={<TbHeartHandshake className="h-5" />} label="Partners" active={selectedCategory === 'Partners'} onClick={() => setSelectedCategory('Partners')} colorClass="bg-pink-100" activeBgColor="bg-pink-200" iconBg="bg-pink-400" />
+                        <StatisticCard title="Teams" value={DashBoardCount?.users || 0} icon={<TbUsersGroup className="h-5" />} label="Teams" active={selectedCategory === 'Teams'} onClick={() => setSelectedCategory('Teams')} colorClass="bg-orange-100" activeBgColor="bg-orange-200" iconBg="bg-orange-400" />
                     </div>
                     <Card bodyClass="px-4 py-3">
                         <div className="flex items-center justify-between">
@@ -334,67 +550,77 @@ const Overview = () => {
                             />
                         </div>
 
-                        {selectedCategory === 'Companies' && companyCounts && (
+                        {selectedCategory === 'Companies' && (
                             <div>
-                                <div className="lg:pl-4 flex items-center gap-1 w-full mt-4">
+                                {companyCounts && <div className="lg:pl-4 flex items-center gap-1 w-full mt-4">
                                     <Bar field="Total" percent={(CompanyData.total / totalCompanies) * 100} count={CompanyData.total || 0} color="text-[#6610f2]" className="bg-[#6610f2] dark:opacity-70" />
                                     <Bar field="Verified" percent={(CompanyData.verified / totalCompanies) * 100 || 0} count={CompanyData.verified} color="text-[#20c997]" className="bg-[#20c997] dark:opacity-70" />
                                     <Bar field="Non Verified" percent={(CompanyData.unverified / totalCompanies) * 100 || 0} count={CompanyData.unverified} color="text-[#e74c3c]" className="bg-[#e74c3c] dark:opacity-70" />
                                     <Bar field="Eligible" percent={(CompanyData.eligible / totalCompanies) * 100 || 0} count={CompanyData.eligible} color="text-[#fd7e14]" className="bg-[#fd7e14] dark:opacity-70" />
                                     <Bar field="Not Eligible" percent={(CompanyData.not_eligible / totalCompanies) * 100 || 0} count={CompanyData.not_eligible} color="text-[#ffc107]" className="bg-[#ffc107] dark:opacity-70" />
-                                </div>
+                                </div>}
                                 <div className="mt-8 block gap-2">
                                     <h6 className="mb-3">Company Leaderboard</h6>
                                     <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} />
-                                    <DataTable columns={companyColumns} data={CompanyData?.companies || []} />
+                                    {isLoading ? (
+                                        <TableSkeleton columns={companyColumns} skeletonRow={<CompanySkeletonRow />} />
+                                    ) : (
+                                        <DataTable columns={companyColumns} data={CompanyData?.companies || []} />
+                                    )}
                                 </div>
                             </div>
                         )}
 
                         {selectedCategory === 'Members' && (
                             <div>
-                                <div className='lg:flex gap-2 justify-between mt-4'>
+                                {MemberData?.total && <div className='lg:flex gap-2 justify-between mt-4'>
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
-                                        <Bar field="Total" percent={(MemberData?.counts?.total / MemberData?.counts?.total) * 100 || 0} count={MemberData?.counts?.total || 0} color='text-[#6610f2]' className="bg-[#6610f2] dark:opacity-70" />
-                                        <Bar field="Active" percent={(MemberData?.counts?.active / MemberData?.counts?.total) * 100 || 0} count={MemberData?.counts?.active || 0} color='text-[#28a745]' className="bg-[#28a745] dark:opacity-70" />
-                                        <Bar field="Disabled" percent={(MemberData?.counts?.disabled / MemberData?.counts?.total) * 100 || 0} count={MemberData?.counts?.disabled || 0} color='text-[#6c757d]' className="bg-[#6c757d] dark:opacity-70" />
-                                        <Bar field="Unregistered" percent={(MemberData?.counts?.unregistered / MemberData?.counts?.total) * 100 || 0} count={MemberData?.counts?.unregistered || 0} color='text-[#e74c3c]' className="bg-[#e74c3c] dark:opacity-70" />
+                                        <Bar field="Total" percent={(MemberData?.total / MemberData?.total) * 100 || 0} count={MemberData?.total || 0} color='text-[#6610f2]' className="bg-[#6610f2] dark:opacity-70" />
+                                        <Bar field="Active" percent={(MemberData?.active / MemberData?.total) * 100 || 0} count={MemberData?.active || 0} color='text-[#28a745]' className="bg-[#28a745] dark:opacity-70" />
+                                        <Bar field="Disabled" percent={(MemberData?.status_summary?.disabled?.count / MemberData?.total) * 100 || 0} count={MemberData?.disabled || 0} color='text-[#6c757d]' className="bg-[#6c757d] dark:opacity-70" />
+                                        <Bar field="Unregistered" percent={(MemberData?.status_summary?.unregistered?.count / MemberData?.total) * 100 || 0} count={MemberData?.unregistered || 0} color='text-[#e74c3c]' className="bg-[#e74c3c] dark:opacity-70" />
                                     </div>
-                                </div>
+                                </div>}
                                 <div className='mt-8 block  gap-2'>
                                     <h6 className='mb-3'>Members Leaderboard</h6>
                                     <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} />
-                                    <DataTable columns={memberColumns} data={MemberData?.data || []} />
+                                    {isLoading ? (
+                                        <TableSkeleton columns={memberColumns} skeletonRow={<MemberSkeletonRow />} />
+                                    ) : (
+                                        <DataTable columns={memberColumns} data={MemberData?.members || []} />
+                                    )}
                                 </div>
                             </div>
                         )}
 
-                        {selectedCategory === 'Products' && ProductsData?.counts && (
+                        {selectedCategory === 'Products' && (
                             <div>
-                                <div className='lg:flex gap-2 justify-between mt-4'>
+                                {ProductsData?.total && <div className='lg:flex gap-2 justify-between mt-4'>
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
-                                        <Bar field="Total" percent={(ProductsData.counts.total / ProductsData.counts.total) * 100 || 0} count={ProductsData.counts.total} color='text-[#6610f2]' className="bg-[#6610f2] dark:opacity-70" />
-                                        <Bar field="Active" percent={(ProductsData.counts.active / ProductsData.counts.total) * 100 || 0} count={ProductsData.counts.active} color='text-[#28a745]' className="bg-[#28a745] dark:opacity-70" />
-                                        <Bar field="Inactive" percent={(ProductsData.counts.inactive / ProductsData.counts.total) * 100 || 0} count={ProductsData.counts.inactive} color='text-[#6c757d]' className="bg-[#6c757d] dark:opacity-70" />
-                                        <Bar field="Pending" percent={(ProductsData.counts.pending / ProductsData.counts.total) * 100 || 0} count={ProductsData.counts.pending} color='text-[#ffc107]' className="bg-[#ffc107] dark:opacity-70" />
-                                        <Bar field="Categories" percent={(ProductsData.counts.categories / ProductsData.counts.total) * 100 || 0} count={ProductsData.counts.categories} color='text-[#2ecc71]' className="bg-[#2ecc71] dark:opacity-70" />
-                                        <Bar field="Brands" percent={(ProductsData.counts.brands / ProductsData.counts.total) * 100 || 0} count={ProductsData.counts.brands} color='text-[#e74c3c]' className="bg-[#e74c3c] dark:opacity-70" />
-                                        <Bar field="Wall" percent={(ProductsData.counts.walls / ProductsData.counts.total) * 100 || 0} count={ProductsData.counts.walls} color='text-[#ffc107]' className="bg-[#ffc107] dark:opacity-70" />
-                                        <Bar field="Leads" percent={(ProductsData.counts.leads / ProductsData.counts.total) * 100 || 0} count={ProductsData.counts.leads} color='text-[#fd7e14]' className="bg-[#fd7e14] dark:opacity-70" />
-                                        <Bar field="Opportunity" percent={(ProductsData.counts.opportunity / ProductsData.counts.total) * 100 || 0} count={ProductsData.counts.opportunity} color='text-[#007bff]' className="bg-[#007bff] dark:opacity-70" />
+                                        <Bar field="Total" percent={(ProductsData?.total / ProductsData?.total) * 100 || 0} count={ProductsData?.total} color='text-[#6610f2]' className="bg-[#6610f2] dark:opacity-70" />
+                                        <Bar field="Active" percent={(ProductsData?.active / ProductsData?.total) * 100 || 0} count={ProductsData?.active} color='text-[#28a745]' className="bg-[#28a745] dark:opacity-70" />
+                                        <Bar field="Inactive" percent={(ProductsData?.inactive / ProductsData?.total) * 100 || 0} count={ProductsData?.inactive} color='text-[#6c757d]' className="bg-[#6c757d] dark:opacity-70" />
+                                        <Bar field="Categories" percent={(ProductsData?.category_count / ProductsData?.total) * 100 || 0} count={ProductsData?.category_count} color='text-[#2ecc71]' className="bg-[#2ecc71] dark:opacity-70" />
+                                        <Bar field="Brands" percent={(ProductsData?.brand_count / ProductsData?.total) * 100 || 0} count={ProductsData?.brand_count} color='text-[#e74c3c]' className="bg-[#e74c3c] dark:opacity-70" />
+                                        <Bar field="Wall" percent={100} count={ProductsData?.wall_count} color='text-[#ffc107]' className="bg-[#ffc107] dark:opacity-70" />
+                                        <Bar field="Leads" percent={(ProductsData?.leads_count / ProductsData?.total) * 100 || 0} count={ProductsData?.leads_count} color='text-[#fd7e14]' className="bg-[#fd7e14] dark:opacity-70" />
                                     </div>
-                                </div>
+                                </div>}
                                 <div className='mt-8 block  gap-2'>
                                     <h6 className='mb-3'>Products Leaderboard</h6>
                                     <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} />
-                                    <DataTable columns={productColumns} data={ProductsData?.data || []} />
+                                    {isLoading ? (
+                                        <TableSkeleton columns={productColumns} skeletonRow={<ProductSkeletonRow />} />
+                                    ) : (
+                                        <DataTable columns={productColumns} data={ProductsData?.products || []} />
+                                    )}
                                 </div>
                             </div>
                         )}
 
-                        {selectedCategory === 'Partners' && partnerData?.counts && (
+                        {selectedCategory === 'Partners' && (
                             <div>
-                                <div className='lg:flex gap-2 justify-between mt-4'>
+                                {partnerData?.counts && <div className='lg:flex gap-2 justify-between mt-4'>
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
                                         <Bar field="Total" percent={(partnerData.counts.total / partnerData.counts.total) * 100 || 0} count={partnerData.counts.total} color='text-[#6610f2]' className="bg-[#6610f2] dark:opacity-70" />
                                         <Bar field="Active" percent={(partnerData.counts.active / partnerData.counts.total) * 100 || 0} count={partnerData.counts.active} color='text-[#2ecc71]' className="bg-[#2ecc71] dark:opacity-70" />
@@ -403,18 +629,22 @@ const Overview = () => {
                                         <Bar field="Verified" percent={(partnerData.counts.verified / partnerData.counts.total) * 100 || 0} count={partnerData.counts.verified} color='text-[#6610f2]' className="bg-[#6610f2] dark:opacity-70" />
                                         <Bar field="Unverified" percent={(partnerData.counts.unverified / partnerData.counts.total) * 100 || 0} count={partnerData.counts.unverified} color='text-[#fd7e14]' className="bg-[#fd7e14] dark:opacity-70" />
                                     </div>
-                                </div>
+                                </div>}
                                 <div className='mt-8 block  gap-2'>
                                     <h6 className='mb-3'>Partners Leaderboard</h6>
                                     <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} />
-                                    <DataTable columns={partnerColumns} data={partnerData?.data || []} />
+                                    {isLoading ? (
+                                        <TableSkeleton columns={partnerColumns} skeletonRow={<PartnerSkeletonRow />} />
+                                    ) : (
+                                        <DataTable columns={partnerColumns} data={partnerData?.data || []} />
+                                    )}
                                 </div>
                             </div>
                         )}
 
-                        {selectedCategory === 'Teams' && Employees?.counts && (
+                        {selectedCategory === 'Teams' && (
                             <div>
-                                <div className='lg:flex gap-2 justify-between mt-4'>
+                                {Employees?.counts && <div className='lg:flex gap-2 justify-between mt-4'>
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
                                         <Bar field="Active" percent={(Employees.counts.active / Employees.counts.total) * 100 || 0} count={Employees.counts.active} color='text-[#2ecc71]' className="bg-[#2ecc71] dark:opacity-70" />
                                         <Bar field="Disabled" percent={(Employees.counts.disabled / Employees.counts.total) * 100 || 0} count={Employees.counts.disabled} color='text-[#e74c3c]' className="bg-[#e74c3c] dark:opacity-70" />
@@ -423,10 +653,14 @@ const Overview = () => {
                                         <Bar field="Departments" percent={(Employees.counts.department / Employees.counts.total) * 100 || 0} count={Employees.counts.department} color='text-[#6c757d]' className="bg-[#6c757d] dark:opacity-70" />
                                         <Bar field="Designations" percent={(Employees.counts.designation / Employees.counts.total) * 100 || 0} count={Employees.counts.designation} color='text-[#007bff]' className="bg-[#007bff] dark:opacity-70" />
                                     </div>
-                                </div>
+                                </div>}
                                 <div className='mt-8 block  gap-2'>
                                     <h6 className='mb-6'>Team Leaderboard</h6>
-                                    <DataTable columns={teamColumns} data={Employees?.data?.data || []} />
+                                    {isLoading ? (
+                                        <TableSkeleton columns={teamColumns} skeletonRow={<TeamSkeletonRow />} />
+                                    ) : (
+                                        <DataTable columns={teamColumns} data={Employees?.data?.data || []} />
+                                    )}
                                 </div>
                             </div>
                         )}
