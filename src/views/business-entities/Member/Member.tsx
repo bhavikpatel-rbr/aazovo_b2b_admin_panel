@@ -1658,7 +1658,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
               <UiFormItem label="Grade"><Controller name="memberGrade" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Grade" options={memberGradeOptions} {...field} />)} /></UiFormItem>
               {/* <UiFormItem label="Relationship Manager"><Controller name="filterRM" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select RM" options={userOptions} {...field} />)} /></UiFormItem> */}
               <UiFormItem label="Member Type"><Controller name="filterMemberType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Member Type" options={memberTypeOptions} {...field} />)} /></UiFormItem>
-              <UiFormItem label="Created Date" className="col-span-2"><Controller name="filterCreatedAt" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange placeholder="Select Date Range" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />)} /></UiFormItem>
+              <UiFormItem label="Created Date" ><Controller name="filterCreatedAt" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange placeholder="Select Date Range" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />)} /></UiFormItem>
             </div>
           </div>
           {/* END: Responsive Fix */}
