@@ -68,6 +68,7 @@ import {
   editMemberAction,
   getAlertsAction,
   getAllUsersAction,
+  getCountriesAction, // <-- ADDED
   getMemberByIdAction,
   getMemberlistingAction,
   submitExportReasonAction,
@@ -1273,9 +1274,10 @@ const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const dispatch = useAppDispatch();
   const [selectedMembers, setSelectedMembers] = useState<FormItem[]>([]);
 
-  // Fetch users list once for dropdowns in modals
+  // Fetch master data for dropdowns
   useEffect(() => {
     dispatch(getAllUsersAction());
+    dispatch(getCountriesAction());
   }, [dispatch]);
 
   // The member list is now the paginated data from the store
@@ -1352,7 +1354,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filt
 // MODIFIED: This component is heavily refactored for server-side operations.
 const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: FilterFormData; setFilterCriteria: React.Dispatch<React.SetStateAction<FilterFormData>>; }) => {
   const dispatch = useAppDispatch();
-  const { MemberlistData: MemberData } = useSelector(masterSelector);
+  const { MemberlistData: MemberData, CountriesData } = useSelector(masterSelector);
   const [isLoading, setIsLoading] = useState(false);
   const { setSelectedMembers, userOptions } = useMemberList();
 
@@ -1597,17 +1599,21 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   const handleRowSelect = (c: boolean, r: FormItem) => setSelectedMembers(p => c ? [...p, r] : p.filter(i => i.id !== r.id));
   const handleAllRowSelect = (c: boolean, r: Row<FormItem>[]) => setSelectedMembers(c ? r.map(i => i.original) : []);
 
-  const { businessTypeOptions, businessOpportunityOptions, memberGradeOptions, countryOptions, rmOptions, memberTypeOptions } = useMemo(() => {
+  const { businessTypeOptions, businessOpportunityOptions, memberGradeOptions, memberTypeOptions } = useMemo(() => {
     const unique = (arr: (string | null | undefined)[]) => [...new Set(arr.filter(Boolean))].map(item => ({ value: item as string, label: item as string }));
     return {
       businessTypeOptions: unique(pageData.map(f => f.business_type)),
       businessOpportunityOptions: unique(pageData.flatMap(f => f.business_opportunity?.split(',').map(s => s.trim()))),
       memberGradeOptions: unique(pageData.map(f => f.member_grade)),
-      countryOptions: unique(pageData.map(f => f.country?.name)),
-      rmOptions: unique(pageData.map(f => f.relationship_manager?.name)),
       memberTypeOptions: unique(pageData.flatMap(f => f.dynamic_member_profiles.map(p => p.member_type?.name))),
     }
   }, [pageData]);
+
+  const allCountryOptions = useMemo(() => {
+      return Array.isArray(CountriesData)
+          ? CountriesData.map((c: any) => ({ value: String(c.id), label: c.name }))
+          : [];
+  }, [CountriesData]);
 
 
   return (
@@ -1647,10 +1653,10 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
               <UiFormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status" options={[{ value: "Active", label: "Active" }, { value: "Disabled", label: "Disabled" }, { value: "Unregistered", label: "Unregistered" }]} {...field} />)} /></UiFormItem>
               <UiFormItem label="Business Type"><Controller name="filterBusinessType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Type" options={businessTypeOptions} {...field} />)} /></UiFormItem>
               <UiFormItem label="Business Opportunity"><Controller name="filterBusinessOpportunity" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Opportunity" options={businessOpportunityOptions} {...field} />)} /></UiFormItem>
-              <UiFormItem label="Country"><Controller name="filterCountry" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Country" options={countryOptions} {...field} />)} /></UiFormItem>
+              <UiFormItem label="Country"><Controller name="filterCountry" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Country" options={allCountryOptions} {...field} />)} /></UiFormItem>
               <UiFormItem label="Interested In"><Controller name="filterInterestedFor" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Interest" options={[{ value: "For Sell", label: "For Sell" }, { value: "For Buy", label: "For Buy" }, { value: "Both", label: "Both" }]} {...field} />)} /></UiFormItem>
               <UiFormItem label="Grade"><Controller name="memberGrade" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Grade" options={memberGradeOptions} {...field} />)} /></UiFormItem>
-              <UiFormItem label="Relationship Manager"><Controller name="filterRM" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select RM" options={rmOptions} {...field} />)} /></UiFormItem>
+              {/* <UiFormItem label="Relationship Manager"><Controller name="filterRM" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select RM" options={userOptions} {...field} />)} /></UiFormItem> */}
               <UiFormItem label="Member Type"><Controller name="filterMemberType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Member Type" options={memberTypeOptions} {...field} />)} /></UiFormItem>
               <UiFormItem label="Created Date" className="col-span-2"><Controller name="filterCreatedAt" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange placeholder="Select Date Range" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />)} /></UiFormItem>
             </div>
