@@ -138,6 +138,7 @@ const Overview = () => {
     console.log("DashBoardCount", DashBoardCount);
     
     useEffect(() => {
+        
         dispatch(getCompanyAction());
         dispatch(getMemberAction());
         dispatch(getProductsAction());

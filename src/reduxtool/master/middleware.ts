@@ -4606,9 +4606,12 @@ export const getActualCompanyAction = createAsyncThunk(
 
 export const getDashboardCountsAction = createAsyncThunk(
   "auth/getDashboardCountsAction",
-  async ({ rejectWithValue, dispatch }) => {
+  async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await getDashboardCountsAsync();
+
+      console.log("response", response);
+
       if (response?.data) {
         return response?.data?.data;
       }
