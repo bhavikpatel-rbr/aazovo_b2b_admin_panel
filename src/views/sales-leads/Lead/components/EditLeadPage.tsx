@@ -118,12 +118,15 @@ const EditLeadPage = () => {
       };
       
       const cartoonTypeId = cartoonTypeOptions.find(o => o.label === currentLead.cartoon_type)?.value ?? null;
+console.log("toNumber(currentLead.lead_member)",toNumber(currentLead.lead_member));
+console.log("toNumber(currentLead.source_member_id)",toNumber(currentLead.source_member_id));
+console.log("currentLead.lead_intent)",currentLead.lead_intent);
 
       // Map API data to the unified form structure
       const formDataToSet: Partial<LeadFormData> = {
         lead_intent: currentLead.lead_intent,
-        member_id: toNumber(currentLead.lead_member),
-        source_supplier_id: toNumber(currentLead.source_member_id),
+        member_id: currentLead.lead_intent == "Sell" ?toNumber(currentLead.source_member_id) :  toNumber(currentLead.lead_member),
+        source_supplier_id: currentLead.lead_intent == "Sell" ?toNumber(currentLead.lead_member) :toNumber(currentLead.source_member_id),
         product_id: toNumber(currentLead.product_id),
         qty: toNumber(currentLead.qty),
         target_price: toNumber(currentLead.target_price),
