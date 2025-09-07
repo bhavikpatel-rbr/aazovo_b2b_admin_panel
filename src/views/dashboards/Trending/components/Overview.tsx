@@ -16,9 +16,10 @@ import cloneDeep from 'lodash/cloneDeep'
 import {
     Fragment,
     ReactNode,
+    useCallback,
     useEffect,
     useMemo,
-    useState
+    useState,
 } from 'react'
 import { IoChevronDown, IoChevronForward } from 'react-icons/io5'
 import {
@@ -161,7 +162,6 @@ const ProductOpportunitySkeleton = () => (
     </Table>
 );
 
-// NEW: Skeleton for the Wall Listing component
 const WallListingSkeleton = () => (
     <div className="flex flex-col gap-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -195,7 +195,6 @@ const WallListingSkeleton = () => (
         </Card>
     </div>
 );
-
 // --- END: SKELETON COMPONENTS ---
 
 type StatisticCategory =
@@ -220,15 +219,15 @@ const StatisticCard = (props: StatisticCardProps) => {
     const { title, value, label, icon, active, onClick, themeColor } = props
 
     const cardColor = active
-        ? `bg-gray-100 dark:bg-gray-700`
-        : 'bg-white dark:bg-gray-800'
+        ? `bg-gray-50 dark:bg-gray-700/50`
+        : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50'
     const iconActiveColor = `text-white bg-${themeColor}`
     const textActiveColor = `text-${themeColor}`
 
     return (
         <button
             className={classNames(
-                'p-4 rounded-xl cursor-pointer ltr:text-left rtl:text-right transition duration-150 outline-none w-full border',
+                'p-4 rounded-xl cursor-pointer ltr:text-left rtl:text-right transition-all duration-200 outline-none w-full border shadow-sm hover:shadow-md',
                 cardColor,
                 active ? `border-${themeColor}` : 'border-gray-200 dark:border-gray-600'
             )}
@@ -238,7 +237,7 @@ const StatisticCard = (props: StatisticCardProps) => {
                 <div className="flex items-center gap-4">
                     <div
                         className={classNames(
-                            'flex items-center justify-center p-2 rounded-lg text-2xl',
+                            'flex items-center justify-center p-2 rounded-lg text-2xl transition-colors duration-200',
                             active ? iconActiveColor : 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400'
                         )}
                     >
@@ -248,7 +247,7 @@ const StatisticCard = (props: StatisticCardProps) => {
                         <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
                             {title}
                         </div>
-                        <h4 className={classNames('font-bold', active && textActiveColor)}>
+                        <h4 className={classNames('font-bold transition-colors duration-200', active && textActiveColor)}>
                             {value}
                         </h4>
                     </div>
@@ -265,8 +264,11 @@ type SummaryChartProps = {
 const CategorySummaryChart = ({ data }: SummaryChartProps) => {
     if (!data || data.length === 0) {
         return (
-            <div className="h-[250px] flex items-center justify-center text-gray-400">
-                No summary data available.
+            <div className="h-[250px] flex items-center justify-center">
+                <div className='text-center'>
+                    <p className='text-lg font-semibold text-gray-600 dark:text-gray-300'>No Summary Data</p>
+                    <p className='text-sm text-gray-400'>There is no data to display in the chart.</p>
+                </div>
             </div>
         )
     }
@@ -274,7 +276,7 @@ const CategorySummaryChart = ({ data }: SummaryChartProps) => {
         <div className="h-[250px] w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data} margin={{ top: 0, right: 20, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--tw-border-gray-200)" />
                     <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
                     <YAxis allowDecimals={false} fontSize={12} tickLine={false} axisLine={false} />
                     <RechartsTooltip
@@ -283,6 +285,7 @@ const CategorySummaryChart = ({ data }: SummaryChartProps) => {
                             background: 'var(--tw-bg-gray-50)',
                             borderRadius: '0.5rem',
                             border: '1px solid var(--tw-border-gray-200)',
+                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
                         }}
                     />
                     <Bar dataKey="value" barSize={35} radius={[4, 4, 0, 0]} />
@@ -314,18 +317,18 @@ const ScoreBar = ({ score }: { score: number }) => {
 const EnquirySubTable = ({ title, enquiries }: { title: string, enquiries: any[] }) => {
     if (!enquiries || enquiries.length === 0) {
         return (
-            <div>
+            <div className='p-4 bg-gray-100 dark:bg-gray-800 rounded-lg'>
                 <h6 className="mb-2 text-sm font-semibold">{title}</h6>
-                <div className="border rounded-lg p-4 text-center text-gray-400 text-sm">No recent enquiries.</div>
+                <div className="text-center text-gray-400 text-sm py-4">No recent enquiries.</div>
             </div>
         )
     }
     return (
-        <div>
+        <div className='p-4 bg-gray-100 dark:bg-gray-800 rounded-lg'>
             <h6 className="mb-2 text-sm font-semibold">{title}</h6>
-            <div className="border rounded-lg overflow-x-auto">
-                <Table className="min-w-full text-xs">
-                    <THead>
+            <div className="overflow-x-auto">
+                <Table className="min-w-full text-xs" compact>
+                    <THead variant='light'>
                         <Tr>
                             <Th>Customer</Th>
                             <Th>Qty</Th>
@@ -379,7 +382,7 @@ const ProductOpportunitiesTable = ({ data, onSearch }: { data: any[], onSearch: 
                 prefix={<TbSearch className="text-lg" />}
                 onChange={(e) => onSearch(e.target.value)}
             />
-            <div className="border rounded-lg">
+            <div className="border rounded-lg overflow-hidden">
                 <Table>
                     <THead>
                         <Tr>
@@ -405,17 +408,17 @@ const ProductOpportunitiesTable = ({ data, onSearch }: { data: any[], onSearch: 
                                         </div>
                                     </Td>
                                     <Td>
-                                        <Tag className="bg-emerald-100 text-emerald-600">{product.buy_count}</Tag>
+                                        <Tag className="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100">{product.buy_count}</Tag>
                                     </Td>
                                     <Td>
-                                        <Tag className="bg-amber-100 text-amber-600">{product.sell_count}</Tag>
+                                        <Tag className="bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100">{product.sell_count}</Tag>
                                     </Td>
                                     <Td><ScoreBar score={product.score} /></Td>
                                 </Tr>
                                 {expandedRows.has(product.product_id) && (
                                     <Tr>
                                         <Td colSpan={4} className="p-0 !border-0">
-                                            <div className="p-4 pl-12 bg-gray-50 dark:bg-gray-900/50 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                            <div className="p-4 bg-gray-50 dark:bg-gray-900/50 grid grid-cols-1 lg:grid-cols-2 gap-4">
                                                 <EnquirySubTable title={`Top 10 Buyers (${product.buy.length} of ${product.buy_count})`} enquiries={product.buy} />
                                                 <EnquirySubTable title={`Top 10 Sellers (${product.sell.length} of ${product.sell_count})`} enquiries={product.sell} />
                                             </div>
@@ -437,10 +440,10 @@ type Lead = { lead_id: number; lead_intent: string | null; status: string; produ
 type SalespersonData = { sales_person_id: number; sales_person_name: string; lead_count: number; latest_10_leads: Lead[] }
 
 const statusColorMapping: { [key: string]: string } = {
-    'New': 'bg-blue-100 text-blue-600', 'Assigned': 'bg-amber-100 text-amber-600', 'Approved': 'bg-cyan-100 text-cyan-600',
-    'Completed': 'bg-emerald-100 text-emerald-600', 'Deal Done': 'bg-emerald-100 text-emerald-600', 'Rejected': 'bg-red-100 text-red-600',
-    'Cancelled': 'bg-rose-100 text-rose-600', 'Approval Waiting': 'bg-yellow-100 text-yellow-600', 'Accepted': 'bg-green-100 text-green-600',
-    'Active': 'bg-emerald-100 text-emerald-600', 'Pending': 'bg-amber-100 text-amber-600', 'default': 'bg-gray-100 text-gray-600',
+    'New': 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100', 'Assigned': 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100', 'Approved': 'bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-100',
+    'Completed': 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100', 'Deal Done': 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100', 'Rejected': 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
+    'Cancelled': 'bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-100', 'Approval Waiting': 'bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-100', 'Accepted': 'bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-100',
+    'Active': 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100', 'Pending': 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100', 'default': 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100',
 }
 
 const LeadsBySalespersonTable = ({ data }: { data: SalespersonData[] }) => {
@@ -448,21 +451,33 @@ const LeadsBySalespersonTable = ({ data }: { data: SalespersonData[] }) => {
     const toggleRow = (id: number) => { const newExpandedRows = new Set(expandedRows); if (newExpandedRows.has(id)) { newExpandedRows.delete(id) } else { newExpandedRows.add(id) } setExpandedRows(newExpandedRows) }
     if (!data || data.length === 0) { return <div className="text-center p-8 border border-dashed rounded-lg"><p className="text-gray-500">No leads found.</p></div> }
     return (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
             <Table className="w-full">
-                <THead className="bg-gray-50 dark:bg-gray-800 rounded-t-lg"><Tr><Th>Salesperson / ID</Th><Th>Product</Th><Th>Status</Th><Th>Buyer</Th><Th>Supplier</Th><Th>Created At</Th></Tr></THead>
-                <tbody className="align-top divide-y divide-gray-200 dark:divide-gray-700">
+                <THead><Tr><Th>Salesperson / ID</Th><Th>Product</Th><Th>Status</Th><Th>Buyer</Th><Th>Supplier</Th><Th>Created At</Th></Tr></THead>
+                <tbody className="align-top">
                     {data.map((salesperson) => (
                         <Fragment key={salesperson.sales_person_id}>
-                            <Tr className="cursor-pointer bg-white dark:bg-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700" onClick={() => toggleRow(salesperson.sales_person_id)}>
-                                <Td colSpan={6}>
+                            <Tr className="cursor-pointer bg-gray-50/50 dark:bg-gray-700/20 hover:bg-gray-100 dark:hover:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700" onClick={() => toggleRow(salesperson.sales_person_id)}>
+                                <Td colSpan={6} className="py-3">
                                     <div className="flex items-center justify-between w-full">
-                                        <div className="flex items-center gap-3"><span className="text-lg text-gray-400">{expandedRows.has(salesperson.sales_person_id) ? <IoChevronDown /> : <IoChevronForward />}</span><Avatar size="sm" shape="circle" icon={<TbUserCircle />} /><span className="font-semibold">{salesperson.sales_person_name}</span></div><Tag>{salesperson.lead_count} Lead{salesperson.lead_count !== 1 ? 's' : ''}</Tag>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-lg text-gray-400">{expandedRows.has(salesperson.sales_person_id) ? <IoChevronDown /> : <IoChevronForward />}</span>
+                                            <Avatar size="sm" shape="circle" icon={<TbUserCircle />} />
+                                            <span className="font-semibold">{salesperson.sales_person_name}</span>
+                                        </div>
+                                        <Tag>{salesperson.lead_count} Lead{salesperson.lead_count !== 1 ? 's' : ''}</Tag>
                                     </div>
                                 </Td>
                             </Tr>
                             {expandedRows.has(salesperson.sales_person_id) && salesperson.latest_10_leads.map((lead) => (
-                                <Tr key={lead.lead_id} className="bg-gray-50/50 dark:bg-gray-900/50"><Td className="pl-14"><span className="font-mono text-sm">#{lead.lead_id}</span></Td><Td><span className="font-medium">{lead.product_name}</span></Td><Td><Tag className={statusColorMapping[lead.status] || statusColorMapping.default}>{lead.status}</Tag></Td><Td>{lead.buyer || <em className="text-gray-400">N/A</em>}</Td><Td>{lead.supplier || <em className="text-gray-400">N/A</em>}</Td><Td><div className="text-sm whitespace-nowrap"><div>{dayjs(lead.created_at).format('DD MMM YYYY')}</div><div className="text-xs">{dayjs(lead.created_at).format('hh:mm A')}</div></div></Td></Tr>
+                                <Tr key={lead.lead_id} className="bg-white dark:bg-gray-800/50 hover:bg-gray-50/50 dark:hover:bg-gray-900/20 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                                    <Td className="pl-14"><span className="font-mono text-sm">#{lead.lead_id}</span></Td>
+                                    <Td><span className="font-medium">{lead.product_name}</span></Td>
+                                    <Td><Tag className={statusColorMapping[lead.status] || statusColorMapping.default}>{lead.status}</Tag></Td>
+                                    <Td>{lead.buyer || <em className="text-gray-400">N/A</em>}</Td>
+                                    <Td>{lead.supplier || <em className="text-gray-400">N/A</em>}</Td>
+                                    <Td><div className="text-sm whitespace-nowrap"><div>{dayjs(lead.created_at).format('DD MMM YYYY')}</div><div className="text-xs text-gray-500">{dayjs(lead.created_at).format('hh:mm A')}</div></div></Td>
+                                </Tr>
                             ))}
                         </Fragment>
                     ))}
@@ -476,7 +491,7 @@ const LeadsBySalespersonTable = ({ data }: { data: SalespersonData[] }) => {
 // --- START OF TASKS BY STATUS TABLE COMPONENT ---
 const formatStatusName = (status: string) => {
     if (!status) return 'Unknown'
-    return status.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').replace(/\b\w/g, (l) => l.toUpperCase()).trim();
+    return status.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()).trim();
 };
 
 const taskStatusColorMapping: { [key: string]: string } = {
@@ -537,9 +552,9 @@ const TasksByStatusTable = ({ data }: { data: any }) => {
                 prefix={<TbSearch className="text-lg" />}
                 onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                 <Table>
-                    <THead className="bg-gray-50 dark:bg-gray-800">
+                    <THead>
                         <Tr>
                             <Th style={{ width: '40%' }}>Task / Module</Th>
                             <Th style={{ width: '20%' }}>Assigned To</Th>
@@ -548,23 +563,26 @@ const TasksByStatusTable = ({ data }: { data: any }) => {
                             <Th style={{ width: '15%' }}>Created By</Th>
                         </Tr>
                     </THead>
-                    <tbody className="align-top divide-y divide-gray-200 dark:divide-gray-700">
+                    <tbody className="align-top">
                         {statusKeysToRender.length > 0 ? statusKeysToRender.map((statusKey) => {
                             const tasks = filteredTasksByStatus[statusKey].slice(0, 10)
                             const count = filteredTasksByStatus[statusKey].length
 
                             return (
                                 <Fragment key={statusKey}>
-                                    <Tr className="cursor-pointer bg-white dark:bg-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700" onClick={() => toggleRow(statusKey)}>
-                                        <Td colSpan={5}>
+                                    <Tr className="cursor-pointer bg-gray-50/50 dark:bg-gray-700/20 hover:bg-gray-100 dark:hover:bg-gray-700/50 border-y border-gray-200 dark:border-gray-700" onClick={() => toggleRow(statusKey)}>
+                                        <Td colSpan={5} className="py-3">
                                             <div className="flex items-center justify-between w-full">
-                                                <div className="flex items-center gap-3"><span className="text-lg text-gray-400">{expandedRows.has(statusKey) ? <IoChevronDown /> : <IoChevronForward />}</span><span className="font-semibold">{formatStatusName(statusKey)}</span></div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-lg text-gray-400">{expandedRows.has(statusKey) ? <IoChevronDown /> : <IoChevronForward />}</span>
+                                                    <span className="font-semibold">{formatStatusName(statusKey)}</span>
+                                                </div>
                                                 <Tag className={taskStatusColorMapping[statusKey]}>{count} Task{count !== 1 ? 's' : ''}</Tag>
                                             </div>
                                         </Td>
                                     </Tr>
                                     {expandedRows.has(statusKey) && tasks.map((task: any) => (
-                                        <Tr key={task.id} className="bg-gray-50/50 dark:bg-gray-900/50">
+                                        <Tr key={task.id} className="bg-white dark:bg-gray-800/50 hover:bg-gray-50/50 dark:hover:bg-gray-900/20">
                                             <Td className="pl-14">
                                                 <div className="font-medium">{task.task_title}</div><div className="text-xs text-gray-500">{task.module_name}</div>
                                             </Td>
@@ -583,7 +601,7 @@ const TasksByStatusTable = ({ data }: { data: any }) => {
                         )}
                     </tbody>
                 </Table>
-                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-b-lg border-t grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div className="p-4 bg-gray-50 dark:bg-gray-800 border-t grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                     <div><div className="text-sm text-gray-500">Unassigned</div><div className="font-bold text-lg">{counts.unassigned || 0}</div></div>
                     <div><div className="text-sm text-gray-500">No Status</div><div className="font-bold text-lg text-red-500">{counts.no_status || 0}</div></div>
                     <div><div className="text-sm text-gray-500">New Today</div><div className="font-bold text-lg">{counts.today || 0}</div></div>
@@ -595,7 +613,7 @@ const TasksByStatusTable = ({ data }: { data: any }) => {
 };
 // --- END OF TASKS BY STATUS TABLE COMPONENT ---
 
-// NEW: --- START: Wall Listing Component ---
+// --- START: Wall Listing Component ---
 const WallSummaryCard = ({ title, data, dataKey, nameKey }: { title: string, data: any[], dataKey: string, nameKey: string }) => {
     if (!data || data.length === 0) {
         return (
@@ -675,10 +693,10 @@ const WallListingDetails = ({ data }: { data: any }) => {
     }, [queries, latest100]);
 
     const columns = useMemo(() => [
-        { header: 'Product', accessorKey: 'product.name', cell: (props: any) => <span>{props.row.original.product?.name || 'N/A'}</span> },
+        { header: 'Product', accessorKey: 'product.name', cell: (props: any) => <span className="font-semibold">{props.row.original.product?.name || 'N/A'}</span> },
         { header: 'Customer', accessorKey: 'customer.name', cell: (props: any) => <span>{props.row.original.customer?.name || 'N/A'}</span> },
         { header: 'Country', accessorKey: 'customer.country.name', cell: (props: any) => <span>{props.row.original.customer?.country?.name || 'N/A'}</span> },
-        { header: 'Type', accessorKey: 'want_to', cell: (props: any) => <Tag className={props.row.original.want_to === 'Buy' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}>{props.row.original.want_to}</Tag> },
+        { header: 'Type', accessorKey: 'want_to', cell: (props: any) => <Tag className={props.row.original.want_to === 'Buy' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100' : 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100'}>{props.row.original.want_to}</Tag> },
         { header: 'Qty', accessorKey: 'qty' },
         { header: 'Status', accessorKey: 'status', cell: (props: any) => <Tag className={statusColorMapping[props.row.original.status] || statusColorMapping.default}>{props.row.original.status}</Tag> },
         { header: 'Date', accessorKey: 'created_at', cell: (props: any) => <span>{dayjs(props.row.original.created_at).format('DD MMM YYYY')}</span> },
@@ -721,8 +739,7 @@ const WallListingDetails = ({ data }: { data: any }) => {
         </div>
     );
 };
-// NEW: --- END: Wall Listing Component ---
-
+// --- END: Wall Listing Component ---
 
 const CHART_COLORS = ['#3B82F6', '#10B981', '#F97316', '#8B5CF6', '#EC4899', '#6366F1', '#F59E0B', '#06B6D4'];
 
@@ -783,7 +800,6 @@ const Overview = () => {
                 fill: CHART_COLORS[i % CHART_COLORS.length],
             }));
 
-        // NEW: Prepare data for Wall Listing chart and details
         const wallListingChartData = (DashboardWallData?.country_wise || [])
             .slice(0, 5)
             .map((c: any, i: number) => ({
@@ -849,7 +865,7 @@ const Overview = () => {
     return (
         <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
-                <h3>Dashboard Overview</h3>
+                <h3 className='mb-2'>Dashboard Overview</h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
@@ -869,11 +885,11 @@ const Overview = () => {
             <Card>
                 <div className="mb-4">
                     <h5 className="mb-1">{currentCategory.title || currentCategory.label} Details</h5>
-                    <p className="text-gray-500">
+                    <p className="text-gray-500 text-sm">
                         {selectedCategory === 'ProductOpportunities' ? "Hot products with both buyers and sellers. Expand a row to see top enquiries." :
                             selectedCategory === 'Tasks' ? "List of all tasks, grouped by current status." :
                                 selectedCategory === 'Leads' ? "List of leads grouped by salesperson" :
-                                    selectedCategory === 'WallListing' ? "Breakdown of wall enquiries by region, category, and recent activity." : // NEW: Description for Wall Listing
+                                    selectedCategory === 'WallListing' ? "Breakdown of wall enquiries by region, category, and recent activity." :
                                         `Detailed list of all ${currentCategory.label.toLowerCase()}`}
                     </p>
                 </div>
@@ -882,7 +898,7 @@ const Overview = () => {
                     selectedCategory === 'ProductOpportunities' ? <ProductOpportunitySkeleton /> :
                         selectedCategory === 'Tasks' ? <TaskTableSkeleton /> :
                             selectedCategory === 'Leads' ? <TableSkeleton columns={[{ header: 'Salesperson' }]} skeletonRow={<SalespersonSkeletonRow />} rowCount={2} /> :
-                                selectedCategory === 'WallListing' ? <WallListingSkeleton /> : // NEW: Loading skeleton for Wall Listing
+                                selectedCategory === 'WallListing' ? <WallListingSkeleton /> :
                                     <Skeleton className="h-64 w-full" />
                 ) : (
                     selectedCategory === 'ProductOpportunities' ? (
@@ -893,11 +909,11 @@ const Overview = () => {
                         ) :
                             selectedCategory === 'Leads' ? (
                                 <>
-                                    <DebouceInput className="w-full md:w-1/3 mb-4" placeholder="Search Leads..." prefix={<TbSearch />} onChange={(e) => handleLeadSearch(e.target.value)} />
+                                    <DebouceInput className="w-full md:w-1/3 mb-4" placeholder="Search by Salesperson or Product..." prefix={<TbSearch />} onChange={(e) => handleLeadSearch(e.target.value)} />
                                     <LeadsBySalespersonTable data={currentCategory.tableData} />
                                 </>
                             ) :
-                                selectedCategory === 'WallListing' ? ( // NEW: Render the WallListingDetails component
+                                selectedCategory === 'WallListing' ? (
                                     <WallListingDetails data={currentCategory.wallData} />
                                 ) : (
                                     <div className="text-center p-8 border border-dashed rounded-lg">
