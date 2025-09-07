@@ -3120,30 +3120,74 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
     const productId = row.original.id.replace('spb-match-', '');
     const leadQty = Math.min(Number(buyer.qty) || Infinity, Number(seller.qty) || Infinity);
 
-    // This state object structure matches what the provided AddLeadPage.tsx expects
     const prefillState = {
       buyerId: buyer.customer_id,
       supplierId: seller.customer_id,
       productId: Number(productId),
-      want_to: 'Buy', // The lead is from the perspective of the Buyer
+      want_to: 'Buy',
       qty: leadQty === Infinity ? null : leadQty,
-      price: Number(seller.price) || null, // The seller's price becomes the target price
+      price: Number(seller.price) || null,
       product_status: seller.product_status,
       device_condition: seller.device_condition,
       color: seller.color,
       location: seller.location,
-      // The AddLeadPage expects IDs for these, which are not available in AutoSpbApiItem as IDs.
-      // Passing null to avoid errors. The user can select them manually on the lead page.
       product_spec_id: null,
       payment_term: null,
     };
 
     toast.push(<Notification title="Redirecting..." type="info">Preparing to create a new lead.</Notification>);
-    
-    // Navigate to the Add Lead page with the pre-filled data in the state
     navigate('/sales-leads/wall-item/lead/add', { state: prefillState });
-
   }, [selectedBuyItems, selectedSellItems, row.original, navigate]);
+
+  const handleCreateOffer = useCallback(() => {
+    if (selectedSellItems.length === 0) {
+        toast.push(<Notification title="No Sellers Selected" type="warning">Please select at least one seller to create an offer.</Notification>);
+        return;
+    }
+
+    const productId = row.original.id.replace('spb-match-', '');
+    const firstSeller = selectedSellItems[0];
+
+    const prefillState = {
+        productId: Number(productId),
+        product_name: row.original.opportunity_id,
+        seller_ids: selectedSellItems.map(item => item.customer_id),
+        product_spec_id: null,
+        product_status: firstSeller.product_status,
+        deviceCondition: firstSeller.device_condition,
+        color: firstSeller.color,
+        qty: Number(firstSeller.qty) || undefined,
+        price: Number(firstSeller.price) || undefined,
+    };
+
+    toast.push(<Notification title="Redirecting..." type="info">Preparing to create a new offer.</Notification>);
+    navigate('/sales-leads/wall-item/offers/create', { state: prefillState });
+  }, [selectedSellItems, row.original, navigate]);
+
+  const handleCreateDemand = useCallback(() => {
+      if (selectedBuyItems.length === 0) {
+          toast.push(<Notification title="No Buyers Selected" type="warning">Please select at least one buyer to create a demand.</Notification>);
+          return;
+      }
+  
+      const productId = row.original.id.replace('spb-match-', '');
+      const firstBuyer = selectedBuyItems[0];
+  
+      const prefillState = {
+          productId: Number(productId),
+          product_name: row.original.opportunity_id,
+          buyer_ids: selectedBuyItems.map(item => item.customer_id),
+          product_spec_id: null,
+          product_status: firstBuyer.product_status,
+          deviceCondition: firstBuyer.device_condition,
+          color: firstBuyer.color,
+          qty: Number(firstBuyer.qty) || undefined,
+          price: Number(firstBuyer.price) || undefined,
+      };
+  
+      toast.push(<Notification title="Redirecting..." type="info">Preparing to create a new demand.</Notification>);
+      navigate('/sales-leads/wall-item/demands/create', { state: prefillState });
+  }, [selectedBuyItems, row.original, navigate]);
 
   const handleToggleBuyItem = (itemToToggle: AutoSpbApiItem) => {
     setSelectedBuyItems((prev) =>
@@ -3250,7 +3294,23 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
           </div>
         </div>
       </div>
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+        <Button
+          variant="solid"
+          color="purple-600"
+          onClick={handleCreateDemand}
+          disabled={selectedBuyItems.length === 0}
+        >
+            Create Demand
+        </Button>
+        <Button
+          variant="solid"
+          color="blue-600"
+          onClick={handleCreateOffer}
+          disabled={selectedSellItems.length === 0}
+        >
+            Create Offer
+        </Button>
         <Button
           variant="solid"
           onClick={handleCreateLead}
