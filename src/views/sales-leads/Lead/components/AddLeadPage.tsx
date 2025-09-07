@@ -348,7 +348,7 @@ const AddLeadPage = () => {
                 />
               </FormItem>
               <FormItem
-                label="Target Price ($)"
+                label="Price ($)"
                 invalid={!!errors.target_price}
                 errorMessage={errors.target_price?.message}
               >
@@ -357,7 +357,7 @@ const AddLeadPage = () => {
                   control={control}
                   render={({ field }) => (
                     <InputNumber
-                      placeholder="Enter target price"
+                      placeholder="Enter price"
                       {...field}
                       value={field.value ?? undefined}
                       onChange={(val) => field.onChange(val ?? null)}

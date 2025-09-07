@@ -250,7 +250,7 @@ const HeaderCard: React.FC<{ lead: VerifiedLead }> = ({ lead }) => (
     <div className="flex flex-col md:flex-row items-center gap-4">
       <div className="flex-grow grid grid-cols-2 sm:grid-cols-5 gap-1 w-full">
         <StatBox value={lead?.qty} label="Quantity" />
-        <StatBox value={`$${lead?.target_price || '0.00'}`} label="Target Price" className="sm:border-l" />
+        <StatBox value={`$${lead?.target_price || '0.00'}`} label="Price" className="sm:border-l" />
         <StatBox
           value={<Tag className="bg-emerald-100 text-emerald-600">{lead?.lead_status}</Tag>}
           label="Lead Status"
@@ -274,7 +274,7 @@ const ProductDetailsTab: React.FC<{ lead: VerifiedLead }> = ({ lead }) => (
     <h5 className="font-semibold mb-4">Product Details</h5>
     <InfoRow label="Product Name">{lead?.product.name}</InfoRow>
     <InfoRow label="Quantity">{lead?.qty}</InfoRow>
-    <InfoRow label="Target Price">{`$${lead?.target_price || ' '}`}</InfoRow>
+    <InfoRow label="Price">{`$${lead?.target_price || ' '}`}</InfoRow>
     <InfoRow label="Color">{lead?.color}</InfoRow>
     <InfoRow label="Device Condition">{lead?.device_condition}</InfoRow>
     <InfoRow label="Product Spec">{lead?.product_spec?.name}</InfoRow>

@@ -172,7 +172,7 @@ const PendingLeadViewModal = ({
               {renderDetail('Lead Number', lead.lead_number || `LD-${lead.id.toString().padStart(5, '0')}`)}
               {renderDetail('Product', lead.product?.name)}
               {renderDetail('Quantity', lead.qty)}
-              {renderDetail('Target Price', lead.target_price ? `$${lead.target_price}` : ' ')}
+              {renderDetail('Price', lead.target_price ? `$${lead.target_price}` : ' ')}
               {renderDetail('Status', <Tag className={`${leadStatusColor[lead.status] || leadStatusColor.default} capitalize`}>{lead.status}</Tag>)}
               {renderDetail('Intent', <Tag className="capitalize">{lead.lead_intent}</Tag>)}
               {renderDetail('Created At', dayjs(lead.created_at).format('DD MMM YYYY, h:mm A'))}
@@ -716,7 +716,7 @@ const CSV_LEAD_HEADERS = [
   "Customer Name",
   "Intent",
   "Qty",
-  "Target Price",
+  "Price",
   "Sales Person",
   "Created At",
 ];
@@ -944,7 +944,7 @@ const HeaderCard: React.FC<{ lead: LeadListItem }> = ({ lead }) => (
     <div className="flex flex-col md:flex-row items-center gap-4">
       <div className="flex-grow grid grid-cols-2 sm:grid-cols-4 gap-1 w-full">
         <StatBox value={lead.qty} label="Quantity" />
-        <StatBox value={`$${lead.target_price || '0.00'}`} label="Target Price" className="sm:border-l" />
+        <StatBox value={`$${lead.target_price || '0.00'}`} label="Price" className="sm:border-l" />
         <StatBox
           value={<Tag className="bg-blue-100 text-blue-600">Qualified</Tag>}
           label="Lead Status"
@@ -961,7 +961,7 @@ const ProductDetailsTab: React.FC<{ lead: LeadListItem }> = ({ lead }) => (
     <h5 className="font-semibold mb-4">Product Details</h5>
     <InfoRow label="Product Name">{lead.productName}</InfoRow>
     <InfoRow label="Quantity">{lead.qty}</InfoRow>
-    <InfoRow label="Target Price">{`$${lead.target_price || ' '}`}</InfoRow>
+    <InfoRow label="Price">{`$${lead.target_price || ' '}`}</InfoRow>
   </Card>
 );
 
@@ -1249,7 +1249,7 @@ const ViewLeadFormDialog: React.FC<{
         <FormItem label="Quantity">
           <Input value={lead.qty ?? " "} readOnly />
         </FormItem>
-        <FormItem label="Target Price">
+        <FormItem label="Price">
           <Input value={lead.target_price ?? " "} readOnly />
         </FormItem>
       </div>
@@ -3415,7 +3415,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
                 <span><strong>Qty:</strong> {props.row.original.qty ?? "-"}</span>
               </div>
               <span>
-                <strong>Target Price:</strong> {props.row.original.target_price ? `$${props.row.original.target_price}` : "-"}
+                <strong>Price:</strong> {props.row.original.target_price ? `$${props.row.original.target_price}` : "-"}
               </span>
               <span>
                 <strong>Sales Person:</strong>{" "}

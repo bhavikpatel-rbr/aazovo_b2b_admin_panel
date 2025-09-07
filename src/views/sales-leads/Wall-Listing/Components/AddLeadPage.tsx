@@ -217,7 +217,7 @@ const AddLeadPage = () => {
               <FormItem label={<div>Quantity<span className="text-red-500"> *</span></div>} invalid={!!errors.qty} errorMessage={errors.qty?.message}>
                 <Controller name="qty" control={control} render={({ field }) => (<InputNumber placeholder="Enter quantity" {...field} value={field.value ?? undefined} onChange={(val) => field.onChange(val ?? null)} />)} />
               </FormItem>
-              <FormItem label="Target Price ($)" invalid={!!errors.target_price} errorMessage={errors.target_price?.message}>
+              <FormItem label="Price ($)" invalid={!!errors.target_price} errorMessage={errors.target_price?.message}>
                 <Controller name="target_price" control={control} render={({ field }) => (<InputNumber placeholder="Enter target price" {...field} value={field.value ?? undefined} onChange={(val) => field.onChange(val ?? null)} step={0.01} />)} />
               </FormItem>
               <FormItem label="Product Status" invalid={!!errors.source_product_status} errorMessage={errors.source_product_status?.message}>
