@@ -361,7 +361,6 @@ const CategorySummaryChart = ({ data }: SummaryChartProps) => {
 }
 
 // --- MAIN COMPONENT ---
-const CHART_COLORS = ['#3B82F6', '#10B981', '#F97316', '#8B5CF6', '#EC4899', '#6366F1', '#F59E0B', '#06B6D4'];
 const categoryThemes = {
     Companies: { base: 'text-rose-500', gradient: 'bg-gradient-to-br from-rose-400 to-pink-500', color: '#F43F5E' },
     Members: { base: 'text-emerald-500', gradient: 'bg-gradient-to-br from-emerald-400 to-green-500', color: '#10B981' },
@@ -369,6 +368,29 @@ const categoryThemes = {
     Partners: { base: 'text-violet-500', gradient: 'bg-gradient-to-br from-violet-400 to-purple-500', color: '#8B5CF6' },
     Teams: { base: 'text-amber-500', gradient: 'bg-gradient-to-br from-amber-400 to-orange-500', color: '#F59E0B' },
 };
+
+// NEW: Color map for different chart statuses
+const STATUS_CHART_COLORS: Record<string, string> = {
+    // General
+    total: '#3B82F6',        // Blue (Primary)
+    active: '#10B981',       // Green (Success)
+    inactive: '#64748B',     // Slate (Muted)
+    disabled: '#EF4444',     // Red (Danger)
+    pending: '#F97316',      // Orange (Warning)
+    
+    // Verification & Registration
+    verified: '#22C55E',     // Strong Green
+    unverified: '#EAB308',   // Amber
+    unregistered: '#78716C', // Stone
+    
+    // Product specific
+    categories: '#06B6D4',   // Cyan
+    brands: '#6366F1',       // Indigo
+    
+    // Team specific
+    'on notice': '#F59E0B',    // Amber (different shade)
+};
+
 
 const Overview = () => {
     const [selectedCategory, setSelectedCategory] =
@@ -506,11 +528,15 @@ const Overview = () => {
             icon: <Building2 size={28} strokeWidth={1.5} />,
             theme: categoryThemes.Companies,
             totalCount: DashBoardCount?.companies || '...',
+            // UPDATED: Dynamically assign colors based on status name
             summaryData: (CompanyData ? [
-                { name: 'Total', value: CompanyData.total || 0, fill: categoryThemes.Companies.color },
-                { name: 'Verified', value: CompanyData.verified || 0, fill: categoryThemes.Companies.color },
-                { name: 'Unverified', value: CompanyData.unverified || 0, fill: categoryThemes.Companies.color },
-            ] : []).map(d => ({ ...d, fill: categoryThemes.Companies.color })),
+                { name: 'Total', value: CompanyData.total || 0 },
+                { name: 'Verified', value: CompanyData.verified || 0 },
+                { name: 'Unverified', value: CompanyData.unverified || 0 },
+            ] : []).map(d => ({
+                ...d,
+                fill: STATUS_CHART_COLORS[d.name.toLowerCase()] || categoryThemes.Companies.color,
+            })),
             tableColumns: companyColumns,
             tableData: companyPageData,
             tableTotal: companyTotal,
@@ -522,12 +548,16 @@ const Overview = () => {
             icon: <UserCircle size={28} strokeWidth={1.5} />,
             theme: categoryThemes.Members,
             totalCount: DashBoardCount?.customers || '...',
-            summaryData: MemberData ? [
-                { name: 'Total', value: MemberData.total || 0, fill: CHART_COLORS[1] },
-                { name: 'Active', value: MemberData.active || 0, fill: CHART_COLORS[1] },
-                { name: 'Disabled', value: MemberData.disabled || 0, fill: CHART_COLORS[2] },
-                { name: 'Unregistered', value: MemberData.unregistered || 0, fill: CHART_COLORS[4] },
-            ] : [],
+            // UPDATED: Dynamically assign colors based on status name
+            summaryData: (MemberData ? [
+                { name: 'Total', value: MemberData.total || 0 },
+                { name: 'Active', value: MemberData.active || 0 },
+                { name: 'Disabled', value: MemberData.disabled || 0 },
+                { name: 'Unregistered', value: MemberData.unregistered || 0 },
+            ] : []).map(d => ({
+                ...d,
+                fill: STATUS_CHART_COLORS[d.name.toLowerCase()] || categoryThemes.Members.color,
+            })),
             tableColumns: memberColumns,
             tableData: memberPageData,
             tableTotal: memberTotal,
@@ -539,13 +569,17 @@ const Overview = () => {
             icon: <Boxes size={28} strokeWidth={1.5} />,
             theme: categoryThemes.Products,
             totalCount: DashBoardCount?.products || '...',
+            // UPDATED: Dynamically assign colors based on status name
             summaryData: (ProductsData ? [
                 { name: 'Total', value: ProductsData.total || 0 },
                 { name: 'Active', value: ProductsData.active || 0 },
                 { name: 'Inactive', value: ProductsData.inactive || 0 },
                 { name: 'Categories', value: ProductsData.category_count || 0 },
                 { name: 'Brands', value: ProductsData.brand_count || 0 },
-            ] : []).map(d => ({ ...d, fill: categoryThemes.Products.color })),
+            ] : []).map(d => ({
+                ...d,
+                fill: STATUS_CHART_COLORS[d.name.toLowerCase()] || categoryThemes.Products.color,
+            })),
             tableColumns: productColumns,
             tableData: productPageData,
             tableTotal: productTotal,
@@ -557,12 +591,16 @@ const Overview = () => {
             icon: <Handshake size={28} strokeWidth={1.5} />,
             theme: categoryThemes.Partners,
             totalCount: DashBoardCount?.partners || '...',
+            // UPDATED: Dynamically assign colors based on status name
             summaryData: (partnerData ? [
                 { name: 'Total', value: partnerData.total || 0 },
                 { name: 'Active', value: partnerData.active || 0 },
                 { name: 'Verified', value: partnerData.verified || 0 },
                 { name: 'Unverified', value: partnerData.unverified || 0 },
-            ] : []).map(d => ({ ...d, fill: categoryThemes.Partners.color })),
+            ] : []).map(d => ({
+                ...d,
+                fill: STATUS_CHART_COLORS[d.name.toLowerCase()] || categoryThemes.Partners.color,
+            })),
             tableColumns: partnerColumns,
             tableData: partnerPageData,
             tableTotal: partnerTotal,
@@ -574,11 +612,15 @@ const Overview = () => {
             icon: <Users size={28} strokeWidth={1.5} />,
             theme: categoryThemes.Teams,
             totalCount: DashBoardCount?.users || '...',
-            summaryData: Employees?.counts ? [
-                { name: 'Active', value: Employees.counts.active, fill: CHART_COLORS[1] },
-                { name: 'Inactive', value: Employees.counts.inactive, fill: CHART_COLORS[2] },
-                { name: 'On Notice', value: Employees.counts.on_notice, fill: CHART_COLORS[6] },
-            ] : [],
+            // UPDATED: Dynamically assign colors based on status name
+            summaryData: (Employees?.counts ? [
+                { name: 'Active', value: Employees.counts.active },
+                { name: 'Inactive', value: Employees.counts.inactive },
+                { name: 'On Notice', value: Employees.counts.on_notice },
+            ] : []).map(d => ({
+                ...d,
+                fill: STATUS_CHART_COLORS[d.name.toLowerCase()] || categoryThemes.Teams.color,
+            })),
             tableColumns: teamColumns,
             tableData: teamPageData,
             tableTotal: teamTotal,
