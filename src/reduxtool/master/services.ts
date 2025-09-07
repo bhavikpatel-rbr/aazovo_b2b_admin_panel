@@ -2952,6 +2952,16 @@ export const getDashboardWallAsync = async () => {
   }
 }
 
+export const getDashboardAccountDocAsync = async () => {
+  try {
+
+    const response = await axiosInstance.get(`${config.apiURL}/dashboardaccountdoc`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
 export const getDashboardOpportunityAsync = async () => {
   try {
 
