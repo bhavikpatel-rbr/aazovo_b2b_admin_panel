@@ -1,12 +1,12 @@
-import { DataTable, DebouceInput } from '@/components/shared';
-import { Avatar, Dialog, Table, Tag, Tooltip } from '@/components/ui';
-import Card from '@/components/ui/Card';
-import Select from '@/components/ui/Select';
-import THead from '@/components/ui/Table/THead';
-import Td from '@/components/ui/Table/Td';
-import Th from '@/components/ui/Table/Th';
-import Tr from '@/components/ui/Table/Tr';
-import { masterSelector } from '@/reduxtool/master/masterSlice';
+import { DataTable, DebouceInput } from '@/components/shared'
+import { Avatar, Dialog, Table, Tag, Tooltip } from '@/components/ui'
+import Card from '@/components/ui/Card'
+import Select from '@/components/ui/Select'
+import THead from '@/components/ui/Table/THead'
+import Td from '@/components/ui/Table/Td'
+import Th from '@/components/ui/Table/Th'
+import Tr from '@/components/ui/Table/Tr'
+import { masterSelector } from '@/reduxtool/master/masterSlice'
 import {
     getDashboardCompanyAction,
     getDashboardCountsAction,
@@ -15,18 +15,24 @@ import {
     getDashboardProductAction,
     getDashboardTeamsAction,
     getEmployeesListingAction,
-    getpartnerAction
-} from '@/reduxtool/master/middleware';
-import { useAppDispatch } from '@/reduxtool/store';
-import classNames from '@/utils/classNames';
-import dayjs from 'dayjs';
-import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+    getpartnerAction,
+} from '@/reduxtool/master/middleware'
+import { useAppDispatch } from '@/reduxtool/store'
+import classNames from '@/utils/classNames'
+import dayjs from 'dayjs'
+import cloneDeep from 'lodash/cloneDeep'
+import {
+    ReactNode,
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from 'react'
 import {
     MdCancel,
     MdCheckCircle,
     MdOutlineBusinessCenter,
-} from 'react-icons/md';
+} from 'react-icons/md'
 import {
     TbBox,
     TbCube3dSphere,
@@ -35,8 +41,11 @@ import {
     TbSearch,
     TbUserCircle,
     TbUsersGroup,
-} from 'react-icons/tb';
-import { useSelector } from 'react-redux';
+} from 'react-icons/tb'
+import { useSelector } from 'react-redux'
+
+// --- Type Definitions (from reference component) ---
+import type { TableQueries } from '@/@types/common'
 
 // --- START: SKELETON COMPONENTS ---
 
@@ -44,13 +53,24 @@ import { useSelector } from 'react-redux';
 const Skeleton = ({ className }: { className?: string }) => {
     return (
         <div
-            className={classNames('animate-pulse bg-gray-200 dark:bg-gray-600', className)}
+            className={classNames(
+                'animate-pulse bg-gray-200 dark:bg-gray-600',
+                className,
+            )}
         />
     )
 }
 
 // 2. Generic Table Skeleton
-const TableSkeleton = ({ columns, skeletonRow, rowCount = 5 }: { columns: any[], skeletonRow: ReactNode, rowCount?: number }) => {
+const TableSkeleton = ({
+    columns,
+    skeletonRow,
+    rowCount = 5,
+}: {
+    columns: any[]
+    skeletonRow: ReactNode
+    rowCount?: number
+}) => {
     return (
         <Table>
             <THead>
@@ -68,8 +88,8 @@ const TableSkeleton = ({ columns, skeletonRow, rowCount = 5 }: { columns: any[],
                 ))}
             </tbody>
         </Table>
-    );
-};
+    )
+}
 
 // 3. Specific Skeleton Rows for each table
 
@@ -78,7 +98,7 @@ const CompanySkeletonRow = () => (
         <Td>
             <div className="flex items-center gap-2">
                 <Skeleton className="h-8 w-8 rounded-full" />
-                <div className='flex flex-col gap-1.5 w-full'>
+                <div className="flex flex-col gap-1.5 w-full">
                     <Skeleton className="h-3 w-20 rounded" />
                     <Skeleton className="h-3 w-40 rounded" />
                 </div>
@@ -112,18 +132,18 @@ const CompanySkeletonRow = () => (
             </div>
         </Td>
     </>
-);
+)
 
 const MemberSkeletonRow = () => (
     <>
         <Td>
-            <div className='flex flex-col gap-1.5 w-full'>
+            <div className="flex flex-col gap-1.5 w-full">
                 <Skeleton className="h-3 w-16 rounded" />
                 <Skeleton className="h-3 w-32 rounded" />
             </div>
         </Td>
         <Td>
-            <div className='flex flex-col gap-1.5 w-full'>
+            <div className="flex flex-col gap-1.5 w-full">
                 <Skeleton className="h-3 w-20 rounded" />
                 <Skeleton className="h-3 w-40 rounded" />
             </div>
@@ -152,21 +172,31 @@ const MemberSkeletonRow = () => (
             </div>
         </Td>
     </>
-);
+)
 
 const ProductSkeletonRow = () => (
     <>
-        <Td><Skeleton className="h-4 w-10 mx-auto rounded" /></Td>
+        <Td>
+            <Skeleton className="h-4 w-10 mx-auto rounded" />
+        </Td>
         <Td>
             <div className="flex items-center gap-3">
                 <Skeleton className="h-8 w-8 rounded-full" />
                 <Skeleton className="h-4 w-48 rounded" />
             </div>
         </Td>
-        <Td><Skeleton className="h-4 w-24 rounded" /></Td>
-        <Td><Skeleton className="h-4 w-24 rounded" /></Td>
-        <Td><Skeleton className="h-4 w-20 rounded" /></Td>
-        <Td><Skeleton className="h-5 w-16 rounded-md" /></Td>
+        <Td>
+            <Skeleton className="h-4 w-24 rounded" />
+        </Td>
+        <Td>
+            <Skeleton className="h-4 w-24 rounded" />
+        </Td>
+        <Td>
+            <Skeleton className="h-4 w-20 rounded" />
+        </Td>
+        <Td>
+            <Skeleton className="h-5 w-16 rounded-md" />
+        </Td>
         <Td>
             <div className="flex flex-col items-center gap-2">
                 <Skeleton className="h-6 w-36 rounded-md" />
@@ -175,31 +205,39 @@ const ProductSkeletonRow = () => (
             </div>
         </Td>
     </>
-);
+)
 
-const PartnerSkeletonRow = () => <CompanySkeletonRow />; // Same structure as Company
+const PartnerSkeletonRow = () => <CompanySkeletonRow /> // Same structure as Company
 
 const TeamSkeletonRow = () => (
     <>
-        <Td><Skeleton className="h-5 w-16 rounded-md" /></Td>
+        <Td>
+            <Skeleton className="h-5 w-16 rounded-md" />
+        </Td>
         <Td>
             <div className="flex items-center gap-2">
                 <Skeleton className="h-7 w-7 rounded-full" />
-                <div className='flex flex-col gap-1.5'>
+                <div className="flex flex-col gap-1.5">
                     <Skeleton className="h-3 w-24 rounded" />
                     <Skeleton className="h-3 w-32 rounded" />
                 </div>
             </div>
         </Td>
-        <Td><Skeleton className="h-4 w-28 rounded" /></Td>
-        <Td><Skeleton className="h-4 w-28 rounded" /></Td>
+        <Td>
+            <Skeleton className="h-4 w-28 rounded" />
+        </Td>
+        <Td>
+            <Skeleton className="h-4 w-28 rounded" />
+        </Td>
         <Td>
             <div className="flex gap-1">
                 <Skeleton className="h-4 w-12 rounded" />
                 <Skeleton className="h-4 w-12 rounded" />
             </div>
         </Td>
-        <Td><Skeleton className="h-4 w-32 rounded" /></Td>
+        <Td>
+            <Skeleton className="h-4 w-32 rounded" />
+        </Td>
         <Td>
             <div className="flex flex-col items-center gap-2">
                 <Skeleton className="h-6 w-36 rounded-md" />
@@ -208,7 +246,7 @@ const TeamSkeletonRow = () => (
             </div>
         </Td>
     </>
-);
+)
 
 // --- END: SKELETON COMPONENTS ---
 
@@ -217,19 +255,19 @@ type StatisticCategory =
     | 'Members'
     | 'Products'
     | 'Partners'
-    | 'Teams';
+    | 'Teams'
 
 type StatisticCardProps = {
-    title: string;
-    value: number | ReactNode;
-    icon: ReactNode;
-    label: StatisticCategory;
-    active: boolean;
-    onClick: (label: StatisticCategory) => void;
-    colorClass: string;
-    activeBgColor: string;
-    iconBg: string;
-};
+    title: string
+    value: number | ReactNode
+    icon: ReactNode
+    label: StatisticCategory
+    active: boolean
+    onClick: (label: StatisticCategory) => void
+    colorClass: string
+    activeBgColor: string
+    iconBg: string
+}
 
 const StatisticCard = (props: StatisticCardProps) => {
     const {
@@ -242,14 +280,14 @@ const StatisticCard = (props: StatisticCardProps) => {
         colorClass,
         activeBgColor,
         iconBg,
-    } = props;
+    } = props
 
     return (
         <button
             className={classNames(
                 'p-4 rounded-2xl cursor-pointer ltr:text-left rtl:text-right transition duration-150 outline-none w-full',
                 colorClass,
-                active && `${activeBgColor} shadow-md`
+                active && `${activeBgColor} shadow-md`,
             )}
             onClick={() => onClick(label)}
         >
@@ -268,8 +306,8 @@ const StatisticCard = (props: StatisticCardProps) => {
                 </div>
             </div>
         </button>
-    );
-};
+    )
+}
 
 const Bar = ({
     percent,
@@ -278,13 +316,13 @@ const Bar = ({
     color,
     count,
 }: {
-    percent: number;
-    className?: string;
-    field: string;
-    color: string;
-    count: number;
+    percent: number
+    className?: string
+    field: string
+    color: string
+    count: number
 }) => {
-    const displayPercent = isNaN(percent) ? 0 : percent;
+    const displayPercent = isNaN(percent) ? 0 : percent
     return (
         <div className="flex-1">
             <span className={`${color} dark:text-white text-xs`}>{field}</span>
@@ -297,14 +335,13 @@ const Bar = ({
                 <span className="font-normal text-xs">({count})</span>
             </div>
         </div>
-    );
-};
-
+    )
+}
 
 const Overview = () => {
     const [selectedCategory, setSelectedCategory] =
-        useState<StatisticCategory>('Companies');
-    const dispatch = useAppDispatch();
+        useState<StatisticCategory>('Companies')
+    const dispatch = useAppDispatch()
     const {
         DashboardCompanyData: CompanyData,
         DashboardMemberData: MemberData,
@@ -312,16 +349,23 @@ const Overview = () => {
         DashboardPartnerData: partnerData,
         DashboardTeamData: Employees,
         DashBoardCount,
-        loading
-    } = useSelector(masterSelector);
+        loading,
+    } = useSelector(masterSelector)
 
-    console.log(Employees, " partnerData");
+    const [isLoading, setIsLoading] = useState(true)
 
-    const [isLoading, setIsLoading] = useState(true);
+    // State for table queries for each category
+    const [tableQueries, setTableQueries] = useState({
+        Companies: { pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' } as TableQueries,
+        Members: { pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' } as TableQueries,
+        Products: { pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' } as TableQueries,
+        Partners: { pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' } as TableQueries,
+        Teams: { pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' } as TableQueries,
+    });
 
     useEffect(() => {
         const fetchData = async () => {
-            setIsLoading(true);
+            setIsLoading(true)
             await Promise.all([
                 dispatch(getpartnerAction()),
                 dispatch(getEmployeesListingAction()),
@@ -331,12 +375,121 @@ const Overview = () => {
                 dispatch(getDashboardProductAction()),
                 dispatch(getDashboardPartnerAction()),
                 dispatch(getDashboardTeamsAction()),
-            ]);
-            setIsLoading(false);
-        };
-        fetchData();
-    }, [dispatch]);
+            ])
+            setIsLoading(false)
+        }
+        fetchData()
+    }, [dispatch])
 
+    const handleTableQueryChange = useCallback(
+        (category: StatisticCategory, newQuery: Partial<TableQueries>) => {
+            setTableQueries((prev) => ({
+                ...prev,
+                [category]: { ...prev[category], ...newQuery },
+            }))
+        },
+        [],
+    )
+
+    const handleSearch = (category: StatisticCategory, query: string) => {
+        handleTableQueryChange(category, { query, pageIndex: 1 })
+    }
+
+    // --- Generic Data Processing Logic ---
+    const processData = (rawData: any[], queries: TableQueries, searchLogic: (item: any, query: string) => boolean) => {
+        const { query = '', pageIndex = 1, pageSize = 10, sort = { order: '', key: '' } } = queries;
+        let processedData = cloneDeep(rawData);
+
+        // Search/Filter
+        if (query) {
+            const lowerCaseQuery = query.toLowerCase();
+            processedData = processedData.filter(item => searchLogic(item, lowerCaseQuery));
+        }
+
+        // Sorting
+        const { order, key } = sort;
+        if (order && key && processedData.length > 0) {
+            processedData.sort((a, b) => {
+                let aValue = a[key as keyof typeof a];
+                let bValue = b[key as keyof typeof b];
+                if (aValue === null || aValue === undefined) aValue = "" as any;
+                if (bValue === null || bValue === undefined) bValue = "" as any;
+
+                if (typeof aValue === "string" && typeof bValue === "string") {
+                    return order === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+                }
+                if (typeof aValue === "number" && typeof bValue === "number") {
+                    return order === "asc" ? aValue - bValue : bValue - aValue;
+                }
+                return 0;
+            });
+        }
+
+        const total = processedData.length;
+        const startIndex = (pageIndex - 1) * pageSize;
+        const pageData = processedData.slice(startIndex, startIndex + pageSize);
+        return { pageData, total };
+    };
+
+    // --- Memoized Data for Each Category ---
+
+    const { pageData: companyPageData, total: companyTotal } = useMemo(() => processData(
+        CompanyData?.companies || [],
+        tableQueries.Companies,
+        (c, q) =>
+            c.company_name?.toLowerCase().includes(q) ||
+            c.company_code?.toLowerCase().includes(q) ||
+            c.owner_name?.toLowerCase().includes(q) ||
+            c.primary_email_id?.toLowerCase().includes(q) ||
+            c.gst_number?.toLowerCase().includes(q) ||
+            c.pan_number?.toLowerCase().includes(q)
+    ), [CompanyData?.companies, tableQueries?.Companies]);
+
+    const { pageData: memberPageData, total: memberTotal } = useMemo(() => processData(
+        MemberData?.members || [],
+        tableQueries.Members,
+        (m, q) =>
+            m.name?.toLowerCase().includes(q) ||
+            m.email?.toLowerCase().includes(q) ||
+            m.number?.toLowerCase().includes(q) ||
+            m.company_name?.toLowerCase().includes(q)
+    ), [MemberData?.members, tableQueries?.Members]);
+
+    const { pageData: productPageData, total: productTotal } = useMemo(() => processData(
+        ProductsData?.products || [],
+        tableQueries.Products,
+        (p, q) =>
+            p.name?.toLowerCase().includes(q) ||
+            p.sku_code?.toLowerCase().includes(q) ||
+            p.category?.name?.toLowerCase().includes(q) ||
+            p.sub_category?.name?.toLowerCase().includes(q) ||
+            p.brand?.name?.toLowerCase().includes(q)
+    ), [ProductsData?.products, tableQueries?.Products]);
+
+    const { pageData: partnerPageData, total: partnerTotal } = useMemo(() => processData(
+        partnerData?.partners || [],
+        tableQueries?.Partners,
+        (p, q) =>
+            p.partner_name?.toLowerCase().includes(q) ||
+            p.partner_code?.toLowerCase().includes(q) ||
+            p.primary_email_id?.toLowerCase().includes(q) ||
+            p.gst_number?.toLowerCase().includes(q) ||
+            p.pan_number?.toLowerCase().includes(q)
+    ), [partnerData?.partners, tableQueries.Partners]);
+
+    const { pageData: teamPageData, total: teamTotal } = useMemo(() => processData(
+        Employees?.data || [],
+        tableQueries?.Teams,
+        (t, q) =>
+            t.name?.toLowerCase().includes(q) ||
+            t.email?.toLowerCase().includes(q) ||
+            t.mobile_number?.toLowerCase().includes(q) ||
+            t.designation?.name?.toLowerCase().includes(q) ||
+            t.department?.name?.toLowerCase().includes(q)
+    ), [Employees?.data, tableQueries?.Teams]);
+
+
+    // --- Column Definitions (remain mostly unchanged) ---
 
     const statusColor = {
         Active: 'bg-green-200 text-green-600',
@@ -495,7 +648,6 @@ const Overview = () => {
         return partnerStatusColors[lowerCaseStatus] || 'bg-gray-200 text-gray-600';
     };
 
-    // --- START: CORRECTED partnerColumns SECTION ---
     const partnerColumns = [
         {
             header: "Partner Info",
@@ -558,10 +710,9 @@ const Overview = () => {
             size: 190,
             id: 'profile',
             cell: ({ row }: any) => {
-                // Safely access nested properties and provide fallbacks
                 const teams_count = row.original.team_summary?.total || 0;
                 const kyc_verified = row.original.kyc_verified;
-                const profile_completion = row.original.profile_completion || 0; // The JSON has no profile_completion, default to 0
+                const profile_completion = row.original.profile_completion || 0;
 
                 return (
                     <div className="flex flex-col gap-1.5 text-xs">
@@ -601,7 +752,6 @@ const Overview = () => {
             )
         },
     ];
-    // --- END: CORRECTED partnerColumns SECTION ---
 
     const employeeStatusColor = {
         active: 'bg-blue-500',
@@ -616,7 +766,6 @@ const Overview = () => {
             accessorKey: "status",
             cell: (props: any) => {
                 const status = props.row.original?.status || 'Unknown';
-                // Normalize status to match keys in employeeStatusColor (e.g., "Active" -> "active")
                 const statusKey = status.toLowerCase().replace(/ /g, '_');
                 const colorClass = employeeStatusColor[statusKey as keyof typeof employeeStatusColor] || 'bg-gray-500';
 
@@ -635,7 +784,6 @@ const Overview = () => {
                 return (
                     <div className="flex items-center">
                         <Avatar size={28} shape="circle" src={profile_pic_path} icon={<TbUserCircle />}>
-                            {/* Show first initial if no profile picture */}
                             {!profile_pic_path && name ? name.charAt(0).toUpperCase() : ""}
                         </Avatar>
                         <div className="ml-2 rtl:mr-2">
@@ -649,10 +797,9 @@ const Overview = () => {
         },
         {
             header: "Designation",
-            accessorKey: "designation.name", // Using dot notation for accessorKey helps with sorting/filtering
+            accessorKey: "designation.name",
             size: 200,
             cell: (props: any) => {
-                // Safely access nested designation name
                 const designationName = props.row.original?.designation?.name;
                 return (
                     <div className="font-semibold">
@@ -663,10 +810,9 @@ const Overview = () => {
         },
         {
             header: "Department",
-            accessorKey: "department.name", // Using dot notation for accessorKey
+            accessorKey: "department.name",
             size: 200,
             cell: (props: any) => {
-                // Safely access nested department name
                 const departmentName = props.row.original?.department?.name;
                 return (
                     <div className="font-semibold">
@@ -679,8 +825,6 @@ const Overview = () => {
             header: "Roles",
             accessorKey: "roles",
             cell: (props: any) => {
-                // Your provided object does not have a 'roles' array.
-                // This cell will now show the role from the 'category' object or role_id as a fallback.
                 const categoryRole = props.row.original?.category?.name;
                 const roleId = props.row.original?.role_id;
 
@@ -710,14 +854,13 @@ const Overview = () => {
         },
         {
             header: 'Business',
-            accessorKey: 'wall.total', // Corrected accessor key to match JSON
+            accessorKey: 'wall.total',
             size: 180,
             meta: { HeaderClass: 'text-center' },
             cell: (props: any) => {
-                // Safely access nested business data with fallbacks
                 const wall = props.row.original?.wall || { buy: 0, sell: 0, total: 0 };
                 const opportunities = props.row.original?.opportunities || { offers: 0, demands: 0, total: 0 };
-                const leads = props.row.original?.leads || { total: 0 }; // Adjusted for available data in your JSON
+                const leads = props.row.original?.leads || { total: 0 };
 
                 return (
                     <div className='flex flex-col gap-4 text-center items-center'>
@@ -784,11 +927,19 @@ const Overview = () => {
                                 </div>}
                                 <div className="mt-8 block gap-2">
                                     <h6 className="mb-3">Company Leaderboard</h6>
-                                    <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} />
+                                    <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => handleSearch('Companies', e.target.value)} />
                                     {isLoading ? (
                                         <TableSkeleton columns={companyColumns} skeletonRow={<CompanySkeletonRow />} />
                                     ) : (
-                                        <DataTable columns={companyColumns} data={CompanyData?.companies || []} />
+                                        <DataTable
+                                            columns={companyColumns}
+                                            data={companyPageData}
+                                            loading={loading}
+                                            pagingData={{ ...tableQueries.Companies, total: companyTotal }}
+                                            onPaginationChange={(page) => handleTableQueryChange('Companies', { pageIndex: page })}
+                                            onSelectChange={(size) => handleTableQueryChange('Companies', { pageSize: size, pageIndex: 1 })}
+                                            onSort={(sort) => handleTableQueryChange('Companies', { sort, pageIndex: 1 })}
+                                        />
                                     )}
                                 </div>
                             </div>
@@ -806,11 +957,19 @@ const Overview = () => {
                                 </div>}
                                 <div className='mt-8 block  gap-2'>
                                     <h6 className='mb-3'>Members Leaderboard</h6>
-                                    <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} />
+                                    <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => handleSearch('Members', e.target.value)} />
                                     {isLoading ? (
                                         <TableSkeleton columns={memberColumns} skeletonRow={<MemberSkeletonRow />} />
                                     ) : (
-                                        <DataTable columns={memberColumns} data={MemberData?.members || []} />
+                                        <DataTable
+                                            columns={memberColumns}
+                                            data={memberPageData}
+                                            loading={loading}
+                                            pagingData={{ ...tableQueries.Members, total: memberTotal }}
+                                            onPaginationChange={(page) => handleTableQueryChange('Members', { pageIndex: page })}
+                                            onSelectChange={(size) => handleTableQueryChange('Members', { pageSize: size, pageIndex: 1 })}
+                                            onSort={(sort) => handleTableQueryChange('Members', { sort, pageIndex: 1 })}
+                                        />
                                     )}
                                 </div>
                             </div>
@@ -831,11 +990,19 @@ const Overview = () => {
                                 </div>}
                                 <div className='mt-8 block  gap-2'>
                                     <h6 className='mb-3'>Products Leaderboard</h6>
-                                    <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} />
+                                    <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => handleSearch('Products', e.target.value)} />
                                     {isLoading ? (
                                         <TableSkeleton columns={productColumns} skeletonRow={<ProductSkeletonRow />} />
                                     ) : (
-                                        <DataTable columns={productColumns} data={ProductsData?.products || []} />
+                                        <DataTable
+                                            columns={productColumns}
+                                            data={productPageData}
+                                            loading={loading}
+                                            pagingData={{ ...tableQueries.Products, total: productTotal }}
+                                            onPaginationChange={(page) => handleTableQueryChange('Products', { pageIndex: page })}
+                                            onSelectChange={(size) => handleTableQueryChange('Products', { pageSize: size, pageIndex: 1 })}
+                                            onSort={(sort) => handleTableQueryChange('Products', { sort, pageIndex: 1 })}
+                                        />
                                     )}
                                 </div>
                             </div>
@@ -855,12 +1022,19 @@ const Overview = () => {
                                 </div>}
                                 <div className='mt-8 block  gap-2'>
                                     <h6 className='mb-3'>Partners Leaderboard</h6>
-                                    <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} />
+                                    <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => handleSearch('Partners', e.target.value)} />
                                     {isLoading ? (
                                         <TableSkeleton columns={partnerColumns} skeletonRow={<PartnerSkeletonRow />} />
                                     ) : (
-                                        <DataTable columns={partnerColumns} data={partnerData?.partners
-                                            || []} />
+                                        <DataTable
+                                            columns={partnerColumns}
+                                            data={partnerPageData}
+                                            loading={loading}
+                                            pagingData={{ ...tableQueries.Partners, total: partnerTotal }}
+                                            onPaginationChange={(page) => handleTableQueryChange('Partners', { pageIndex: page })}
+                                            onSelectChange={(size) => handleTableQueryChange('Partners', { pageSize: size, pageIndex: 1 })}
+                                            onSort={(sort) => handleTableQueryChange('Partners', { sort, pageIndex: 1 })}
+                                        />
                                     )}
                                 </div>
                             </div>
@@ -880,10 +1054,19 @@ const Overview = () => {
                                 </div>}
                                 <div className='mt-8 block  gap-2'>
                                     <h6 className='mb-6'>Team Leaderboard</h6>
+                                    <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => handleSearch('Teams', e.target.value)} />
                                     {isLoading ? (
                                         <TableSkeleton columns={teamColumns} skeletonRow={<TeamSkeletonRow />} />
                                     ) : (
-                                        <DataTable columns={teamColumns} data={Employees?.data || []} />
+                                        <DataTable
+                                            columns={teamColumns}
+                                            data={teamPageData}
+                                            loading={loading}
+                                            pagingData={{ ...tableQueries.Teams, total: teamTotal }}
+                                            onPaginationChange={(page) => handleTableQueryChange('Teams', { pageIndex: page })}
+                                            onSelectChange={(size) => handleTableQueryChange('Teams', { pageSize: size, pageIndex: 1 })}
+                                            onSort={(sort) => handleTableQueryChange('Teams', { sort, pageIndex: 1 })}
+                                        />
                                     )}
                                 </div>
                             </div>
