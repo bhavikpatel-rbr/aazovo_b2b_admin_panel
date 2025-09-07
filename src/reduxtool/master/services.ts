@@ -2932,6 +2932,36 @@ export const getDashboardLeadsAsync = async () => {
   }
 }
 
+export const getDashboardTaskAsync = async () => {
+  try {
+
+    const response = await axiosInstance.post(`${config.apiURL}/dashboardtask`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
+export const getDashboardWallAsync = async () => {
+  try {
+
+    const response = await axiosInstance.post(`${config.apiURL}/dashboard/dashboardwall`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
+export const getDashboardOpportunityAsync = async () => {
+  try {
+
+    const response = await axiosInstance.post(`${config.apiURL}/opportunity/dashboardautospb`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
 
 export const deleteOfferAsync = async (OfferData: any) => {
   try {
