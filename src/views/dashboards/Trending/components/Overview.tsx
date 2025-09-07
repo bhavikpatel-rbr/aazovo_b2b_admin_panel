@@ -1031,7 +1031,7 @@ const Overview = () => {
             <Card>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <h5 className="capitalize">{currentCategory.title || currentCategory.label} Summary</h5>
-                    <Select className="min-w-[160px]" size="sm" defaultValue={{ label: 'All Time', value: 'All' }} options={[{ label: 'All Time', value: 'All' }, { label: 'Today', value: 'Today' }, { label: 'This Week', value: 'Weekly' }, { label: 'This Month', value: 'Monthly' }]} />
+                    {/* <Select className="min-w-[160px]" size="sm" defaultValue={{ label: 'All Time', value: 'All' }} options={[{ label: 'All Time', value: 'All' }, { label: 'Today', value: 'Today' }, { label: 'This Week', value: 'Weekly' }, { label: 'This Month', value: 'Monthly' }]} /> */}
                 </div>
                 <CategorySummaryChart data={currentCategory.summaryData} />
             </Card>

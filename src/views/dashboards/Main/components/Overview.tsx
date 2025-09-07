@@ -608,7 +608,7 @@ const Overview = () => {
                     <h5 className="capitalize">
                         {selectedCategory} Summary
                     </h5>
-                    <Select
+                    {/* <Select
                         className="min-w-[160px]"
                         size="sm"
                         defaultValue={{ label: 'All Time', value: 'All' }}
@@ -618,7 +618,7 @@ const Overview = () => {
                             { label: 'This Week', value: 'Weekly' },
                             { label: 'This Month', value: 'Monthly' },
                         ]}
-                    />
+                    /> */}
                 </div>
 
                 <CategorySummaryChart data={currentCategory.summaryData} />
