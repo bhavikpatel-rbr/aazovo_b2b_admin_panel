@@ -144,8 +144,8 @@ const Overview = () => {
         
         // 1. Opportunity Data
         const opportunityData = AllCountData?.response1?.data?.data || []
-        const opportunityTotal = opportunityData.length
-        const opportunityStatusCounts = opportunityData.reduce(
+        const opportunityTotal = opportunityData?.length || 0
+        const opportunityStatusCounts = opportunityData?.reduce(
             (acc, curr) => {
                 const status = curr.status || 'Unknown'
                 acc[status] = (acc[status] || 0) + 1

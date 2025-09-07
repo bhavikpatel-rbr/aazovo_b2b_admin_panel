@@ -136,7 +136,8 @@ import {
   getWallItemById,
   getWallItemsAction,
   getWallListingAction,
-  getPageAction
+  getPageAction,
+  getDashboardCountsAction
 } from "./middleware";
 
 const INITIAL_STATE: any = {
@@ -238,7 +239,7 @@ const masterSlice = createSlice({
   initialState: INITIAL_STATE,
   reducers: {
     resetMasterState: () => INITIAL_STATE,
-     clearSubcategories: (state) => {
+    clearSubcategories: (state) => {
       state.subCategoriesForSelectedCategoryData = [];
     },
   },
@@ -824,10 +825,14 @@ const masterSlice = createSlice({
       ...state,
       actualCompanyData: payload,
     }));
+    builder.addCase(getDashboardCountsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      DashBoardCount: payload,
+    }));
   },
 
 });
-export const { resetMasterState ,clearSubcategories } = masterSlice.actions
+export const { resetMasterState, clearSubcategories } = masterSlice.actions
 export const masterSelector = (state: RootState) => state?.Master;
 
 export default masterSlice.reducer;

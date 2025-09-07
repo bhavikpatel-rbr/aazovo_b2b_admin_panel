@@ -2860,6 +2860,18 @@ export const getActualCompanyAsync = async (id: string | number) => {
   }
 }
 
+
+
+export const getDashboardCountsAsync = async () => {
+  try {
+    // const response = await axiosInstance.get(`${config.apiURL}/get-company/${id}`);
+    const response = await axiosInstance.get(`${config.apiURL}/dashboard/dashboardcounts`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
 export const deleteOfferAsync = async (OfferData: any) => {
   try {
     const response = await axiosInstance.delete(`${config.apiURL}/offer/${OfferData}`)
