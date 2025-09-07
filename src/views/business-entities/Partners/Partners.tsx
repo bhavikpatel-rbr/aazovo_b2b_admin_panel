@@ -276,26 +276,20 @@ const taskPriorityOptions: SelectOption[] = [
   { value: "High", label: "High" },
 ];
 
-// --- CSV Exporter Utility ---
+// --- MODIFIED: CSV Exporter Utility ---
 const PARTNER_CSV_HEADERS = [
-  "ID",
-  "Name",
-  "Partner Code",
-  "Company Name",
-  "Industry Expertise",
-  "Joined As",
+  "Partner ID",
   "Status",
+  "Partner Name",
+  "Company Name",
+  "Person name",
+  "Mobile number",
+  "Email ID",
+  "GST number",
+  "Industry Expertise",
+  "Joined as",
   "Country",
-  "State",
   "City",
-  "KYC Verified",
-  "Created Date",
-  "Owner",
-  "Contact Number",
-  "Email",
-  "Website",
-  "GST",
-  "PAN",
 ];
 
 function exportToCsv(filename: string, rows: PartnerItem[]) {
@@ -307,48 +301,37 @@ function exportToCsv(filename: string, rows: PartnerItem[]) {
     );
     return false;
   }
+
   const transformedRows = rows.map((row) => ({
     id: String(row.id) || " ",
-    name: row.partner_name || " ",
-    partner_code: row.partner_code || " ",
+    status: row.status || " ",
+    partner_name: row.partner_name || " ",
     company_name: row.company_name || " ",
+    owner_name: row.owner_name || " ",
+    mobile_number: `${row.primary_contact_number_code || ""} ${
+      row.primary_contact_number || ""
+    }`.trim(),
+    email_id: row.primary_email_id || " ",
+    gst_number: row.gst_number || " ",
     industrial_expertise: row.industrial_expertise || " ",
     join_us_as: row.join_us_as || " ",
-    status: row.status || " ",
     country: row.country?.name || " ",
-    state: row.state || " ",
     city: row.city || " ",
-    kyc_verified: row.kyc_verified ? "Yes" : "No",
-    created_at: row.created_at
-      ? new Date(row.created_at).toLocaleDateString("en-GB")
-      : " ",
-    owner_name: row.owner_name || " ",
-    primary_contact_number: row.primary_contact_number || " ",
-    primary_email_id: row.primary_email_id || " ",
-    partner_website: row.partner_website || " ",
-    gst_number: row.gst_number || " ",
-    pan_number: row.pan_number || " ",
   }));
 
   const headerToKeyMap: Record<string, keyof (typeof transformedRows)[0]> = {
-    ID: "id",
-    Name: "name",
-    "Partner Code": "partner_code",
-    "Company Name": "company_name",
-    "Industry Expertise": "industrial_expertise",
-    "Joined As": "join_us_as",
+    "Partner ID": "id",
     Status: "status",
+    "Partner Name": "partner_name",
+    "Company Name": "company_name",
+    "Person name": "owner_name",
+    "Mobile number": "mobile_number",
+    "Email ID": "email_id",
+    "GST number": "gst_number",
+    "Industry Expertise": "industrial_expertise",
+    "Joined as": "join_us_as",
     Country: "country",
-    State: "state",
     City: "city",
-    "KYC Verified": "kyc_verified",
-    "Created Date": "created_at",
-    Owner: "owner_name",
-    "Contact Number": "primary_contact_number",
-    Email: "primary_email_id",
-    Website: "partner_website",
-    GST: "gst_number",
-    PAN: "pan_number",
   };
 
   const csvContent = [
@@ -359,6 +342,7 @@ function exportToCsv(filename: string, rows: PartnerItem[]) {
       ).join(",")
     ),
   ].join("\n");
+
   const blob = new Blob([`\ufeff${csvContent}`], {
     type: "text/csv;charset=utf-8;",
   });
