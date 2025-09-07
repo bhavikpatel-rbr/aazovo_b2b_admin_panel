@@ -117,7 +117,7 @@ const recordStatusColor: Record<WallRecordStatus, string> = {
 const recordStatusOptions = Object.keys(recordStatusColor).map((s) => ({ value: s, label: s, }));
 const intentTagColor: Record<WallIntent, string> = { Sell: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100", Buy: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100", Exchange: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100", };
 const intentOptions: { value: WallIntent; label: string }[] = [{ value: "Buy", label: "Buy" }, { value: "Sell", label: "Sell" },];
-const productApiStatusColor: Record<string, string> = { available: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-100", "low stock": "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100", "out of stock": "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100", discontinued: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100", "non-active": "bg-gray-100 text-gray-500/20 dark:text-gray-100", default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100", };
+const productApiStatusColor: Record<string, string> = { available: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-100", "low stock": "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100", "out of stock": "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100", discontinued: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100", default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100", };
 export const dummyCartoonTypes = [{ id: 1, name: "Master Carton" }, { id: 2, name: "Inner Carton" }];
 
 // ============================================================================
