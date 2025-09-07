@@ -360,7 +360,7 @@ const AutoEmailTemplatesListing = () => {
       }
     };
     fetchData();
-  }, [dispatch]);
+  }, []);
 
   const formMethods = useForm<AutoEmailTemplateFormData>({
     resolver: zodResolver(autoEmailTemplateFormSchema),
