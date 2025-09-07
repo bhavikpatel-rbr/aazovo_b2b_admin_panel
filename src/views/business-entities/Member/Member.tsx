@@ -122,6 +122,8 @@ export type FormItem = {
   updated_by_user: UserReference | null;
   category?: string; // ADDED: Used in cell rendering
   subcategory?: string; // ADDED: Used in cell rendering
+  city?: string; // ADDED: For export
+  state?: string; // ADDED: For export
   [key: string]: any;
 };
 
@@ -554,6 +556,8 @@ const transformApiData = (apiResponse: any): { status: boolean; message: string;
     updated_by_user: apiItem.updated_by_user,
     category: apiItem.category,
     subcategory: apiItem.subcategory,
+    city: apiItem.city, // Added for export
+    state: apiItem.state, // Added for export
   }));
 
   return {
@@ -572,18 +576,70 @@ const transformApiData = (apiResponse: any): { status: boolean; message: string;
 // --- END: NEW DATA TRANSFORMATION LOGIC ---
 
 
-// --- CSV Exporter Utility ---
+// --- CSV Exporter Utility (MODIFIED) ---
 function exportToCsv(filename: string, rows: FormItem[]) {
-  if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
-  const CSV_HEADERS = ["Member ID", "Member Code", "Name", "Email", "Contact", "Status", "Company (Temp)", "Company (Actual)", "Business Type", "Business Opportunity", "Member Grade", "Interested In", "Country", "Profile Completion (%)", "Joined Date"];
+  if (!rows || !rows.length) {
+    toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+    return false;
+  }
+  const CSV_HEADERS = [
+    "Member Name", "Member Code", "Contact Number", "Email ID", "Status",
+    "City", "State", "Country", "Company (Temp)", "Company (Actual)",
+    "Interested Category", "Interested Sub Category", "Business Type",
+    "Business Opportunity", "Grade", "Relationship Manager"
+  ];
+  
   const preparedRows = rows.map(row => ({
-    id: row.id, customer_code: row.customer_code, name: row.name, email: row.email, contact: `${row.customer_code || ''} ${row.number || ''}`.trim(), status: row.status, company_temp: row.company_temp || ' ', company_actual: row.company_actual || ' ', business_type: row.business_type || ' ', business_opportunity: row.business_opportunity || ' ', member_grade: row.member_grade || ' ', interested_in: row.interested_in || ' ', country: row.country?.name || ' ', profile_completion: row.profile_completion, created_at: row.created_at ? dayjs(row.created_at).format('DD MMM YYYY') : ' '
+    member_name: row.name || '',
+    member_code: row.customer_code || '',
+    contact_number: `${row.whatsapp_country_code || ''}${row.number || ''}`.trim(),
+    email_id: row.email || '',
+    status: row.status || '',
+    city: row.city || '',
+    state: row.state || '',
+    country: row.country?.name || '',
+    company_temp: row.company_temp || '',
+    company_actual: row.company_actual || '',
+    interested_category: row.category || '',
+    interested_sub_category: row.subcategory || '',
+    business_type: row.business_type || '',
+    business_opportunity: row.business_opportunity || '',
+    grade: row.member_grade || '',
+    relationship_manager: row.relationship_manager?.name || '',
   }));
-  const csvContent = [CSV_HEADERS.join(','), ...preparedRows.map(row => CSV_HEADERS.map(header => { const key = header.toLowerCase().replace(/ \(.+\)/, '').replace(/ /g, '_') as keyof typeof row; const cell = row[key] ?? ''; const cellString = String(cell).replace(/"/g, '""'); return `"${cellString}"`; }).join(','))].join('\n');
+
+  const csvContent = [
+    CSV_HEADERS.join(','),
+    ...preparedRows.map(row =>
+      CSV_HEADERS.map(header => {
+        const key = header.toLowerCase()
+          .replace(/ \(.+\)/, '') // remove "(text)"
+          .replace(/ /g, '_') as keyof typeof row;
+        const cell = row[key] ?? '';
+        const cellString = String(cell).replace(/"/g, '""');
+        return `"${cellString}"`;
+      }).join(',')
+    )
+  ].join('\n');
+
   const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement("a");
-  if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute("href", url); link.setAttribute("download", filename); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); toast.push(<Notification title="Export Successful" type="success">Current page exported to {filename}.</Notification>); return true; }
-  toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>); return false;
+
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.push(<Notification title="Export Successful" type="success">Data exported to {filename}.</Notification>);
+    return true;
+  }
+  
+  toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
+  return false;
 }
 
 // --- START: NEW Excel Viewer Modal ---
@@ -1311,46 +1367,56 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
 
   useEffect(() => { filterFormMethods.reset(filterCriteria); }, [filterCriteria, filterFormMethods]);
 
+  // --- START: MODIFIED & ROBUST DATA FETCHING LOGIC ---
   useEffect(() => {
-    setIsLoading(true);
-    const timerId = setTimeout(() => {
-      const fetchMembers = () => {
-        const formatFilterForApi = (data: any[] | undefined) => {
-          if (!data || data.length === 0) return undefined;
-          return data.map((d: { value: any }) => d.value).join(',');
-        };
-
-        const [startDate, endDate] = filterCriteria.filterCreatedAt || [null, null];
-
-        const params: any = {
-          page: tableData.pageIndex,
-          per_page: tableData.pageSize,
-          search: tableData.query || undefined,
-          sort_key: tableData.sort.key || undefined,
-          sort_order: tableData.sort.order || undefined,
-          status: formatFilterForApi(filterCriteria.filterStatus),
-          business_type: formatFilterForApi(filterCriteria.filterBusinessType),
-          country: formatFilterForApi(filterCriteria.filterCountry),
-          business_opportunity: formatFilterForApi(filterCriteria.filterBusinessOpportunity),
-          interested_in: formatFilterForApi(filterCriteria.filterInterestedFor),
-          grade: formatFilterForApi(filterCriteria.memberGrade),
-          relationship_manager: formatFilterForApi(filterCriteria.filterRM),
-          member_type: formatFilterForApi(filterCriteria.filterMemberType),
-          created_date: (startDate && endDate) ? `${dayjs(startDate).format('YYYY-MM-DD')} ~ ${dayjs(endDate).format('YYYY-MM-DD')}` : undefined,
-        };
-
-        // Clean up undefined params before dispatching
-        Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
-        setIsLoading(true);
-        dispatch(getMemberlistingAction(params));
+    const fetchMembers = () => {
+      const formatFilterForApi = (data: any[] | undefined) => {
+        if (!data || data.length === 0) return undefined;
+        return data.map((d: { value: any }) => d.value).join(',');
       };
-      fetchMembers();
-    }, 500);
+
+      const [startDate, endDate] = filterCriteria.filterCreatedAt || [null, null];
+
+      const params: any = {
+        page: tableData.pageIndex,
+        per_page: tableData.pageSize,
+        search: tableData.query || undefined,
+        sort_key: tableData.sort.key || undefined,
+        sort_order: tableData.sort.order || undefined,
+        status: formatFilterForApi(filterCriteria.filterStatus),
+        business_type: formatFilterForApi(filterCriteria.filterBusinessType),
+        country: formatFilterForApi(filterCriteria.filterCountry),
+        business_opportunity: formatFilterForApi(filterCriteria.filterBusinessOpportunity),
+        interested_in: formatFilterForApi(filterCriteria.filterInterestedFor),
+        grade: formatFilterForApi(filterCriteria.memberGrade),
+        relationship_manager: formatFilterForApi(filterCriteria.filterRM),
+        member_type: formatFilterForApi(filterCriteria.filterMemberType),
+        created_date: (startDate && endDate) ? `${dayjs(startDate).format('YYYY-MM-DD')}~${dayjs(endDate).format('YYYY-MM-DD')}` : undefined,
+      };
+
+      // Clean up undefined params before dispatching
+      Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
+
+      setIsLoading(true);
+      dispatch(getMemberlistingAction(params))
+        .unwrap()
+        .catch((error: any) => {
+            console.error("Failed to fetch members:", error);
+            toast.push(<Notification type="danger" title="Data Fetch Failed" children={error?.message || 'An unexpected error occurred.'} />);
+        })
+        .finally(() => {
+            setIsLoading(false);
+        });
+    };
+
+    const timerId = setTimeout(fetchMembers, 500);
+
     return () => {
       clearTimeout(timerId);
     };
   }, [dispatch, tableData, filterCriteria]);
-  useEffect(() => { if (MemberData?.data?.data) setIsLoading(false) }, [MemberData]);
+  // --- END: MODIFIED & ROBUST DATA FETCHING LOGIC ---
+
   const onApplyFiltersSubmit = (data: FilterFormData) => { setFilterCriteria(data); setTableData(prev => ({ ...prev, pageIndex: 1 })); setFilterDrawerOpen(false); };
 
   const onClearFilters = useCallback(() => {
