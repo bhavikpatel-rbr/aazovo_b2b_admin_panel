@@ -29,7 +29,6 @@ import {
 import {
     Fragment,
     ReactNode,
-    useCallback,
     useEffect,
     useMemo,
     useState,
@@ -240,6 +239,7 @@ type StatisticCardProps = {
     theme: {
         base: string
         gradient: string
+        color: string
     }
 }
 
@@ -250,8 +250,7 @@ const StatisticCard = (props: StatisticCardProps) => {
         ? `border-gray-300 dark:border-gray-600 shadow-lg ${theme.gradient}`
         : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/60 border-gray-200 dark:border-gray-700'
     const iconColor = active ? 'text-white' : `dark:text-white ${theme.base}`
-    const iconBg = active ? theme.base : 'bg-gray-100 dark:bg-gray-900/50'
-    const textColor = active ? `text-white` : `dark:text-white ${theme.base}`
+    const iconBg = active ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-900/50'
     const valueColor = active ? 'text-white' : 'text-gray-900 dark:text-gray-100'
 
     return (
@@ -408,7 +407,7 @@ const ProductOpportunitiesTable = ({ data, onSearch }: { data: any[], onSearch: 
                 prefix={<Search className="text-lg" />}
                 onChange={(e) => onSearch(e.target.value)}
             />
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                 <Table>
                     <THead>
                         <Tr>
@@ -747,20 +746,22 @@ const WallListingDetails = ({ data }: { data: any }) => {
                     prefix={<Search className="text-lg" />}
                     onChange={(e) => handleInputChange(e.target.value)}
                 />
-                <DataTable
-                    columns={columns}
-                    data={paginatedData}
-                    skeletonAvatarColumns={[0]}
-                    skeletonAvatarProps={{ className: 'rounded-md' }}
-                    loading={!latest100}
-                    pagingData={{
-                        total: total,
-                        pageIndex: queries.pageIndex,
-                        pageSize: queries.pageSize,
-                    }}
-                    onPaginationChange={handlePaginationChange}
-                    onSelectChange={handleSelectChange}
-                />
+                <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                    <DataTable
+                        columns={columns}
+                        data={paginatedData}
+                        skeletonAvatarColumns={[0]}
+                        skeletonAvatarProps={{ className: 'rounded-md' }}
+                        loading={!latest100}
+                        pagingData={{
+                            total: total,
+                            pageIndex: queries.pageIndex,
+                            pageSize: queries.pageSize,
+                        }}
+                        onPaginationChange={handlePaginationChange}
+                        onSelectChange={handleSelectChange}
+                    />
+                </div>
             </Card>
         </div>
     );
@@ -850,24 +851,34 @@ const AccountDocumentsTable = ({ data, loading }: { data: any[], loading: boolea
                 prefix={<Search className="text-lg" />}
                 onChange={(e) => handleInputChange(e.target.value)}
             />
-            <DataTable
-                columns={columns}
-                data={paginatedData}
-                loading={loading}
-                pagingData={{
-                    total: total,
-                    pageIndex: queries.pageIndex,
-                    pageSize: queries.pageSize,
-                }}
-                onPaginationChange={handlePaginationChange}
-                onSelectChange={handleSelectChange}
-            />
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <DataTable
+                    columns={columns}
+                    data={paginatedData}
+                    loading={loading}
+                    pagingData={{
+                        total: total,
+                        pageIndex: queries.pageIndex,
+                        pageSize: queries.pageSize,
+                    }}
+                    onPaginationChange={handlePaginationChange}
+                    onSelectChange={handleSelectChange}
+                />
+            </div>
         </div>
     );
 };
 // --- END: Account Documents Component ---
 
 const CHART_COLORS = ['#3B82F6', '#10B981', '#F97316', '#8B5CF6', '#EC4899', '#6366F1', '#F59E0B', '#06B6D4'];
+const categoryThemes = {
+    ProductOpportunities: { base: 'text-purple-500', gradient: 'bg-gradient-to-br from-purple-400 to-indigo-500', color: '#8B5CF6' },
+    Leads: { base: 'text-emerald-500', gradient: 'bg-gradient-to-br from-emerald-400 to-green-500', color: '#10B981' },
+    Tasks: { base: 'text-rose-500', gradient: 'bg-gradient-to-br from-rose-400 to-pink-500', color: '#F43F5E' },
+    WallListing: { base: 'text-amber-500', gradient: 'bg-gradient-to-br from-amber-400 to-orange-500', color: '#F59E0B' },
+    Company: { base: 'text-sky-500', gradient: 'bg-gradient-to-br from-sky-400 to-blue-500', color: '#0EA5E9' },
+};
+
 
 // --- MAIN COMPONENT ---
 const Overview = () => {
@@ -919,9 +930,9 @@ const Overview = () => {
     const accountDocAPIData = useMemo(() => {
         const counts = DashboardAccountDocData?.counts || {};
         const summaryData = [
-            { name: 'Active', value: counts.active || 0, fill: '#3B82F6' },
-            { name: 'Pending', value: counts.pending || 0, fill: '#F97316' },
-            { name: 'Completed', value: counts.completed || 0, fill: '#10B981' },
+            { name: 'Active', value: counts.active || 0, fill: CHART_COLORS[0] },
+            { name: 'Pending', value: counts.pending || 0, fill: CHART_COLORS[2] },
+            { name: 'Completed', value: counts.completed || 0, fill: CHART_COLORS[1] },
         ];
         return {
             totalCount: counts.total || 0,
@@ -936,18 +947,18 @@ const Overview = () => {
 
         const opportunityChartData = (DashboardOpportunityData?.data || [])
             .slice(0, 10) 
-            .map((p: any, i: number) => ({
+            .map((p: any) => ({
                 name: p.product_name.replace('IPHONE', 'IP').substring(0, 15),
                 value: p.score,
-                fill: CHART_COLORS[i % CHART_COLORS.length],
+                fill: categoryThemes.ProductOpportunities.color,
             }));
 
         const wallListingChartData = (DashboardWallData?.country_wise || [])
             .slice(0, 10) 
-            .map((c: any, i: number) => ({
+            .map((c: any) => ({
                 name: c.country_name,
                 value: c.total,
-                fill: CHART_COLORS[i % CHART_COLORS.length]
+                fill: categoryThemes.WallListing.color
             }));
 
         return {
@@ -955,7 +966,7 @@ const Overview = () => {
                 label: 'ProductOpportunities' as StatisticCategory,
                 title: 'Product Opportunities',
                 icon: <Shuffle size={28} strokeWidth={1.5}/>,
-                theme: { base: 'text-purple-500', gradient: 'bg-gradient-to-br from-purple-400 to-indigo-500'},
+                theme: categoryThemes.ProductOpportunities,
                 totalCount: DashboardOpportunityData?.data?.length || 0,
                 summaryData: opportunityChartData,
                 tableData: filteredOpportunityData,
@@ -964,7 +975,7 @@ const Overview = () => {
                 label: 'Leads' as StatisticCategory,
                 title: 'Leads',
                 icon: <ShoppingBag size={28} strokeWidth={1.5} />,
-                theme: { base: 'text-emerald-500', gradient: 'bg-gradient-to-br from-emerald-400 to-green-500'},
+                theme: categoryThemes.Leads,
                 totalCount: leadsAPIData.totalCount || 0,
                 summaryData: leadsAPIData.summaryData,
                 tableData: leadsAPIData.tableData,
@@ -973,7 +984,7 @@ const Overview = () => {
                 label: 'Tasks' as StatisticCategory,
                 title: 'Tasks',
                 icon: <ListChecks size={28} strokeWidth={1.5} />,
-                theme: { base: 'text-rose-500', gradient: 'bg-gradient-to-br from-rose-400 to-pink-500' },
+                theme: categoryThemes.Tasks,
                 totalCount: taskCounts.total || 0,
                 summaryData: Object.entries(taskCounts).map(([key, value], i) => ({ name: formatStatusName(key), value, fill: CHART_COLORS[i % CHART_COLORS.length] })).filter(d => ['Not Started', 'Pending', 'In Progress', 'On Hold', 'Completed'].includes(d.name) && d.value > 0),
                 fullData: DashboardTaskData,
@@ -982,7 +993,7 @@ const Overview = () => {
                 label: 'WallListing' as StatisticCategory,
                 title: 'Wall Enquiries',
                 icon: <LayoutGrid size={28} strokeWidth={1.5}/>,
-                theme: { base: 'text-amber-500', gradient: 'bg-gradient-to-br from-amber-400 to-orange-500'},
+                theme: categoryThemes.WallListing,
                 totalCount: DashboardWallData?.counts?.total || 0,
                 summaryData: wallListingChartData,
                 wallData: {
@@ -995,7 +1006,7 @@ const Overview = () => {
                 label: 'Company' as StatisticCategory,
                 title: 'Account Document',
                 icon: <Building2 size={28} strokeWidth={1.5}/>,
-                theme: { base: 'text-sky-500', gradient: 'bg-gradient-to-br from-sky-400 to-blue-500'},
+                theme: categoryThemes.Company,
                 totalCount: accountDocAPIData.totalCount,
                 summaryData: accountDocAPIData.summaryData,
                 tableData: accountDocAPIData.tableData,
