@@ -142,6 +142,7 @@ import { shallowEqual, useSelector } from "react-redux";
 // --- Type Definitions ---
 export type ApiOpportunityItem = {
   id: number;
+  product_id?: number | null | string; // UPDATED: Added product_id based on user's API sample
   opportunity_id: string | null;
   product_name: string;
   product_image_url?: string | null;
@@ -228,6 +229,7 @@ export type AutoSpbApiResponse = {
 };
 export type OpportunityItem = {
   id: string;
+  product_id?: string | number | null; // UPDATED: Added product_id
   opportunity_id: string;
   product_name: string;
   product_image_url?: string;
@@ -3114,10 +3116,18 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
       toast.push(<Notification title="Invalid Selection" type="warning" duration={4000}>Please select exactly one buyer and one seller to create a lead.</Notification>);
       return;
     }
+console.log("row.original",row.original);
 
     const buyer = selectedBuyItems[0];
     const seller = selectedSellItems[0];
-    const productId = row.original.id.replace('spb-match-', '');
+    const productId = row.original.product_id; // UPDATED: Use the correct product_id
+console.log("productId",productId);
+
+    if (!productId) {
+      toast.push(<Notification title="Error" type="danger">Product ID is missing. Cannot create lead.</Notification>);
+      return;
+    }
+
     const leadQty = Math.min(Number(buyer.qty) || Infinity, Number(seller.qty) || Infinity);
 
     const prefillState = {
@@ -3136,7 +3146,7 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
     };
 
     toast.push(<Notification title="Redirecting..." type="info">Preparing to create a new lead.</Notification>);
-    navigate('/sales-leads/wall-item/lead/add', { state: prefillState });
+  navigate('/sales-leads/wall-item/lead/add', { state: prefillState });
   }, [selectedBuyItems, selectedSellItems, row.original, navigate]);
 
   const handleCreateOffer = useCallback(() => {
@@ -3145,7 +3155,12 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
         return;
     }
 
-    const productId = row.original.id.replace('spb-match-', '');
+    const productId = row.original.product_id;
+    if (!productId) {
+      toast.push(<Notification title="Error" type="danger">Product ID is missing. Cannot create offer.</Notification>);
+      return;
+    }
+
     const firstSeller = selectedSellItems[0];
 
     const prefillState = {
@@ -3170,7 +3185,12 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
           return;
       }
   
-      const productId = row.original.id.replace('spb-match-', '');
+      const productId = row.original.product_id;
+      if (!productId) {
+        toast.push(<Notification title="Error" type="danger">Product ID is missing. Cannot create demand.</Notification>);
+        return;
+      }
+      
       const firstBuyer = selectedBuyItems[0];
   
       const prefillState = {
@@ -3529,9 +3549,11 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
       else if (apiItem.opportunity_status?.toLowerCase() === "converted") uiOppStatus = "Converted";
       else if (apiItem.opportunity_status?.toLowerCase() === "rejected") uiOppStatus = "Rejected";
       else if (apiItem.opportunity_status) uiOppStatus = apiItem.opportunity_status;
+console.log("apiItem",apiItem);
 
       return {
         id: String(apiItem.id),
+        product_id: apiItem.product_id, // UPDATED: Pass product_id
         opportunity_id: apiItem.opportunity_id || `OPP-${apiItem.id}`,
         product_name: apiItem.product_name || " ",
         status: uiStatus,
@@ -3705,14 +3727,19 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
 
     // Get the product name directly from the group object
     const productName = group.product_name || `Match Group ${groupId}`;
+    const product_id = group.product_id || `Match Group ${groupId}`;
+    const score = group.score || `Match Group ${groupId}`;
 
+    console.log("autoSpbData",autoSpbData);
+    
     const matchRow: OpportunityItem = {
       id: `spb-match-${groupId}`,
+      product_id: product_id, // UPDATED: Correctly assign the product_id
       opportunity_id: productName,
       product_name: autospbNumber,
       status: "active",
       opportunity_status: "Shortlisted",
-      match_score: 88, // Assuming this is a default/placeholder value
+      match_score: score, // Assuming this is a default/placeholder value
       created_date: representativeItem.created_at,
       spb_role: "Match",
       want_to: "Exchange",
@@ -4274,21 +4301,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                   label="Score"
                   text={`${item.match_score}%`}
                 />{" "}
-                <div className="flex items-center gap-1">
-                  {" "}
-                  <InfoLine
-                    icon={<TbProgressCheck size={14} />}
-                    label="Status"
-                  />{" "}
-                  <Tag
-                    className={`${opportunityStatusTagColor[item.opportunity_status] ||
-                      opportunityStatusTagColor.default
-                      } capitalize`}
-                  >
-                    {" "}
-                    {item.opportunity_status}{" "}
-                  </Tag>{" "}
-                </div>{" "}
+              
               </div>
             );
           },

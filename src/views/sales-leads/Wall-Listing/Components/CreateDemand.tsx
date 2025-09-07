@@ -26,7 +26,7 @@ import {
   getAllProductAction,
   getDemandById,
   getMembersAction,
-  getPaymentTermAction, // Added
+  getPaymentTermAction,
   getProductPriceAction,
   getProductsAction,
   getProductSpecificationsAction,
@@ -34,7 +34,7 @@ import {
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
 
-// --- Zod Schema Definitions (Updated) ---
+// --- Zod Schema Definitions ---
 const priceListItemSchema = z.object({
   color: z.string(),
   qty: z.number().optional(),
@@ -48,7 +48,7 @@ const productDataSchema = z.object({
   product_status: z.enum(["active", "non-active"]).default("active"),
   spec_id: z.number().nullable().default(null),
   items: z.array(priceListItemSchema).default([]),
-  // New fields for note generation only
+  // Fields for note generation only
   location: z.string().nullable().optional(),
   paymentTermId: z.number().nullable().optional(),
   eta: z.any().nullable().optional(),
@@ -64,7 +64,7 @@ const demandFormSchema = z.object({
   groupB: z.string().min(1, "Note is required."),
 });
 
-// --- Type Definitions & Defaults (Updated) ---
+// --- Type Definitions & Defaults ---
 type DemandFormData = z.infer<typeof demandFormSchema>;
 type OptionType<T = string | number> = { value: T; label: string };
 
@@ -101,7 +101,7 @@ const CreateDemand = () => {
             dispatch(getMembersAction()),
             dispatch(getProductsAction()),
             dispatch(getProductSpecificationsAction()),
-            dispatch(getPaymentTermAction()), // Added
+            dispatch(getPaymentTermAction()),
         ]);
         if (isEdit) {
             await dispatch(getDemandById(id));
@@ -116,7 +116,7 @@ const CreateDemand = () => {
     memberData = [],
     ProductsData = [],
     ProductSpecificationsData = [],
-    PaymentTermsData = [], // Added
+    PaymentTermsData = [],
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector);
   
@@ -130,12 +130,14 @@ const CreateDemand = () => {
   const dummyCartoonTypes: OptionType[] = [{ value: "Master Cartoon", label: "Master Cartoon" }, { value: "Non Masster Cartoon", label: "Non Masster Cartoon" }];
   const deviceConditionOptions: OptionType[] = [{ value: "New", label: "New" }, { value: "Old", label: "Old" }];
   
+  // MODIFIED: Added `getValues` to useForm for more reliable state access
   const {
     control,
     handleSubmit,
     reset,
     watch,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<DemandFormData>({
     resolver: zodResolver(demandFormSchema),
@@ -144,7 +146,6 @@ const CreateDemand = () => {
   
   const { fields, append, remove } = useFieldArray({ control, name: "product_data" });
   const watchedProductGroups = watch("product_data");
-  const watchedItems = watch('product_data.0.items');
 
   const handleProductChange = useCallback(async (groupIndex: number, productId: number | null) => {
     setValue(`product_data.${groupIndex}.product_id`, productId);
@@ -160,36 +161,37 @@ const CreateDemand = () => {
     setValue(`product_data.${groupIndex}.items`, newItems, { shouldValidate: true });
   }, [dispatch, setValue, ProductsData]);
 
+  // MODIFIED: Combined two separate useEffects into a single, more robust async function for pre-filling.
   useEffect(() => {
     const prefillData = location.state;
     if (prefillData && prefillData.productId && initialDataLoaded && !isEdit) {
-        setValue('name', `Demand for ${prefillData.product_name || 'Product'}`);
-        if(prefillData.seller_ids) setValue('product_data.0.seller_ids', prefillData.seller_ids);
-        if(prefillData.buyer_ids) setValue('product_data.0.buyer_ids', prefillData.buyer_ids);
-        setValue('product_data.0.spec_id', prefillData.product_spec_id || null);
-        setValue('product_data.0.product_status', prefillData.product_status?.toLowerCase() === 'non-active' ? 'non-active' : 'active');
-        handleProductChange(0, Number(prefillData.productId));
-    }
-  }, [location.state, setValue, handleProductChange, initialDataLoaded, isEdit]);
+        const prefillForm = async () => {
+            setValue('name', `Demand for ${prefillData.product_name || 'Product'}`);
+            if(prefillData.seller_ids) setValue('product_data.0.seller_ids', prefillData.seller_ids);
+            if(prefillData.buyer_ids) setValue('product_data.0.buyer_ids', prefillData.buyer_ids);
+            setValue('product_data.0.spec_id', prefillData.product_spec_id || null);
+            setValue('product_data.0.product_status', prefillData.product_status?.toLowerCase() === 'non-active' ? 'non-active' : 'active');
+            
+            await handleProductChange(0, Number(prefillData.productId));
 
-  useEffect(() => {
-    const prefillData = location.state;
-    if (prefillData && watchedItems && watchedItems.length > 0) {
-        const itemIndex = watchedItems.findIndex(item => item.color.toLowerCase() === (prefillData.color?.toLowerCase() || ''));
-        if (itemIndex !== -1) {
-            setValue(`product_data.0.items.${itemIndex}.qty`, Number(prefillData.qty) || undefined);
-            setValue(`product_data.0.items.${itemIndex}.price`, Number(prefillData.price) || undefined);
-        } else if (watchedItems.length > 0) {
-            setValue(`product_data.0.items.0.qty`, Number(prefillData.qty) || undefined);
-            setValue(`product_data.0.items.0.price`, Number(prefillData.price) || undefined);
-        }
+            const currentItems = getValues('product_data.0.items');
+            if (currentItems && currentItems.length > 0) {
+                const itemIndex = currentItems.findIndex(item => item.color.toLowerCase() === (prefillData.color?.toLowerCase() || ''));
+                const targetIndex = itemIndex !== -1 ? itemIndex : 0;
+                if (prefillData.qty) setValue(`product_data.0.items.${targetIndex}.qty`, Number(prefillData.qty));
+                if (prefillData.price) setValue(`product_data.0.items.${targetIndex}.price`, Number(prefillData.price));
+            }
+        };
+        prefillForm();
     }
-  }, [watchedItems, location.state, setValue]);
+  }, [location.state, initialDataLoaded, isEdit, setValue, getValues, handleProductChange]);
 
+
+  // MODIFIED: Added `initialDataLoaded` check to prevent race conditions when populating the form for editing.
   useEffect(() => {
     const demandDataFromState = location.state?.originalApiItem;
     
-    if (isEdit && demandDataFromState) {
+    if (isEdit && demandDataFromState && initialDataLoaded) {
         const reconstructedProductData = (demandDataFromState.demand_products || []).map((productInfo: any) => ({
             ...defaultProductGroup,
             product_id: productInfo.product_id,
@@ -206,7 +208,7 @@ const CreateDemand = () => {
             product_data: reconstructedProductData.length > 0 ? reconstructedProductData : [defaultProductGroup],
         });
     }
-  }, [isEdit, location.state, reset]);
+  }, [isEdit, location.state, reset, initialDataLoaded]);
 
   const handleGenerateAndCopyNotes = () => {
     const relevantGroups = watchedProductGroups.filter(g => g.product_id && g.items.some(i => i.qty && i.qty > 0));
@@ -218,7 +220,7 @@ const CreateDemand = () => {
         const specLabel = productSpecOptions.find(s => s.value === group.spec_id)?.label;
         const eta = group.eta ? dayjs(group.eta).format("DD-MMM-YYYY") : null;
         
-        let baseNote = `WTB\n${productName}\n`; // Changed to WTB
+        let baseNote = `WTB\n${productName}\n`;
         let noteA_Items = '', noteB_Items = '';
 
         itemsWithQty.forEach(item => {
@@ -246,6 +248,7 @@ const CreateDemand = () => {
     toast.push(<Notification title="Success" type="info">Notes generated and populated below.</Notification>);
   };
 
+  // NO CHANGE: This save function is correct and matches the logic in the second file.
   const onFormSubmit = useCallback(async (data: DemandFormData) => {
     setIsSubmitting(true);
     const apiPayload = {
@@ -302,10 +305,12 @@ const CreateDemand = () => {
                     <Controller name={`product_data.${index}.product_id`} control={control} render={({ field: { value }}) =>  <UiSelect placeholder="Select Product..." options={productOptions} value={productOptions.find(opt => opt.value === value)} onChange={(option) => handleProductChange(index, option ? option.value as number : null)} isLoading={isLoading} /> } />
                 </FormItem>
                 <FormItem label="Sellers">
-                    <Controller name={`product_data.${index}.seller_ids`} control={control} render={({ field: { onChange, value }}) =>  <UiSelect isMulti placeholder="Select Sellers..." options={memberOptions} value={memberOptions.filter(opt => value?.find((f)=> f == opt.value))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} /> } />
+                    {/* MODIFIED: Using `.includes` for a cleaner check on the value array */}
+                    <Controller name={`product_data.${index}.seller_ids`} control={control} render={({ field: { onChange, value }}) =>  <UiSelect isMulti placeholder="Select Sellers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} /> } />
                 </FormItem>
                 <FormItem label="Buyers">
-                    <Controller name={`product_data.${index}.buyer_ids`} control={control} render={({ field: { onChange, value }}) =>  <UiSelect isMulti placeholder="Select Buyers..." options={memberOptions} value={memberOptions.filter(opt => value?.find((f)=> f == opt.value))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} /> } />
+                    {/* MODIFIED: Using `.includes` for a cleaner check on the value array */}
+                    <Controller name={`product_data.${index}.buyer_ids`} control={control} render={({ field: { onChange, value }}) =>  <UiSelect isMulti placeholder="Select Buyers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} /> } />
                 </FormItem>
             </div>
 
