@@ -60,7 +60,9 @@ import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addAllActionAction, addNotificationAction, addScheduleAction, addTaskAction,
   deleteAllWallAction, getAllCompany, getAllUsersAction, getBrandAction,
-  getEmployeesAction, getMatchingOpportunitiesAction, getMemberTypeAction,
+  getCountriesAction, // START: ADDED - Import country action
+  getEmployeesAction, getMatchingOpportunitiesAction, getMemberAction, // START: ADDED - Import member action
+  getMemberTypeAction,
   getParentCategoriesAction, getProductsDataAsync, getProductSpecificationsAction,
   getSubcategoriesByCategoryIdAction, getWallListingAction, submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
@@ -95,7 +97,8 @@ type MatchingOpportunityItem = {
 
 // --- Zod Schemas ---
 const selectOptionSchema = z.object({ value: z.any(), label: z.string() });
-const filterFormSchema = z.object({ filterRecordStatuses: z.array(selectOptionSchema).optional().default([]), filterProductIds: z.array(selectOptionSchema).optional().default([]), filterCompanyIds: z.array(selectOptionSchema).optional().default([]), filterIntents: z.array(selectOptionSchema).optional().default([]), dateRange: z.array(z.date().nullable()).length(2).nullable().optional(), categories: z.array(selectOptionSchema).optional().default([]), subcategories: z.array(selectOptionSchema).optional().default([]), brands: z.array(selectOptionSchema).optional().default([]), productStatus: z.array(selectOptionSchema).optional().default([]), source: z.array(selectOptionSchema).optional().default([]), productSpec: z.array(selectOptionSchema).optional().default([]), memberType: z.array(selectOptionSchema).optional().default([]), createdBy: z.array(selectOptionSchema).optional().default([]), quickFilters: z.object({ type: z.string(), value: z.string() }).nullable().optional(), });
+// MODIFIED - Added filterMembers and filterCountries
+const filterFormSchema = z.object({ filterRecordStatuses: z.array(selectOptionSchema).optional().default([]), filterProductIds: z.array(selectOptionSchema).optional().default([]), filterCompanyIds: z.array(selectOptionSchema).optional().default([]), filterIntents: z.array(selectOptionSchema).optional().default([]), dateRange: z.array(z.date().nullable()).length(2).nullable().optional(), categories: z.array(selectOptionSchema).optional().default([]), subcategories: z.array(selectOptionSchema).optional().default([]), brands: z.array(selectOptionSchema).optional().default([]), productStatus: z.array(selectOptionSchema).optional().default([]), source: z.array(selectOptionSchema).optional().default([]), productSpec: z.array(selectOptionSchema).optional().default([]), memberType: z.array(selectOptionSchema).optional().default([]), createdBy: z.array(selectOptionSchema).optional().default([]), filterMembers: z.array(selectOptionSchema).optional().default([]), filterCountries: z.array(selectOptionSchema).optional().default([]), quickFilters: z.object({ type: z.string(), value: z.string() }).nullable().optional(), });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 const exportReasonSchema = z.object({ reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters."), });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
@@ -121,16 +124,16 @@ const productApiStatusColor: Record<string, string> = { available: "bg-green-100
 export const dummyCartoonTypes = [{ id: 1, name: "Master Carton" }, { id: 2, name: "Inner Carton" }];
 
 // ============================================================================
-// --- MODALS SECTION ---
+// --- MODALS SECTION --- (This section is unchanged, so it is collapsed for brevity)
 // ============================================================================
+// ... (All modal components like AddNotificationDialog, MatchingOpportunitiesDialog, etc. are unchanged)
+// START: COLLAPSED MODALS SECTION
 export type WallModalType = "email" | "whatsapp" | "notification" | "task" | "activity" | "calendar" | "match_opportunity" | "share";
 export interface WallModalState { isOpen: boolean; type: WallModalType | null; data: WallItem | null; }
 interface WallModalsProps { modalState: WallModalState; onClose: () => void; getAllUserDataOptions: { value: any, label: string }[]; user: any; }
-
 const priorityOptions = [{ value: "Low", label: "Low" }, { value: "Medium", label: "Medium" }, { value: "High", label: "High" },];
 const taskPriorityOptions = priorityOptions;
 const eventTypeOptions = [{ value: 'Meeting', label: 'Meeting' }, { value: 'Demo', label: 'Product Demo' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'LogEmail', label: 'Log an Email' }, { value: 'Milestone', label: 'Project Milestone' }, { value: 'Task', label: 'Task' }, { value: 'FollowUp', label: 'General Follow-up' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'OnboardingSession', label: 'Onboarding Session' }, { value: 'Training', label: 'Training Session' }, { value: 'SupportCall', label: 'Support Call' }, { value: 'Reminder', label: 'Reminder' }, { value: 'Note', label: 'Add a Note' }, { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' }, { value: 'StrategySession', label: 'Strategy Session' }, { value: 'TeamMeeting', label: 'Team Meeting' }, { value: 'PerformanceReview', label: 'Performance Review' }, { value: 'Lunch', label: 'Lunch / Break' }, { value: 'Appointment', label: 'Personal Appointment' }, { value: 'Other', label: 'Other' },];
-
 const AddNotificationDialog: React.FC<{ wallItem: WallItem; onClose: () => void; getAllUserDataOptions: { value: any, label: string }[]; }> = ({ wallItem, onClose, getAllUserDataOptions }) => {
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
@@ -313,33 +316,25 @@ const AddActivityDialog: React.FC<{ wallItem: WallItem; onClose: () => void; use
     </Dialog>
   );
 };
-
 const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const [data, setData] = useState<MatchingOpportunityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selected, setSelected] = useState<number[]>([]);
-
-  // --- START: Pagination State ---
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
     return data.slice(startIndex, startIndex + pageSize);
   }, [data, currentPage, pageSize]);
-
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
-
   const handlePageSizeChange = (size: number) => {
     setPageSize(size);
     setCurrentPage(1); // Reset to first page when page size changes
   };
-  // --- END: Pagination State ---
-
   useEffect(() => {
     const fetchOpportunities = async () => {
       if (!wallItem.id) { setIsLoading(false); return; }
@@ -371,24 +366,17 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
     };
     fetchOpportunities();
   }, [dispatch, wallItem.id]);
-
   const handleSelect = (id: number, checked: boolean) => {
     setSelected(prev => checked ? [...prev, id] : prev.filter(i => i !== id));
   };
-  
-  // --- START: Modified handleSelectAll for pagination ---
   const handleSelectAll = (checked: boolean) => {
     const pageIds = paginatedData.map(op => op.id);
     if (checked) {
-      // Add all IDs from the current page to the selection, avoiding duplicates
       setSelected(prev => [...new Set([...prev, ...pageIds])]);
     } else {
-      // Remove all IDs from the current page from the selection
       setSelected(prev => prev.filter(id => !pageIds.includes(id)));
     }
   };
-  // --- END: Modified handleSelectAll ---
-
   const handleAction = (type: 'offer_demand' | 'lead' | 'email' | 'whatsapp' | 'copy') => {
     const selectedOps = data.filter(op => selected.includes(op.id));
     if (selectedOps.length === 0) {
@@ -423,7 +411,6 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
         setSelected([]);
         onClose();
         break;
-
       case 'whatsapp':
         const phone = firstOp.member_phone?.replace(/\D/g, '') || '';
         toast.push(<Notification type="info" title="Opening WhatsApp..." />);
@@ -431,7 +418,6 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
         setSelected([]);
         onClose();
         break;
-
       case 'copy':
         const textToCopy = selectedOps.map(op =>
           `${op.member_code} ${op.want_to === 'Buy' ? 'Buyer' : 'Supplier'} - Qty: ${op.qty} - Contact: ${op.member_phone}`
@@ -440,12 +426,8 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
         break;
     }
   };
-
-  // --- START: Logic for header checkbox state ---
   const isAllOnPageSelected = paginatedData.length > 0 && paginatedData.every(op => selected.includes(op.id));
   const isSomeOnPageSelected = paginatedData.some(op => selected.includes(op.id)) && !isAllOnPageSelected;
-  // --- END: Logic for header checkbox state ---
-
   const columns: ColumnDef<MatchingOpportunityItem>[] = [
     {
       id: 'select',
@@ -482,7 +464,6 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
       )
     },
   ];
-
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={1000} bodyOpenClassName="overflow-hidden">
       <div className="flex flex-col h-full max-h-[80vh]">
@@ -530,8 +511,6 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
     </Dialog>
   );
 };
-
-
 const ShareWallLinkDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
   const linkToShare = `${window.location.origin}/sales-leads/wall-item/${wallItem.id}`;
   const handleCopy = () => {
@@ -552,7 +531,6 @@ const ShareWallLinkDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }
     </Dialog>
   );
 };
-
 const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose, getAllUserDataOptions, user }) => {
   const { type, data: wallItem, isOpen } = modalState;
   if (!isOpen || !wallItem) return null;
@@ -569,6 +547,7 @@ const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose, getAllUser
   };
   return <>{renderModalContent()}</>;
 };
+// END: COLLAPSED MODALS SECTION
 
 // --- CSV Export ---
 const CSV_WALL_HEADERS = ["ID", "Product Name", "Company Name", "Member Name", "Category", "Subcategory", "Product Status", "Quantity", "Price", "Intent", "Created Date", "Record Status",];
@@ -684,7 +663,8 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { user } = useSelector(authSelector);
-  const { wallListing, AllProductsData, ParentCategories, subCategoriesForSelectedCategoryData, BrandData, MemberTypeData, ProductSpecificationsData, Employees, AllCompanyData, getAllUserData, status: masterLoadingStatus } = useSelector(masterSelector, shallowEqual);
+  // MODIFIED - Destructure MemberData and CountriesData
+  const { wallListing, AllProductsData, ParentCategories, subCategoriesForSelectedCategoryData, BrandData, MemberTypeData, ProductSpecificationsData, Employees, AllCompanyData, getAllUserData, MemberData, CountriesData, status: masterLoadingStatus } = useSelector(masterSelector, shallowEqual);
   const [initialLoading, setInitialLoading] = useState(true);
   // --- Add this new state for instant feedback on data refetch ---
   const [isRefetching, setIsRefetching] = useState(false);
@@ -703,9 +683,11 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
   const mapApiToWallItem = useCallback((apiItem: ApiWallItemFromSource): WallItem => ({ id: apiItem.id as number, productId: apiItem.product_id, product_name: apiItem.product?.name || ' ', company_name: apiItem.company_name || "", companyId: apiItem.company_id || undefined, member_name: apiItem.member?.name || ' ', memberId: String(apiItem.member?.id || ""), memberTypeId: apiItem.member_type_id, member_email: apiItem.member?.email || "", member_phone: apiItem.member?.number || "", product_category: apiItem.product?.category?.name || "", productCategoryId: apiItem.product?.category_id, product_subcategory: apiItem.product?.sub_category?.name || "", subCategoryId: apiItem.product?.sub_category_id, product_description: apiItem.product?.description || "", product_specs: apiItem.product_spec?.name || "", productSpecId: apiItem.product_spec_id, product_status: apiItem.product_status, quantity: Number(apiItem.qty) || 0, price: Number(apiItem.price) || 0, want_to: apiItem.want_to as WallIntent | string, listing_type: apiItem.listing_type || "", shipping_options: apiItem.shipping_options || "", payment_method: apiItem.payment_method || "", warranty: apiItem.warranty_info || "", return_policy: apiItem.return_policy || "", listing_url: apiItem.product_url || "", brand: apiItem.product?.brand?.name || "", brandId: apiItem.product?.brand_id, product_images: apiItem.product?.product_images_array || [], created_date: new Date(apiItem.created_at), updated_at: new Date(apiItem.updated_at), visibility: apiItem.visibility || "", priority: apiItem.priority || "", assigned_to: apiItem.assigned_to_name || "", interaction_type: apiItem.interaction_type || "", action: apiItem.action || "", recordStatus: apiItem.status as WallRecordStatus, cartoonTypeId: apiItem.cartoon_type_id, created_from: apiItem.created_from || "", deviceCondition: (apiItem.device_condition as WallProductCondition | null) || null, inquiry_count: Number(apiItem.inquiries) || 0, share_count: Number(apiItem.share) || 0, is_bookmarked: apiItem.bookmark === 1, updated_by_user: apiItem.updated_by_user || null, createdById: apiItem.created_by, member: apiItem?.member || null, }), []);
-  const apiParams = useMemo(() => { const formatMultiSelect = (items: { value: any }[] | undefined) => { if (!items || items.length === 0) return undefined; return items.map((item) => item.value).join(","); }; const params: any = { page: tableData.pageIndex, per_page: tableData.pageSize, search: tableData.query || undefined, sort_by: tableData.sort?.key || undefined, sort_order: tableData.sort?.order || undefined, status: formatMultiSelect(filterCriteria.filterRecordStatuses), company_ids: formatMultiSelect(filterCriteria.filterCompanyIds), want_to: formatMultiSelect(filterCriteria.filterIntents), product_ids: formatMultiSelect(filterCriteria.filterProductIds), category_ids: formatMultiSelect(filterCriteria.categories), subcategory_ids: formatMultiSelect(filterCriteria.subcategories), brand_ids: formatMultiSelect(filterCriteria.brands), product_status: formatMultiSelect(filterCriteria.productStatus), member_type_ids: formatMultiSelect(filterCriteria.memberType), created_by_ids: formatMultiSelect(filterCriteria.createdBy), product_spec_ids: formatMultiSelect(filterCriteria.productSpec), source: formatMultiSelect(filterCriteria.source) }; if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) { params.start_date = filterCriteria.dateRange[0] ? dayjs(filterCriteria.dateRange[0]).format("YYYY-MM-DD") : undefined; params.end_date = filterCriteria.dateRange[1] ? dayjs(filterCriteria.dateRange[1]).format("YYYY-MM-DD") : undefined; } if (filterCriteria.quickFilters) { if (filterCriteria.quickFilters.type === 'intent') params.want_to = filterCriteria.quickFilters.value; if (filterCriteria.quickFilters.type === 'status') params.status = filterCriteria.quickFilters.value; } Object.keys(params).forEach((key) => { if (params[key] === undefined || params[key] === null) { delete params[key]; } }); return params; }, [tableData, filterCriteria]);
+  // MODIFIED - Add member_ids and country_ids to API params
+  const apiParams = useMemo(() => { const formatMultiSelect = (items: { value: any }[] | undefined) => { if (!items || items.length === 0) return undefined; return items.map((item) => item.value).join(","); }; const params: any = { page: tableData.pageIndex, per_page: tableData.pageSize, search: tableData.query || undefined, sort_by: tableData.sort?.key || undefined, sort_order: tableData.sort?.order || undefined, status: formatMultiSelect(filterCriteria.filterRecordStatuses), company_ids: formatMultiSelect(filterCriteria.filterCompanyIds), want_to: formatMultiSelect(filterCriteria.filterIntents), product_ids: formatMultiSelect(filterCriteria.filterProductIds), category_ids: formatMultiSelect(filterCriteria.categories), subcategory_ids: formatMultiSelect(filterCriteria.subcategories), brand_ids: formatMultiSelect(filterCriteria.brands), product_status: formatMultiSelect(filterCriteria.productStatus), member_type_ids: formatMultiSelect(filterCriteria.memberType), created_by_ids: formatMultiSelect(filterCriteria.createdBy), product_spec_ids: formatMultiSelect(filterCriteria.productSpec), source: formatMultiSelect(filterCriteria.source), customer_ids: formatMultiSelect(filterCriteria.filterMembers), country_ids: formatMultiSelect(filterCriteria.filterCountries) }; if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) { params.start_date = filterCriteria.dateRange[0] ? dayjs(filterCriteria.dateRange[0]).format("YYYY-MM-DD") : undefined; params.end_date = filterCriteria.dateRange[1] ? dayjs(filterCriteria.dateRange[1]).format("YYYY-MM-DD") : undefined; } if (filterCriteria.quickFilters) { if (filterCriteria.quickFilters.type === 'intent') params.want_to = filterCriteria.quickFilters.value; if (filterCriteria.quickFilters.type === 'status') params.status = filterCriteria.quickFilters.value; } Object.keys(params).forEach((key) => { if (params[key] === undefined || params[key] === null) { delete params[key]; } }); return params; }, [tableData, filterCriteria]);
 
-  useEffect(() => { const fetchInitialData = async () => { setInitialLoading(true); try { await Promise.all([dispatch(getWallListingAction(apiParams)), dispatch(getProductsDataAsync()), dispatch(getParentCategoriesAction()), dispatch(getSubcategoriesByCategoryIdAction(0)), dispatch(getBrandAction()), dispatch(getMemberTypeAction()), dispatch(getProductSpecificationsAction()), dispatch(getEmployeesAction()), dispatch(getAllCompany()), dispatch(getAllUsersAction())]); } catch (error) { console.error("Failed to fetch initial data", error); toast.push(<Notification type="danger" title="Error">Could not load initial data.</Notification>); } finally { setInitialLoading(false); } }; fetchInitialData(); }, [dispatch]);
+  // MODIFIED - Fetch Members and Countries data on initial load
+  useEffect(() => { const fetchInitialData = async () => { setInitialLoading(true); try { await Promise.all([dispatch(getWallListingAction(apiParams)), dispatch(getProductsDataAsync()), dispatch(getParentCategoriesAction()), dispatch(getSubcategoriesByCategoryIdAction(0)), dispatch(getBrandAction()), dispatch(getMemberTypeAction()), dispatch(getProductSpecificationsAction()), dispatch(getEmployeesAction()), dispatch(getAllCompany()), dispatch(getAllUsersAction()), dispatch(getMemberAction()), dispatch(getCountriesAction())]); } catch (error) { console.error("Failed to fetch initial data", error); toast.push(<Notification type="danger" title="Error">Could not load initial data.</Notification>); } finally { setInitialLoading(false); } }; fetchInitialData(); }, [dispatch]);
   useEffect(() => { const timerId = setTimeout(() => { if (!initialLoading) { dispatch(getWallListingAction(apiParams)).then(() => { setIsRefetching(false) }); } }, 300); return () => { clearTimeout(timerId); }; }, [dispatch, apiParams, initialLoading]);
 
   // --- Add this useEffect to manage the refetching state ---
@@ -753,7 +735,8 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<WallItem>[]>([]);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
-  const activeFilterCount = useMemo(() => { let count = 0; if (filterCriteria.filterRecordStatuses?.length) count++; if (filterCriteria.filterIntents?.length) count++; if (filterCriteria.filterProductIds?.length) count++; if (filterCriteria.filterCompanyIds?.length) count++; if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) count++; if (filterCriteria.quickFilters) count++; return count; }, [filterCriteria]);
+  // MODIFIED - Add new filters to active count
+  const activeFilterCount = useMemo(() => { let count = 0; if (filterCriteria.filterRecordStatuses?.length) count++; if (filterCriteria.filterIntents?.length) count++; if (filterCriteria.filterProductIds?.length) count++; if (filterCriteria.filterCompanyIds?.length) count++; if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) count++; if (filterCriteria.quickFilters) count++; if (filterCriteria.filterMembers?.length) count++; if (filterCriteria.filterCountries?.length) count++; return count; }, [filterCriteria]);
   const counts = wallListing?.counts || { active: 0, buy: 0, non_active: 0, pending: 0, rejected: 0, sell: 0, today: 0, total: 0 };
   const cardClass = "rounded-sm border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const renderCardContent = (content: number | undefined, colorClass: string) => { if (initialLoading) { return <Skeleton width={40} height={20} />; } return <b className={colorClass}>{content ?? 0}</b>; };
@@ -847,6 +830,18 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               <FormItem label="Product Spec (Example)"><Controller name="productSpec" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Product Spec..." options={ProductSpecificationsData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               <FormItem label="Member Type (Example)"><Controller name="memberType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Member Type..." options={MemberTypeData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               <FormItem label="Created By (Example)"><Controller name="createdBy" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Employee..." options={Employees?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
+              {/* START: ADDED - Member and Country filters */}
+              <FormItem label="Members">
+                <Controller name="filterMembers" control={filterFormMethods.control} render={({ field }) => (
+                  <UiSelect isMulti placeholder="Select Members..." options={(MemberData?.data || []).map((m: any) => ({ value: m.id, label: m.name }))} {...field} />
+                )} />
+              </FormItem>
+              <FormItem label="Countries">
+                <Controller name="filterCountries" control={filterFormMethods.control} render={({ field }) => (
+                  <UiSelect isMulti placeholder="Select Countries..." options={(CountriesData || []).map((c: any) => ({ value: c.id, label: c.name }))} {...field} />
+                )} />
+              </FormItem>
+              {/* END: ADDED */}
             </div>
           </div>
         </UiForm>
