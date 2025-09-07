@@ -358,6 +358,7 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
+// --- MODIFICATION: ADD NEW FILTERS TO SCHEMA ---
 const filterFormSchema = z.object({
   filterStatuses: z.array(z.string()).optional().default([]),
   filterEnquiryTypes: z.array(z.string()).optional().default([]),
@@ -368,6 +369,10 @@ const filterFormSchema = z.object({
     .optional()
     .default([]),
   dateRange: z.array(z.date().nullable()).length(2).nullable().optional(),
+  // --- NEW FILTERS ---
+  filterMemberType: z.array(z.string()).optional().default([]),
+  filterCountryIds: z.array(z.number()).optional().default([]),
+  filterProductSpecIds: z.array(z.number()).optional().default([]),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
@@ -555,6 +560,11 @@ const priorityOptions = [
   { value: "low", label: "Low" },
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
+];
+// --- NEW: Options for a new filter ---
+const memberTypeOptions = [
+    { value: 'Buyer', label: 'Buyer' },
+    { value: 'Supplier', label: 'Supplier' },
 ];
 const eventTypeOptions = [
   { value: "Meeting", label: "Meeting" },
@@ -2520,14 +2530,19 @@ const LeadTableTools = ({
   );
 };
 
+// --- MODIFICATION: UPDATE ActiveFiltersDisplay TO HANDLE NEW FILTERS ---
 const ActiveFiltersDisplay = ({
   filterData,
   onRemoveFilter,
   onClearAll,
+  countryOptions = [],
+  productSpecOptions = [],
 }: {
   filterData: FilterFormData;
-  onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
+  onRemoveFilter: (key: keyof FilterFormData, value: string | number) => void;
   onClearAll: () => void;
+  countryOptions?: { value: number; label: string }[];
+  productSpecOptions?: { value: number; label: string }[];
 }) => {
   const hasFilters = Object.values(filterData).some(
     (v) => Array.isArray(v) && v.length > 0
@@ -2566,6 +2581,40 @@ const ActiveFiltersDisplay = ({
           />
         </Tag>
       ))}
+      {/* --- NEW FILTER TAGS --- */}
+      {filterData.filterMemberType?.map((item) => (
+        <Tag key={`memberType-${item}`} prefix>
+          Member: {item}{" "}
+          <TbX
+            className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
+            onClick={() => onRemoveFilter("filterMemberType", item)}
+          />
+        </Tag>
+      ))}
+      {filterData.filterCountryIds?.map((id) => {
+        const country = countryOptions.find((opt) => opt.value === id);
+        return (
+          <Tag key={`country-${id}`} prefix>
+            Country: {country?.label || id}{" "}
+            <TbX
+              className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
+              onClick={() => onRemoveFilter("filterCountryIds", id)}
+            />
+          </Tag>
+        );
+      })}
+      {filterData.filterProductSpecIds?.map((id) => {
+        const spec = productSpecOptions.find((opt) => opt.value === id);
+        return (
+          <Tag key={`spec-${id}`} prefix>
+            Spec: {spec?.label || id}{" "}
+            <TbX
+              className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
+              onClick={() => onRemoveFilter("filterProductSpecIds", id)}
+            />
+          </Tag>
+        );
+      })}
       <Button
         size="xs"
         variant="plain"
@@ -2708,7 +2757,6 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     [getAllUserData]
   );
 
-  // --- FIX: Improved data mapping to be more robust and use real user data ---
   const mappedLeads: LeadListItem[] = useMemo(() => {
     if (!Array.isArray(LeadsData?.data?.data)) return [];
     return LeadsData.data.data.map((apiLead: any): LeadListItem => {
@@ -2749,7 +2797,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         formId: apiLead.form_id,
       }
     });
-  }, [LeadsData?.data?.data, getAllUserData]); // Dependency on getAllUserData is crucial
+  }, [LeadsData?.data?.data, getAllUserData]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo((): {
     pageData: LeadListItem[];
@@ -2758,7 +2806,6 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   } => {
     
     let processedData = mappedLeads;
-    console.log("processedData",processedData);
     if (filterCriteria.dateRange?.[0] || filterCriteria.dateRange?.[1]) {
       const [start, end] = filterCriteria.dateRange.map((d) =>
         d ? dayjs(d) : null
@@ -2801,7 +2848,6 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         (item) => !!item.productId && productIds.has(item.productId)
       );
     }
-    // --- FIX: Corrected filtering logic for sales person IDs ---
     if (filterCriteria.filterSalesPersonIds?.length) {
       const spIds = new Set(filterCriteria.filterSalesPersonIds);
       processedData = processedData.filter(
@@ -2811,6 +2857,34 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           spIds.has(item.assigned_sales_person_id)
       );
     }
+    
+    // --- NEW: FILTERING LOGIC ---
+    if (filterCriteria.filterMemberType?.length) {
+        processedData = processedData.filter((item) => {
+            const hasBuyer = item.buyer && Object.keys(item.buyer).length > 0;
+            const hasSupplier = item.seller && Object.keys(item.seller).length > 0;
+            const matchesBuyer = filterCriteria.filterMemberType.includes('Buyer') && hasBuyer;
+            const matchesSupplier = filterCriteria.filterMemberType.includes('Supplier') && hasSupplier;
+            return matchesBuyer || matchesSupplier;
+        });
+    }
+    if (filterCriteria.filterCountryIds?.length) {
+        const countryIds = new Set(filterCriteria.filterCountryIds);
+        processedData = processedData.filter((item) => {
+            const buyerCountryId = item.buyer?.country?.id;
+            const sellerCountryId = item.seller?.country?.id;
+            return (buyerCountryId && countryIds.has(buyerCountryId)) || (sellerCountryId && countryIds.has(sellerCountryId));
+        });
+    }
+    if (filterCriteria.filterProductSpecIds?.length) {
+        const specIds = new Set(filterCriteria.filterProductSpecIds);
+        processedData = processedData.filter((item) => {
+            const specId = item.rawApiData?.product_spec?.id;
+            return !!specId && specIds.has(specId);
+        });
+    }
+    // --- END NEW FILTERING LOGIC ---
+
     if (tableData.query && tableData.query.trim() !== "") {
       const query = tableData.query.toLowerCase().trim();
       processedData = processedData.filter(
@@ -2853,7 +2927,6 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     };
   }, [mappedLeads, tableData, filterCriteria]);
 
-  // --- MODIFIED: Calculate STATIC dashboard counts based on the complete dataset ---
   const dashboardCounts = useMemo(() => {
     const counts = {
       total: 0,
@@ -2866,7 +2939,6 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
       manual_lead: 0,
     };
 
-    // Use mappedLeads which is the full, unfiltered list
     mappedLeads.forEach(lead => {
       counts.total++;
 
@@ -2874,20 +2946,19 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         counts.today++;
       }
 
-      // Use 'lead_status' and check for common variants for robustness
       if (lead.lead_status === 'New') counts.new++;
       if (lead.lead_status === 'Deal Done' || lead.lead_status === 'Won') counts.deal_done++;
       if (lead.lead_status === 'Cancelled' || lead.lead_status === 'Lost') counts.cancelled++;
 
-      // Check enquiry type
       if (lead.enquiry_type === 'Product lead') counts.product_lead++;
       if (lead.enquiry_type === 'Wall lead') counts.wall_lead++;
       if (lead.enquiry_type === 'Manual lead') counts.manual_lead++;
     });
 
     return counts;
-  }, [mappedLeads]); // This now ONLY depends on the full list of leads
+  }, [mappedLeads]);
 
+  // --- MODIFICATION: UPDATE ACTIVE FILTER COUNT ---
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filterCriteria.filterStatuses?.length) count++;
@@ -2900,10 +2971,14 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
       (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])
     )
       count++;
+    // --- NEW ---
+    if (filterCriteria.filterMemberType?.length) count++;
+    if (filterCriteria.filterCountryIds?.length) count++;
+    if (filterCriteria.filterProductSpecIds?.length) count++;
     return count;
   }, [filterCriteria]);
 
-  // --- NEW: Create dynamic product options for the filter dropdown ---
+  // --- NEW: DYNAMIC FILTER OPTIONS ---
   const productOptions = useMemo(() => {
     if (!Array.isArray(mappedLeads)) return [];
     const products = new Map<number, string>();
@@ -2914,6 +2989,37 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     });
     return Array.from(products, ([id, name]) => ({ value: id, label: name }));
   }, [mappedLeads]);
+
+  const countryOptions = useMemo(() => {
+    if (!Array.isArray(mappedLeads)) return [];
+    const countries = new Map<number, string>();
+    mappedLeads.forEach(lead => {
+      const buyerCountry = lead.buyer?.country;
+      const sellerCountry = lead.seller?.country;
+      if (buyerCountry?.id && buyerCountry?.name && !countries.has(buyerCountry.id)) {
+        countries.set(buyerCountry.id, buyerCountry.name);
+      }
+      if (sellerCountry?.id && sellerCountry?.name && !countries.has(sellerCountry.id)) {
+        countries.set(sellerCountry.id, sellerCountry.name);
+      }
+    });
+    return Array.from(countries, ([id, name]) => ({ value: id, label: name }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [mappedLeads]);
+  
+  const productSpecOptions = useMemo(() => {
+    if (!Array.isArray(mappedLeads)) return [];
+    const specs = new Map<number, string>();
+    mappedLeads.forEach(lead => {
+      const spec = lead.rawApiData?.product_spec;
+      if (spec?.id && spec?.name && !specs.has(spec.id)) {
+        specs.set(spec.id, spec.name);
+      }
+    });
+    return Array.from(specs, ([id, name]) => ({ value: id, label: name }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [mappedLeads]);
+  // --- END DYNAMIC FILTER OPTIONS ---
 
   const handleSetTableData = useCallback(
     (data: Partial<TableQueries>) =>
@@ -3201,11 +3307,12 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     handleSetTableData({ pageIndex: 1 });
   }, [handleSetTableData]);
 
+  // --- MODIFICATION: UPDATE `handleRemoveFilter` TO ACCEPT NUMBERS ---
   const handleRemoveFilter = useCallback(
-    (key: keyof FilterFormData, value: string) => {
+    (key: keyof FilterFormData, value: string | number) => {
       setFilterCriteria((prev) => {
         const newFilters = { ...prev };
-        const currentValues = prev[key] as string[] | undefined;
+        const currentValues = prev[key] as (string | number)[] | undefined;
         if (currentValues) {
           const newValues = currentValues.filter((item) => item !== value);
           (newFilters as any)[key] =
@@ -3416,7 +3523,6 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               </div>
             </div>
           )}
-          {/* --- MODIFIED: Use the stable dashboardCounts for rendering cards --- */}
           {!isDashboard && (
             <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-8 mb-4 gap-2 ">
               <Tooltip title="Click to show all leads">
@@ -3502,6 +3608,8 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
             filterData={filterCriteria}
             onRemoveFilter={handleRemoveFilter}
             onClearAll={onClearFilters}
+            countryOptions={countryOptions}
+            productSpecOptions={productSpecOptions}
           />
           <div className="flex-grow overflow-auto">
             {initialLoading ? (
@@ -3662,7 +3770,6 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
             label="Sales Person"
             errorMessage={assignFormMethods.formState.errors.salesPersonId?.message}
           >
-            {/* --- FIX: Use real user data instead of dummy data --- */}
             <Controller
               name="salesPersonId"
               control={assignFormMethods.control}
@@ -3820,7 +3927,6 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               )}
             />
           </FormItem>
-          {/* --- FIX: Use dynamic productOptions instead of dummy data --- */}
           <FormItem label="Product">
             <Controller
               name="filterProductIds"
@@ -3838,8 +3944,47 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               )}
             />
           </FormItem>
-          {/* --- FIX: Use real user data (getAllUserDataOptions) instead of dummy data --- */}
-         
+          {/* --- NEW: FILTER UI ELEMENTS --- */}
+          <FormItem label="Member Type">
+            <Controller
+                name="filterMemberType"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                <UiSelect
+                    isMulti
+                    options={memberTypeOptions}
+                    value={memberTypeOptions.filter((o) =>
+                    field.value?.includes(o.value)
+                    )}
+                    onChange={(opts: any) =>
+                    field.onChange(opts?.map((o: any) => o.value) || [])
+                    }
+                    placeholder="Select member types..."
+                />
+                )}
+            />
+            </FormItem>
+           
+            <FormItem label="Product Specification">
+            <Controller
+                name="filterProductSpecIds"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                <UiSelect
+                    isMulti
+                    options={productSpecOptions}
+                    value={productSpecOptions.filter((o) =>
+                    field.value?.includes(o.value)
+                    )}
+                    onChange={(opts: any) =>
+                    field.onChange(opts?.map((o: any) => o.value) || [])
+                    }
+                    placeholder="Select specifications..."
+                />
+                )}
+            />
+            </FormItem>
+          {/* --- END NEW FILTER UI ELEMENTS --- */}
           <FormItem label="Date Range">
             <Controller
               name="dateRange"
