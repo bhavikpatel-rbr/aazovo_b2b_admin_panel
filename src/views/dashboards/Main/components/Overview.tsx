@@ -42,6 +42,15 @@ import {
     TbUsersGroup,
 } from 'react-icons/tb'
 import { useSelector } from 'react-redux'
+import {
+    Bar,
+    BarChart,
+    CartesianGrid,
+    ResponsiveContainer,
+    XAxis,
+    YAxis,
+    Tooltip as RechartsTooltip, // Renamed to avoid conflict with UI component
+} from 'recharts'
 
 // --- Type Definitions (from reference component) ---
 import type { TableQueries } from '@/@types/common'
@@ -54,7 +63,7 @@ const Skeleton = ({ className }: { className?: string }) => {
         <div
             className={classNames(
                 'animate-pulse bg-gray-200 dark:bg-gray-600',
-                className,
+                className
             )}
         />
     )
@@ -75,7 +84,10 @@ const TableSkeleton = ({
             <THead>
                 <Tr>
                     {columns.map((col) => (
-                        <Th key={col.id || col.header} style={{ width: col.size }}>
+                        <Th
+                            key={col.id || col.header}
+                            style={{ width: col.size }}
+                        >
                             {col.header}
                         </Th>
                     ))}
@@ -246,6 +258,7 @@ const TeamSkeletonRow = () => (
         </Td>
     </>
 )
+
 // --- END: SKELETON COMPONENTS ---
 
 type StatisticCategory =
@@ -255,86 +268,96 @@ type StatisticCategory =
     | 'Partners'
     | 'Teams'
 
+// --- NEW & IMPROVED COMPONENTS ---
+
 type StatisticCardProps = {
     title: string
-    value: number | ReactNode
+    value: number | string
     icon: ReactNode
     label: StatisticCategory
     active: boolean
     onClick: (label: StatisticCategory) => void
-    colorClass: string
-    activeBgColor: string
-    iconBg: string
+    themeColor: string
 }
 
 const StatisticCard = (props: StatisticCardProps) => {
-    const {
-        title,
-        value,
-        label,
-        icon,
-        active,
-        onClick,
-        colorClass,
-        activeBgColor,
-        iconBg,
-    } = props
+    const { title, value, label, icon, active, onClick, themeColor } = props
+
+    const cardColor = active
+        ? `bg-gray-100 dark:bg-gray-700`
+        : 'bg-white dark:bg-gray-800'
+    const iconActiveColor = `text-white bg-${themeColor}`
+    const textActiveColor = `text-${themeColor}`
 
     return (
         <button
             className={classNames(
-                'p-4 rounded-2xl cursor-pointer ltr:text-left rtl:text-right transition duration-150 outline-none w-full',
-                colorClass,
-                active && `${activeBgColor} shadow-md`,
+                'p-4 rounded-xl cursor-pointer ltr:text-left rtl:text-right transition duration-150 outline-none w-full border',
+                cardColor,
+                active ? `border-${themeColor}` : 'border-gray-200 dark:border-gray-600'
             )}
             onClick={() => onClick(label)}
         >
             <div className="flex justify-between items-center relative">
-                <div>
-                    <div className="mb-4 !text-xs text-gray-900 font-bold">
-                        {title}
+                <div className="flex items-center gap-4">
+                    <div
+                        className={classNames(
+                            'flex items-center justify-center p-2 rounded-lg text-2xl',
+                            active ? iconActiveColor : 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400'
+                        )}
+                    >
+                        {icon}
                     </div>
-                    <h6 className="mb-1 text-gray-900">{value}</h6>
-                </div>
-                <div
-                    className={`flex items-center justify-center min-h-8 min-w-8 max-h-8 max-w-8 ${iconBg}
-                            text-white rounded-full text-2xl`}
-                >
-                    {icon}
+                    <div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                            {title}
+                        </div>
+                        <h4 className={classNames('font-bold', active && textActiveColor)}>
+                            {value}
+                        </h4>
+                    </div>
                 </div>
             </div>
         </button>
     )
 }
 
-const Bar = ({
-    percent,
-    className,
-    field,
-    color,
-    count,
-}: {
-    percent: number
-    className?: string
-    field: string
-    color: string
-    count: number
-}) => {
-    const displayPercent = isNaN(percent) ? 0 : percent
-    return (
-        <div className="flex-1">
-            <span className={`${color} dark:text-white text-xs`}>{field}</span>
-            <div
-                className={classNames('h-1.5 rounded-full mt-1', className)}
-                style={{ width: `${displayPercent}%` }}
-            />
-            <div className="font-bold heading-text mt-1">
-                {displayPercent.toFixed(0)}%{' '}
-                <span className="font-normal text-xs">({count})</span>
+type SummaryChartProps = {
+    data: { name: string; value: number; fill: string }[]
+}
+
+const CategorySummaryChart = ({ data }: SummaryChartProps) => {
+    if (!data || data.length === 0) {
+        return (
+            <div className="h-[250px] flex items-center justify-center text-gray-400">
+                No summary data available.
             </div>
+        )
+    }
+
+    return (
+        <div className="h-[250px] w-full mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data} margin={{ top: 0, right: 20, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis allowDecimals={false} fontSize={12} tickLine={false} axisLine={false} />
+                    <RechartsTooltip
+                        cursor={{ fill: 'rgba(100, 100, 100, 0.1)' }}
+                        contentStyle={{
+                            background: 'var(--tw-bg-gray-50)',
+                            borderRadius: '0.5rem',
+                            border: '1px solid var(--tw-border-gray-200)',
+                        }}
+                    />
+                    <Bar dataKey="value" barSize={35} radius={[4, 4, 0, 0]} />
+                </BarChart>
+            </ResponsiveContainer>
         </div>
     )
 }
+
+// --- MAIN COMPONENT ---
 
 const Overview = () => {
     const [selectedCategory, setSelectedCategory] =
@@ -350,10 +373,8 @@ const Overview = () => {
         loading,
     } = useSelector(masterSelector)
 
-    // This state controls the skeleton visibility for each tab's initial load.
     const [isLoading, setIsLoading] = useState(true)
 
-    // State for table queries for each category
     const [tableQueries, setTableQueries] = useState({
         Companies: { pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' } as TableQueries,
         Members: { pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' } as TableQueries,
@@ -362,70 +383,37 @@ const Overview = () => {
         Teams: { pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' } as TableQueries,
     });
 
-    // --- START: DATA FETCHING REFACTOR ---
-
-    // 1. Fetch dashboard counts once on component mount for the top cards.
+    // --- DATA FETCHING (Optimized) ---
     useEffect(() => {
         dispatch(getDashboardCountsAction())
     }, [dispatch])
 
-    // 2. Fetch data for the selected category tab if it hasn't been fetched yet.
     useEffect(() => {
         const fetchCategoryData = async () => {
-            // Helper to check if data for the current category already exists in the Redux store.
-            // It checks for the existence of the main data array property (`.companies`, `.members`, etc.)
-            // to correctly handle cases where the API has returned an empty array.
-            // const doesDataExist = () => {
-            //     switch (selectedCategory) {
-            //         case 'Companies': return CompanyData?.companies !== undefined
-            //         case 'Members':   return MemberData?.members !== undefined
-            //         case 'Products':  return ProductsData?.products !== undefined
-            //         case 'Partners':  return partnerData?.partners !== undefined
-            //         case 'Teams':     return Employees?.data !== undefined
-            //         default:          return true // Assume data exists for any unknown category to prevent errors.
-            //     }
-            // }
-
-            // if (doesDataExist()) {
-            //     setIsLoading(false) // Data is already present, no skeleton needed.
-            //     return
-            // }
-
-            setIsLoading(true) // Show skeleton while fetching.
+            setIsLoading(true)
             let fetchPromise
 
             switch (selectedCategory) {
-                case 'Companies':
-                    fetchPromise = dispatch(getDashboardCompanyAction())
-                    break
-                case 'Members':
-                    fetchPromise = dispatch(getDashboardMemberAction())
-                    break
-                case 'Products':
-                    fetchPromise = dispatch(getDashboardProductAction())
-                    break
-                case 'Partners':
-                    fetchPromise = dispatch(getDashboardPartnerAction())
-                    break
+                case 'Companies': fetchPromise = dispatch(getDashboardCompanyAction()); break;
+                case 'Members': fetchPromise = dispatch(getDashboardMemberAction()); break;
+                case 'Products': fetchPromise = dispatch(getDashboardProductAction()); break;
+                case 'Partners': fetchPromise = dispatch(getDashboardPartnerAction()); break;
                 case 'Teams':
-                    // Fetch both summary and list data for teams.
                     fetchPromise = Promise.all([
                         dispatch(getDashboardTeamsAction()),
                         dispatch(getEmployeesListingAction()),
-                    ])
-                    break
+                    ]);
+                    break;
             }
 
             if (fetchPromise) {
                 await fetchPromise
             }
-            setIsLoading(false) // Hide skeleton after fetch completes.
+            setIsLoading(false)
         }
 
         fetchCategoryData()
-    }, [selectedCategory, dispatch]) // This effect re-runs only when the user changes the tab.
-
-    // --- END: DATA FETCHING REFACTOR ---
+    }, [selectedCategory, dispatch])
 
     const handleTableQueryChange = useCallback(
         (category: StatisticCategory, newQuery: Partial<TableQueries>) => {
@@ -441,21 +429,17 @@ const Overview = () => {
         handleTableQueryChange(category, { query, pageIndex: 1 })
     }
 
-    // --- Generic Data Processing Logic ---
+    // --- DATA PROCESSING & MEMOIZATION ---
     const processData = (rawData: any[], queries: TableQueries, searchLogic: (item: any, query: string) => boolean) => {
-        if (!rawData) {
-            return { pageData: [], total: 0 }; // Return empty if rawData is null/undefined
-        }
+        if (!rawData) return { pageData: [], total: 0 };
         const { query = '', pageIndex = 1, pageSize = 10, sort = { order: '', key: '' } } = queries;
         let processedData = cloneDeep(rawData);
 
-        // Search/Filter
         if (query) {
             const lowerCaseQuery = query.toLowerCase();
             processedData = processedData.filter(item => searchLogic(item, lowerCaseQuery));
         }
 
-        // Sorting
         const { order, key } = sort;
         if (order && key && processedData.length > 0) {
             processedData.sort((a, b) => {
@@ -480,650 +464,187 @@ const Overview = () => {
         return { pageData, total };
     };
 
-    // --- Memoized Data for Each Category ---
+    const { pageData: companyPageData, total: companyTotal } = useMemo(() => processData(CompanyData?.companies || [], tableQueries.Companies, (c, q) => c.company_name?.toLowerCase().includes(q) || c.company_code?.toLowerCase().includes(q) || c.owner_name?.toLowerCase().includes(q) || c.primary_email_id?.toLowerCase().includes(q)), [CompanyData?.companies, tableQueries?.Companies]);
+    const { pageData: memberPageData, total: memberTotal } = useMemo(() => processData(MemberData?.members || [], tableQueries.Members, (m, q) => m.name?.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q) || m.number?.toLowerCase().includes(q) || m.company_name?.toLowerCase().includes(q)), [MemberData?.members, tableQueries?.Members]);
+    const { pageData: productPageData, total: productTotal } = useMemo(() => processData(ProductsData?.products || [], tableQueries.Products, (p, q) => p.name?.toLowerCase().includes(q) || p.sku_code?.toLowerCase().includes(q) || p.category?.name?.toLowerCase().includes(q)), [ProductsData?.products, tableQueries?.Products]);
+    const { pageData: partnerPageData, total: partnerTotal } = useMemo(() => processData(partnerData?.partners || [], tableQueries.Partners, (p, q) => p.partner_name?.toLowerCase().includes(q) || p.partner_code?.toLowerCase().includes(q) || p.primary_email_id?.toLowerCase().includes(q)), [partnerData?.partners, tableQueries.Partners]);
+    const { pageData: teamPageData, total: teamTotal } = useMemo(() => processData(Employees?.data || [], tableQueries.Teams, (t, q) => t.name?.toLowerCase().includes(q) || t.email?.toLowerCase().includes(q) || t.mobile_number?.toLowerCase().includes(q) || t.designation?.name?.toLowerCase().includes(q)), [Employees?.data, tableQueries?.Teams]);
 
-    const { pageData: companyPageData, total: companyTotal } = useMemo(() => processData(
-        CompanyData?.companies || [],
-        tableQueries.Companies,
-        (c, q) =>
-            c.company_name?.toLowerCase().includes(q) ||
-            c.company_code?.toLowerCase().includes(q) ||
-            c.owner_name?.toLowerCase().includes(q) ||
-            c.primary_email_id?.toLowerCase().includes(q) ||
-            c.gst_number?.toLowerCase().includes(q) ||
-            c.pan_number?.toLowerCase().includes(q)
-    ), [CompanyData?.companies, tableQueries?.Companies]);
+    // --- COLUMN DEFINITIONS (Unchanged) ---
+    const statusColor = { Active: 'bg-green-200 text-green-600', Verified: 'bg-blue-200 text-blue-600', Pending: 'bg-orange-200 text-orange-600', Inactive: 'bg-red-200 text-red-600', Unregistered: 'bg-red-200 text-red-600' };
+    const getCompanyStatusClass = (statusValue?: string): string => { if (!statusValue) return 'bg-gray-200 text-gray-600'; const lowerCaseStatus = statusValue.toLowerCase(); const companyStatusColors: Record<string, string> = { active: 'border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300', verified: 'border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300', pending: 'border border-orange-300 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300', inactive: 'border border-red-300 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300', 'non verified': 'border border-yellow-300 bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300', }; return (companyStatusColors[lowerCaseStatus] || 'bg-gray-200 text-gray-600'); };
+    const companyColumns = useMemo(() => [ { header: 'Company Info', accessorKey: 'company_name', id: 'companyInfo', size: 220, cell: ({ row }: any) => { const { company_name, ownership_type, primary_business_type, city, state, company_logo, company_code } = row.original; const addressParts = [city, state].filter(Boolean); const addressString = addressParts.length > 0 ? addressParts.join(', ') : ''; return (<div className="flex flex-col"> <div className="flex items-center gap-2"> <Avatar src={company_logo ? `${company_logo}` : undefined} size="sm" shape="circle" icon={<TbUserCircle />} /> <div> <h6 className="text-xs font-semibold"><em className="text-blue-600">{company_code || " "}</em></h6> <span className="text-xs font-semibold leading-1">{company_name}</span> </div> </div> <span className="text-xs mt-1"><b>Ownership Type:</b> {ownership_type || " "}</span> <span className="text-xs mt-1"><b>Primary Business Type:</b> {primary_business_type || " "}</span> <div className="text-xs text-gray-500">{addressString}</div> </div>); }, }, { header: 'Contact', accessorKey: 'owner_name', id: 'contact', size: 180, cell: (props: any) => { const { owner_name, primary_contact_number, primary_email_id, company_website, primary_contact_number_code } = props.row.original; return (<div className="text-xs flex flex-col gap-0.5"> {owner_name && (<span><b>Owner: </b> {owner_name}</span>)} {primary_contact_number && (<span>{primary_contact_number_code} {primary_contact_number}</span>)} {primary_email_id && (<a href={`mailto:${primary_email_id}`} className="text-blue-600 hover:underline">{primary_email_id}</a>)} {company_website && (<a href={company_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{company_website}</a>)} </div>); }, }, { header: 'Legal IDs & Status', accessorKey: 'status', id: 'legal', size: 180, cell: ({ row }: any) => { const { gst_number, pan_number, status } = row.original; return (<div className="flex flex-col gap-0.5 text-[11px]"> {gst_number && <div><b>GST:</b> <span className="break-all">{gst_number}</span></div>} {pan_number && <div><b>PAN:</b> <span className="break-all">{pan_number}</span></div>} <Tag className={`${getCompanyStatusClass(status)} capitalize mt-1 self-start !text-[11px] px-2 py-1`}>{status}</Tag> </div>); }, }, { header: 'Profile & Scores', accessorKey: 'profile_completion', id: 'profile', size: 190, cell: ({ row }: any) => { const { teams_count = 0, kyc_verified, enable_billing, billing_due, members_summary } = row.original; const members_count = members_summary?.total || 0; const profile_completion = members_summary?.profile_completion || 0; const formattedDate = billing_due ? dayjs(billing_due).format('D MMM, YYYY') : " "; return (<div className="flex flex-col gap-1 text-xs"> <span><b>Members:</b> {members_count}</span> <span><b>Teams:</b> {teams_count}</span> <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${kyc_verified ? "Yes" : "No"}`}>{kyc_verified ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <div className="flex gap-1 items-center"><b>Billing:</b><Tooltip title={`Billing: ${enable_billing ? "Yes" : "No"}`}>{enable_billing ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <span><b>Billing Due:</b> {formattedDate}</span> <Tooltip title={`Profile Completion ${profile_completion}%`}> <div className="h-2.5 w-full rounded-full bg-gray-300"> <div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${profile_completion}%` }}></div> </div> </Tooltip> </div>); }, }, { header: 'Business', accessorKey: 'wallCount', size: 180, meta: { HeaderClass: 'text-center' }, cell: (props: any) => { return (<div className='flex flex-col gap-4 text-center items-center '> <Tooltip title={`Buy: ${props.row.original?.walls?.buy || 0} | Sell: ${props.row.original?.walls?.sell || 0} | Total: ${props.row.original?.walls?.total || 0}`} className='text-xs'> <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.walls?.buy || 0} | {props?.row?.original?.walls?.sell || 0} | {props?.row?.original?.walls?.total || 0} </div> </Tooltip> <Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'> <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div> </Tooltip> <Tooltip title={`Success: ${props.row.original?.leads?.success || 0} | Lost: ${props.row.original?.leads?.lost || 0} | Total: ${props.row.original?.leads?.total || 0}`} className='text-xs'> <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.leads?.success || 0} | {props?.row?.original?.leads?.lost || 0} | {props?.row?.original?.leads?.total || 0} </div> </Tooltip> </div>) } }, ], [])
+    const memberColumns = useMemo(() => [ { header: "Member", accessorKey: "name", id: 'member', size: 180, cell: (props: any) => (<div className="flex flex-col gap-1"><div className="flex items-center gap-1.5"><div className="text-xs"><b className="text-xs text-blue-500"><em>{props.row.original.id || ""}</em></b><br /><b className="texr-xs">{props.row.original.name || ""}</b></div></div><div className="text-xs"><div className="text-xs text-gray-500">{props.row.original.email || "No Email"}</div><div className="text-xs text-gray-500">{props.row.original.number || ""}</div><div className="text-xs text-gray-500">{props.row.original.country?.name || ""}</div></div></div>), }, { header: "Company", accessorKey: "company_name", id: 'company', size: 200, cell: (props: any) => (<div className="ml-2 rtl:mr-2 text-xs"><b className="text-xs "><em className="text-blue-500">{props.row.original.customer_code || ""}</em></b><div className="text-xs flex gap-1"><MdCheckCircle size={20} className="text-green-500" /><b className="">{props.row.original.company_name || "N/A"}</b></div></div>), }, { header: "Status", accessorKey: "status", id: 'status', size: 140, cell: (props: any) => { const { status, created_at } = props.row.original; return (<div className="flex flex-col text-xs"><Tag className={`${statusColor[status as keyof typeof statusColor] || 'bg-gray-200'} inline capitalize`}>{status || ""}</Tag><span className="mt-0.5"><div className="text-[10px] text-gray-500 mt-0.5">Joined Date: {dayjs(created_at).format('D MMM, YYYY') || " "}</div></span></div>); }, }, { header: "Profile", accessorKey: "grade", id: 'profile', size: 220, cell: (props: any) => (<div className="text-xs flex flex-col"><span><b>RM: </b>{props.row.original.name || ""}</span><span><b>Grade: {props.row.original.grade || "N/A"}</b></span><span><b>Business Opportunity: {props.row.original.business_opportunity || "N/A"}</b></span><Tooltip title={`Profile: ${props.row.original.profile_completion || 0}%`}><div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1"><div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${props.row.original.profile_completion || 0}%` }}></div></div></Tooltip></div>), }, { header: "Preferences", accessorKey: "business_type", id: 'preferences', size: 300, cell: (props: any) => { const [isOpen, setIsOpen] = useState<boolean>(false); const openDialog = () => setIsOpen(true); const closeDialog = () => setIsOpen(false); return (<div className="flex flex-col gap-1"><span className="text-xs"><b className="text-xs">Business Type: {props.row.original.business_type || "N/A"}</b></span><span className="text-xs flex items-center gap-1"><span onClick={openDialog}><TbInfoCircle size={16} className="text-blue-500 cursor-pointer" /></span><b className="text-xs">Brands: {props.row.original.favourite_brands || "N/A"}</b></span><span className="text-xs"><span className="text-[11px]"><b className="text-xs">Interested: </b>{props.row.original.interested_in || "N/A"}</span></span><Dialog width={620} isOpen={isOpen} onRequestClose={closeDialog} onClose={closeDialog}><h6>Dynamic Profile</h6><Table className="mt-6"><thead className="bg-gray-100 rounded-md"><Tr><Td width={130}>Member Type</Td><Td>Brands</Td><Td>Category</Td><Td>Sub Category</Td></Tr></thead><tbody><Tr><Td>INS - PREMIUM</Td><Td><span className="flex gap-0.5 flex-wrap"><Tag>Apple</Tag><Tag>Samsung</Tag><Tag>POCO</Tag></span></Td><Td><Tag>Electronics</Tag></Td><Td><span className="flex gap-0.5 flex-wrap"><Tag>Mobile</Tag><Tag>Laptop</Tag></span></Td></Tr></tbody></Table></Dialog></div>); }, }, { header: 'Business', accessorKey: 'wall_total', size: 180, meta: { HeaderClass: 'text-center' }, cell: (props: any) => (<div className='flex flex-col gap-4 text-center items-center '><Tooltip title={`Buy: ${props.row.original?.wall_buy || 0} | Sell: ${props.row.original?.wall_sell || 0} | Total: ${props.row.original?.wall_total || 0}`} className='text-xs'><div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.wall_buy || 0} | {props?.row?.original?.wall_sell || 0} | {props?.row?.original?.wall_total || 0} </div></Tooltip><Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'><div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div></Tooltip><Tooltip title={`Success: ${props.row.original?.lead_success || 0} | Lost: ${props.row.original?.lead_lost || 0} | Total: ${props.row.original?.lead_total || 0}`} className='text-xs'><div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.lead_success || 0} | {props?.row?.original?.lead_lost || 0} | {props?.row?.original?.lead_total || 0} </div></Tooltip></div>) }, ], [])
+    const productColumns = useMemo(() => { const productStatusColor: Record<string, string> = { active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100', inactive: 'bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-100', pending: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100', draft: 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-100', rejected: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100', }; return [ { header: "ID", accessorKey: "id", size: 60, meta: { tdClass: "text-center", thClass: "text-center" }, cell: ({ getValue }: any) => getValue().toString().padStart(6, '0'), }, { header: "Product", id: "productInfo", size: 300, cell: (props: any) => (<div className="flex items-center gap-3"><Avatar size={30} shape="circle" src={props.row.original.icon_full_path || undefined} icon={<TbBox />} /><Tooltip title={props.row.original.name}><div className="truncate"><span className="font-semibold">{props.row.original.name}</span><div className="text-xs text-gray-500">SKU: {props.row.original.sku_code || "-"}</div></div></Tooltip></div>), }, { header: "Category", accessorKey: "category.name", cell: (props: any) => props.row.original.category?.name || "-", }, { header: "Sub Cat", accessorKey: "sub_category.name", cell: (props: any) => props.row.original.sub_category?.name || "-", }, { header: "Brand", accessorKey: "brand.name", cell: (props: any) => props.row.original.brand?.name || "-", }, { header: "Status", accessorKey: "status", cell: (props: any) => { const statusKey = props.row.original.status?.toLowerCase() || ''; return (<Tag className={`${productStatusColor[statusKey] || "bg-gray-200"} capitalize font-semibold border-0`}>{props.row.original.status}</Tag>) }, }, { header: 'Business', accessorKey: 'walls.total', size: 180, meta: { HeaderClass: 'text-center' }, cell: (props: any) => (<div className='flex flex-col gap-4 text-center items-center '><Tooltip title={`Buy: ${props.row.original?.walls?.buy || 0} | Sell: ${props.row.original?.walls?.sell || 0} | Total: ${props.row.original?.walls?.total || 0}`} className='text-xs'><div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.walls?.buy || 0} | {props?.row?.original?.walls?.sell || 0} | {props?.row?.original?.walls?.total || 0} </div></Tooltip><Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'><div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div></Tooltip><Tooltip title={`Success: ${props.row.original?.leads?.success || 0} | Lost: ${props.row.original?.leads?.lost || 0} | Total: ${props.row.original?.leads?.total || 0}`} className='text-xs'><div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.leads?.success || 0} | {props?.row?.original?.leads?.lost || 0} | {props?.row?.original?.leads?.total || 0} </div></Tooltip></div>) }, ]; }, [])
+    const partnerColumns = useMemo(() => { const getPartnerStatusClass = (statusValue: string): string => { if (!statusValue) return 'bg-gray-200 text-gray-600'; const lowerCaseStatus = statusValue.toLowerCase(); const partnerStatusColors: Record<string, string> = { active: 'bg-green-200 text-green-600 dark:bg-green-500/20 dark:text-green-300', verified: 'bg-blue-200 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300', pending: 'bg-orange-200 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300', inactive: 'bg-red-200 text-red-600 dark:bg-red-500/20 dark:text-red-300', 'non verified': 'bg-yellow-200 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300', }; return partnerStatusColors[lowerCaseStatus] || 'bg-gray-200 text-gray-600'; }; return [ { header: "Partner Info", accessorKey: "partner_name", id: 'partnerInfo', size: 220, cell: ({ row }: any) => { const { partner_logo, partner_code, partner_name, ownership_type, city, state } = row.original; const address = [city, state].filter(Boolean).join(', '); return (<div className="flex flex-col"><div className="flex items-center gap-2"><Avatar src={partner_logo || ''} size="md" shape="circle" icon={<TbUserCircle />} /><div><h6 className="text-xs font-semibold">{partner_code || 'N/A'}</h6><span className="text-xs font-semibold">{partner_name}</span></div></div><span className="text-xs mt-1"><b>Type:</b> {ownership_type}</span><div className="text-xs text-gray-500">{address}</div></div>); }, }, { header: "Contact", id: 'contact', size: 180, cell: ({ row }: any) => { const { partner_name, primary_contact_number, primary_contact_number_code, primary_email_id, partner_website } = row.original; return (<div className="text-xs flex flex-col gap-0.5">{partner_name && <span><b>Contact:</b> {partner_name}</span>}{primary_contact_number && <span>{primary_contact_number_code} {primary_contact_number}</span>}{primary_email_id && <a href={`mailto:${primary_email_id}`} className="text-blue-600 hover:underline">{primary_email_id}</a>}{partner_website && <a href={partner_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{partner_website}</a>}</div>); }, }, { header: "Legal IDs & Status", size: 180, accessorKey: 'status', id: 'legal', cell: ({ row }: any) => { const { gst_number, pan_number, status } = row.original; return (<div className="flex flex-col gap-1 text-[10px]">{gst_number && <div><b>GST:</b> <span className="break-all">{gst_number}</span></div>}{pan_number && <div><b>PAN:</b> <span className="break-all">{pan_number}</span></div>}<Tag className={`${getPartnerStatusClass(status)} capitalize mt-1 self-start !text-[10px] px-1.5 py-0.5`}>{status}</Tag></div>); }, }, { header: "Profile & Scores", size: 190, id: 'profile', cell: ({ row }: any) => { const teams_count = row.original.team_summary?.total || 0; const kyc_verified = row.original.kyc_verified; const profile_completion = row.original.profile_completion || 0; return (<div className="flex flex-col gap-1.5 text-xs"><span><b>Teams:</b> {teams_count}</span><div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${kyc_verified ? 'Yes' : 'No'}`}>{kyc_verified ? <MdCheckCircle className="text-green-500 text-lg" /> : <MdCancel className="text-red-500 text-lg" />}</Tooltip></div><Tooltip title={`Profile Completion ${profile_completion}%`}><div className="h-2.5 w-full rounded-full bg-gray-300"><div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${profile_completion}%` }}></div></div></Tooltip></div>); }, }, { header: 'Business', accessorKey: 'wallCount', size: 180, meta: { HeaderClass: 'text-center' }, cell: (props: any) => (<div className='flex flex-col gap-4 text-center items-center '><Tooltip title={`Buy: ${props.row.original?.walls?.buy || 0} | Sell: ${props.row.original?.walls?.sell || 0} | Total: ${props.row.original?.walls?.total || 0}`} className='text-xs'><div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.walls?.buy || 0} | {props?.row?.original?.walls?.sell || 0} | {props?.row?.original?.walls?.total || 0} </div></Tooltip><Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'><div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div></Tooltip><Tooltip title={`Success: ${props.row.original?.leads?.success || 0} | Lost: ${props.row.original?.leads?.lost || 0} | Total: ${props.row.original?.leads?.total || 0}`} className='text-xs'><div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.leads?.success || 0} | {props?.row?.original?.leads?.lost || 0} | {props?.row?.original?.leads?.total || 0} </div></Tooltip></div>) }, ]; }, [])
+    const teamColumns = useMemo(() => { const employeeStatusColor = { active: 'bg-blue-500', inactive: 'bg-emerald-500', on_leave: 'bg-amber-500', terminated: 'bg-red-500', }; return [ { header: "Status", accessorKey: "status", cell: (props: any) => { const status = props.row.original?.status || 'Unknown'; const statusKey = status.toLowerCase().replace(/ /g, '_'); const colorClass = employeeStatusColor[statusKey as keyof typeof employeeStatusColor] || 'bg-gray-500'; return (<Tag className={`${colorClass} text-white capitalize`}>{status}</Tag>); }, }, { header: "Name", accessorKey: "name", cell: (props: any) => { const { name, email, mobile_number, profile_pic_path } = props.row.original || {}; return (<div className="flex items-center"><Avatar size={28} shape="circle" src={profile_pic_path} icon={<TbUserCircle />}>{!profile_pic_path && name ? name.charAt(0).toUpperCase() : ""}</Avatar><div className="ml-2 rtl:mr-2"><span className="font-semibold">{name ?? 'N/A'}</span><div className="text-xs text-gray-500">{email ?? 'No Email'}</div><div className="text-xs text-gray-500">{mobile_number ?? 'No Mobile'}</div></div></div>); }, }, { header: "Designation", accessorKey: "designation.name", size: 200, cell: (props: any) => { const designationName = props.row.original?.designation?.name; return (<div className="font-semibold">{designationName ?? 'N/A'}</div>); }, }, { header: "Department", accessorKey: "department.name", size: 200, cell: (props: any) => { const departmentName = props.row.original?.department?.name; return (<div className="font-semibold">{departmentName ?? 'N/A'}</div>); }, }, { header: "Roles", accessorKey: "roles", cell: (props: any) => { const categoryRole = props.row.original?.category?.name; const roleId = props.row.original?.role_id; if (categoryRole) { return <Tag className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 text-[10px]">{categoryRole}</Tag> } if (roleId) { return <span className="text-xs">Role ID: {roleId}</span> } return <span className="text-xs text-gray-500">No Role Assigned</span> }, }, { header: "Joined At", accessorKey: "date_of_joining", size: 200, cell: (props: any) => { const joinDate = props.row.original?.date_of_joining; return joinDate ? (<span className="text-xs">{dayjs(joinDate).format("D MMM YYYY, h:mm A")}</span>) : ('-'); }, }, { header: 'Business', accessorKey: 'wall.total', size: 180, meta: { HeaderClass: 'text-center' }, cell: (props: any) => { const wall = props.row.original?.wall || { buy: 0, sell: 0, total: 0 }; const opportunities = props.row.original?.opportunities || { offers: 0, demands: 0, total: 0 }; const leads = props.row.original?.leads || { total: 0 }; return (<div className='flex flex-col gap-4 text-center items-center'><Tooltip title={`Buy: ${wall.buy} | Sell: ${wall.sell} | Total: ${wall.total}`} className='text-xs'><div className='bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'>Wall Listing: {wall.buy} | {wall.sell} | {wall.total}</div></Tooltip><Tooltip title={`Offers: ${opportunities.offers} | Demands: ${opportunities.demands} | Total: ${opportunities.total}`} className='text-xs'><div className='bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'>Opportunities: {opportunities.offers} | {opportunities.demands} | {opportunities.total}</div></Tooltip><Tooltip title={`Total: ${leads.total}`} className='text-xs'><div className='bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'>Leads: {leads.total}</div></Tooltip></div>); }, }, ]; }, [])
 
-    const { pageData: memberPageData, total: memberTotal } = useMemo(() => processData(
-        MemberData?.members || [],
-        tableQueries.Members,
-        (m, q) =>
-            m.name?.toLowerCase().includes(q) ||
-            m.email?.toLowerCase().includes(q) ||
-            m.number?.toLowerCase().includes(q) ||
-            m.company_name?.toLowerCase().includes(q)
-    ), [MemberData?.members, tableQueries?.Members]);
+    // --- REFACTORED: Central Configuration for Categories ---
+    const categoryDetails = useMemo(() => ({
+        Companies: {
+            label: 'Companies' as StatisticCategory,
+            icon: <MdOutlineBusinessCenter />,
+            themeColor: 'rose-500',
+            totalCount: DashBoardCount?.companies || '...',
+            summaryData: [
+                { name: 'Total', value: CompanyData?.total || 0, fill: '#8884d8' },
+                { name: 'Verified', value: CompanyData?.verified || 0, fill: '#82ca9d' },
+                { name: 'Unverified', value: CompanyData?.unverified || 0, fill: '#ffc658' },
+                { name: 'Eligible', value: CompanyData?.eligible || 0, fill: '#ff8042' },
+            ],
+            tableColumns: companyColumns,
+            tableData: companyPageData,
+            tableTotal: companyTotal,
+            tableQueries: tableQueries.Companies,
+            skeletonRow: <CompanySkeletonRow />,
+        },
+        Members: {
+            label: 'Members' as StatisticCategory,
+            icon: <TbUserCircle />,
+            themeColor: 'emerald-500',
+            totalCount: DashBoardCount?.customers || '...',
+            summaryData: [
+                { name: 'Total', value: MemberData?.total || 0, fill: '#8884d8' },
+                { name: 'Active', value: MemberData?.active || 0, fill: '#82ca9d' },
+                { name: 'Disabled', value: MemberData?.disabled || 0, fill: '#ffc658' },
+                { name: 'Unregistered', value: MemberData?.unregistered || 0, fill: '#ff8042' },
+            ],
+            tableColumns: memberColumns,
+            tableData: memberPageData,
+            tableTotal: memberTotal,
+            tableQueries: tableQueries.Members,
+            skeletonRow: <MemberSkeletonRow />,
+        },
+        Products: {
+            label: 'Products' as StatisticCategory,
+            icon: <TbCube3dSphere />,
+            themeColor: 'blue-500',
+            totalCount: DashBoardCount?.products || '...',
+            summaryData: [
+                { name: 'Total', value: ProductsData?.total || 0, fill: '#8884d8' },
+                { name: 'Active', value: ProductsData?.active || 0, fill: '#82ca9d' },
+                { name: 'Inactive', value: ProductsData?.inactive || 0, fill: '#ffc658' },
+                { name: 'Categories', value: ProductsData?.category_count || 0, fill: '#ff8042' },
+                { name: 'Brands', value: ProductsData?.brand_count || 0, fill: '#a4de6c' },
+            ],
+            tableColumns: productColumns,
+            tableData: productPageData,
+            tableTotal: productTotal,
+            tableQueries: tableQueries.Products,
+            skeletonRow: <ProductSkeletonRow />,
+        },
+        Partners: {
+            label: 'Partners' as StatisticCategory,
+            icon: <TbHeartHandshake />,
+            themeColor: 'pink-500',
+            totalCount: DashBoardCount?.partners || '...',
+            summaryData: [
+                { name: 'Total', value: partnerData?.total || 0, fill: '#8884d8' },
+                { name: 'Active', value: partnerData?.active || 0, fill: '#82ca9d' },
+                { name: 'Blocked', value: partnerData?.blocked || 0, fill: '#ffc658' },
+                { name: 'Verified', value: partnerData?.verified || 0, fill: '#ff8042' },
+                { name: 'Unverified', value: partnerData?.unverified || 0, fill: '#a4de6c' },
+            ],
+            tableColumns: partnerColumns,
+            tableData: partnerPageData,
+            tableTotal: partnerTotal,
+            tableQueries: tableQueries.Partners,
+            skeletonRow: <PartnerSkeletonRow />,
+        },
+        Teams: {
+            label: 'Teams' as StatisticCategory,
+            icon: <TbUsersGroup />,
+            themeColor: 'amber-500',
+            totalCount: DashBoardCount?.users || '...',
+            summaryData: Employees?.counts ? [
+                { name: 'Active', value: Employees.counts.active, fill: '#82ca9d' },
+                { name: 'Inactive', value: Employees.counts.inactive, fill: '#ffc658' },
+                { name: 'Blocked', value: Employees.counts.blocked, fill: '#ff8042' },
+                { name: 'On Notice', value: Employees.counts.on_notice, fill: '#a4de6c' },
+            ] : [],
+            tableColumns: teamColumns,
+            tableData: teamPageData,
+            tableTotal: teamTotal,
+            tableQueries: tableQueries.Teams,
+            skeletonRow: <TeamSkeletonRow />,
+        },
+    }), [DashBoardCount, CompanyData, MemberData, ProductsData, partnerData, Employees, companyPageData, memberPageData, productPageData, partnerPageData, teamPageData, tableQueries, companyColumns, memberColumns, productColumns, partnerColumns, teamColumns, companyTotal, memberTotal, productTotal, partnerTotal, teamTotal]);
 
-    const { pageData: productPageData, total: productTotal } = useMemo(() => processData(
-        ProductsData?.products || [],
-        tableQueries.Products,
-        (p, q) =>
-            p.name?.toLowerCase().includes(q) ||
-            p.sku_code?.toLowerCase().includes(q) ||
-            p.category?.name?.toLowerCase().includes(q) ||
-            p.sub_category?.name?.toLowerCase().includes(q) ||
-            p.brand?.name?.toLowerCase().includes(q)
-    ), [ProductsData?.products, tableQueries?.Products]);
-
-    const { pageData: partnerPageData, total: partnerTotal } = useMemo(() => processData(
-        partnerData?.partners || [],
-        tableQueries?.Partners,
-        (p, q) =>
-            p.partner_name?.toLowerCase().includes(q) ||
-            p.partner_code?.toLowerCase().includes(q) ||
-            p.primary_email_id?.toLowerCase().includes(q) ||
-            p.gst_number?.toLowerCase().includes(q) ||
-            p.pan_number?.toLowerCase().includes(q)
-    ), [partnerData?.partners, tableQueries.Partners]);
-
-    const { pageData: teamPageData, total: teamTotal } = useMemo(() => processData(
-        Employees?.data || [],
-        tableQueries?.Teams,
-        (t, q) =>
-            t.name?.toLowerCase().includes(q) ||
-            t.email?.toLowerCase().includes(q) ||
-            t.mobile_number?.toLowerCase().includes(q) ||
-            t.designation?.name?.toLowerCase().includes(q) ||
-            t.department?.name?.toLowerCase().includes(q)
-    ), [Employees?.data, tableQueries?.Teams]);
-
-
-    // --- Column Definitions (Unchanged) ---
-
-    const statusColor = {
-        Active: 'bg-green-200 text-green-600',
-        Verified: 'bg-blue-200 text-blue-600',
-        Pending: 'bg-orange-200 text-orange-600',
-        Inactive: 'bg-red-200 text-red-600',
-        Unregistered: 'bg-red-200 text-red-600'
-    };
-
-    const getCompanyStatusClass = (statusValue?: string): string => {
-        if (!statusValue) return 'bg-gray-200 text-gray-600';
-        const lowerCaseStatus = statusValue.toLowerCase();
-        const companyStatusColors: Record<string, string> = {
-            active: 'border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300',
-            verified: 'border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300',
-            pending: 'border border-orange-300 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300',
-            inactive: 'border border-red-300 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300',
-            'non verified': 'border border-yellow-300 bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300',
-        };
-        return (
-            companyStatusColors[lowerCaseStatus] || 'bg-gray-200 text-gray-600'
-        );
-    };
-
-    const companyColumns = [
-        { header: 'Company Info', accessorKey: 'company_name', id: 'companyInfo', size: 220, cell: ({ row }: any) => { const { company_name, ownership_type, primary_business_type, city, state, company_logo, company_code } = row.original; const addressParts = [city, state].filter(Boolean); const addressString = addressParts.length > 0 ? addressParts.join(', ') : ''; return (<div className="flex flex-col"> <div className="flex items-center gap-2"> <Avatar src={company_logo ? `${company_logo}` : undefined} size="sm" shape="circle" icon={<TbUserCircle />} /> <div> <h6 className="text-xs font-semibold"><em className="text-blue-600">{company_code || " "}</em></h6> <span className="text-xs font-semibold leading-1">{company_name}</span> </div> </div> <span className="text-xs mt-1"><b>Ownership Type:</b> {ownership_type || " "}</span> <span className="text-xs mt-1"><b>Primary Business Type:</b> {primary_business_type || " "}</span> <div className="text-xs text-gray-500">{addressString}</div> </div>); }, },
-        { header: 'Contact', accessorKey: 'owner_name', id: 'contact', size: 180, cell: (props: any) => { const { owner_name, primary_contact_number, primary_email_id, company_website, primary_contact_number_code } = props.row.original; return (<div className="text-xs flex flex-col gap-0.5"> {owner_name && (<span><b>Owner: </b> {owner_name}</span>)} {primary_contact_number && (<span>{primary_contact_number_code} {primary_contact_number}</span>)} {primary_email_id && (<a href={`mailto:${primary_email_id}`} className="text-blue-600 hover:underline">{primary_email_id}</a>)} {company_website && (<a href={company_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{company_website}</a>)} </div>); }, },
-        { header: 'Legal IDs & Status', accessorKey: 'status', id: 'legal', size: 180, cell: ({ row }: any) => { const { gst_number, pan_number, status } = row.original; return (<div className="flex flex-col gap-0.5 text-[11px]"> {gst_number && <div><b>GST:</b> <span className="break-all">{gst_number}</span></div>} {pan_number && <div><b>PAN:</b> <span className="break-all">{pan_number}</span></div>} <Tag className={`${getCompanyStatusClass(status)} capitalize mt-1 self-start !text-[11px] px-2 py-1`}>{status}</Tag> </div>); }, },
-        { header: 'Profile & Scores', accessorKey: 'profile_completion', id: 'profile', size: 190, cell: ({ row }: any) => { const { teams_count = 0, kyc_verified, enable_billing, billing_due, members_summary } = row.original; const members_count = members_summary?.total || 0; const profile_completion = members_summary?.profile_completion || 0; const formattedDate = billing_due ? dayjs(billing_due).format('D MMM, YYYY') : " "; return (<div className="flex flex-col gap-1 text-xs"> <span><b>Members:</b> {members_count}</span> <span><b>Teams:</b> {teams_count}</span> <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${kyc_verified ? "Yes" : "No"}`}>{kyc_verified ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <div className="flex gap-1 items-center"><b>Billing:</b><Tooltip title={`Billing: ${enable_billing ? "Yes" : "No"}`}>{enable_billing ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <span><b>Billing Due:</b> {formattedDate}</span> <Tooltip title={`Profile Completion ${profile_completion}%`}> <div className="h-2.5 w-full rounded-full bg-gray-300"> <div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${profile_completion}%` }}></div> </div> </Tooltip> </div>); }, },
-        { header: 'Business', accessorKey: 'wallCount', size: 180, meta: { HeaderClass: 'text-center' }, cell: (props: any) => { return (<div className='flex flex-col gap-4 text-center items-center '> <Tooltip title={`Buy: ${props.row.original?.walls?.buy || 0} | Sell: ${props.row.original?.walls?.sell || 0} | Total: ${props.row.original?.walls?.total || 0}`} className='text-xs'> <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.walls?.buy || 0} | {props?.row?.original?.walls?.sell || 0} | {props?.row?.original?.walls?.total || 0} </div> </Tooltip> <Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'> <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div> </Tooltip> <Tooltip title={`Success: ${props.row.original?.leads?.success || 0} | Lost: ${props.row.original?.leads?.lost || 0} | Total: ${props.row.original?.leads?.total || 0}`} className='text-xs'> <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.leads?.success || 0} | {props?.row?.original?.leads?.lost || 0} | {props?.row?.original?.leads?.total || 0} </div> </Tooltip> </div>) } },
-    ];
-
-    const memberColumns = [
-        {
-            header: "Member", accessorKey: "name", id: 'member', size: 180,
-            cell: (props: any) => (<div className="flex flex-col gap-1"><div className="flex items-center gap-1.5"><div className="text-xs"><b className="text-xs text-blue-500"><em>{props.row.original.id || ""}</em></b><br /><b className="texr-xs">{props.row.original.name || ""}</b></div></div><div className="text-xs"><div className="text-xs text-gray-500">{props.row.original.email || "No Email"}</div><div className="text-xs text-gray-500">{props.row.original.number || ""}</div><div className="text-xs text-gray-500">{props.row.original.country?.name || ""}</div></div></div>),
-        },
-        {
-            header: "Company", accessorKey: "company_name", id: 'company', size: 200,
-            cell: (props: any) => (<div className="ml-2 rtl:mr-2 text-xs"><b className="text-xs "><em className="text-blue-500">{props.row.original.customer_code || ""}</em></b><div className="text-xs flex gap-1"><MdCheckCircle size={20} className="text-green-500" /><b className="">{props.row.original.company_name || "N/A"}</b></div></div>),
-        },
-        {
-            header: "Status", accessorKey: "status", id: 'status', size: 140,
-            cell: (props: any) => { const { status, created_at } = props.row.original; return (<div className="flex flex-col text-xs"><Tag className={`${statusColor[status as keyof typeof statusColor] || 'bg-gray-200'} inline capitalize`}>{status || ""}</Tag><span className="mt-0.5"><div className="text-[10px] text-gray-500 mt-0.5">Joined Date: {dayjs(created_at).format('D MMM, YYYY') || " "}</div></span></div>); },
-        },
-        {
-            header: "Profile", accessorKey: "grade", id: 'profile', size: 220,
-            cell: (props: any) => (<div className="text-xs flex flex-col"><span><b>RM: </b>{props.row.original.name || ""}</span><span><b>Grade: {props.row.original.grade || "N/A"}</b></span><span><b>Business Opportunity: {props.row.original.business_opportunity || "N/A"}</b></span><Tooltip title={`Profile: ${props.row.original.profile_completion || 0}%`}><div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1"><div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${props.row.original.profile_completion || 0}%` }}></div></div></Tooltip></div>),
-        },
-        {
-            header: "Preferences", accessorKey: "business_type", id: 'preferences', size: 300,
-            cell: (props: any) => { const [isOpen, setIsOpen] = useState<boolean>(false); const openDialog = () => setIsOpen(true); const closeDialog = () => setIsOpen(false); return (<div className="flex flex-col gap-1"><span className="text-xs"><b className="text-xs">Business Type: {props.row.original.business_type || "N/A"}</b></span><span className="text-xs flex items-center gap-1"><span onClick={openDialog}><TbInfoCircle size={16} className="text-blue-500 cursor-pointer" /></span><b className="text-xs">Brands: {props.row.original.favourite_brands || "N/A"}</b></span><span className="text-xs"><span className="text-[11px]"><b className="text-xs">Interested: </b>{props.row.original.interested_in || "N/A"}</span></span><Dialog width={620} isOpen={isOpen} onRequestClose={closeDialog} onClose={closeDialog}><h6>Dynamic Profile</h6><Table className="mt-6"><thead className="bg-gray-100 rounded-md"><Tr><Td width={130}>Member Type</Td><Td>Brands</Td><Td>Category</Td><Td>Sub Category</Td></Tr></thead><tbody><Tr><Td>INS - PREMIUM</Td><Td><span className="flex gap-0.5 flex-wrap"><Tag>Apple</Tag><Tag>Samsung</Tag><Tag>POCO</Tag></span></Td><Td><Tag>Electronics</Tag></Td><Td><span className="flex gap-0.5 flex-wrap"><Tag>Mobile</Tag><Tag>Laptop</Tag></span></Td></Tr></tbody></Table></Dialog></div>); },
-        },
-        {
-            header: 'Business', accessorKey: 'wall_total', size: 180, meta: { HeaderClass: 'text-center' },
-            cell: (props: any) => (<div className='flex flex-col gap-4 text-center items-center '><Tooltip title={`Buy: ${props.row.original?.wall_buy || 0} | Sell: ${props.row.original?.wall_sell || 0} | Total: ${props.row.original?.wall_total || 0}`} className='text-xs'><div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.wall_buy || 0} | {props?.row?.original?.wall_sell || 0} | {props?.row?.original?.wall_total || 0} </div></Tooltip><Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'><div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div></Tooltip><Tooltip title={`Success: ${props.row.original?.lead_success || 0} | Lost: ${props.row.original?.lead_lost || 0} | Total: ${props.row.original?.lead_total || 0}`} className='text-xs'><div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.lead_success || 0} | {props?.row?.original?.lead_lost || 0} | {props?.row?.original?.lead_total || 0} </div></Tooltip></div>)
-        },
-    ];
-
-    const productStatusColor: Record<string, string> = {
-        active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
-        inactive: 'bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-100',
-        pending: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100',
-        draft: 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-100',
-        rejected: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100',
-    };
-
-    const productColumns = [
-        {
-            header: "ID",
-            accessorKey: "id",
-            size: 60,
-            meta: { tdClass: "text-center", thClass: "text-center" },
-            cell: ({ getValue }: any) => getValue().toString().padStart(6, '0'),
-        },
-        {
-            header: "Product",
-            id: "productInfo",
-            size: 300,
-            cell: (props: any) => (
-                <div className="flex items-center gap-3">
-                    <Avatar size={30} shape="circle" src={props.row.original.icon_full_path || undefined} icon={<TbBox />} />
-                    <Tooltip title={props.row.original.name}>
-                        <div className="truncate">
-                            <span className="font-semibold">{props.row.original.name}</span>
-                            <div className="text-xs text-gray-500">SKU: {props.row.original.sku_code || "-"}</div>
-                        </div>
-                    </Tooltip>
-                </div>
-            ),
-        },
-        {
-            header: "Category",
-            accessorKey: "category.name",
-            cell: (props: any) => props.row.original.category?.name || "-",
-        },
-        {
-            header: "Sub Cat",
-            accessorKey: "sub_category.name",
-            cell: (props: any) => props.row.original.sub_category?.name || "-",
-        },
-        {
-            header: "Brand",
-            accessorKey: "brand.name",
-            cell: (props: any) => props.row.original.brand?.name || "-",
-        },
-        {
-            header: "Status",
-            accessorKey: "status",
-            cell: (props: any) => {
-                const statusKey = props.row.original.status?.toLowerCase() || '';
-                return (
-                    <Tag className={`${productStatusColor[statusKey] || "bg-gray-200"} capitalize font-semibold border-0`}>
-                        {props.row.original.status}
-                    </Tag>
-                )
-            },
-        },
-        {
-            header: 'Business',
-            accessorKey: 'walls.total',
-            size: 180,
-            meta: { HeaderClass: 'text-center' },
-            cell: (props: any) => (
-                <div className='flex flex-col gap-4 text-center items-center '>
-                    <Tooltip title={`Buy: ${props.row.original?.walls?.buy || 0} | Sell: ${props.row.original?.walls?.sell || 0} | Total: ${props.row.original?.walls?.total || 0}`} className='text-xs'>
-                        <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'>
-                            Wall Listing: {props?.row?.original?.walls?.buy || 0} | {props?.row?.original?.walls?.sell || 0} | {props?.row?.original?.walls?.total || 0}
-                        </div>
-                    </Tooltip>
-                    <Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'>
-                        <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'>
-                            Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0}
-                        </div>
-                    </Tooltip>
-                    <Tooltip title={`Success: ${props.row.original?.leads?.success || 0} | Lost: ${props.row.original?.leads?.lost || 0} | Total: ${props.row.original?.leads?.total || 0}`} className='text-xs'>
-                        <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'>
-                            Leads: {props?.row?.original?.leads?.success || 0} | {props?.row?.original?.leads?.lost || 0} | {props?.row?.original?.leads?.total || 0}
-                        </div>
-                    </Tooltip>
-                </div>
-            )
-        },
-    ];
-
-    const getPartnerStatusClass = (statusValue: string): string => {
-        if (!statusValue) return 'bg-gray-200 text-gray-600';
-        const lowerCaseStatus = statusValue.toLowerCase();
-        const partnerStatusColors: Record<string, string> = {
-            active: 'bg-green-200 text-green-600 dark:bg-green-500/20 dark:text-green-300',
-            verified: 'bg-blue-200 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300',
-            pending: 'bg-orange-200 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300',
-            inactive: 'bg-red-200 text-red-600 dark:bg-red-500/20 dark:text-red-300',
-            'non verified': 'bg-yellow-200 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300',
-        };
-        return partnerStatusColors[lowerCaseStatus] || 'bg-gray-200 text-gray-600';
-    };
-
-    const partnerColumns = [
-        {
-            header: "Partner Info",
-            accessorKey: "partner_name",
-            id: 'partnerInfo',
-            size: 220,
-            cell: ({ row }: any) => {
-                const { partner_logo, partner_code, partner_name, ownership_type, city, state } = row.original;
-                const address = [city, state].filter(Boolean).join(', ');
-
-                return (
-                    <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                            <Avatar src={partner_logo || ''} size="md" shape="circle" icon={<TbUserCircle />} />
-                            <div>
-                                <h6 className="text-xs font-semibold">{partner_code || 'N/A'}</h6>
-                                <span className="text-xs font-semibold">{partner_name}</span>
-                            </div>
-                        </div>
-                        <span className="text-xs mt-1"><b>Type:</b> {ownership_type}</span>
-                        <div className="text-xs text-gray-500">{address}</div>
-                    </div>
-                );
-            },
-        },
-        {
-            header: "Contact",
-            id: 'contact',
-            size: 180,
-            cell: ({ row }: any) => {
-                const { partner_name, primary_contact_number, primary_contact_number_code, primary_email_id, partner_website } = row.original;
-                return (
-                    <div className="text-xs flex flex-col gap-0.5">
-                        {partner_name && <span><b>Contact:</b> {partner_name}</span>}
-                        {primary_contact_number && <span>{primary_contact_number_code} {primary_contact_number}</span>}
-                        {primary_email_id && <a href={`mailto:${primary_email_id}`} className="text-blue-600 hover:underline">{primary_email_id}</a>}
-                        {partner_website && <a href={partner_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{partner_website}</a>}
-                    </div>
-                );
-            },
-        },
-        {
-            header: "Legal IDs & Status",
-            size: 180,
-            accessorKey: 'status',
-            id: 'legal',
-            cell: ({ row }: any) => {
-                const { gst_number, pan_number, status } = row.original;
-                return (
-                    <div className="flex flex-col gap-1 text-[10px]">
-                        {gst_number && <div><b>GST:</b> <span className="break-all">{gst_number}</span></div>}
-                        {pan_number && <div><b>PAN:</b> <span className="break-all">{pan_number}</span></div>}
-                        <Tag className={`${getPartnerStatusClass(status)} capitalize mt-1 self-start !text-[10px] px-1.5 py-0.5`}>{status}</Tag>
-                    </div>
-                );
-            },
-        },
-        {
-            header: "Profile & Scores",
-            size: 190,
-            id: 'profile',
-            cell: ({ row }: any) => {
-                const teams_count = row.original.team_summary?.total || 0;
-                const kyc_verified = row.original.kyc_verified;
-                const profile_completion = row.original.profile_completion || 0;
-
-                return (
-                    <div className="flex flex-col gap-1.5 text-xs">
-                        <span><b>Teams:</b> {teams_count}</span>
-                        <div className="flex gap-1 items-center">
-                            <b>KYC Verified:</b>
-                            <Tooltip title={`KYC: ${kyc_verified ? 'Yes' : 'No'}`}>
-                                {kyc_verified ? <MdCheckCircle className="text-green-500 text-lg" /> : <MdCancel className="text-red-500 text-lg" />}
-                            </Tooltip>
-                        </div>
-                        <Tooltip title={`Profile Completion ${profile_completion}%`}>
-                            <div className="h-2.5 w-full rounded-full bg-gray-300">
-                                <div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${profile_completion}%` }}></div>
-                            </div>
-                        </Tooltip>
-                    </div>
-                );
-            },
-        },
-        {
-            header: 'Business',
-            accessorKey: 'wallCount',
-            size: 180,
-            meta: { HeaderClass: 'text-center' },
-            cell: (props: any) => (
-                <div className='flex flex-col gap-4 text-center items-center '>
-                    <Tooltip title={`Buy: ${props.row.original?.walls?.buy || 0} | Sell: ${props.row.original?.walls?.sell || 0} | Total: ${props.row.original?.walls?.total || 0}`} className='text-xs'>
-                        <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.walls?.buy || 0} | {props?.row?.original?.walls?.sell || 0} | {props?.row?.original?.walls?.total || 0} </div>
-                    </Tooltip>
-                    <Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'>
-                        <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div>
-                    </Tooltip>
-                    <Tooltip title={`Success: ${props.row.original?.leads?.success || 0} | Lost: ${props.row.original?.leads?.lost || 0} | Total: ${props.row.original?.leads?.total || 0}`} className='text-xs'>
-                        <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.leads?.success || 0} | {props?.row?.original?.leads?.lost || 0} | {props?.row?.original?.leads?.total || 0} </div>
-                    </Tooltip>
-                </div>
-            )
-        },
-    ];
-
-    const employeeStatusColor = {
-        active: 'bg-blue-500',
-        inactive: 'bg-emerald-500',
-        on_leave: 'bg-amber-500',
-        terminated: 'bg-red-500',
-    };
-
-    const teamColumns = [
-        {
-            header: "Status",
-            accessorKey: "status",
-            cell: (props: any) => {
-                const status = props.row.original?.status || 'Unknown';
-                const statusKey = status.toLowerCase().replace(/ /g, '_');
-                const colorClass = employeeStatusColor[statusKey as keyof typeof employeeStatusColor] || 'bg-gray-500';
-
-                return (
-                    <Tag className={`${colorClass} text-white capitalize`}>
-                        {status}
-                    </Tag>
-                );
-            },
-        },
-        {
-            header: "Name",
-            accessorKey: "name",
-            cell: (props: any) => {
-                const { name, email, mobile_number, profile_pic_path } = props.row.original || {};
-                return (
-                    <div className="flex items-center">
-                        <Avatar size={28} shape="circle" src={profile_pic_path} icon={<TbUserCircle />}>
-                            {!profile_pic_path && name ? name.charAt(0).toUpperCase() : ""}
-                        </Avatar>
-                        <div className="ml-2 rtl:mr-2">
-                            <span className="font-semibold">{name ?? 'N/A'}</span>
-                            <div className="text-xs text-gray-500">{email ?? 'No Email'}</div>
-                            <div className="text-xs text-gray-500">{mobile_number ?? 'No Mobile'}</div>
-                        </div>
-                    </div>
-                );
-            },
-        },
-        {
-            header: "Designation",
-            accessorKey: "designation.name",
-            size: 200,
-            cell: (props: any) => {
-                const designationName = props.row.original?.designation?.name;
-                return (
-                    <div className="font-semibold">
-                        {designationName ?? 'N/A'}
-                    </div>
-                );
-            },
-        },
-        {
-            header: "Department",
-            accessorKey: "department.name",
-            size: 200,
-            cell: (props: any) => {
-                const departmentName = props.row.original?.department?.name;
-                return (
-                    <div className="font-semibold">
-                        {departmentName ?? 'N/A'}
-                    </div>
-                );
-            },
-        },
-        {
-            header: "Roles",
-            accessorKey: "roles",
-            cell: (props: any) => {
-                const categoryRole = props.row.original?.category?.name;
-                const roleId = props.row.original?.role_id;
-
-                if (categoryRole) {
-                    return <Tag className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 text-[10px]">{categoryRole}</Tag>
-                }
-                if (roleId) {
-                    return <span className="text-xs">Role ID: {roleId}</span>
-                }
-                return <span className="text-xs text-gray-500">No Role Assigned</span>
-            },
-        },
-        {
-            header: "Joined At",
-            accessorKey: "date_of_joining",
-            size: 200,
-            cell: (props: any) => {
-                const joinDate = props.row.original?.date_of_joining;
-                return joinDate ? (
-                    <span className="text-xs">
-                        {dayjs(joinDate).format("D MMM YYYY, h:mm A")}
-                    </span>
-                ) : (
-                    '-'
-                );
-            },
-        },
-        {
-            header: 'Business',
-            accessorKey: 'wall.total',
-            size: 180,
-            meta: { HeaderClass: 'text-center' },
-            cell: (props: any) => {
-                const wall = props.row.original?.wall || { buy: 0, sell: 0, total: 0 };
-                const opportunities = props.row.original?.opportunities || { offers: 0, demands: 0, total: 0 };
-                const leads = props.row.original?.leads || { total: 0 };
-
-                return (
-                    <div className='flex flex-col gap-4 text-center items-center'>
-                        <Tooltip title={`Buy: ${wall.buy} | Sell: ${wall.sell} | Total: ${wall.total}`} className='text-xs'>
-                            <div className='bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'>
-                                Wall Listing: {wall.buy} | {wall.sell} | {wall.total}
-                            </div>
-                        </Tooltip>
-                        <Tooltip title={`Offers: ${opportunities.offers} | Demands: ${opportunities.demands} | Total: ${opportunities.total}`} className='text-xs'>
-                            <div className='bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'>
-                                Opportunities: {opportunities.offers} | {opportunities.demands} | {opportunities.total}
-                            </div>
-                        </Tooltip>
-                        <Tooltip title={`Total: ${leads.total}`} className='text-xs'>
-                            <div className='bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'>
-                                Leads: {leads.total}
-                            </div>
-                        </Tooltip>
-                    </div>
-                );
-            },
-        },
-    ];
-
-    const companyCounts = CompanyData?.total;
-    const totalCompanies = CompanyData?.total || 0;
+    const currentCategory = categoryDetails[selectedCategory];
 
     return (
-        <Card>
+        <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
-                <h4>Overview</h4>
+                <h3>Dashboard Overview</h3>
             </div>
 
-            <section className="block gap-4 w-full">
-                <section>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 rounded-2xl py-3 mt-4">
-                        <StatisticCard title="Companies" value={DashBoardCount?.companies || 0} icon={<MdOutlineBusinessCenter className="h-5" />} label="Companies" active={selectedCategory === 'Companies'} onClick={() => setSelectedCategory('Companies')} colorClass="bg-red-100" activeBgColor="bg-red-200" iconBg="bg-red-400" />
-                        <StatisticCard title="Members" value={DashBoardCount?.customers || 0} icon={<TbUserCircle className="h-5" />} label="Members" active={selectedCategory === 'Members'} onClick={() => setSelectedCategory('Members')} colorClass="bg-green-100" activeBgColor="bg-green-200" iconBg="bg-green-400" />
-                        <StatisticCard title="Products" value={DashBoardCount?.products || 0} icon={<TbCube3dSphere className="h-5" />} label="Products" active={selectedCategory === 'Products'} onClick={() => setSelectedCategory('Products')} colorClass="bg-blue-100" activeBgColor="bg-blue-200" iconBg="bg-blue-400" />
-                        <StatisticCard title="Partners" value={DashBoardCount?.partners || 0} icon={<TbHeartHandshake className="h-5" />} label="Partners" active={selectedCategory === 'Partners'} onClick={() => setSelectedCategory('Partners')} colorClass="bg-pink-100" activeBgColor="bg-pink-200" iconBg="bg-pink-400" />
-                        <StatisticCard title="Teams" value={DashBoardCount?.users || 0} icon={<TbUsersGroup className="h-5" />} label="Teams" active={selectedCategory === 'Teams'} onClick={() => setSelectedCategory('Teams')} colorClass="bg-orange-100" activeBgColor="bg-orange-200" iconBg="bg-orange-400" />
-                    </div>
-                    <Card bodyClass="px-4 py-3">
-                        <div className="flex items-center justify-between">
-                            <h6 className="capitalize">
-                                {selectedCategory} summary
-                            </h6>
-                            <Select
-                                className="min-w-[140px]"
-                                size="sm"
-                                defaultValue={{ label: 'All', value: 'All' }}
-                                options={[{ label: 'All', value: 'All' }, { label: 'Today', value: 'Today' }, { label: 'Weekly', value: 'Weekly' }, { label: 'Monthly', value: 'Monthly' }, { label: '3 Months', value: '3 Months' }, { label: '6 Months', value: '6 Months' }, { label: 'This Year', value: 'This Year' },]}
-                            />
-                        </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                {Object.values(categoryDetails).map((cat) => (
+                    <StatisticCard
+                        key={cat.label}
+                        title={cat.label}
+                        value={cat.totalCount.toLocaleString()}
+                        icon={cat.icon}
+                        label={cat.label}
+                        active={selectedCategory === cat.label}
+                        onClick={setSelectedCategory}
+                        themeColor={cat.themeColor}
+                    />
+                ))}
+            </div>
 
-                        {selectedCategory === 'Companies' && (
-                            <div>
-                                {companyCounts && <div className="lg:pl-4 flex items-center gap-1 w-full mt-4">
-                                    <Bar field="Total" percent={(CompanyData.total / totalCompanies) * 100} count={CompanyData.total || 0} color="text-[#6610f2]" className="bg-[#6610f2] dark:opacity-70" />
-                                    <Bar field="Verified" percent={(CompanyData.verified / totalCompanies) * 100 || 0} count={CompanyData.verified} color="text-[#20c997]" className="bg-[#20c997] dark:opacity-70" />
-                                    <Bar field="Non Verified" percent={(CompanyData.unverified / totalCompanies) * 100 || 0} count={CompanyData.unverified} color="text-[#e74c3c]" className="bg-[#e74c3c] dark:opacity-70" />
-                                    <Bar field="Eligible" percent={(CompanyData.eligible / totalCompanies) * 100 || 0} count={CompanyData.eligible} color="text-[#fd7e14]" className="bg-[#fd7e14] dark:opacity-70" />
-                                    <Bar field="Not Eligible" percent={(CompanyData.not_eligible / totalCompanies) * 100 || 0} count={CompanyData.not_eligible} color="text-[#ffc107]" className="bg-[#ffc107] dark:opacity-70" />
-                                </div>}
-                                <div className="mt-8 block gap-2">
-                                    <h6 className="mb-3">Company Leaderboard</h6>
-                                    <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => handleSearch('Companies', e.target.value)} />
-                                    {isLoading ? (
-                                        <TableSkeleton columns={companyColumns} skeletonRow={<CompanySkeletonRow />} />
-                                    ) : (
-                                        <DataTable
-                                            columns={companyColumns}
-                                            data={companyPageData}
-                                            loading={loading}
-                                            pagingData={{ ...tableQueries.Companies, total: companyTotal }}
-                                            onPaginationChange={(page) => handleTableQueryChange('Companies', { pageIndex: page })}
-                                            onSelectChange={(size) => handleTableQueryChange('Companies', { pageSize: size, pageIndex: 1 })}
-                                            onSort={(sort) => handleTableQueryChange('Companies', { sort, pageIndex: 1 })}
-                                        />
-                                    )}
-                                </div>
-                            </div>
-                        )}
+            <Card>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <h5 className="capitalize">
+                        {selectedCategory} Summary
+                    </h5>
+                    <Select
+                        className="min-w-[160px]"
+                        size="sm"
+                        defaultValue={{ label: 'All Time', value: 'All' }}
+                        options={[
+                            { label: 'All Time', value: 'All' },
+                            { label: 'Today', value: 'Today' },
+                            { label: 'This Week', value: 'Weekly' },
+                            { label: 'This Month', value: 'Monthly' },
+                        ]}
+                    />
+                </div>
 
-                        {selectedCategory === 'Members' && (
-                            <div>
-                                {MemberData?.total && <div className='lg:flex gap-2 justify-between mt-4'>
-                                    <div className="lg:pl-4 flex items-center gap-1 w-full">
-                                        <Bar field="Total" percent={(MemberData?.total / MemberData?.total) * 100 || 0} count={MemberData?.total || 0} color='text-[#6610f2]' className="bg-[#6610f2] dark:opacity-70" />
-                                        <Bar field="Active" percent={(MemberData?.active / MemberData?.total) * 100 || 0} count={MemberData?.active || 0} color='text-[#28a745]' className="bg-[#28a745] dark:opacity-70" />
-                                        <Bar field="Disabled" percent={(MemberData?.status_summary?.disabled?.count / MemberData?.total) * 100 || 0} count={MemberData?.disabled || 0} color='text-[#6c757d]' className="bg-[#6c757d] dark:opacity-70" />
-                                        <Bar field="Unregistered" percent={(MemberData?.status_summary?.unregistered?.count / MemberData?.total) * 100 || 0} count={MemberData?.unregistered || 0} color='text-[#e74c3c]' className="bg-[#e74c3c] dark:opacity-70" />
-                                    </div>
-                                </div>}
-                                <div className='mt-8 block  gap-2'>
-                                    <h6 className='mb-3'>Members Leaderboard</h6>
-                                    <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => handleSearch('Members', e.target.value)} />
-                                    {isLoading ? (
-                                        <TableSkeleton columns={memberColumns} skeletonRow={<MemberSkeletonRow />} />
-                                    ) : (
-                                        <DataTable
-                                            columns={memberColumns}
-                                            data={memberPageData}
-                                            loading={loading}
-                                            pagingData={{ ...tableQueries.Members, total: memberTotal }}
-                                            onPaginationChange={(page) => handleTableQueryChange('Members', { pageIndex: page })}
-                                            onSelectChange={(size) => handleTableQueryChange('Members', { pageSize: size, pageIndex: 1 })}
-                                            onSort={(sort) => handleTableQueryChange('Members', { sort, pageIndex: 1 })}
-                                        />
-                                    )}
-                                </div>
-                            </div>
-                        )}
+                <CategorySummaryChart data={currentCategory.summaryData} />
+            </Card>
 
-                        {selectedCategory === 'Products' && (
-                            <div>
-                                {ProductsData?.total && <div className='lg:flex gap-2 justify-between mt-4'>
-                                    <div className="lg:pl-4 flex items-center gap-1 w-full">
-                                        <Bar field="Total" percent={(ProductsData?.total / ProductsData?.total) * 100 || 0} count={ProductsData?.total} color='text-[#6610f2]' className="bg-[#6610f2] dark:opacity-70" />
-                                        <Bar field="Active" percent={(ProductsData?.active / ProductsData?.total) * 100 || 0} count={ProductsData?.active} color='text-[#28a745]' className="bg-[#28a745] dark:opacity-70" />
-                                        <Bar field="Inactive" percent={(ProductsData?.inactive / ProductsData?.total) * 100 || 0} count={ProductsData?.inactive} color='text-[#6c757d]' className="bg-[#6c757d] dark:opacity-70" />
-                                        <Bar field="Categories" percent={(ProductsData?.category_count / ProductsData?.total) * 100 || 0} count={ProductsData?.category_count} color='text-[#2ecc71]' className="bg-[#2ecc71] dark:opacity-70" />
-                                        <Bar field="Brands" percent={(ProductsData?.brand_count / ProductsData?.total) * 100 || 0} count={ProductsData?.brand_count} color='text-[#e74c3c]' className="bg-[#e74c3c] dark:opacity-70" />
-                                        <Bar field="Wall" percent={100} count={ProductsData?.wall_count} color='text-[#ffc107]' className="bg-[#ffc107] dark:opacity-70" />
-                                        <Bar field="Leads" percent={(ProductsData?.leads_count / ProductsData?.total) * 100 || 0} count={ProductsData?.leads_count} color='text-[#fd7e14]' className="bg-[#fd7e14] dark:opacity-70" />
-                                    </div>
-                                </div>}
-                                <div className='mt-8 block  gap-2'>
-                                    <h6 className='mb-3'>Products Leaderboard</h6>
-                                    <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => handleSearch('Products', e.target.value)} />
-                                    {isLoading ? (
-                                        <TableSkeleton columns={productColumns} skeletonRow={<ProductSkeletonRow />} />
-                                    ) : (
-                                        <DataTable
-                                            columns={productColumns}
-                                            data={productPageData}
-                                            loading={loading}
-                                            pagingData={{ ...tableQueries.Products, total: productTotal }}
-                                            onPaginationChange={(page) => handleTableQueryChange('Products', { pageIndex: page })}
-                                            onSelectChange={(size) => handleTableQueryChange('Products', { pageSize: size, pageIndex: 1 })}
-                                            onSort={(sort) => handleTableQueryChange('Products', { sort, pageIndex: 1 })}
-                                        />
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {selectedCategory === 'Partners' && (
-                            <div>
-                                {partnerData?.total && <div className='lg:flex gap-2 justify-between mt-4'>
-                                    <div className="lg:pl-4 flex items-center gap-1 w-full">
-                                        <Bar field="Total" percent={(partnerData?.total / partnerData?.total) * 100 || 0} count={partnerData?.total} color='text-[#6610f2]' className="bg-[#6610f2] dark:opacity-70" />
-                                        <Bar field="Active" percent={(partnerData?.active / partnerData?.total) * 100 || 0} count={partnerData?.active} color='text-[#2ecc71]' className="bg-[#2ecc71] dark:opacity-70" />
-                                        <Bar field="Blocked" percent={(partnerData?.blocked / partnerData?.total) * 100 || 0} count={partnerData?.blocked} color='text-[#e74c3c]' className="bg-[#e74c3c] dark:opacity-70" />
-                                        <Bar field="Disabled" percent={(partnerData?.disabled / partnerData?.total) * 100 || 0} count={partnerData?.disabled} color='text-[#6c757d]' className="bg-[#6c757d] dark:opacity-70" />
-                                        <Bar field="Verified" percent={(partnerData?.verified / partnerData?.total) * 100 || 0} count={partnerData?.verified} color='text-[#6610f2]' className="bg-[#6610f2] dark:opacity-70" />
-                                        <Bar field="Unverified" percent={(partnerData?.unverified / partnerData?.total) * 100 || 0} count={partnerData?.unverified} color='text-[#fd7e14]' className="bg-[#fd7e14] dark:opacity-70" />
-                                    </div>
-                                </div>}
-                                <div className='mt-8 block  gap-2'>
-                                    <h6 className='mb-3'>Partners Leaderboard</h6>
-                                    <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => handleSearch('Partners', e.target.value)} />
-                                    {isLoading ? (
-                                        <TableSkeleton columns={partnerColumns} skeletonRow={<PartnerSkeletonRow />} />
-                                    ) : (
-                                        <DataTable
-                                            columns={partnerColumns}
-                                            data={partnerPageData}
-                                            loading={loading}
-                                            pagingData={{ ...tableQueries.Partners, total: partnerTotal }}
-                                            onPaginationChange={(page) => handleTableQueryChange('Partners', { pageIndex: page })}
-                                            onSelectChange={(size) => handleTableQueryChange('Partners', { pageSize: size, pageIndex: 1 })}
-                                            onSort={(sort) => handleTableQueryChange('Partners', { sort, pageIndex: 1 })}
-                                        />
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {selectedCategory === 'Teams' && (
-                            <div>
-                                {Employees?.counts && <div className='lg:flex gap-2 justify-between mt-4'>
-                                    <div className="lg:pl-4 flex items-center gap-1 w-full">
-                                        <Bar field="Active" percent={(Employees.counts.active / Employees.counts.total) * 100 || 0} count={Employees.counts.active} color='text-[#2ecc71]' className="bg-[#2ecc71] dark:opacity-70" />
-                                        <Bar field="Inactive" percent={(Employees.counts.inactive / Employees.counts.total) * 100 || 0} count={Employees.counts.inactive} color='text-[#e74c3c]' className="bg-[#e74c3c] dark:opacity-70" />
-                                        <Bar field="Blocked" percent={(Employees.counts.blocked / Employees.counts.total) * 100 || 0} count={Employees.counts.blocked} color='text-[#fd7e14]' className="bg-[#fd7e14] dark:opacity-70" />
-                                        <Bar field="On Notice" percent={(Employees.counts.on_notice / Employees.counts.total) * 100 || 0} count={Employees.counts.on_notice} color='text-[#ffc107]' className="bg-[#ffc107] dark:opacity-70" />
-                                        <Bar field="Departments" percent={(Employees.counts.departments / Employees.counts.total) * 100 || 0} count={Employees.counts.departments} color='text-[#6c757d]' className="bg-[#6c757d] dark:opacity-70" />
-                                        <Bar field="Designations" percent={(Employees.counts.designations / Employees.counts.total) * 100 || 0} count={Employees.counts.designations} color='text-[#007bff]' className="bg-[#007bff] dark:opacity-70" />
-                                    </div>
-                                </div>}
-                                <div className='mt-8 block  gap-2'>
-                                    <h6 className='mb-6'>Team Leaderboard</h6>
-                                    <DebouceInput className="w-full mb-2" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => handleSearch('Teams', e.target.value)} />
-                                    {isLoading ? (
-                                        <TableSkeleton columns={teamColumns} skeletonRow={<TeamSkeletonRow />} />
-                                    ) : (
-                                        <DataTable
-                                            columns={teamColumns}
-                                            data={teamPageData}
-                                            loading={loading}
-                                            pagingData={{ ...tableQueries.Teams, total: teamTotal }}
-                                            onPaginationChange={(page) => handleTableQueryChange('Teams', { pageIndex: page })}
-                                            onSelectChange={(size) => handleTableQueryChange('Teams', { pageSize: size, pageIndex: 1 })}
-                                            onSort={(sort) => handleTableQueryChange('Teams', { sort, pageIndex: 1 })}
-                                        />
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </Card>
-                </section>
-            </section>
-        </Card>
+            <Card>
+                <div className="mb-4">
+                    <h5 className="mb-1">{currentCategory.label} Leaderboard</h5>
+                    <p className="text-gray-500">
+                        Detailed list of all {currentCategory.label.toLowerCase()}
+                    </p>
+                </div>
+                <DebouceInput
+                    className="w-full md:w-1/3 mb-4"
+                    placeholder={`Search ${currentCategory.label}...`}
+                    prefix={<TbSearch className="text-lg" />}
+                    onChange={(e) => handleSearch(currentCategory.label, e.target.value)}
+                />
+                {isLoading ? (
+                    <TableSkeleton
+                        columns={currentCategory.tableColumns}
+                        skeletonRow={currentCategory.skeletonRow}
+                    />
+                ) : (
+                    <DataTable
+                        columns={currentCategory.tableColumns}
+                        data={currentCategory.tableData}
+                        loading={loading}
+                        pagingData={{ ...currentCategory.tableQueries, total: currentCategory.tableTotal }}
+                        onPaginationChange={(page) => handleTableQueryChange(currentCategory.label, { pageIndex: page })}
+                        onSelectChange={(size) => handleTableQueryChange(currentCategory.label, { pageSize: size, pageIndex: 1 })}
+                        onSort={(sort) => handleTableQueryChange(currentCategory.label, { sort, pageIndex: 1 })}
+                    />
+                )}
+            </Card>
+        </div>
     );
 };
 
