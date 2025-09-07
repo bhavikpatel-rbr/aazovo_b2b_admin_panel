@@ -8,15 +8,14 @@ import Th from '@/components/ui/Table/Th';
 import Tr from '@/components/ui/Table/Tr';
 import { masterSelector } from '@/reduxtool/master/masterSlice';
 import {
-    getCompanyAction,
     getDashboardCompanyAction,
     getDashboardCountsAction,
     getDashboardMemberAction,
+    getDashboardPartnerAction,
     getDashboardProductAction,
+    getDashboardTeamsAction,
     getEmployeesListingAction,
-    getMemberAction,
-    getpartnerAction,
-    getProductsAction,
+    getpartnerAction
 } from '@/reduxtool/master/middleware';
 import { useAppDispatch } from '@/reduxtool/store';
 import classNames from '@/utils/classNames';
@@ -310,11 +309,13 @@ const Overview = () => {
         DashboardCompanyData: CompanyData,
         DashboardMemberData: MemberData,
         DashboardProductData: ProductsData,
-        partnerData,
-        EmployeesList: Employees,
+        DashboardPartnerData: partnerData,
+        DashboardTeamData: Employees,
         DashBoardCount,
         loading
     } = useSelector(masterSelector);
+
+    console.log(Employees, " partnerData");
 
     const [isLoading, setIsLoading] = useState(true);
 
@@ -322,15 +323,14 @@ const Overview = () => {
         const fetchData = async () => {
             setIsLoading(true);
             await Promise.all([
-                dispatch(getCompanyAction()),
-                dispatch(getMemberAction()),
-                dispatch(getProductsAction()),
                 dispatch(getpartnerAction()),
                 dispatch(getEmployeesListingAction()),
                 dispatch(getDashboardCountsAction()),
                 dispatch(getDashboardCompanyAction()),
                 dispatch(getDashboardMemberAction()),
                 dispatch(getDashboardProductAction()),
+                dispatch(getDashboardPartnerAction()),
+                dispatch(getDashboardTeamsAction()),
             ]);
             setIsLoading(false);
         };
@@ -368,7 +368,7 @@ const Overview = () => {
         { header: 'Profile & Scores', accessorKey: 'profile_completion', id: 'profile', size: 190, cell: ({ row }: any) => { const { teams_count = 0, kyc_verified, enable_billing, billing_due, members_summary } = row.original; const members_count = members_summary?.total || 0; const profile_completion = members_summary?.profile_completion || 0; const formattedDate = billing_due ? dayjs(billing_due).format('D MMM, YYYY') : " "; return (<div className="flex flex-col gap-1 text-xs"> <span><b>Members:</b> {members_count}</span> <span><b>Teams:</b> {teams_count}</span> <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${kyc_verified ? "Yes" : "No"}`}>{kyc_verified ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <div className="flex gap-1 items-center"><b>Billing:</b><Tooltip title={`Billing: ${enable_billing ? "Yes" : "No"}`}>{enable_billing ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <span><b>Billing Due:</b> {formattedDate}</span> <Tooltip title={`Profile Completion ${profile_completion}%`}> <div className="h-2.5 w-full rounded-full bg-gray-300"> <div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${profile_completion}%` }}></div> </div> </Tooltip> </div>); }, },
         { header: 'Business', accessorKey: 'wallCount', size: 180, meta: { HeaderClass: 'text-center' }, cell: (props: any) => { return (<div className='flex flex-col gap-4 text-center items-center '> <Tooltip title={`Buy: ${props.row.original?.walls?.buy || 0} | Sell: ${props.row.original?.walls?.sell || 0} | Total: ${props.row.original?.walls?.total || 0}`} className='text-xs'> <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.walls?.buy || 0} | {props?.row?.original?.walls?.sell || 0} | {props?.row?.original?.walls?.total || 0} </div> </Tooltip> <Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'> <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div> </Tooltip> <Tooltip title={`Success: ${props.row.original?.leads?.success || 0} | Lost: ${props.row.original?.leads?.lost || 0} | Total: ${props.row.original?.leads?.total || 0}`} className='text-xs'> <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.leads?.success || 0} | {props?.row?.original?.leads?.lost || 0} | {props?.row?.original?.leads?.total || 0} </div> </Tooltip> </div>) } },
     ];
-   
+
     const memberColumns = [
         {
             header: "Member", accessorKey: "name", id: 'member', size: 180,
@@ -396,7 +396,6 @@ const Overview = () => {
         },
     ];
 
-    // --- START: CORRECTED productColumns SECTION ---
     const productStatusColor: Record<string, string> = {
         active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
         inactive: 'bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-100',
@@ -404,19 +403,19 @@ const Overview = () => {
         draft: 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-100',
         rejected: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100',
     };
-    
+
     const productColumns = [
-        { 
-            header: "ID", 
+        {
+            header: "ID",
             accessorKey: "id",
-            size: 60, 
-            meta: { tdClass: "text-center", thClass: "text-center" }, 
-            cell: ({ getValue }: any) => getValue().toString().padStart(6, '0'), 
+            size: 60,
+            meta: { tdClass: "text-center", thClass: "text-center" },
+            cell: ({ getValue }: any) => getValue().toString().padStart(6, '0'),
         },
-        { 
-            header: "Product", 
-            id: "productInfo", 
-            size: 300, 
+        {
+            header: "Product",
+            id: "productInfo",
+            size: 300,
             cell: (props: any) => (
                 <div className="flex items-center gap-3">
                     <Avatar size={30} shape="circle" src={props.row.original.icon_full_path || undefined} icon={<TbBox />} />
@@ -427,25 +426,25 @@ const Overview = () => {
                         </div>
                     </Tooltip>
                 </div>
-            ), 
+            ),
         },
-        { 
-            header: "Category", 
+        {
+            header: "Category",
             accessorKey: "category.name",
             cell: (props: any) => props.row.original.category?.name || "-",
         },
-        { 
-            header: "Sub Cat", 
+        {
+            header: "Sub Cat",
             accessorKey: "sub_category.name",
             cell: (props: any) => props.row.original.sub_category?.name || "-",
         },
-        { 
-            header: "Brand", 
+        {
+            header: "Brand",
             accessorKey: "brand.name",
             cell: (props: any) => props.row.original.brand?.name || "-",
         },
-        { 
-            header: "Status", 
+        {
+            header: "Status",
             accessorKey: "status",
             cell: (props: any) => {
                 const statusKey = props.row.original.status?.toLowerCase() || '';
@@ -454,13 +453,13 @@ const Overview = () => {
                         {props.row.original.status}
                     </Tag>
                 )
-            }, 
+            },
         },
-        { 
-            header: 'Business', 
+        {
+            header: 'Business',
             accessorKey: 'walls.total',
-            size: 180, 
-            meta: { HeaderClass: 'text-center' }, 
+            size: 180,
+            meta: { HeaderClass: 'text-center' },
             cell: (props: any) => (
                 <div className='flex flex-col gap-4 text-center items-center '>
                     <Tooltip title={`Buy: ${props.row.original?.walls?.buy || 0} | Sell: ${props.row.original?.walls?.sell || 0} | Total: ${props.row.original?.walls?.total || 0}`} className='text-xs'>
@@ -479,10 +478,9 @@ const Overview = () => {
                         </div>
                     </Tooltip>
                 </div>
-            ) 
+            )
         },
     ];
-    // --- END: CORRECTED productColumns SECTION ---
 
     const getPartnerStatusClass = (statusValue: string): string => {
         if (!statusValue) return 'bg-gray-200 text-gray-600';
@@ -496,27 +494,252 @@ const Overview = () => {
         };
         return partnerStatusColors[lowerCaseStatus] || 'bg-gray-200 text-gray-600';
     };
+
+    // --- START: CORRECTED partnerColumns SECTION ---
     const partnerColumns = [
-        { header: "Partner Info", accessorKey: "partner_name", id: 'partnerInfo', size: 220, cell: ({ row }: any) => (<div className="flex flex-col"> <div className="flex items-center gap-2"> <Avatar src={row.original.partner_logo ? `${row.original.partner_logo}` : ''} size="md" shape="circle" icon={<TbUserCircle />} /> <div> <h6 className="text-xs font-semibold">{row.original.partner_code}</h6> <span className="text-xs font-semibold">{row.original.partner_name}</span> </div> </div> <span className="text-xs mt-1"><b>Type:</b> {row.original.ownership_type}</span> <div className="text-xs text-gray-500">{row.original.city}, {row.original.state}, {row.original.country?.name}</div> </div>), },
-        { header: "Contact", accessorKey: "owner_name", id: 'contact', size: 180, cell: ({ row }: any) => (<div className="text-xs flex flex-col gap-0.5"> {row.original.owner_name && <span><b>Owner:</b> {row.original.owner_name}</span>} {row.original.primary_contact_number && <span>{row.original.primary_contact_number_code} {row.original.primary_contact_number}</span>} {row.original.primary_email_id && <a href={`mailto:${row.original.primary_email_id}`} className="text-blue-600 hover:underline">{row.original.primary_email_id}</a>} {row.original.partner_website && <a href={row.original.partner_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{row.original.partner_website}</a>} </div>) },
-        { header: "Legal IDs & Status", size: 180, accessorKey: 'status', id: 'legal', cell: ({ row }: any) => (<div className="flex flex-col gap-1 text-[10px]"> {row.original.gst_number && <div><b>GST:</b> <span className="break-all">{row.original.gst_number}</span></div>} {row.original.pan_number && <div><b>PAN:</b> <span className="break-all">{row.original.pan_number}</span></div>} <Tag className={`${getPartnerStatusClass(row.original.status)} capitalize mt-1 self-start !text-[10px] px-1.5 py-0.5`}>{row.original.status}</Tag> </div>) },
-        { header: "Profile & Scores", size: 190, accessorKey: 'profile_completion', id: 'profile', cell: ({ row }: any) => (<div className="flex flex-col gap-1.5 text-xs"> <span><b>Teams:</b> {row.original.teams_count || 0}</span> <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${row.original.kyc_verified ? 'Yes' : 'No'}`}>{row.original.kyc_verified ? <MdCheckCircle className="text-green-500 text-lg" /> : <MdCancel className="text-red-500 text-lg" />}</Tooltip></div> <Tooltip title={`Profile Completion ${row.original.profile_completion}%`}> <div className="h-2.5 w-full rounded-full bg-gray-300"><div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${row.original.profile_completion}%` }}></div></div> </Tooltip> </div>) },
-        { header: 'Business', accessorKey: 'wallCount', size: 180, meta: { HeaderClass: 'text-center' }, cell: (props: any) => (<div className='flex flex-col gap-4 text-center items-center '> <Tooltip title={`Buy: ${props.row.original?.walls?.buy || 0} | Sell: ${props.row.original?.walls?.sell || 0} | Total: ${props.row.original?.walls?.total || 0}`} className='text-xs'> <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.walls?.buy || 0} | {props?.row?.original?.walls?.sell || 0} | {props?.row?.original?.walls?.total || 0} </div> </Tooltip> <Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'> <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div> </Tooltip> <Tooltip title={`Success: ${props.row.original?.leads?.success || 0} | Lost: ${props.row.original?.leads?.lost || 0} | Total: ${props.row.original?.leads?.total || 0}`} className='text-xs'> <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.leads?.success || 0} | {props?.row?.original?.leads?.lost || 0} | {props?.row?.original?.leads?.total || 0} </div> </Tooltip> </div>) },
+        {
+            header: "Partner Info",
+            accessorKey: "partner_name",
+            id: 'partnerInfo',
+            size: 220,
+            cell: ({ row }: any) => {
+                const { partner_logo, partner_code, partner_name, ownership_type, city, state } = row.original;
+                const address = [city, state].filter(Boolean).join(', ');
+
+                return (
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                            <Avatar src={partner_logo || ''} size="md" shape="circle" icon={<TbUserCircle />} />
+                            <div>
+                                <h6 className="text-xs font-semibold">{partner_code || 'N/A'}</h6>
+                                <span className="text-xs font-semibold">{partner_name}</span>
+                            </div>
+                        </div>
+                        <span className="text-xs mt-1"><b>Type:</b> {ownership_type}</span>
+                        <div className="text-xs text-gray-500">{address}</div>
+                    </div>
+                );
+            },
+        },
+        {
+            header: "Contact",
+            id: 'contact',
+            size: 180,
+            cell: ({ row }: any) => {
+                const { partner_name, primary_contact_number, primary_contact_number_code, primary_email_id, partner_website } = row.original;
+                return (
+                    <div className="text-xs flex flex-col gap-0.5">
+                        {partner_name && <span><b>Contact:</b> {partner_name}</span>}
+                        {primary_contact_number && <span>{primary_contact_number_code} {primary_contact_number}</span>}
+                        {primary_email_id && <a href={`mailto:${primary_email_id}`} className="text-blue-600 hover:underline">{primary_email_id}</a>}
+                        {partner_website && <a href={partner_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{partner_website}</a>}
+                    </div>
+                );
+            },
+        },
+        {
+            header: "Legal IDs & Status",
+            size: 180,
+            accessorKey: 'status',
+            id: 'legal',
+            cell: ({ row }: any) => {
+                const { gst_number, pan_number, status } = row.original;
+                return (
+                    <div className="flex flex-col gap-1 text-[10px]">
+                        {gst_number && <div><b>GST:</b> <span className="break-all">{gst_number}</span></div>}
+                        {pan_number && <div><b>PAN:</b> <span className="break-all">{pan_number}</span></div>}
+                        <Tag className={`${getPartnerStatusClass(status)} capitalize mt-1 self-start !text-[10px] px-1.5 py-0.5`}>{status}</Tag>
+                    </div>
+                );
+            },
+        },
+        {
+            header: "Profile & Scores",
+            size: 190,
+            id: 'profile',
+            cell: ({ row }: any) => {
+                // Safely access nested properties and provide fallbacks
+                const teams_count = row.original.team_summary?.total || 0;
+                const kyc_verified = row.original.kyc_verified;
+                const profile_completion = row.original.profile_completion || 0; // The JSON has no profile_completion, default to 0
+
+                return (
+                    <div className="flex flex-col gap-1.5 text-xs">
+                        <span><b>Teams:</b> {teams_count}</span>
+                        <div className="flex gap-1 items-center">
+                            <b>KYC Verified:</b>
+                            <Tooltip title={`KYC: ${kyc_verified ? 'Yes' : 'No'}`}>
+                                {kyc_verified ? <MdCheckCircle className="text-green-500 text-lg" /> : <MdCancel className="text-red-500 text-lg" />}
+                            </Tooltip>
+                        </div>
+                        <Tooltip title={`Profile Completion ${profile_completion}%`}>
+                            <div className="h-2.5 w-full rounded-full bg-gray-300">
+                                <div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${profile_completion}%` }}></div>
+                            </div>
+                        </Tooltip>
+                    </div>
+                );
+            },
+        },
+        {
+            header: 'Business',
+            accessorKey: 'wallCount',
+            size: 180,
+            meta: { HeaderClass: 'text-center' },
+            cell: (props: any) => (
+                <div className='flex flex-col gap-4 text-center items-center '>
+                    <Tooltip title={`Buy: ${props.row.original?.walls?.buy || 0} | Sell: ${props.row.original?.walls?.sell || 0} | Total: ${props.row.original?.walls?.total || 0}`} className='text-xs'>
+                        <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.walls?.buy || 0} | {props?.row?.original?.walls?.sell || 0} | {props?.row?.original?.walls?.total || 0} </div>
+                    </Tooltip>
+                    <Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'>
+                        <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div>
+                    </Tooltip>
+                    <Tooltip title={`Success: ${props.row.original?.leads?.success || 0} | Lost: ${props.row.original?.leads?.lost || 0} | Total: ${props.row.original?.leads?.total || 0}`} className='text-xs'>
+                        <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.leads?.success || 0} | {props?.row?.original?.leads?.lost || 0} | {props?.row?.original?.leads?.total || 0} </div>
+                    </Tooltip>
+                </div>
+            )
+        },
     ];
+    // --- END: CORRECTED partnerColumns SECTION ---
+
     const employeeStatusColor = {
         active: 'bg-blue-500',
         inactive: 'bg-emerald-500',
         on_leave: 'bg-amber-500',
         terminated: 'bg-red-500',
     };
+
     const teamColumns = [
-        { header: "Status", accessorKey: "status", cell: (props: any) => { const { status } = props.row.original || {}; const displayStatus = status?.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toLowerCase()) || ''; return (<Tag className={`${employeeStatusColor[displayStatus as keyof typeof employeeStatusColor]} text-white capitalize`}>{displayStatus}</Tag>); }, },
-        { header: "Name", accessorKey: "name", cell: (props: any) => { const { name, email, mobile_number, profile_pic_path } = props.row.original || {}; return (<div className="flex items-center"><Avatar size={28} shape="circle" src={profile_pic_path} icon={<TbUserCircle />}>{!profile_pic_path ? name?.charAt(0).toUpperCase() : ""}</Avatar><div className="ml-2 rtl:mr-2"><span className="font-semibold">{name}</span><div className="text-xs text-gray-500">{email}</div><div className="text-xs text-gray-500">{mobile_number}</div></div></div>); }, },
-        { header: "Designation", accessorKey: "designation_id", size: 200, cell: (props: any) => { const data = props.row.original || {}; return (<div className="flex items-center"><div className="ml-2 rtl:mr-2"><span className="font-semibold">{data?.designation?.name ?? " "}</span></div></div>); }, },
-        { header: "Department", accessorKey: "department", size: 200, cell: (props: any) => { const { department } = props.row.original || {}; return (<div className="flex items-center"><div className="ml-2 rtl:mr-2"><span className="font-semibold">{department?.name ?? " "}</span></div></div>); }, },
-        { header: "Roles", accessorKey: "roles", cell: (props: any) => { const { roles } = props.row.original || {}; return (<div className="flex flex-wrap gap-1 text-xs">{roles?.map((role: any) => (<Tag key={role.id} className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 text-[10px]">{role?.name || ""}</Tag>))}</div>) }, },
-        { header: "Joined At", accessorKey: "date_of_joining", size: 200, cell: (props: any) => props?.row?.original?.date_of_joining ? <span className="text-xs"> {dayjs(props?.row?.original?.date_of_joining).format("D MMM YYYY, h:mm A")}</span> : '-' },
-        { header: 'Business', accessorKey: 'wallCount', size: 180, meta: { HeaderClass: 'text-center' }, cell: (props: any) => (<div className='flex flex-col gap-4 text-center items-center '> <Tooltip title={`Buy: ${props.row.original?.walls?.buy || 0} | Sell: ${props.row.original?.walls?.sell || 0} | Total: ${props.row.original?.walls?.total || 0}`} className='text-xs'> <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.walls?.buy || 0} | {props?.row?.original?.walls?.sell || 0} | {props?.row?.original?.walls?.total || 0} </div> </Tooltip> <Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'> <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div> </Tooltip> <Tooltip title={`Success: ${props.row.original?.leads?.success || 0} | Lost: ${props.row.original?.leads?.lost || 0} | Total: ${props.row.original?.leads?.total || 0}`} className='text-xs'> <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.leads?.success || 0} | {props?.row?.original?.leads?.lost || 0} | {props?.row?.original?.leads?.total || 0} </div> </Tooltip> </div>) },
+        {
+            header: "Status",
+            accessorKey: "status",
+            cell: (props: any) => {
+                const status = props.row.original?.status || 'Unknown';
+                // Normalize status to match keys in employeeStatusColor (e.g., "Active" -> "active")
+                const statusKey = status.toLowerCase().replace(/ /g, '_');
+                const colorClass = employeeStatusColor[statusKey as keyof typeof employeeStatusColor] || 'bg-gray-500';
+
+                return (
+                    <Tag className={`${colorClass} text-white capitalize`}>
+                        {status}
+                    </Tag>
+                );
+            },
+        },
+        {
+            header: "Name",
+            accessorKey: "name",
+            cell: (props: any) => {
+                const { name, email, mobile_number, profile_pic_path } = props.row.original || {};
+                return (
+                    <div className="flex items-center">
+                        <Avatar size={28} shape="circle" src={profile_pic_path} icon={<TbUserCircle />}>
+                            {/* Show first initial if no profile picture */}
+                            {!profile_pic_path && name ? name.charAt(0).toUpperCase() : ""}
+                        </Avatar>
+                        <div className="ml-2 rtl:mr-2">
+                            <span className="font-semibold">{name ?? 'N/A'}</span>
+                            <div className="text-xs text-gray-500">{email ?? 'No Email'}</div>
+                            <div className="text-xs text-gray-500">{mobile_number ?? 'No Mobile'}</div>
+                        </div>
+                    </div>
+                );
+            },
+        },
+        {
+            header: "Designation",
+            accessorKey: "designation.name", // Using dot notation for accessorKey helps with sorting/filtering
+            size: 200,
+            cell: (props: any) => {
+                // Safely access nested designation name
+                const designationName = props.row.original?.designation?.name;
+                return (
+                    <div className="font-semibold">
+                        {designationName ?? 'N/A'}
+                    </div>
+                );
+            },
+        },
+        {
+            header: "Department",
+            accessorKey: "department.name", // Using dot notation for accessorKey
+            size: 200,
+            cell: (props: any) => {
+                // Safely access nested department name
+                const departmentName = props.row.original?.department?.name;
+                return (
+                    <div className="font-semibold">
+                        {departmentName ?? 'N/A'}
+                    </div>
+                );
+            },
+        },
+        {
+            header: "Roles",
+            accessorKey: "roles",
+            cell: (props: any) => {
+                // Your provided object does not have a 'roles' array.
+                // This cell will now show the role from the 'category' object or role_id as a fallback.
+                const categoryRole = props.row.original?.category?.name;
+                const roleId = props.row.original?.role_id;
+
+                if (categoryRole) {
+                    return <Tag className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 text-[10px]">{categoryRole}</Tag>
+                }
+                if (roleId) {
+                    return <span className="text-xs">Role ID: {roleId}</span>
+                }
+                return <span className="text-xs text-gray-500">No Role Assigned</span>
+            },
+        },
+        {
+            header: "Joined At",
+            accessorKey: "date_of_joining",
+            size: 200,
+            cell: (props: any) => {
+                const joinDate = props.row.original?.date_of_joining;
+                return joinDate ? (
+                    <span className="text-xs">
+                        {dayjs(joinDate).format("D MMM YYYY, h:mm A")}
+                    </span>
+                ) : (
+                    '-'
+                );
+            },
+        },
+        {
+            header: 'Business',
+            accessorKey: 'wall.total', // Corrected accessor key to match JSON
+            size: 180,
+            meta: { HeaderClass: 'text-center' },
+            cell: (props: any) => {
+                // Safely access nested business data with fallbacks
+                const wall = props.row.original?.wall || { buy: 0, sell: 0, total: 0 };
+                const opportunities = props.row.original?.opportunities || { offers: 0, demands: 0, total: 0 };
+                const leads = props.row.original?.leads || { total: 0 }; // Adjusted for available data in your JSON
+
+                return (
+                    <div className='flex flex-col gap-4 text-center items-center'>
+                        <Tooltip title={`Buy: ${wall.buy} | Sell: ${wall.sell} | Total: ${wall.total}`} className='text-xs'>
+                            <div className='bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'>
+                                Wall Listing: {wall.buy} | {wall.sell} | {wall.total}
+                            </div>
+                        </Tooltip>
+                        <Tooltip title={`Offers: ${opportunities.offers} | Demands: ${opportunities.demands} | Total: ${opportunities.total}`} className='text-xs'>
+                            <div className='bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'>
+                                Opportunities: {opportunities.offers} | {opportunities.demands} | {opportunities.total}
+                            </div>
+                        </Tooltip>
+                        <Tooltip title={`Total: ${leads.total}`} className='text-xs'>
+                            <div className='bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'>
+                                Leads: {leads.total}
+                            </div>
+                        </Tooltip>
+                    </div>
+                );
+            },
+        },
     ];
 
     const companyCounts = CompanyData?.total;
@@ -620,14 +843,14 @@ const Overview = () => {
 
                         {selectedCategory === 'Partners' && (
                             <div>
-                                {partnerData?.counts && <div className='lg:flex gap-2 justify-between mt-4'>
+                                {partnerData?.total && <div className='lg:flex gap-2 justify-between mt-4'>
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
-                                        <Bar field="Total" percent={(partnerData.counts.total / partnerData.counts.total) * 100 || 0} count={partnerData.counts.total} color='text-[#6610f2]' className="bg-[#6610f2] dark:opacity-70" />
-                                        <Bar field="Active" percent={(partnerData.counts.active / partnerData.counts.total) * 100 || 0} count={partnerData.counts.active} color='text-[#2ecc71]' className="bg-[#2ecc71] dark:opacity-70" />
-                                        <Bar field="Unregistered" percent={(partnerData.counts.unregistered / partnerData.counts.total) * 100 || 0} count={partnerData.counts.unregistered} color='text-[#e74c3c]' className="bg-[#e74c3c] dark:opacity-70" />
-                                        <Bar field="Disabled" percent={(partnerData.counts.disabled / partnerData.counts.total) * 100 || 0} count={partnerData.counts.disabled} color='text-[#6c757d]' className="bg-[#6c757d] dark:opacity-70" />
-                                        <Bar field="Verified" percent={(partnerData.counts.verified / partnerData.counts.total) * 100 || 0} count={partnerData.counts.verified} color='text-[#6610f2]' className="bg-[#6610f2] dark:opacity-70" />
-                                        <Bar field="Unverified" percent={(partnerData.counts.unverified / partnerData.counts.total) * 100 || 0} count={partnerData.counts.unverified} color='text-[#fd7e14]' className="bg-[#fd7e14] dark:opacity-70" />
+                                        <Bar field="Total" percent={(partnerData?.total / partnerData?.total) * 100 || 0} count={partnerData?.total} color='text-[#6610f2]' className="bg-[#6610f2] dark:opacity-70" />
+                                        <Bar field="Active" percent={(partnerData?.active / partnerData?.total) * 100 || 0} count={partnerData?.active} color='text-[#2ecc71]' className="bg-[#2ecc71] dark:opacity-70" />
+                                        <Bar field="Blocked" percent={(partnerData?.blocked / partnerData?.total) * 100 || 0} count={partnerData?.blocked} color='text-[#e74c3c]' className="bg-[#e74c3c] dark:opacity-70" />
+                                        <Bar field="Disabled" percent={(partnerData?.disabled / partnerData?.total) * 100 || 0} count={partnerData?.disabled} color='text-[#6c757d]' className="bg-[#6c757d] dark:opacity-70" />
+                                        <Bar field="Verified" percent={(partnerData?.verified / partnerData?.total) * 100 || 0} count={partnerData?.verified} color='text-[#6610f2]' className="bg-[#6610f2] dark:opacity-70" />
+                                        <Bar field="Unverified" percent={(partnerData?.unverified / partnerData?.total) * 100 || 0} count={partnerData?.unverified} color='text-[#fd7e14]' className="bg-[#fd7e14] dark:opacity-70" />
                                     </div>
                                 </div>}
                                 <div className='mt-8 block  gap-2'>
@@ -636,7 +859,8 @@ const Overview = () => {
                                     {isLoading ? (
                                         <TableSkeleton columns={partnerColumns} skeletonRow={<PartnerSkeletonRow />} />
                                     ) : (
-                                        <DataTable columns={partnerColumns} data={partnerData?.data || []} />
+                                        <DataTable columns={partnerColumns} data={partnerData?.partners
+                                            || []} />
                                     )}
                                 </div>
                             </div>
@@ -647,11 +871,11 @@ const Overview = () => {
                                 {Employees?.counts && <div className='lg:flex gap-2 justify-between mt-4'>
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
                                         <Bar field="Active" percent={(Employees.counts.active / Employees.counts.total) * 100 || 0} count={Employees.counts.active} color='text-[#2ecc71]' className="bg-[#2ecc71] dark:opacity-70" />
-                                        <Bar field="Disabled" percent={(Employees.counts.disabled / Employees.counts.total) * 100 || 0} count={Employees.counts.disabled} color='text-[#e74c3c]' className="bg-[#e74c3c] dark:opacity-70" />
+                                        <Bar field="Inactive" percent={(Employees.counts.inactive / Employees.counts.total) * 100 || 0} count={Employees.counts.inactive} color='text-[#e74c3c]' className="bg-[#e74c3c] dark:opacity-70" />
                                         <Bar field="Blocked" percent={(Employees.counts.blocked / Employees.counts.total) * 100 || 0} count={Employees.counts.blocked} color='text-[#fd7e14]' className="bg-[#fd7e14] dark:opacity-70" />
-                                        <Bar field="On Notice" percent={(Employees.counts.onnotice / Employees.counts.total) * 100 || 0} count={Employees.counts.onnotice} color='text-[#ffc107]' className="bg-[#ffc107] dark:opacity-70" />
-                                        <Bar field="Departments" percent={(Employees.counts.department / Employees.counts.total) * 100 || 0} count={Employees.counts.department} color='text-[#6c757d]' className="bg-[#6c757d] dark:opacity-70" />
-                                        <Bar field="Designations" percent={(Employees.counts.designation / Employees.counts.total) * 100 || 0} count={Employees.counts.designation} color='text-[#007bff]' className="bg-[#007bff] dark:opacity-70" />
+                                        <Bar field="On Notice" percent={(Employees.counts.on_notice / Employees.counts.total) * 100 || 0} count={Employees.counts.on_notice} color='text-[#ffc107]' className="bg-[#ffc107] dark:opacity-70" />
+                                        <Bar field="Departments" percent={(Employees.counts.departments / Employees.counts.total) * 100 || 0} count={Employees.counts.departments} color='text-[#6c757d]' className="bg-[#6c757d] dark:opacity-70" />
+                                        <Bar field="Designations" percent={(Employees.counts.designations / Employees.counts.total) * 100 || 0} count={Employees.counts.designations} color='text-[#007bff]' className="bg-[#007bff] dark:opacity-70" />
                                     </div>
                                 </div>}
                                 <div className='mt-8 block  gap-2'>
@@ -659,7 +883,7 @@ const Overview = () => {
                                     {isLoading ? (
                                         <TableSkeleton columns={teamColumns} skeletonRow={<TeamSkeletonRow />} />
                                     ) : (
-                                        <DataTable columns={teamColumns} data={Employees?.data?.data || []} />
+                                        <DataTable columns={teamColumns} data={Employees?.data || []} />
                                     )}
                                 </div>
                             </div>

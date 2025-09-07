@@ -2864,7 +2864,7 @@ export const getActualCompanyAsync = async (id: string | number) => {
 
 export const getDashboardCountsAsync = async () => {
   try {
-    // const response = await axiosInstance.get(`${config.apiURL}/get-company/${id}`);
+
     const response = await axiosInstance.get(`${config.apiURL}/dashboard/dashboardcounts`);
     return response;
   } catch (err) {
@@ -2874,7 +2874,7 @@ export const getDashboardCountsAsync = async () => {
 
 export const getDashboardCompanyAsync = async () => {
   try {
-    // const response = await axiosInstance.get(`${config.apiURL}/get-company/${id}`);
+
     const response = await axiosInstance.get(`${config.apiURL}/dashboard/dashboardcompany`);
     return response;
   } catch (err) {
@@ -2884,7 +2884,7 @@ export const getDashboardCompanyAsync = async () => {
 
 export const getDashboardMemberAsync = async () => {
   try {
-    // const response = await axiosInstance.get(`${config.apiURL}/get-company/${id}`);
+
     const response = await axiosInstance.get(`${config.apiURL}/dashboard/dashboardmembers`);
     return response;
   } catch (err) {
@@ -2894,8 +2894,28 @@ export const getDashboardMemberAsync = async () => {
 
 export const getDashboardProductAsync = async () => {
   try {
-    // const response = await axiosInstance.get(`${config.apiURL}/get-company/${id}`);
+
     const response = await axiosInstance.get(`${config.apiURL}/dashboard/dashboardproducts`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
+export const getDashboardPartnerAsync = async () => {
+  try {
+
+    const response = await axiosInstance.get(`${config.apiURL}/dashboard/dashboardpartners`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
+export const getDashboardTeamsAsync = async () => {
+  try {
+
+    const response = await axiosInstance.get(`${config.apiURL}/dashboardteams`);
     return response;
   } catch (err) {
     return isAxiosError(err);
