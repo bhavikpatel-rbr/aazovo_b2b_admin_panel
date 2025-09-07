@@ -3107,29 +3107,78 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
   const navigate = useNavigate();
   const [selectedBuyItems, setSelectedBuyItems] = useState<AutoSpbApiItem[]>([]);
   const [selectedSellItems, setSelectedSellItems] = useState<AutoSpbApiItem[]>([]);
+  
+  // START: New state for filtering
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  // END: New state for filtering
 
   const buyItems = row.original._rawSpbBuyItems || [];
   const sellItems = row.original._rawSpbSellItems || [];
+
+  // START: Reusable map for filter options
+  const filterOptionMap: Record<string, { label: string; key: keyof AutoSpbApiItem }> = {
+    product_status: { label: "Product Status", key: "product_status" },
+    product_specs: { label: "Product Specs", key: "product_specs" },
+    device_type: { label: "Device Type", key: "device_type" },
+    price: { label: "Price", key: "price" },
+    color: { label: "Color", key: "color" },
+    master_cartoon: { label: "Cartoon Type", key: "master_cartoon" },
+    dispatch_status: { label: "Dispatch Status", key: "dispatch_status" },
+    payment_term: { label: "Payment Term", key: "payment_term" },
+    device_condition: { label: "Device Condition", key: "device_condition" },
+    eta_details: { label: "ETA", key: "eta_details" },
+    location: { label: "Location", key: "location" },
+  };
+  // END: Reusable map
+
+  // START: Client-side filtering logic
+  const { filteredBuyItems, filteredSellItems } = useMemo(() => {
+    if (activeFilters.length === 0) {
+      return { filteredBuyItems: buyItems, filteredSellItems: sellItems };
+    }
+
+    const filterPredicate = (item: AutoSpbApiItem) => {
+      return activeFilters.every(filterKey => {
+        const value = item[filterKey as keyof AutoSpbApiItem];
+        // Filter out items where the specified key is null, undefined, or an empty string
+        return value !== null && value !== undefined && String(value).trim() !== '';
+      });
+    };
+
+    return {
+      filteredBuyItems: buyItems.filter(filterPredicate),
+      filteredSellItems: sellItems.filter(filterPredicate),
+    };
+  }, [buyItems, sellItems, activeFilters]);
+
+  const handleToggleFilter = (filterKey: string) => {
+    setActiveFilters(prev =>
+      prev.includes(filterKey)
+        ? prev.filter(k => k !== filterKey)
+        : [...prev, filterKey]
+    );
+  };
+  // END: Client-side filtering logic
+
+  // Clear selections when filters change to avoid confusion
+  useEffect(() => {
+      setSelectedBuyItems([]);
+      setSelectedSellItems([]);
+  }, [activeFilters]);
 
   const handleCreateLead = useCallback(() => {
     if (selectedBuyItems.length !== 1 || selectedSellItems.length !== 1) {
       toast.push(<Notification title="Invalid Selection" type="warning" duration={4000}>Please select exactly one buyer and one seller to create a lead.</Notification>);
       return;
     }
-console.log("row.original",row.original);
-
     const buyer = selectedBuyItems[0];
     const seller = selectedSellItems[0];
-    const productId = row.original.product_id; // UPDATED: Use the correct product_id
-console.log("productId",productId);
-
+    const productId = row.original.product_id;
     if (!productId) {
       toast.push(<Notification title="Error" type="danger">Product ID is missing. Cannot create lead.</Notification>);
       return;
     }
-
     const leadQty = Math.min(Number(buyer.qty) || Infinity, Number(seller.qty) || Infinity);
-
     const prefillState = {
       buyerId: buyer.customer_id,
       supplierId: seller.customer_id,
@@ -3144,9 +3193,8 @@ console.log("productId",productId);
       product_spec_id: null,
       payment_term: null,
     };
-
     toast.push(<Notification title="Redirecting..." type="info">Preparing to create a new lead.</Notification>);
-  navigate('/sales-leads/wall-item/lead/add', { state: prefillState });
+    navigate('/sales-leads/wall-item/lead/add', { state: prefillState });
   }, [selectedBuyItems, selectedSellItems, row.original, navigate]);
 
   const handleCreateOffer = useCallback(() => {
@@ -3154,15 +3202,12 @@ console.log("productId",productId);
         toast.push(<Notification title="No Sellers Selected" type="warning">Please select at least one seller to create an offer.</Notification>);
         return;
     }
-
     const productId = row.original.product_id;
     if (!productId) {
       toast.push(<Notification title="Error" type="danger">Product ID is missing. Cannot create offer.</Notification>);
       return;
     }
-
     const firstSeller = selectedSellItems[0];
-
     const prefillState = {
         productId: Number(productId),
         product_name: row.original.opportunity_id,
@@ -3174,7 +3219,6 @@ console.log("productId",productId);
         qty: Number(firstSeller.qty) || undefined,
         price: Number(firstSeller.price) || undefined,
     };
-
     toast.push(<Notification title="Redirecting..." type="info">Preparing to create a new offer.</Notification>);
     navigate('/sales-leads/wall-item/offers/create', { state: prefillState });
   }, [selectedSellItems, row.original, navigate]);
@@ -3184,15 +3228,12 @@ console.log("productId",productId);
           toast.push(<Notification title="No Buyers Selected" type="warning">Please select at least one buyer to create a demand.</Notification>);
           return;
       }
-  
       const productId = row.original.product_id;
       if (!productId) {
         toast.push(<Notification title="Error" type="danger">Product ID is missing. Cannot create demand.</Notification>);
         return;
       }
-      
       const firstBuyer = selectedBuyItems[0];
-  
       const prefillState = {
           productId: Number(productId),
           product_name: row.original.opportunity_id,
@@ -3204,7 +3245,6 @@ console.log("productId",productId);
           qty: Number(firstBuyer.qty) || undefined,
           price: Number(firstBuyer.price) || undefined,
       };
-  
       toast.push(<Notification title="Redirecting..." type="info">Preparing to create a new demand.</Notification>);
       navigate('/sales-leads/wall-item/demands/create', { state: prefillState });
   }, [selectedBuyItems, row.original, navigate]);
@@ -3225,9 +3265,9 @@ console.log("productId",productId);
   };
   const handleSelectAll = (type: 'Buy' | 'Sell', isChecked: boolean) => {
     if (type === 'Buy') {
-      setSelectedBuyItems(isChecked ? buyItems : []);
+      setSelectedBuyItems(isChecked ? filteredBuyItems : []);
     } else {
-      setSelectedSellItems(isChecked ? sellItems : []);
+      setSelectedSellItems(isChecked ? filteredSellItems : []);
     }
   }
 
@@ -3236,17 +3276,61 @@ console.log("productId",productId);
       bordered
       className="m-1 my-2 rounded-lg bg-gray-50 dark:bg-gray-900/50"
     >
+       {/* START: New Filter UI Section */}
+       <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-4">
+                <Dropdown
+                    renderTitle={
+                    <Button variant="default" size="sm" icon={<TbFilter />}>
+                        Filter By
+                    </Button>
+                    }
+                    placement="bottom-start"
+                >
+                    <div className="p-2 w-56 max-h-60 overflow-y-auto">
+                    {Object.entries(filterOptionMap).map(([key, { label }]) => (
+                        <div key={key} className="px-1">
+                        <label className="flex items-center gap-2 cursor-pointer py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md px-2">
+                            <Checkbox
+                            checked={activeFilters.includes(key)}
+                            onChange={() => handleToggleFilter(key)}
+                            />
+                            <span className="text-sm">{label}</span>
+                        </label>
+                        </div>
+                    ))}
+                    <div className="border-t my-1 dark:border-gray-600"></div>
+                    <Dropdown.Item onClick={() => setActiveFilters([])}>Clear All Filters</Dropdown.Item>
+                    </div>
+                </Dropdown>
+                <div className="flex flex-wrap gap-1.5 items-center">
+                    {activeFilters.map(key => (
+                        <Tag key={key} prefix className="capitalize">
+                            {filterOptionMap[key]?.label || key}
+                            <TbX className="ml-1.5 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => handleToggleFilter(key)} />
+                        </Tag>
+                    ))}
+                </div>
+            </div>
+            {activeFilters.length > 0 && (
+                <Button size="xs" variant="plain" onClick={() => setActiveFilters([])} className="text-red-500 hover:underline">
+                    Clear All
+                </Button>
+            )}
+        </div>
+        {/* END: New Filter UI Section */}
+
       <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
           <div className="flex justify-between items-center mb-2">
             <h6 className="text-sm font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-2">
-              <TbChecks /> Buyer ({buyItems.length})
+              <TbChecks /> Buyer ({filteredBuyItems.length})
             </h6>
-            {buyItems.length > 0 &&
+            {filteredBuyItems.length > 0 &&
               <label className="flex items-center gap-2 text-xs cursor-pointer">
                 <Checkbox
-                  checked={selectedBuyItems.length === buyItems.length && buyItems.length > 0}
-                  indeterminate={selectedBuyItems.length > 0 && selectedBuyItems.length < buyItems.length}
+                  checked={selectedBuyItems.length === filteredBuyItems.length && filteredBuyItems.length > 0}
+                  indeterminate={selectedBuyItems.length > 0 && selectedBuyItems.length < filteredBuyItems.length}
                   onChange={(checked) => handleSelectAll('Buy', checked)}
                 />
                 <span>Select All</span>
@@ -3255,9 +3339,9 @@ console.log("productId",productId);
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-md">
             <div className="max-h-60 overflow-y-auto">
-              {buyItems.length > 0 ? (
+              {filteredBuyItems.length > 0 ? (
                 <div className="px-2">
-                  {buyItems.map((item) => (
+                  {filteredBuyItems.map((item) => (
                     <SpbSummaryRow
                       key={`buy-${item.id}`}
                       item={item}
@@ -3268,7 +3352,7 @@ console.log("productId",productId);
                 </div>
               ) : (
                 <p className="text-xs text-gray-500 py-4 text-center">
-                  No buy demand in this match.
+                  {buyItems.length > 0 ? 'No buyers match the current filters.' : 'No buy demand in this match.'}
                 </p>
               )}
             </div>
@@ -3278,13 +3362,13 @@ console.log("productId",productId);
         <div>
           <div className="flex justify-between items-center mb-2">
             <h6 className="text-sm font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-2">
-              <TbBox /> Seller ({sellItems.length})
+              <TbBox /> Seller ({filteredSellItems.length})
             </h6>
-            {sellItems.length > 0 &&
+            {filteredSellItems.length > 0 &&
               <label className="flex items-center gap-2 text-xs cursor-pointer">
                 <Checkbox
-                  checked={selectedSellItems.length === sellItems.length && sellItems.length > 0}
-                  indeterminate={selectedSellItems.length > 0 && selectedSellItems.length < sellItems.length}
+                  checked={selectedSellItems.length === filteredSellItems.length && filteredSellItems.length > 0}
+                  indeterminate={selectedSellItems.length > 0 && selectedSellItems.length < filteredSellItems.length}
                   onChange={(checked) => handleSelectAll('Sell', checked)}
                 />
                 <span>Select All</span>
@@ -3293,9 +3377,9 @@ console.log("productId",productId);
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-md">
             <div className="max-h-60 overflow-y-auto">
-              {sellItems.length > 0 ? (
+              {filteredSellItems.length > 0 ? (
                 <div className="px-2">
-                  {sellItems.map((item) => (
+                  {filteredSellItems.map((item) => (
                     <SpbSummaryRow
                       key={`sell-${item.id}`}
                       item={item}
@@ -3305,8 +3389,8 @@ console.log("productId",productId);
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-gray-500 py-4 text-center">
-                  No sell offers in this match.
+                 <p className="text-xs text-gray-500 py-4 text-center">
+                  {sellItems.length > 0 ? 'No sellers match the current filters.' : 'No sell offers in this match.'}
                 </p>
               )}
             </div>
