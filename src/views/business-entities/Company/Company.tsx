@@ -513,61 +513,62 @@ function exportToCsv(filename: string, rows: CompanyItem[]) {
     toast.push(
       <Notification title="No Data" type="info">
         Nothing to export.
-      </Notification>
+      </Notification>,
     );
     return false;
   }
+
   const CSV_HEADERS = [
-    "ID",
-    "Company Code",
     "Company Name",
+    "Company Code",
     "Owner Name",
     "Ownership Type",
     "Status",
-    "Contact",
-    "Email",
     "Country",
-    "State",
-    "City",
-    "KYC Verified",
-    "gst_number",
-    "pan_number",
-    "Created Date",
+    "Tax Identification",
   ];
-  const preparedRows = rows.map((row) => ({
-    id: row.id,
-    company_code: row.company_code,
-    company_name: row.company_name,
-    owner_name: row.owner_name,
-    ownership_type: row.ownership_type,
-    status: row.status,
-    primary_contact_number: `${row.primary_contact_number_code} ${row.primary_contact_number}`,
-    primary_email_id: row.primary_email_id,
-    country: row.country?.name || " ",
-    state: row.state,
-    city: row.city,
-    kyc_verified: row.kyc_verified ? "Yes" : "No",
-    gst_number: row.gst_number,
-    pan_number: row.pan_number,
-    created_at: row.created_at
-      ? dayjs(row.created_at).format("DD MMM YYYY")
-      : " ",
-  }));
+
+  type RowType = { [key in typeof CSV_HEADERS[number]]: any };
+
+  const preparedRows = rows.map((row): RowType => {
+    let taxId = "";
+    if (row.country?.name?.toLowerCase() === 'india') {
+      const gst = row.gst_number ? `GST: ${row.gst_number}` : '';
+      const pan = row.pan_number ? `PAN: ${row.pan_number}` : '';
+      taxId = [gst, pan].filter(Boolean).join('; ');
+    } else {
+      const trn = row.trn_number ? `TRN: ${row.trn_number}` : '';
+      const tan = row.tan_number ? `TAN: ${row.tan_number}` : '';
+      taxId = [trn, tan].filter(Boolean).join('; ');
+    }
+
+    return {
+      "Company Name": row.company_name,
+      "Company Code": row.company_code,
+      "Owner Name": row.owner_name,
+      "Ownership Type": row.ownership_type,
+      Status: row.status,
+      Country: row.country?.name || "",
+      "Tax Identification": taxId,
+    };
+  });
+
   const csvContent = [
     CSV_HEADERS.join(","),
     ...preparedRows.map((row) =>
       CSV_HEADERS.map((header) =>
         JSON.stringify(
-          row[header.toLowerCase().replace(/ /g, "_") as keyof typeof row] ??
-          "",
+          row[header as keyof typeof row] ?? "",
           (key, value) => (value === null ? "" : value)
         )
       ).join(",")
     ),
   ].join("\n");
+
   const blob = new Blob([`\ufeff${csvContent}`], {
     type: "text/csv;charset=utf-8;",
   });
+
   const link = document.createElement("a");
   if (link.download !== undefined) {
     const url = URL.createObjectURL(blob);
@@ -3126,6 +3127,7 @@ console.log("PendingBillData",PendingBillData);
         </Notification>
       );
       dispatch(getCompanyAction());
+      dispatch(getPendingBillAction()),
       handleCloseEnableBillingModal();
     } catch (error: any) {
       toast.push(
