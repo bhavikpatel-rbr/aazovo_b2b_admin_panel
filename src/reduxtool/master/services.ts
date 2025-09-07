@@ -2922,6 +2922,16 @@ export const getDashboardTeamsAsync = async () => {
   }
 }
 
+export const getDashboardLeadsAsync = async () => {
+  try {
+
+    const response = await axiosInstance.get(`${config.apiURL}/lead/dashboardleads`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
 
 export const deleteOfferAsync = async (OfferData: any) => {
   try {

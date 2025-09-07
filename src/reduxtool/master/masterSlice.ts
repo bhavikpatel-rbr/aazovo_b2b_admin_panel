@@ -142,7 +142,8 @@ import {
   getDashboardMemberAction,
   getDashboardProductAction,
   getDashboardPartnerAction,
-  getDashboardTeamsAction
+  getDashboardTeamsAction,
+  getDashboardLeadsAction
 } from "./middleware";
 
 const INITIAL_STATE: any = {
@@ -853,6 +854,10 @@ const masterSlice = createSlice({
     builder.addCase(getDashboardTeamsAction.fulfilled, (state, { payload }) => ({
       ...state,
       DashboardTeamData: payload,
+    }));
+    builder.addCase(getDashboardLeadsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      DashboardLeadsData: payload,
     }));
   },
 
