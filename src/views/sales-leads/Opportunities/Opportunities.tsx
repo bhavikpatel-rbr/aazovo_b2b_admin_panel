@@ -2822,13 +2822,11 @@ const ExpandedOpportunityDetails: React.FC<{
     </Card>
   );
 };
-
 const SpbActionToolbar: React.FC<{
   items: AutoSpbApiItem[];
   matchType: "Buy" | "Sell";
-  activeFilters: string[];
-  onFilterChange: (filters: string[]) => void;
-}> = ({ items, matchType, activeFilters, onFilterChange }) => {
+}> = ({ items, matchType }) => {
+  const [selectedMessageOptions, setSelectedMessageOptions] = useState<string[]>([]);
   const [messageTemplate, setMessageTemplate] = useState<
     "default" | "master" | "wtb" | null
   >(null);
@@ -2836,6 +2834,7 @@ const SpbActionToolbar: React.FC<{
 
   useEffect(() => {
     if (items.length === 0) {
+      setSelectedMessageOptions([]);
       setMessageTemplate(null);
       setCustomMessage("");
     }
@@ -2869,10 +2868,11 @@ const SpbActionToolbar: React.FC<{
     "Select Template";
 
   const handleToggleOption = (optionKey: string) => {
-    const newFilters = activeFilters.includes(optionKey)
-      ? activeFilters.filter((k) => k !== optionKey)
-      : [...activeFilters, optionKey];
-    onFilterChange(newFilters);
+    setSelectedMessageOptions((prev) =>
+      prev.includes(optionKey)
+        ? prev.filter((k) => k !== optionKey)
+        : [...prev, optionKey]
+    );
   };
 
   const generateMessage = () => {
@@ -2885,7 +2885,7 @@ const SpbActionToolbar: React.FC<{
         } ${item.unit || ""}unit`,
       ];
 
-      activeFilters.forEach((key) => {
+      selectedMessageOptions.forEach((key) => {
         const option = messageOptionMap[key];
         if (option) {
           const value = item[option.key];
@@ -2966,7 +2966,7 @@ const SpbActionToolbar: React.FC<{
           <Dropdown
             renderTitle={
               <Button variant="default" size="sm" icon={<TbPlus />} className="w-full sm:w-auto">
-                Add Details / Filter
+                Add Details
               </Button>
             }
             placement="bottom-start"
@@ -2976,7 +2976,7 @@ const SpbActionToolbar: React.FC<{
                 <div key={key} className="px-1">
                   <label className="flex items-center gap-2 cursor-pointer py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md px-2">
                     <Checkbox
-                      checked={activeFilters.includes(key)}
+                      checked={selectedMessageOptions.includes(key)}
                       onChange={() => handleToggleOption(key)}
                     />
                     <span className="text-sm">{label}</span>
@@ -3012,10 +3012,10 @@ const SpbActionToolbar: React.FC<{
           </Dropdown>
         </div>
 
-        {activeFilters.length > 0 && (
+        {selectedMessageOptions.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-2">Including / Filtering by:</span>
-            {activeFilters.map((key) => (
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-2">Including:</span>
+            {selectedMessageOptions.map((key) => (
               <Tag
                 key={key}
                 prefix
@@ -3107,66 +3107,9 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
   const navigate = useNavigate();
   const [selectedBuyItems, setSelectedBuyItems] = useState<AutoSpbApiItem[]>([]);
   const [selectedSellItems, setSelectedSellItems] = useState<AutoSpbApiItem[]>([]);
-  const [buyDetailFilters, setBuyDetailFilters] = useState<string[]>([]);
-  const [sellDetailFilters, setSellDetailFilters] = useState<string[]>([]);
 
   const buyItems = row.original._rawSpbBuyItems || [];
   const sellItems = row.original._rawSpbSellItems || [];
-
-  const messageOptionMap: Record<string, { key: keyof AutoSpbApiItem }> = useMemo(() => ({
-    product_status: { key: "product_status" },
-    product_specs: { key: "product_specs" },
-    device_type: { key: "device_type" },
-    price: { key: "price" },
-    color: { key: "color" },
-    master_cartoon: { key: "master_cartoon" },
-    dispatch_status: { key: "dispatch_status" },
-    payment_term: { key: "payment_term" },
-    device_condition: { key: "device_condition" },
-    eta_details: { key: "eta_details" },
-    location: { key: "location" },
-  }), []);
-
-  const filteredBuyItems = useMemo(() => {
-    if (buyDetailFilters.length === 0) return buyItems;
-    return buyItems.filter(item => {
-      return buyDetailFilters.every(filterKey => {
-        const mapEntry = messageOptionMap[filterKey];
-        if (!mapEntry) return false;
-        const value = item[mapEntry.key];
-        return value !== null && value !== undefined && String(value).trim() !== '';
-      });
-    });
-  }, [buyItems, buyDetailFilters, messageOptionMap]);
-
-  const filteredSellItems = useMemo(() => {
-    if (sellDetailFilters.length === 0) return sellItems;
-    return sellItems.filter(item => {
-      return sellDetailFilters.every(filterKey => {
-        const mapEntry = messageOptionMap[filterKey];
-        if (!mapEntry) return false;
-        const value = item[mapEntry.key];
-        return value !== null && value !== undefined && String(value).trim() !== '';
-      });
-    });
-  }, [sellItems, sellDetailFilters, messageOptionMap]);
-
-  useEffect(() => {
-    setSelectedBuyItems(currentSelected =>
-      currentSelected.filter(selectedItem =>
-        filteredBuyItems.some(filteredItem => filteredItem.id === selectedItem.id)
-      )
-    );
-  }, [filteredBuyItems]);
-
-  useEffect(() => {
-    setSelectedSellItems(currentSelected =>
-      currentSelected.filter(selectedItem =>
-        filteredSellItems.some(filteredItem => filteredItem.id === selectedItem.id)
-      )
-    );
-  }, [filteredSellItems]);
-
 
   const handleCreateLead = useCallback(() => {
     if (selectedBuyItems.length !== 1 || selectedSellItems.length !== 1) {
@@ -3282,9 +3225,9 @@ console.log("productId",productId);
   };
   const handleSelectAll = (type: 'Buy' | 'Sell', isChecked: boolean) => {
     if (type === 'Buy') {
-      setSelectedBuyItems(isChecked ? filteredBuyItems : []);
+      setSelectedBuyItems(isChecked ? buyItems : []);
     } else {
-      setSelectedSellItems(isChecked ? filteredSellItems : []);
+      setSelectedSellItems(isChecked ? sellItems : []);
     }
   }
 
@@ -3297,24 +3240,24 @@ console.log("productId",productId);
         <div>
           <div className="flex justify-between items-center mb-2">
             <h6 className="text-sm font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-2">
-              <TbChecks /> Buyer ({filteredBuyItems.length} / {buyItems.length})
+              <TbChecks /> Buyer ({buyItems.length})
             </h6>
             {buyItems.length > 0 &&
               <label className="flex items-center gap-2 text-xs cursor-pointer">
                 <Checkbox
-                  checked={filteredBuyItems.length > 0 && selectedBuyItems.length === filteredBuyItems.length}
-                  indeterminate={selectedBuyItems.length > 0 && selectedBuyItems.length < filteredBuyItems.length}
+                  checked={selectedBuyItems.length === buyItems.length && buyItems.length > 0}
+                  indeterminate={selectedBuyItems.length > 0 && selectedBuyItems.length < buyItems.length}
                   onChange={(checked) => handleSelectAll('Buy', checked)}
                 />
-                <span>Select All Visible</span>
+                <span>Select All</span>
               </label>
             }
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-md">
             <div className="max-h-60 overflow-y-auto">
-              {filteredBuyItems.length > 0 ? (
+              {buyItems.length > 0 ? (
                 <div className="px-2">
-                  {filteredBuyItems.map((item) => (
+                  {buyItems.map((item) => (
                     <SpbSummaryRow
                       key={`buy-${item.id}`}
                       item={item}
@@ -3325,39 +3268,34 @@ console.log("productId",productId);
                 </div>
               ) : (
                 <p className="text-xs text-gray-500 py-4 text-center">
-                  {buyItems.length > 0 ? 'No buyers match selected filters.' : 'No buy demand in this match.'}
+                  No buy demand in this match.
                 </p>
               )}
             </div>
-            <SpbActionToolbar 
-                items={selectedBuyItems} 
-                matchType="Buy" 
-                activeFilters={buyDetailFilters}
-                onFilterChange={setBuyDetailFilters}
-            />
+            <SpbActionToolbar items={selectedBuyItems} matchType="Buy" />
           </div>
         </div>
         <div>
           <div className="flex justify-between items-center mb-2">
             <h6 className="text-sm font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-2">
-              <TbBox /> Seller ({filteredSellItems.length} / {sellItems.length})
+              <TbBox /> Seller ({sellItems.length})
             </h6>
             {sellItems.length > 0 &&
               <label className="flex items-center gap-2 text-xs cursor-pointer">
                 <Checkbox
-                  checked={filteredSellItems.length > 0 && selectedSellItems.length === filteredSellItems.length}
-                  indeterminate={selectedSellItems.length > 0 && selectedSellItems.length < filteredSellItems.length}
+                  checked={selectedSellItems.length === sellItems.length && sellItems.length > 0}
+                  indeterminate={selectedSellItems.length > 0 && selectedSellItems.length < sellItems.length}
                   onChange={(checked) => handleSelectAll('Sell', checked)}
                 />
-                <span>Select All Visible</span>
+                <span>Select All</span>
               </label>
             }
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-md">
             <div className="max-h-60 overflow-y-auto">
-              {filteredSellItems.length > 0 ? (
+              {sellItems.length > 0 ? (
                 <div className="px-2">
-                  {filteredSellItems.map((item) => (
+                  {sellItems.map((item) => (
                     <SpbSummaryRow
                       key={`sell-${item.id}`}
                       item={item}
@@ -3367,17 +3305,12 @@ console.log("productId",productId);
                   ))}
                 </div>
               ) : (
-                 <p className="text-xs text-gray-500 py-4 text-center">
-                  {sellItems.length > 0 ? 'No sellers match selected filters.' : 'No sell offers in this match.'}
+                <p className="text-xs text-gray-500 py-4 text-center">
+                  No sell offers in this match.
                 </p>
               )}
             </div>
-            <SpbActionToolbar 
-                items={selectedSellItems} 
-                matchType="Sell" 
-                activeFilters={sellDetailFilters}
-                onFilterChange={setSellDetailFilters}
-            />
+            <SpbActionToolbar items={selectedSellItems} matchType="Sell" />
           </div>
         </div>
       </div>
