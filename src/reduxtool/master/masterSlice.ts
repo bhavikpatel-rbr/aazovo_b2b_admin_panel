@@ -137,7 +137,8 @@ import {
   getWallItemsAction,
   getWallListingAction,
   getPageAction,
-  getDashboardCountsAction
+  getDashboardCountsAction,
+  getDashboardCompanyAction
 } from "./middleware";
 
 const INITIAL_STATE: any = {
@@ -828,6 +829,10 @@ const masterSlice = createSlice({
     builder.addCase(getDashboardCountsAction.fulfilled, (state, { payload }) => ({
       ...state,
       DashBoardCount: payload,
+    }));
+    builder.addCase(getDashboardCompanyAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      DashboardCompanyData: payload,
     }));
   },
 

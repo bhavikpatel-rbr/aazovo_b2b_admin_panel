@@ -2872,6 +2872,16 @@ export const getDashboardCountsAsync = async () => {
   }
 }
 
+export const getDashboardCompanyAsync = async () => {
+  try {
+    // const response = await axiosInstance.get(`${config.apiURL}/get-company/${id}`);
+    const response = await axiosInstance.get(`${config.apiURL}/dashboard/dashboardcompany`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
 export const deleteOfferAsync = async (OfferData: any) => {
   try {
     const response = await axiosInstance.delete(`${config.apiURL}/offer/${OfferData}`)
