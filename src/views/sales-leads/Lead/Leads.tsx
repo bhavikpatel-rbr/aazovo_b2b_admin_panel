@@ -2778,7 +2778,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         productName: apiLead.product?.name ?? " ",
         customerId: String(buyerInfo?.id ?? apiLead.customer?.id ?? " "),
         customerName: buyerInfo?.name ?? apiLead.customer?.name ?? " ",
-        lead_intent: (apiLead.want_to as LeadIntent) || apiLead.lead_intent || "Buy",
+        lead_intent: apiLead.lead_intent || "Buy",
         qty: apiLead.qty,
         target_price: apiLead.target_price,
         assigned_sales_person_id: assignedId,
@@ -3411,7 +3411,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           return (
             <div className="flex flex-col gap-1 text-xs">
               <div className="flex items-center gap-2">
-                <Tag className="capitalize">{props.row.original.lead_intent || "Buy"}</Tag>
+                <Tag className="capitalize">{props.row.original.lead_intent || ""}</Tag>
                 <span><strong>Qty:</strong> {props.row.original.qty ?? "-"}</span>
               </div>
               <span>
