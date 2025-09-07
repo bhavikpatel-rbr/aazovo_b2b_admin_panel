@@ -15,7 +15,6 @@ import {
     getDashboardProductAction,
     getDashboardTeamsAction,
     getEmployeesListingAction,
-    getpartnerAction,
 } from '@/reduxtool/master/middleware'
 import { useAppDispatch } from '@/reduxtool/store'
 import classNames from '@/utils/classNames'
@@ -47,7 +46,7 @@ import { useSelector } from 'react-redux'
 // --- Type Definitions (from reference component) ---
 import type { TableQueries } from '@/@types/common'
 
-// --- START: SKELETON COMPONENTS ---
+// --- START: SKELETON COMPONENTS (Unchanged) ---
 
 // 1. Base Skeleton Block
 const Skeleton = ({ className }: { className?: string }) => {
@@ -247,7 +246,6 @@ const TeamSkeletonRow = () => (
         </Td>
     </>
 )
-
 // --- END: SKELETON COMPONENTS ---
 
 type StatisticCategory =
@@ -352,6 +350,7 @@ const Overview = () => {
         loading,
     } = useSelector(masterSelector)
 
+    // This state controls the skeleton visibility for each tab's initial load.
     const [isLoading, setIsLoading] = useState(true)
 
     // State for table queries for each category
@@ -363,23 +362,70 @@ const Overview = () => {
         Teams: { pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' } as TableQueries,
     });
 
+    // --- START: DATA FETCHING REFACTOR ---
+
+    // 1. Fetch dashboard counts once on component mount for the top cards.
     useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true)
-            await Promise.all([
-                dispatch(getpartnerAction()),
-                dispatch(getEmployeesListingAction()),
-                dispatch(getDashboardCountsAction()),
-                dispatch(getDashboardCompanyAction()),
-                dispatch(getDashboardMemberAction()),
-                dispatch(getDashboardProductAction()),
-                dispatch(getDashboardPartnerAction()),
-                dispatch(getDashboardTeamsAction()),
-            ])
-            setIsLoading(false)
-        }
-        fetchData()
+        dispatch(getDashboardCountsAction())
     }, [dispatch])
+
+    // 2. Fetch data for the selected category tab if it hasn't been fetched yet.
+    useEffect(() => {
+        const fetchCategoryData = async () => {
+            // Helper to check if data for the current category already exists in the Redux store.
+            // It checks for the existence of the main data array property (`.companies`, `.members`, etc.)
+            // to correctly handle cases where the API has returned an empty array.
+            // const doesDataExist = () => {
+            //     switch (selectedCategory) {
+            //         case 'Companies': return CompanyData?.companies !== undefined
+            //         case 'Members':   return MemberData?.members !== undefined
+            //         case 'Products':  return ProductsData?.products !== undefined
+            //         case 'Partners':  return partnerData?.partners !== undefined
+            //         case 'Teams':     return Employees?.data !== undefined
+            //         default:          return true // Assume data exists for any unknown category to prevent errors.
+            //     }
+            // }
+
+            // if (doesDataExist()) {
+            //     setIsLoading(false) // Data is already present, no skeleton needed.
+            //     return
+            // }
+
+            setIsLoading(true) // Show skeleton while fetching.
+            let fetchPromise
+
+            switch (selectedCategory) {
+                case 'Companies':
+                    fetchPromise = dispatch(getDashboardCompanyAction())
+                    break
+                case 'Members':
+                    fetchPromise = dispatch(getDashboardMemberAction())
+                    break
+                case 'Products':
+                    fetchPromise = dispatch(getDashboardProductAction())
+                    break
+                case 'Partners':
+                    fetchPromise = dispatch(getDashboardPartnerAction())
+                    break
+                case 'Teams':
+                    // Fetch both summary and list data for teams.
+                    fetchPromise = Promise.all([
+                        dispatch(getDashboardTeamsAction()),
+                        dispatch(getEmployeesListingAction()),
+                    ])
+                    break
+            }
+
+            if (fetchPromise) {
+                await fetchPromise
+            }
+            setIsLoading(false) // Hide skeleton after fetch completes.
+        }
+
+        fetchCategoryData()
+    }, [selectedCategory, dispatch]) // This effect re-runs only when the user changes the tab.
+
+    // --- END: DATA FETCHING REFACTOR ---
 
     const handleTableQueryChange = useCallback(
         (category: StatisticCategory, newQuery: Partial<TableQueries>) => {
@@ -397,6 +443,9 @@ const Overview = () => {
 
     // --- Generic Data Processing Logic ---
     const processData = (rawData: any[], queries: TableQueries, searchLogic: (item: any, query: string) => boolean) => {
+        if (!rawData) {
+            return { pageData: [], total: 0 }; // Return empty if rawData is null/undefined
+        }
         const { query = '', pageIndex = 1, pageSize = 10, sort = { order: '', key: '' } } = queries;
         let processedData = cloneDeep(rawData);
 
@@ -489,7 +538,7 @@ const Overview = () => {
     ), [Employees?.data, tableQueries?.Teams]);
 
 
-    // --- Column Definitions (remain mostly unchanged) ---
+    // --- Column Definitions (Unchanged) ---
 
     const statusColor = {
         Active: 'bg-green-200 text-green-600',
