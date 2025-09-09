@@ -2860,7 +2860,8 @@ const PartnerListTable = () => {
           return (
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <Link to={`/business-entities/member-view/${id}`}>
+               
+                <Link to={`/business-entities/partner-view/${id}`}>
                   <h6 className="text-xs font-semibold">
                     <em className="text-blue-600">
                       {String(id).padStart(5, "0") || "Partner Code"}
