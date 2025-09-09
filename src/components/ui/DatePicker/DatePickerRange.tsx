@@ -46,6 +46,36 @@ const validationRule = (val: any) =>
 const isFirstDateSet = (val: any) =>
     Array.isArray(val) && val.length === 2 && val[0] instanceof Date
 
+// A simple presets component for the "Today" button
+const Presets = ({ onSelect, closePicker }) => {
+    const handleTodayClick = () => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize to start of day
+        onSelect([today, today]);
+        closePicker(); // Close picker after selecting
+    };
+
+    const presetButtonStyle = {
+        width: '100%',
+        padding: '8px 12px',
+        border: 'none',
+        textAlign: 'left',
+        cursor: 'pointer',
+        background: 'transparent',
+        fontSize: '14px',
+    };
+
+    return (
+        <div style={{ padding: '8px 0', borderRight: '1px solid #E5E7EB', minWidth: '100px' }}>
+            <button style={presetButtonStyle} onClick={handleTodayClick}>
+                Today
+            </button>
+            {/* You can add more presets like "Last 7 Days" here */}
+        </div>
+    );
+};
+
+
 const DatePickerRange = (props: DatePickerRangeProps) => {
     const {
         className,
@@ -168,29 +198,35 @@ const DatePickerRange = (props: DatePickerRangeProps) => {
             onDropdownOpen={onDropdownOpen}
             {...rest}
         >
-            <RangeCalendar
-                locale={finalLocale}
-                defaultMonth={(valueValid ? _value?.[0] : defaultMonth) as Date}
-                value={_value as [Date | null, Date | null]}
-                labelFormat={labelFormat}
-                dayClassName={dayClassName}
-                dayStyle={dayStyle}
-                disableOutOfMonth={disableOutOfMonth}
-                minDate={minDate}
-                maxDate={maxDate}
-                disableDate={disableDate}
-                firstDayOfWeek={firstDayOfWeek}
-                enableHeaderLabel={enableHeaderLabel}
-                singleDate={singleDate}
-                dateViewCount={dateViewCount}
-                defaultView={defaultView}
-                hideOutOfMonthDates={hideOutOfMonthDates}
-                hideWeekdays={hideWeekdays}
-                renderDay={renderDay}
-                weekendDays={weekendDays}
-                yearLabelFormat={yearLabelFormat}
-                onChange={(date) => handleValueChange(date as [Date, Date])}
-            />
+            <div style={{ display: 'flex' }}>
+                {/* <Presets
+                    onSelect={setValue}
+                    closePicker={() => setDropdownOpened(false)}
+                /> */}
+                <RangeCalendar
+                    locale={finalLocale}
+                    defaultMonth={(valueValid ? _value?.[0] : defaultMonth) as Date}
+                    value={_value as [Date | null, Date | null]}
+                    labelFormat={labelFormat}
+                    dayClassName={dayClassName}
+                    dayStyle={dayStyle}
+                    disableOutOfMonth={disableOutOfMonth}
+                    minDate={minDate}
+                    maxDate={maxDate}
+                    disableDate={disableDate}
+                    firstDayOfWeek={firstDayOfWeek}
+                    enableHeaderLabel={enableHeaderLabel}
+                    singleDate={singleDate}
+                    dateViewCount={dateViewCount}
+                    defaultView={defaultView}
+                    hideOutOfMonthDates={hideOutOfMonthDates}
+                    hideWeekdays={hideWeekdays}
+                    renderDay={renderDay}
+                    weekendDays={weekendDays}
+                    yearLabelFormat={yearLabelFormat}
+                    onChange={(date) => handleValueChange(date as [Date, Date])}
+                />
+            </div>
         </BasePicker>
     )
 }

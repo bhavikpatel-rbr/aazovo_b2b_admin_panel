@@ -1,3 +1,4 @@
+// RangeCalendar.tsx
 import { useState } from 'react'
 import dayjs from 'dayjs'
 import { isSameDate } from './utils/isSameDate'
@@ -39,11 +40,15 @@ const RangeCalendar = (props: RangeCalendarProps) => {
 
     const setRangeDate = (date: Date) => {
         if (pickedDate instanceof Date) {
+            // ========================= START OF THE FIX =========================
+            // If the user clicks the same date again, this now completes the selection.
             if (isSameDate(date, pickedDate) && !singleDate) {
-                setPickedDate(null)
-                setHoveredDay(null)
-                return null
+                onChange([pickedDate, date]); // Set the range to the same day
+                setPickedDate(null);
+                setHoveredDay(null);
+                return null;
             }
+            // ========================== END OF THE FIX ==========================
 
             const result: [Date, Date] = [date, pickedDate]
             result.sort((a, b) => a.getTime() - b.getTime())
