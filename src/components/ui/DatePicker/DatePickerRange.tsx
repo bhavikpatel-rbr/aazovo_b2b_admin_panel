@@ -199,10 +199,10 @@ const DatePickerRange = (props: DatePickerRangeProps) => {
             {...rest}
         >
             <div style={{ display: 'flex' }}>
-                {/* <Presets
+                <Presets
                     onSelect={setValue}
                     closePicker={() => setDropdownOpened(false)}
-                /> */}
+                />
                 <RangeCalendar
                     locale={finalLocale}
                     defaultMonth={(valueValid ? _value?.[0] : defaultMonth) as Date}
