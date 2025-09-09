@@ -10,7 +10,7 @@ import React, {
 
 import { Controller, useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
-import * as XLSX from 'xlsx'; // <-- ADD THIS IMPORT
+import * as XLSX from 'xlsx';
 import { z } from "zod";
 
 // UI Components
@@ -68,18 +68,21 @@ import {
   editMemberAction,
   getAlertsAction,
   getAllUsersAction,
-  getCountriesAction, // <-- ADDED
+  getBrandAction, // <-- ADDED
+  getCountriesAction,
   getMemberByIdAction,
   getMemberlistingAction,
+  getParentCategoriesAction, // <-- ADDED
+  getSubcategoriesByCategoryIdAction, // <-- ADDED
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
+import { getMenuRights } from "@/utils/getMenuRights";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import dayjs from "dayjs";
 import { config } from "localforage";
 import { useSelector } from "react-redux";
-import { getMenuRights } from "@/utils/getMenuRights";
 
 
 // --- START: Detailed Type Definitions (Matching API Response) ---
@@ -469,6 +472,11 @@ const filterFormSchema = z.object({
   filterRM: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterMemberType: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterCreatedAt: z.array(z.date().nullable()).optional().default([]),
+  // --- START: ADDED FILTERS ---
+  filterCategory: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterSubCategory: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterBrand: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  // --- END: ADDED FILTERS ---
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
@@ -649,18 +657,6 @@ interface ExcelSheet {
   data: any[][];
 }
 
-// --- START: NEW Excel Viewer Modal (UPDATED with better error handling) ---
-interface ExcelSheet {
-  name: string;
-  data: any[][];
-}
-
-// --- START: NEW Excel Viewer Modal (UPDATED - Lenient Content-Type) ---
-interface ExcelSheet {
-  name: string;
-  data: any[][];
-}
-
 const ExcelViewerModal: React.FC<{ isOpen: boolean; onClose: () => void; fileUrl: string; title: string }> = ({ isOpen, onClose, fileUrl, title }) => {
   const [sheets, setSheets] = useState<ExcelSheet[]>([]);
   const [activeSheetIndex, setActiveSheetIndex] = useState(0);
@@ -682,15 +678,11 @@ const ExcelViewerModal: React.FC<{ isOpen: boolean; onClose: () => void; fileUrl
             throw new Error(`Could not find the file at '${fileUrl}'. (HTTP Status: ${response.status}). Please ensure the file is in the 'public' directory and the dev server has been restarted.`);
           }
 
-          // The strict content-type check has been removed.
-          // We will now rely on sheetjs to parse the binary data directly.
-
           const arrayBuffer = await response.arrayBuffer();
           const workbook = XLSX.read(arrayBuffer, { type: 'buffer' });
 
           const parsedSheets: ExcelSheet[] = workbook.SheetNames.map(sheetName => {
             const worksheet = workbook.Sheets[sheetName];
-            // Using { defval: "" } ensures that empty cells are represented as empty strings instead of being omitted.
             const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
             return { name: sheetName, data: jsonData as any[][] };
           });
@@ -777,7 +769,6 @@ const ExcelViewerModal: React.FC<{ isOpen: boolean; onClose: () => void; fileUrl
                 <tbody>
                   {bodyRows.length > 0 ? bodyRows.map((row, rowIndex) => (
                     <Tr key={rowIndex} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                      {/* Using headers.length ensures we render a consistent number of cells per row, even if a row has missing data */}
                       {Array.from({ length: headers.length }).map((_, cellIndex) => (
                         <Td key={cellIndex} className="whitespace-nowrap">{row[cellIndex]}</Td>
                       ))}
@@ -795,8 +786,7 @@ const ExcelViewerModal: React.FC<{ isOpen: boolean; onClose: () => void; fileUrl
   );
 };
 // --- END: NEW Excel Viewer Modal ---
-// --- END: NEW Excel Viewer Modal ---
-// --- END: NEW Excel Viewer Modal ---
+
 
 // --- START: MODALS SECTION ---
 export type MemberModalType = "notification" | "task" | "calendar" | "viewDetail" | "alert" | "transaction" | "activity" | "changePassword";
@@ -1278,6 +1268,8 @@ const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     dispatch(getAllUsersAction());
     dispatch(getCountriesAction());
+    dispatch(getParentCategoriesAction()); // <-- ADDED
+    dispatch(getBrandAction()); // <-- ADDED
   }, [dispatch]);
 
   // The member list is now the paginated data from the store
@@ -1329,7 +1321,15 @@ const ActionColumn = ({ rowData, onOpenModal }: { rowData: FormItem; onOpenModal
 };
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filterData: FilterFormData; onRemoveFilter: (key: keyof FilterFormData, value: string) => void; onClearAll: () => void; }) => {
-  const filterKeyToLabelMap: Record<string, string> = { filterStatus: "Status", filterBusinessType: "Business Type", filterBusinessOpportunity: "Opportunity", filterCountry: "Country", filterInterestedFor: "Interest", memberGrade: "Grade", filterRM: "RM", filterMemberType: "Member Type" };
+  const filterKeyToLabelMap: Record<string, string> = {
+    filterStatus: "Status", filterBusinessType: "Business Type",
+    filterBusinessOpportunity: "Opportunity", filterCountry: "Country",
+    filterInterestedFor: "Interest", memberGrade: "Grade",
+    filterRM: "RM", filterMemberType: "Member Type",
+    // --- START: ADDED LABELS ---
+    filterCategory: "Category", filterSubCategory: "Sub Category", filterBrand: "Brand",
+    // --- END: ADDED LABELS ---
+  };
   const activeFiltersList = Object.entries(filterData).flatMap(([key, value]) => {
     if (!value || (Array.isArray(value) && value.length === 0)) return [];
     if (key === 'filterCreatedAt') {
@@ -1354,7 +1354,14 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filt
 // MODIFIED: This component is heavily refactored for server-side operations.
 const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: FilterFormData; setFilterCriteria: React.Dispatch<React.SetStateAction<FilterFormData>>; }) => {
   const dispatch = useAppDispatch();
-  const { MemberlistData: MemberData, CountriesData } = useSelector(masterSelector);
+  const { 
+    MemberlistData: MemberData, 
+    CountriesData, 
+    ParentCategories, 
+    BrandData, 
+    subCategoriesForSelectedCategoryData, 
+    status: masterLoadingStatus 
+  } = useSelector(masterSelector);
   const [isLoading, setIsLoading] = useState(false);
   const { setSelectedMembers, userOptions } = useMemberList();
 
@@ -1363,9 +1370,11 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
   const [modalState, setModalState] = useState<MemberModalState>({ isOpen: false, type: null, data: null });
+  const [subcategoryOptions, setSubcategoryOptions] = useState<SelectOption[]>([]); // <-- ADDED
 
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
+  const { watch: watchFilter, setValue: setFilterFormValue, getValues: getFilterValues } = filterFormMethods; // <-- ADDED
 
   useEffect(() => { filterFormMethods.reset(filterCriteria); }, [filterCriteria, filterFormMethods]);
 
@@ -1394,6 +1403,11 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
         relationship_manager: formatFilterForApi(filterCriteria.filterRM),
         member_type: formatFilterForApi(filterCriteria.filterMemberType),
         created_date: (startDate && endDate) ? `${dayjs(startDate).format('YYYY-MM-DD')}~${dayjs(endDate).format('YYYY-MM-DD')}` : undefined,
+        // --- START: ADDED PARAMS ---
+        category_id: formatFilterForApi(filterCriteria.filterCategory),
+        sub_category_id: formatFilterForApi(filterCriteria.filterSubCategory),
+        brand_id: formatFilterForApi(filterCriteria.filterBrand),
+        // --- END: ADDED PARAMS ---
       };
 
       // Clean up undefined params before dispatching
@@ -1418,6 +1432,33 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
     };
   }, [dispatch, tableData, filterCriteria]);
   // --- END: MODIFIED & ROBUST DATA FETCHING LOGIC ---
+
+  // --- START: DEPENDENT DROPDOWN LOGIC ---
+  const watchedFilterCategory = watchFilter("filterCategory");
+  useEffect(() => {
+      if (isFilterDrawerOpen) {
+          if (watchedFilterCategory && watchedFilterCategory.length === 1) {
+              dispatch(getSubcategoriesByCategoryIdAction(Number(watchedFilterCategory[0].value)));
+          } else {
+              setSubcategoryOptions([]);
+              const currentFilterSubCat = getFilterValues("filterSubCategory");
+              if (currentFilterSubCat && currentFilterSubCat.length > 0) {
+                  setFilterFormValue("filterSubCategory", []);
+              }
+          }
+      }
+  }, [watchedFilterCategory, isFilterDrawerOpen, dispatch, getFilterValues, setFilterFormValue]);
+
+  useEffect(() => {
+    if (masterLoadingStatus !== 'loading') {
+      setSubcategoryOptions(
+        Array.isArray(subCategoriesForSelectedCategoryData)
+        ? subCategoriesForSelectedCategoryData.map((sc: any) => ({ value: String(sc.id), label: sc.name }))
+        : []
+      );
+    }
+  }, [subCategoriesForSelectedCategoryData, masterLoadingStatus]);
+  // --- END: DEPENDENT DROPDOWN LOGIC ---
 
   const onApplyFiltersSubmit = (data: FilterFormData) => { setFilterCriteria(data); setTableData(prev => ({ ...prev, pageIndex: 1 })); setFilterDrawerOpen(false); };
 
@@ -1614,6 +1655,16 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
           ? CountriesData.map((c: any) => ({ value: String(c.id), label: c.name }))
           : [];
   }, [CountriesData]);
+  
+  // --- START: ADDED OPTIONS ---
+  const categoryOptions = useMemo(() =>
+    Array.isArray(ParentCategories) ? ParentCategories.map((c: any) => ({ value: String(c.id), label: c.name })) : [],
+  [ParentCategories]);
+  
+  const brandOptions = useMemo(() =>
+    Array.isArray(BrandData) ? BrandData.map((b: any) => ({ value: String(b.id), label: b.name })) : [],
+  [BrandData]);
+  // --- END: ADDED OPTIONS ---
 
 
   return (
@@ -1647,7 +1698,6 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
       <DataTable menuName="member" selectable columns={filteredColumns} data={pageData} noData={!isLoading && pageData.length === 0} loading={isLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} width={700} onClose={() => setFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterMemberForm" type="submit">Apply</Button></div>}>
         <UiForm id="filterMemberForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}>
-          {/* START: Responsive Fix */}
           <div className="h-full overflow-y-auto">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
               <UiFormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status" options={[{ value: "Active", label: "Active" }, { value: "Disabled", label: "Disabled" }, { value: "Unregistered", label: "Unregistered" }]} {...field} />)} /></UiFormItem>
@@ -1656,17 +1706,33 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
               <UiFormItem label="Country"><Controller name="filterCountry" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Country" options={allCountryOptions} {...field} />)} /></UiFormItem>
               <UiFormItem label="Interested In"><Controller name="filterInterestedFor" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Interest" options={[{ value: "For Sell", label: "For Sell" }, { value: "For Buy", label: "For Buy" }, { value: "Both", label: "Both" }]} {...field} />)} /></UiFormItem>
               <UiFormItem label="Grade"><Controller name="memberGrade" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Grade" options={memberGradeOptions} {...field} />)} /></UiFormItem>
-              {/* <UiFormItem label="Relationship Manager"><Controller name="filterRM" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select RM" options={userOptions} {...field} />)} /></UiFormItem> */}
               <UiFormItem label="Member Type"><Controller name="filterMemberType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Member Type" options={memberTypeOptions} {...field} />)} /></UiFormItem>
               <UiFormItem label="Created Date" ><Controller name="filterCreatedAt" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange placeholder="Select Date Range" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />)} /></UiFormItem>
+              {/* --- START: ADDED FILTERS --- */}
+              <UiFormItem label="Category">
+                <Controller name="filterCategory" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Category" options={categoryOptions} {...field} />)} />
+              </UiFormItem>
+              <UiFormItem label="Sub Category">
+                <Controller name="filterSubCategory" control={filterFormMethods.control} render={({ field }) => (
+                  <UiSelect 
+                    isMulti 
+                    placeholder={!watchedFilterCategory || watchedFilterCategory.length !== 1 ? "Select category first" : "Select Sub Category"}
+                    options={subcategoryOptions} 
+                    {...field}
+                    isDisabled={!watchedFilterCategory || watchedFilterCategory.length !== 1 || (subcategoryOptions.length === 0 && masterLoadingStatus !== 'loading')}
+                  />
+                )} />
+              </UiFormItem>
+              <UiFormItem label="Brand">
+                <Controller name="filterBrand" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Brand" options={brandOptions} {...field} />)} />
+              </UiFormItem>
+              {/* --- END: ADDED FILTERS --- */}
             </div>
           </div>
-          {/* END: Responsive Fix */}
         </UiForm>
       </Drawer>
       <MemberModals modalState={modalState} onClose={() => setModalState({ isOpen: false, type: null, data: null })} userOptions={userOptions} />
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText="Submit & Export" >
-        {/* <p className="mb-2">You are about to export the currently visible page of members. For a full report, please contact an administrator.</p> */}
         <UiFormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
           <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
         </UiFormItem>
@@ -1732,7 +1798,7 @@ const FormListSelected = () => {
 const Member = () => {
   const navigate = useNavigate();
   const { MemberlistData: MemberData } = useSelector(masterSelector);
-  const [isExcelViewerOpen, setIsExcelViewerOpen] = useState(false); // <-- ADD THIS STATE
+  const [isExcelViewerOpen, setIsExcelViewerOpen] = useState(false);
 
   const MEMBER_FILTER_STORAGE_KEY = 'memberFilterState';
 
@@ -1798,7 +1864,7 @@ const Member = () => {
               <div className="flex items-center gap-2">
                 <Button
                   icon={<TbEye />}
-                  onClick={handleViewBitRouteClick} // <-- MODIFIED
+                  onClick={handleViewBitRouteClick}
                   clickFeedback={false}
                   color="green-600"
                 >
@@ -1837,11 +1903,10 @@ const Member = () => {
         </AdaptiveCard>
       </Container>
       <FormListSelected />
-      {/* ADD THIS MODAL RENDER */}
       <ExcelViewerModal
         isOpen={isExcelViewerOpen}
         onClose={() => setIsExcelViewerOpen(false)}
-        fileUrl="/public/bit_route_rm_wise_data.xlsx"
+        fileUrl="/bit_route_rm_wise_data.xlsx"
         title="Bit Route Data"
       />
     </MemberListProvider>

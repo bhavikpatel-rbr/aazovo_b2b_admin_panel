@@ -1052,7 +1052,7 @@ const productFormSchema = z.object({
   sub_category_id: z.number().positive().nullable().optional(),
   brand_id: z.number().nullable().optional(),
   name: z.string().min(1, "Product name is required.").max(255),
-  slug: z.string().min(1, "Slug is required.").max(255),
+  slug: z.string().max(100).optional().nullable(),
   sku_code: z.string().max(50).optional().nullable(),
   hsn_code: z.string().max(50).optional().nullable(),
   supplier_product_code: z.string().max(100).optional().nullable(), // New field
@@ -3264,6 +3264,7 @@ const Products = () => {
                 >
                   <Controller
                     name="slug"
+                    disabled
                     control={formControl}
                     render={({ field }) => <Input {...field} />}
                   />

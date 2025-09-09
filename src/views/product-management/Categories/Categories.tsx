@@ -146,7 +146,7 @@ export type CategoryItem = {
 // --- Zod Schemas (Categories) ---
 const categoryFormSchema = z.object({
   name: z.string().min(1, "Category name is required.").max(255),
-  slug: z.string().min(1, "Slug is required.").max(255),
+  slug:z.string().max(100).optional().nullable(),
   parent_category: z
     .union([z.number().positive().nullable(), z.string().length(0)])
     .transform((val) => (val === "" ? null : val === null ? null : Number(val)))
@@ -1445,7 +1445,7 @@ const Categories = () => {
             <div style={{ display: activeAddTab === 'general' ? 'block' : 'none' }}>
               <div className="flex flex-col gap-3">
                 <FormItem label={<div>Category Name<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.name} errorMessage={addFormMethods.formState.errors.name?.message} isRequired> <Controller name="name" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Category Name" />} /> </FormItem>
-                <FormItem label={<div>Slug/URL<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.slug} errorMessage={addFormMethods.formState.errors.slug?.message} isRequired> <Controller name="slug" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter category-slug" />} /> </FormItem>
+                <FormItem label={<div>Slug/URL</div>} invalid={!!addFormMethods.formState.errors.slug} errorMessage={addFormMethods.formState.errors.slug?.message} > <Controller name="slug"  disabled control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter category-slug" />} /> </FormItem>
                 <FormItem label="Parent Category" invalid={!!addFormMethods.formState.errors.parent_category} errorMessage={addFormMethods.formState.errors.parent_category?.message as string}> <Controller name="parent_category" control={addFormMethods.control} render={({ field }) => <UiSelect placeholder="Select Parent or None" options={parentCategoryOptions} value={parentCategoryOptions.find(opt => opt.value === field.value)} onChange={option => field.onChange(option ? option.value : null)} isClearable />} /> </FormItem>
 
                 <div className="flex gap-2">
