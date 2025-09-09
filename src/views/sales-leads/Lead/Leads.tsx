@@ -2325,7 +2325,7 @@ const LeadActionColumn = ({
         >
           <TbMail size={18} /> Send Email
         </Dropdown.Item>
-        {data.assigned_saled_id && data.lead_status != "Rejected" && data.lead_status != "Approved" ? <Dropdown.Item
+        {data.assigned_saled_id && data.lead_status != "Rejected" && data.lead_status != "Approved" && data.lead_status != "Deal Done" ? <Dropdown.Item
           onClick={onStartProcess}
           className="flex items-center gap-2 text-xs"
         >

@@ -819,7 +819,17 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           <div className="overflow-y-auto p-1 flex-grow">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormItem label="Status"><Controller name="filterRecordStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status..." options={recordStatusOptions} {...field} />)} /></FormItem>
-              <FormItem label="Companies"><Controller name="filterCompanyIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select companies..." options={AllCompanyData?.map((p: any) => ({ value: p.id, label: p.company_name }))} {...field} />)} /></FormItem>
+             <FormItem label="Members">
+                <Controller name="filterMembers" control={filterFormMethods.control} render={({ field }) => (
+                  <UiSelect isMulti placeholder="Select Members..." options={(MemberData?.data || []).map((m: any) => ({ value: m.id, label: m.name }))} {...field} />
+                )} />
+              </FormItem>
+               <FormItem label="Countries">
+                <Controller name="filterCountries" control={filterFormMethods.control} render={({ field }) => (
+                  <UiSelect isMulti placeholder="Select Countries..." options={(CountriesData || []).map((c: any) => ({ value: c.id, label: c.name }))} {...field} />
+                )} />
+              </FormItem>
+              {/* <FormItem label="Companies"><Controller name="filterCompanyIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select companies..." options={AllCompanyData?.map((p: any) => ({ value: p.id, label: p.company_name }))} {...field} />)} /></FormItem> */}
               <FormItem label="Intent (Want to)"><Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select intents..." options={intentOptions} {...field} />)} /></FormItem>
               <FormItem label="Products"><Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select products..." options={AllProductsData?.data?.map((p: any) => ({ value: p.id, label: p.name })) || []} {...field} />)} /></FormItem>
               <FormItem label="Categories"><Controller name="categories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Categories..." options={ParentCategories.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
@@ -827,20 +837,16 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               <FormItem label="Brands"><Controller name="brands" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Brands..." options={BrandData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               <FormItem label="Availability Status"><Controller name="productStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Availability..." options={Object.keys(productApiStatusColor).filter((k) => k !== "default").map((s) => ({ label: s.charAt(0).toUpperCase() + s.slice(1), value: s }))} {...field} />)} /></FormItem>
               <FormItem label="Created Date Range"><Controller name="dateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date | null, Date | null] | null} onChange={field.onChange} placeholder="Select date range" />)} /></FormItem>
-              <FormItem label="Product Spec (Example)"><Controller name="productSpec" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Product Spec..." options={ProductSpecificationsData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
-              <FormItem label="Member Type (Example)"><Controller name="memberType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Member Type..." options={MemberTypeData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
-              <FormItem label="Created By (Example)"><Controller name="createdBy" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Employee..." options={Employees?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
+              <FormItem label="Product Spec "><Controller name="productSpec" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Product Spec..." options={ProductSpecificationsData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
+              <FormItem label="Member Type "><Controller name="memberType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Member Type..." options={MemberTypeData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
+              <FormItem label="Created By "><Controller name="createdBy" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Employee..." options={Employees?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               {/* START: ADDED - Member and Country filters */}
-              <FormItem label="Members">
+              {/* <FormItem label="Members">
                 <Controller name="filterMembers" control={filterFormMethods.control} render={({ field }) => (
                   <UiSelect isMulti placeholder="Select Members..." options={(MemberData?.data || []).map((m: any) => ({ value: m.id, label: m.name }))} {...field} />
                 )} />
-              </FormItem>
-              <FormItem label="Countries">
-                <Controller name="filterCountries" control={filterFormMethods.control} render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select Countries..." options={(CountriesData || []).map((c: any) => ({ value: c.id, label: c.name }))} {...field} />
-                )} />
-              </FormItem>
+              </FormItem> */}
+             
               {/* END: ADDED */}
             </div>
           </div>
