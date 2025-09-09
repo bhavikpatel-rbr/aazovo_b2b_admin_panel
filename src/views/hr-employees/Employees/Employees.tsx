@@ -378,6 +378,7 @@ const EmployeesListing = () => {
                 mobile: emp.mobile_number ? `${emp.mobile_number_code || ''}${emp.mobile_number}`.trim() : null,
                 department: emp.department?.name || ' ',
                 designation: emp.designation?.name || ' ',
+                role_name: emp.role_name || ' ',
                 roles: Array.isArray(emp.roles) ? emp.roles.map((r: any) => r.display_name) : [],
                 avatar: emp.profile_pic_path ? emp.profile_pic_path.replace(/([^:]\/)\/+/g, "$1") : null,
                 createdAt: new Date(emp.created_at),
@@ -468,7 +469,8 @@ const EmployeesListing = () => {
         },
         { header: "Designation", accessorKey: "designation", size: 200, cell: (props) => (<div >{props.row.original?.designation ?? ""}</div>) },
         { header: "Department", accessorKey: "department", size: 200, cell: (props) => (<div >{props.row.original?.department ?? ""}</div>) },
-        { header: "Roles", accessorKey: "roles", cell: (props) => (<div className="flex flex-wrap gap-1">{props.row.original?.roles?.map((role: any) => (<Tag key={role} className="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100 text-[10px] font-semibold border-0">{role || ""}</Tag>))}</div>) },
+        { header: "Roles", accessorKey: "role_name", size: 200, cell: (props) => (<div >{props.row.original?.role_name ?? ""}</div>) },
+        // { header: "Roles", accessorKey: "roles", cell: (props) => (<div className="flex flex-wrap gap-1">{props.row.original?.roles?.map((role: any) => (<Tag key={role} className="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100 text-[10px] font-semibold border-0">{role || ""}</Tag>))}</div>) },
         { header: "Joined At", accessorKey: "joiningDate", size: 150, cell: (props) => props.row.original?.joiningDate ? <span className="text-sm">{dayjs(props.row.original.joiningDate).format("D MMM YYYY")}</span> : '-' },
         { header: "Action", id: "action", size: 120, meta: { HeaderClass: "text-center" }, cell: (props) => (<ActionColumn rowData={props.row.original} onOpenModal={handleOpenModal} />) },
     ], [openImageViewer]);
