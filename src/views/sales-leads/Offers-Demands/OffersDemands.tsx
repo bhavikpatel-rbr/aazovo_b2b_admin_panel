@@ -2668,7 +2668,7 @@ const OffersDemands = () => {
                   group.groupName === "Group B";
                 if (isSpecialGroup && group.items?.[0]) {
                   const fullText = group.items[0];
-                  const messageToCopy = `Offer ID: ${row.original.originalApiItem.generate_id}\nOffer Name: ${row.original.name}\n\nMessage:\n${fullText}`;
+                  const messageToCopy = ` ${row.original.originalApiItem.generate_id}\n${row.original.name}\n\nMessage:\n${fullText}`;
                   return (
                     <div
                       key={index}

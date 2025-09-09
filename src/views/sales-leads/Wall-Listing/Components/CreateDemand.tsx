@@ -232,13 +232,13 @@ const CreateDemand = () => {
         
         let additionalInfo = '';
         if (specLabel) additionalInfo += `${specLabel}\n`;
-        additionalInfo += `Status: ${productStatus}\n`;
-        if (group.deviceCondition) additionalInfo += `Condition: ${group.deviceCondition}\n`;
-        if (group.cartoonTypeId) additionalInfo += `Cartoon: ${group.cartoonTypeId}\n`;
-        if (group.location) additionalInfo += `Location: ${group.location}\n`;
-        if (group.paymentTermId) additionalInfo += `Payment: ${paymentTermsOption.find(o => o.value === group.paymentTermId)?.label}\n`;
-        if (group.dispatchStatus) additionalInfo += `Dispatch: ${group.dispatchStatus}\n`;
-        if (eta) additionalInfo += `ETA: ${eta}\n`;
+        additionalInfo += ` ${productStatus}\n`;
+        if (group.deviceCondition) additionalInfo += `${group.deviceCondition}\n`;
+        if (group.cartoonTypeId) additionalInfo += `${group.cartoonTypeId}\n`;
+        if (group.location) additionalInfo += `${group.location}\n`;
+        if (group.paymentTermId) additionalInfo += `${paymentTermsOption.find(o => o.value === group.paymentTermId)?.label}\n`;
+        if (group.dispatchStatus) additionalInfo += `${group.dispatchStatus}\n`;
+        if (eta) additionalInfo += `${eta}\n`;
 
         messageA += `${baseNote}${noteA_Items}${additionalInfo}\n`;
         messageB += `${baseNote}${noteB_Items}${additionalInfo}\n`;
