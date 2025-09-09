@@ -206,7 +206,7 @@ const AddLeadPage = () => {
       await dispatch(addLeadAction(apiPayload)).unwrap();
       toast.push(<Notification title="Success" type="success">Lead created successfully.</Notification>);
       reset();
-      navigate("/sales/leads");
+      navigate("/sales-leads/lead");
     } catch (error: any) {
       toast.push(<Notification title="Error" type="danger">{error.message || "Failed to create lead."}</Notification>);
     } finally {
@@ -216,7 +216,7 @@ const AddLeadPage = () => {
 
   const handleCancel = () => {
     if (isDirty) setCancelConfirmOpen(true);
-    else navigate("/sales/leads");
+    else navigate("/sales-leads/lead");;
   };
 
   const isLoadingInitialData = masterLoadingStatus === "loading" && !initialDataFetched;
@@ -228,7 +228,7 @@ const AddLeadPage = () => {
   return (
     <Container className="h-full">
       <div className="flex gap-1 items-end mb-3">
-        <NavLink to="/sales/leads"><h6 className="font-semibold hover:text-primary">Leads</h6></NavLink>
+        <NavLink to="/sales-leads/lead"><h6 className="font-semibold hover:text-primary">Leads</h6></NavLink>
         <BiChevronRight size={22} />
         <h6 className="font-semibold text-primary">Add New Lead</h6>
       </div>
@@ -295,7 +295,7 @@ const AddLeadPage = () => {
           </div>
         </form>
       </FormContainer>
-      <ConfirmDialog isOpen={cancelConfirmOpen} type="warning" title="Discard Changes?" onClose={() => setCancelConfirmOpen(false)} onConfirm={() => { setCancelConfirmOpen(false); navigate("/sales/leads"); }} onCancel={() => setCancelConfirmOpen(false)}>
+      <ConfirmDialog isOpen={cancelConfirmOpen} type="warning" title="Discard Changes?" onClose={() => setCancelConfirmOpen(false)} onConfirm={() => { setCancelConfirmOpen(false); navigate("/sales-leads/lead"); }} onCancel={() => setCancelConfirmOpen(false)}>
         <p>Unsaved changes will be lost.</p>
       </ConfirmDialog>
     </Container>
