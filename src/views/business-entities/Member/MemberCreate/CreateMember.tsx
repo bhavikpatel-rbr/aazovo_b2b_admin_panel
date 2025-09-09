@@ -1974,48 +1974,52 @@ const MemberProfileComponent = ({ control, errors, formMethods, isEditMode }: Fo
     }
   }, [selectedCat, dispatch, setValue]);
 
-  // Effect 2 (Unchanged): Set the default FIRST category in "Add New" mode.
-  useEffect(() => {
-    if (!isEditMode && ParentCategories.length > 0) {
-      const alreadySet = watch('interested_category_ids');
-      if (!alreadySet || alreadySet.length === 0) {
-        const defaultCategory = ParentCategories[0];
-        const defaultCategoryOption = { value: defaultCategory.id, label: defaultCategory.name };
-        setValue('interested_category_ids', [defaultCategoryOption], { shouldValidate: true });
-      }
-    }
-  }, [isEditMode, ParentCategories, setValue, watch]);
+  // --- MODIFICATION START: Disabled default selection hooks ---
 
-  // Effect 3 (Unchanged): Set the default FIRST sub-category in "Add New" mode.
-  useEffect(() => {
-    if (!isEditMode && subCategoriesForSelectedCategoryData.length > 0) {
-      const alreadySet = watch('interested_subcategory_ids');
-      if (!alreadySet || alreadySet.length === 0) {
-        const defaultSubCategory = subCategoriesForSelectedCategoryData[0];
-        const defaultSubCategoryOption = { value: defaultSubCategory.id, label: defaultSubCategory.name };
-        setValue('interested_subcategory_ids', [defaultSubCategoryOption], { shouldValidate: true });
-      }
-    }
-  }, [isEditMode, subCategoriesForSelectedCategoryData, setValue, watch]);
+  // Effect 2 (DISABLED): No longer sets the default FIRST category in "Add New" mode.
+  // useEffect(() => {
+  //   if (!isEditMode && ParentCategories.length > 0) {
+  //     const alreadySet = watch('interested_category_ids');
+  //     if (!alreadySet || alreadySet.length === 0) {
+  //       const defaultCategory = ParentCategories[0];
+  //       const defaultCategoryOption = { value: defaultCategory.id, label: defaultCategory.name };
+  //       setValue('interested_category_ids', [defaultCategoryOption], { shouldValidate: true });
+  //     }
+  //   }
+  // }, [isEditMode, ParentCategories, setValue, watch]);
 
-  // Effect 4 (Unchanged): Set the default FIRST product in "Add New" mode.
-  useEffect(() => {
-    if (!isEditMode && productsMasterData.length > 0 && selectedCat?.length > 0 && selectedSubCat?.length > 0) {
-      const alreadySet = watch('favourite_product_id');
-      if (!alreadySet || alreadySet.length === 0) {
-        const selectedCategoryId = selectedCat[0].value;
-        const selectedSubCategoryId = selectedSubCat[0].value;
-        const matchingProduct = productsMasterData.find((p: any) =>
-          String(p.category_id) === String(selectedCategoryId) &&
-          String(p.sub_category_id) === String(selectedSubCategoryId)
-        );
-        if (matchingProduct) {
-          const productOption = { value: matchingProduct.id, label: matchingProduct.name };
-          setValue('favourite_product_id', [productOption], { shouldValidate: true });
-        }
-      }
-    }
-  }, [isEditMode, productsMasterData, selectedCat, selectedSubCat, setValue, watch]);
+  // Effect 3 (DISABLED): No longer sets the default FIRST sub-category in "Add New" mode.
+  // useEffect(() => {
+  //   if (!isEditMode && subCategoriesForSelectedCategoryData.length > 0) {
+  //     const alreadySet = watch('interested_subcategory_ids');
+  //     if (!alreadySet || alreadySet.length === 0) {
+  //       const defaultSubCategory = subCategoriesForSelectedCategoryData[0];
+  //       const defaultSubCategoryOption = { value: defaultSubCategory.id, label: defaultSubCategory.name };
+  //       setValue('interested_subcategory_ids', [defaultSubCategoryOption], { shouldValidate: true });
+  //     }
+  //   }
+  // }, [isEditMode, subCategoriesForSelectedCategoryData, setValue, watch]);
+
+  // Effect 4 (DISABLED): No longer sets the default FIRST product in "Add New" mode.
+  // useEffect(() => {
+  //   if (!isEditMode && productsMasterData.length > 0 && selectedCat?.length > 0 && selectedSubCat?.length > 0) {
+  //     const alreadySet = watch('favourite_product_id');
+  //     if (!alreadySet || alreadySet.length === 0) {
+  //       const selectedCategoryId = selectedCat[0].value;
+  //       const selectedSubCategoryId = selectedSubCat[0].value;
+  //       const matchingProduct = productsMasterData.find((p: any) =>
+  //         String(p.category_id) === String(selectedCategoryId) &&
+  //         String(p.sub_category_id) === String(selectedSubCategoryId)
+  //       );
+  //       if (matchingProduct) {
+  //         const productOption = { value: matchingProduct.id, label: matchingProduct.name };
+  //         setValue('favourite_product_id', [productOption], { shouldValidate: true });
+  //       }
+  //     }
+  //   }
+  // }, [isEditMode, productsMasterData, selectedCat, selectedSubCat, setValue, watch]);
+
+  // --- MODIFICATION END ---
 
   // Effect 5 (NEW): Handle clearing of sub-categories to also clear products.
   useEffect(() => {
