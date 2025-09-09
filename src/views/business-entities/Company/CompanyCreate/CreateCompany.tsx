@@ -1,867 +1,2950 @@
-// src/views/your-path/WallListing.tsx
-
-import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
-import dayjs from "dayjs";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Control,
+  Controller,
+  FieldErrors,
+  useFieldArray,
+  useForm,
+  UseFormReturn,
+} from "react-hook-form";
+import { NavLink, useNavigate, useParams } from "react-router-dom";
 
 // UI Components
-import AdaptiveCard from "@/components/shared/AdaptiveCard";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
-import DataTable from "@/components/shared/DataTable";
-import DebouceInput from "@/components/shared/DebouceInput";
-import StickyFooter from "@/components/shared/StickyFooter";
-import {
-  Card,
-  Checkbox,
-  DatePicker,
-  Drawer,
-  Dropdown,
-  Form as UiForm, // Renamed to avoid conflict with native form
-  FormItem,
-  Input,
-  Skeleton,
-  Select as UiSelect,
-} from "@/components/ui";
+import NumericInput from "@/components/shared/NumericInput";
+import { Dialog, Spinner } from "@/components/ui";
 import Button from "@/components/ui/Button";
-import Dialog from "@/components/ui/Dialog";
+import Card from "@/components/ui/Card";
+import Checkbox from "@/components/ui/Checkbox";
+import { FormItem } from "@/components/ui/Form";
+import Input from "@/components/ui/Input";
 import Notification from "@/components/ui/Notification";
-import Spinner from "@/components/ui/Spinner";
-import Tag from "@/components/ui/Tag";
+import Select from "@/components/ui/Select";
 import toast from "@/components/ui/toast";
-import Tooltip from "@/components/ui/Tooltip";
 
 
-// Icons
-import { BsThreeDotsVertical } from "react-icons/bs";
-import {
-  TbBell, TbBookmark, TbBox, TbBoxOff, TbBrandWhatsapp, TbBulb, TbCalendar,
-  TbCalendarEvent, TbCancel, TbCheck, TbChecks, TbCircleCheck, TbCloudDownload,
-  TbCloudUpload, TbColumns, TbCopy, TbEye, TbFilter,
-  TbHandGrab,
-  TbListDetails, TbMail,
-  TbMailForward,
-  TbPackageExport, TbPencil, TbPlus, TbProgress, TbReload, TbSearch, TbShare,
-  TbStack2, TbTagStarred, TbUser,
-  TbUserPlus,
-  TbX
-} from "react-icons/tb";
-
-// Types
-import type { TableQueries } from "@/@types/common";
-import type { CellContext, ColumnDef, OnSortParam, Row, } from "@/components/shared/DataTable";
-
-// Redux
-import { authSelector } from "@/reduxtool/auth/authSlice";
+// Icons & Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-  addAllActionAction, addNotificationAction, addScheduleAction, addTaskAction,
-  deleteAllWallAction, getAllCompany, getAllUsersAction, getBrandAction,
-  getCountriesAction, // START: ADDED - Import country action
-  getEmployeesAction, getMatchingOpportunitiesAction, getMemberAction, // START: ADDED - Import member action
-  getMemberTypeAction,
-  getParentCategoriesAction, getProductsDataAsync, getProductSpecificationsAction,
-  getSubcategoriesByCategoryIdAction, getWallListingAction, submitExportReasonAction,
+  addcompanyAction,
+  addMemberAction,
+  editCompanyAction,
+  getCompanyAction,
+  getCompanyByIdAction,
+  getContinentsAction,
+  getCountriesAction,
+  getDocumentListAction,
+  getEmployeesListingAction,
+  getMemberAction,
+  getParentCategoriesAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import { getMenuRights } from "@/utils/getMenuRights";
-import { encryptStorage } from "@/utils/secureLocalStorage";
-import { config } from "localforage";
-import { shallowEqual, useSelector } from "react-redux";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { BiChevronRight } from "react-icons/bi";
+import { TbBrandWhatsapp, TbCategory, TbChevronLeft, TbChevronRight, TbFile, TbFileSpreadsheet, TbFileTypePdf, TbMail, TbPhone, TbPlus, TbTrash, TbUserCircle, TbWorld, TbX } from "react-icons/tb";
+import { useSelector } from "react-redux";
 import { z } from "zod";
 
-// --- Type Definitions ---
-export type ApiWallItemFromSource = any;
-export type WallRecordStatus = | "Pending" | "Approved" | "Rejected" | "Expired" | "Fulfilled" | "Active" | string;
-export type WallIntent = "Buy" | "Sell" | "Exchange";
-export type WallProductCondition = "New" | "Used" | "Refurbished" | string;
-export type WallItem = { id: number; product_name: string; company_name: string; companyId?: string; member_name: string; memberId?: string; member_email: string; member_phone: string; product_category: string; productCategoryId?: number; product_subcategory: string; subCategoryId?: number; product_description: string; product_specs: string; product_status: string; quantity: number; price: number; want_to: WallIntent | string; listing_type: string; shipping_options: string; payment_method: string; warranty: string; return_policy: string; listing_url: string; brand: string; brandId?: number; product_images: string[]; created_date: Date; updated_at: Date; visibility: string; priority: string; assigned_to: string; interaction_type: string; action: string; created_from: string; recordStatus?: WallRecordStatus; cartoonTypeId?: number | null; deviceCondition?: WallProductCondition | null; inquiry_count: number; share_count: number; is_bookmarked: boolean; updated_by_user?: { name: string; profile_pic_path?: string | null; roles: { display_name: string }[]; } | null; productId?: number; productSpecId?: number; memberTypeId?: number; createdById?: number; member?: any; };
 
-type MatchingOpportunityItem = {
-  id: number;
-  member_id: number;
-  product_id: number;
-  want_to: 'Buy' | 'Sell';
-  qty: string;
-  price: number | null;
-  device_condition: string;
-  color: string;
-  member_name: string;
-  member_code: string; // ADDED
-  member_email: string;
-  member_phone: string;
-};
-
-// --- Zod Schemas ---
-const selectOptionSchema = z.object({ value: z.any(), label: z.string() });
-// MODIFIED - Added filterMembers and filterCountries
-const filterFormSchema = z.object({ filterRecordStatuses: z.array(selectOptionSchema).optional().default([]), filterProductIds: z.array(selectOptionSchema).optional().default([]), filterCompanyIds: z.array(selectOptionSchema).optional().default([]), filterIntents: z.array(selectOptionSchema).optional().default([]), dateRange: z.array(z.date().nullable()).length(2).nullable().optional(), categories: z.array(selectOptionSchema).optional().default([]), subcategories: z.array(selectOptionSchema).optional().default([]), brands: z.array(selectOptionSchema).optional().default([]), productStatus: z.array(selectOptionSchema).optional().default([]), source: z.array(selectOptionSchema).optional().default([]), productSpec: z.array(selectOptionSchema).optional().default([]), memberType: z.array(selectOptionSchema).optional().default([]), createdBy: z.array(selectOptionSchema).optional().default([]), filterMembers: z.array(selectOptionSchema).optional().default([]), filterCountries: z.array(selectOptionSchema).optional().default([]), quickFilters: z.object({ type: z.string(), value: z.string() }).nullable().optional(), });
-type FilterFormData = z.infer<typeof filterFormSchema>;
-const exportReasonSchema = z.object({ reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters."), });
-type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
-const scheduleSchema = z.object({ event_title: z.string().min(3, "Title must be at least 3 characters."), event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."), date_time: z.date({ required_error: "Event date & time is required." }), remind_from: z.date().nullable().optional(), notes: z.string().optional(), });
-type ScheduleFormData = z.infer<typeof scheduleSchema>;
-const taskValidationSchema = z.object({ task_title: z.string().min(3, 'Task title must be at least 3 characters.'), assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'), priority: z.string().min(1, 'Please select a priority.'), due_date: z.date().nullable().optional(), description: z.string().optional(), });
-type TaskFormData = z.infer<typeof taskValidationSchema>;
-const activitySchema = z.object({ item: z.string().min(3, "Activity item is required and must be at least 3 characters."), notes: z.string().optional(), });
-type ActivityFormData = z.infer<typeof activitySchema>;
-
-
-// --- Status Colors and Options ---
-const recordStatusColor: Record<WallRecordStatus, string> = {
-  Active: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
-  Inactive: "bg-gray-100 text-gray-700 dark:bg-gray-600/20 dark:text-gray-100",
-  Pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100",
-  Rejected: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
-};
-const recordStatusOptions = Object.keys(recordStatusColor).map((s) => ({ value: s, label: s, }));
-const intentTagColor: Record<WallIntent, string> = { Sell: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100", Buy: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100", Exchange: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100", };
-const intentOptions: { value: WallIntent; label: string }[] = [{ value: "Buy", label: "Buy" }, { value: "Sell", label: "Sell" }, { value: "Exchange", label: "Exchange" },];
-const productApiStatusColor: Record<string, string> = { available: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-100", "low stock": "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100", "out of stock": "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100", discontinued: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100", "non-active": "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100", default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100", };
-export const dummyCartoonTypes = [{ id: 1, name: "Master Carton" }, { id: 2, name: "Inner Carton" }];
-
-// ============================================================================
-// --- MODALS SECTION --- (This section is unchanged, so it is collapsed for brevity)
-// ============================================================================
-// ... (All modal components like AddNotificationDialog, MatchingOpportunitiesDialog, etc. are unchanged)
-// START: COLLAPSED MODALS SECTION
-export type WallModalType = "email" | "whatsapp" | "notification" | "task" | "activity" | "calendar" | "match_opportunity" | "share";
-export interface WallModalState { isOpen: boolean; type: WallModalType | null; data: WallItem | null; }
-interface WallModalsProps { modalState: WallModalState; onClose: () => void; getAllUserDataOptions: { value: any, label: string }[]; user: any; }
-const priorityOptions = [{ value: "Low", label: "Low" }, { value: "Medium", label: "Medium" }, { value: "High", label: "High" },];
-const taskPriorityOptions = priorityOptions;
-const eventTypeOptions = [{ value: 'Meeting', label: 'Meeting' }, { value: 'Demo', label: 'Product Demo' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'LogEmail', label: 'Log an Email' }, { value: 'Milestone', label: 'Project Milestone' }, { value: 'Task', label: 'Task' }, { value: 'FollowUp', label: 'General Follow-up' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'OnboardingSession', label: 'Onboarding Session' }, { value: 'Training', label: 'Training Session' }, { value: 'SupportCall', label: 'Support Call' }, { value: 'Reminder', label: 'Reminder' }, { value: 'Note', label: 'Add a Note' }, { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' }, { value: 'StrategySession', label: 'Strategy Session' }, { value: 'TeamMeeting', label: 'Team Meeting' }, { value: 'PerformanceReview', label: 'Performance Review' }, { value: 'Lunch', label: 'Lunch / Break' }, { value: 'Appointment', label: 'Personal Appointment' }, { value: 'Other', label: 'Other' },];
-const AddNotificationDialog: React.FC<{ wallItem: WallItem; onClose: () => void; getAllUserDataOptions: { value: any, label: string }[]; }> = ({ wallItem, onClose, getAllUserDataOptions }) => {
-  const dispatch = useAppDispatch();
-  const [isLoading, setIsLoading] = useState(false);
-  const notificationSchema = z.object({ notification_title: z.string().min(3, "Title must be at least 3 characters long."), send_users: z.array(z.number()).min(1, "Please select at least one user."), message: z.string().min(10, "Message must be at least 10 characters long."), });
-  type NotificationFormData = z.infer<typeof notificationSchema>;
-  const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), defaultValues: { notification_title: `Regarding Wall Listing: ${wallItem.product_name}`, send_users: [], message: `This is a notification for the wall listing: "${wallItem.product_name}".` }, mode: 'onChange' });
-  const onSend = async (formData: NotificationFormData) => {
-    setIsLoading(true);
-    const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(wallItem.id), module_name: 'WallListing', };
-    try {
-      await dispatch(addNotificationAction(payload)).unwrap();
-      toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
-      onClose();
-    } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsLoading(false); }
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} bodyOpenClassName="overflow-hidden">
-        <div className="flex flex-col h-full max-h-[90vh]">
-            <div className="px-6 py-4 border-b">
-                <h5 className="mb-0">Add Notification for "{wallItem.product_name}"</h5>
-            </div>
-            <form onSubmit={handleSubmit(onSend)} className="flex flex-col flex-grow overflow-hidden">
-                <div className="flex-grow overflow-y-auto p-6">
-                    <FormItem label="Notification Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-                    <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select Users" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />)} /></FormItem>
-                    <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={5} />} /></FormItem>
-                </div>
-                <div className="px-6 py-4 border-t text-right">
-                    <Button type="button" className="mr-2" onClick={onClose}>Cancel</Button>
-                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button>
-                </div>
-            </form>
-        </div>
-    </Dialog>
-  );
-};
-const AssignTaskDialog: React.FC<{ wallItem: WallItem; onClose: () => void; getAllUserDataOptions: { value: any, label: string }[]; }> = ({ wallItem, onClose, getAllUserDataOptions }) => {
-  const dispatch = useAppDispatch();
-  const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({
-    resolver: zodResolver(taskValidationSchema),
-    defaultValues: {
-      task_title: `Follow up on wall listing: ${wallItem.product_name}`,
-      assign_to: [],
-      priority: 'Medium',
-      due_date: null,
-      description: `Regarding wall item from ${wallItem.member_name} for product "${wallItem.product_name}".`,
-    },
-    mode: 'onChange'
-  });
-
-  const onAssignTask = async (data: TaskFormData) => {
-    setIsLoading(true);
-    try {
-      const payload = {
-        ...data,
-        due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined,
-        module_id: String(wallItem.id),
-        module_name: 'WallListing',
-      };
-      await dispatch(addTaskAction(payload)).unwrap();
-      toast.push(<Notification type="success" title="Task Assigned" children={`Successfully assigned task for item #${wallItem.id}.`} />);
-      onClose();
-    } catch (error: any) {
-      toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An unknown error occurred.'} />);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} bodyOpenClassName="overflow-hidden">
-        <div className="flex flex-col h-full max-h-[90vh]">
-            <div className="px-6 py-4 border-b">
-                <h5 className="mb-0">Assign Task for "{wallItem.product_name}"</h5>
-            </div>
-            <form onSubmit={handleSubmit(onAssignTask)} className="flex flex-col flex-grow overflow-hidden">
-                <div className="flex-grow overflow-y-auto p-6">
-                    <FormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}>
-                        <Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} />
-                    </FormItem>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}>
-                            <Controller name="assign_to" control={control} render={({ field }) => (
-                                <UiSelect isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])} />
-                            )} />
-                        </FormItem>
-                        <FormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}>
-                            <Controller name="priority" control={control} render={({ field }) => (
-                                <UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />
-                            )} />
-                        </FormItem>
-                    </div>
-                    <FormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}>
-                        <Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value as Date} onChange={field.onChange} />} />
-                    </FormItem>
-                    <FormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}>
-                        <Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
-                    </FormItem>
-                </div>
-                <div className="px-6 py-4 border-t text-right">
-                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button>
-                </div>
-            </form>
-        </div>
-    </Dialog>
-  );
-};
-const AddScheduleDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
-  const dispatch = useAppDispatch();
-  const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({ resolver: zodResolver(scheduleSchema), defaultValues: { event_title: `Regarding Wall Item: ${wallItem.product_name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Details for wall item "${wallItem.product_name}" (ID: ${wallItem.id}).`, }, mode: 'onChange', });
-  const onAddEvent = async (data: ScheduleFormData) => {
-    setIsLoading(true);
-    const payload = { module_id: Number(wallItem.id), module_name: 'WallListing', event_title: data.event_title, event_type: data.event_type, date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'), ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }), notes: data.notes || '', };
-    try {
-      await dispatch(addScheduleAction(payload)).unwrap();
-      toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for "${wallItem.product_name}".`} />);
-      onClose();
-    } catch (error: any) { toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsLoading(false); }
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} bodyOpenClassName="overflow-hidden">
-        <div className="flex flex-col h-full max-h-[90vh]">
-            <div className="px-6 py-4 border-b">
-                <h5 className="mb-0">Add Schedule for "{wallItem.product_name}"</h5>
-            </div>
-            <form onSubmit={handleSubmit(onAddEvent)} className="flex flex-col flex-grow overflow-hidden">
-                <div className="flex-grow overflow-y-auto p-6">
-                    <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></FormItem>
-                        <FormItem label="Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
-                    </div>
-                    <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}><Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
-                    <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
-                </div>
-                <div className="px-6 py-4 border-t text-right">
-                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
-                </div>
-            </form>
-        </div>
-    </Dialog>
-  );
-};
-const AddActivityDialog: React.FC<{ wallItem: WallItem; onClose: () => void; user: any; }> = ({ wallItem, onClose, user }) => {
-  const dispatch = useAppDispatch();
-  const [userData, setUserData] = useState<any>(null);
-  useEffect(() => { const { useEncryptApplicationStorage } = config; try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); } catch (error) { console.error("Error getting UserData:", error); } }, []);
-  const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ActivityFormData>({ resolver: zodResolver(activitySchema), defaultValues: { item: `Follow up on ${wallItem.product_name}`, notes: '' }, mode: 'onChange', });
-  const onAddActivity = async (data: ActivityFormData) => {
-    setIsLoading(true);
-    const payload = { item: data.item, notes: data.notes || '', module_id: String(wallItem.id), module_name: 'WallListing', user_id: userData.id, };
-    try {
-      await dispatch(addAllActionAction(payload)).unwrap();
-      toast.push(<Notification type="success" title="Activity Added" />);
-      onClose();
-    } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsLoading(false); }
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} bodyOpenClassName="overflow-hidden">
-        <div className="flex flex-col h-full max-h-[90vh]">
-            <div className="px-6 py-4 border-b">
-                <h5 className="mb-0">Add Activity Log for "{wallItem.product_name}"</h5>
-            </div>
-            <form onSubmit={handleSubmit(onAddActivity)} className="flex flex-col flex-grow overflow-hidden">
-                <div className="flex-grow overflow-y-auto p-6">
-                    <FormItem label="Activity" invalid={!!errors.item} errorMessage={errors.item?.message}><Controller name="item" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Followed up with member" />} /></FormItem>
-                    <FormItem label="Notes (Optional)" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} placeholder="Add relevant details..." />} /></FormItem>
-                </div>
-                <div className="px-6 py-4 border-t text-right">
-                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading} icon={<TbCheck />}>Save Activity</Button>
-                </div>
-            </form>
-        </div>
-    </Dialog>
-  );
-};
-const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
-  const dispatch = useAppDispatch();
-  const navigate = useNavigate();
-  const [data, setData] = useState<MatchingOpportunityItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selected, setSelected] = useState<number[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    return data.slice(startIndex, startIndex + pageSize);
-  }, [data, currentPage, pageSize]);
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-  const handlePageSizeChange = (size: number) => {
-    setPageSize(size);
-    setCurrentPage(1); // Reset to first page when page size changes
-  };
-  useEffect(() => {
-    const fetchOpportunities = async () => {
-      if (!wallItem.id) { setIsLoading(false); return; }
-      setIsLoading(true);
-      try {
-        const actionResult = await dispatch(getMatchingOpportunitiesAction(wallItem.id)).unwrap();
-        if (actionResult?.data) {
-          const formattedData = actionResult.data.map((item: any) => ({
-            ListData: wallItem,
-            id: item.id,
-            member_id: item.member.id,
-            product_id: item.product_id,
-            want_to: item.want_to,
-            qty: item.qty,
-            price: item.price,
-            device_condition: item.device_condition,
-            color: item.color,
-            member_name: item.member.name,
-            member_code: item.member.customer_code,
-            member_email: item.member.email,
-            member_phone: item.member.number
-          }));
-          setData(formattedData);
-        } else { setData([]); }
-      } catch (error) {
-        toast.push(<Notification type="danger" title="Error">Could not load opportunities.</Notification>);
-        setData([]);
-      } finally { setIsLoading(false); }
-    };
-    fetchOpportunities();
-  }, [dispatch, wallItem.id]);
-  const handleSelect = (id: number, checked: boolean) => {
-    setSelected(prev => checked ? [...prev, id] : prev.filter(i => i !== id));
-  };
-  const handleSelectAll = (checked: boolean) => {
-    const pageIds = paginatedData.map(op => op.id);
-    if (checked) {
-      setSelected(prev => [...new Set([...prev, ...pageIds])]);
-    } else {
-      setSelected(prev => prev.filter(id => !pageIds.includes(id)));
-    }
-  };
-  const handleAction = (type: 'offer_demand' | 'lead' | 'email' | 'whatsapp' | 'copy') => {
-    const selectedOps = data.filter(op => selected.includes(op.id));
-    if (selectedOps.length === 0) {
-      toast.push(<Notification title="No Selection" type="warning">Please select at least one opportunity.</Notification>);
-      return;
-    }
-    const firstOp = selectedOps[0];
-
-    switch (type) {
-      case 'offer_demand':
-        const firstOpForTemplate = selectedOps[0];
-        const navigationState = { ...firstOpForTemplate, ListData: wallItem, productId: firstOpForTemplate.product_id };
-        if (wallItem.want_to === 'Buy') {
-          const sellerMemberIds = selectedOps.map(op => op.member_id);
-          navigate('/sales-leads/wall-item/demands/create', { state: { ...navigationState, seller_ids: sellerMemberIds, buyer_ids: [wallItem.memberId] } });
-        } else {
-          const buyerMemberIds = selectedOps.map(op => Number(op.member_id));
-          navigate('/sales-leads/wall-item/offers/create', { state: { ...navigationState, buyer_ids: buyerMemberIds, seller_ids: [wallItem.memberId] } });
-        }
-        break;
-      case 'lead':
-        if (selectedOps.length !== 1) {
-          toast.push(<Notification title="Selection Error" type="warning">Please select exactly one opportunity to create a lead.</Notification>);
-          return;
-        }
-        navigate('/sales-leads/wall-item/lead/add', { state: { buyerId: wallItem.memberId, supplierId: firstOp.member_id, productId: firstOp.product_id, ...firstOp } });
-        break;
-      case 'email':
-        const emails = selectedOps.map(op => op.member_email).filter(Boolean).join(',');
-        toast.push(<Notification type="info" title="Opening Email..." />);
-        window.open(`mailto:${emails}?subject=Regarding ${wallItem.product_name}`, '_blank');
-        setSelected([]);
-        onClose();
-        break;
-      case 'whatsapp':
-        const phone = firstOp.member_phone?.replace(/\D/g, '') || '';
-        toast.push(<Notification type="info" title="Opening WhatsApp..." />);
-        window.open(`https://wa.me/${phone}?text=Hi, I'm interested in your listing for ${wallItem.product_name}`, '_blank');
-        setSelected([]);
-        onClose();
-        break;
-      case 'copy':
-        const textToCopy = selectedOps.map(op =>
-          `${op.member_code} ${op.want_to === 'Buy' ? 'Buyer' : 'Supplier'} - Qty: ${op.qty} - Contact: ${op.member_phone}`
-        ).join('\n');
-        navigator.clipboard.writeText(textToCopy).then(() => toast.push(<Notification title="Copied!" type="success" />));
-        break;
-    }
-  };
-  const isAllOnPageSelected = paginatedData.length > 0 && paginatedData.every(op => selected.includes(op.id));
-  const isSomeOnPageSelected = paginatedData.some(op => selected.includes(op.id)) && !isAllOnPageSelected;
-  const columns: ColumnDef<MatchingOpportunityItem>[] = [
-    {
-      id: 'select',
-      header: () => (
-        <Checkbox
-          checked={isAllOnPageSelected}
-          indeterminate={isSomeOnPageSelected}
-          onChange={e => handleSelectAll(e)}
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={selected.includes(row.original.id)}
-          onChange={e => handleSelect(row.original.id, e)}
-        />
-      ),
-      size: 40
-    },
-    { header: 'Supplier/Buyer', cell: ({ row }) => <div><span className="font-semibold">{row.original.member_name}</span><br /><span className="text-xs text-gray-500">{row.original.member_code}</span></div> },
-    {
-      header: 'Details', cell: ({ row }) => (
-        <div className="flex flex-col text-xs">
-          <span>Qty: <strong>{row.original.qty}</strong></span>
-          <span>Price: <strong>{row.original.price ? `$${row.original.price}` : ' '}</strong></span>
-        </div>
-      )
-    },
-    {
-      header: 'Contact', cell: ({ row }) => (
-        <div className="flex flex-col text-xs">
-          <a href={`mailto:${row.original.member_email}`} className="text-blue-500 hover:underline">{row.original.member_email}</a>
-          <span>{row.original.member_phone}</span>
-        </div>
-      )
-    },
-  ];
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={1000} bodyOpenClassName="overflow-hidden">
-      <div className="flex flex-col h-full max-h-[80vh]">
-        <div className="px-6 py-4 border-b"><h5>Matching Opportunities for "{wallItem.product_name}"</h5></div>
-        <div className="flex-grow overflow-y-auto px-6 py-4">
-          {isLoading ? (
-            <div className="flex justify-center items-center h-64"><Spinner size={40} /></div>
-          ) : (
-            <DataTable
-              columns={columns}
-              data={paginatedData}
-              noData={data.length === 0}
-              pagingData={{
-                total: data.length,
-                pageIndex: currentPage,
-                pageSize: pageSize
-              }}
-              onPaginationChange={handlePageChange}
-              onSelectChange={handlePageSizeChange}
-            />
-          )}
-        </div>
-        <div className="px-6 py-4 border-t">
-          {selected.length > 0 ? (
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-semibold">{selected.length} selected</span>
-              <div className="flex flex-wrap gap-2">
-                <>
-                  <Button size="sm" icon={<TbHandGrab />} onClick={() => handleAction('offer_demand')}>Create {wallItem.want_to === 'Buy' ? 'Demand' : 'Offer'}</Button>
-                  {selected.length === 1 && <Button size="sm" icon={<TbUserPlus />} onClick={() => handleAction('lead')}>Create Lead</Button>}
-                </>
-
-                <Button size="sm" icon={<TbMailForward />} onClick={() => handleAction('email')}>Email</Button>
-                <Button size="sm" icon={<TbBrandWhatsapp />} onClick={() => handleAction('whatsapp')}>WhatsApp</Button>
-                <Button size="sm" icon={<TbCopy />} onClick={() => handleAction('copy')}>Copy</Button>
-              </div>
-            </div>
-          ) : (
-            <div className="text-right">
-              <Button variant="solid" onClick={onClose}>Close</Button>
-            </div>
-          )}
-        </div>
-      </div>
-    </Dialog>
-  );
-};
-const ShareWallLinkDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
-  const linkToShare = `${window.location.origin}/sales-leads/wall-item/${wallItem.id}`;
-  const handleCopy = () => {
-    navigator.clipboard.writeText(linkToShare).then(() => {
-      toast.push(<Notification title="Copied to Clipboard" type="success" />);
-      onClose();
-    });
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Share Link for "{wallItem.product_name}"</h5>
-      <p className="mb-2 text-sm">Use the link below to share this listing:</p>
-      <div className="flex items-center gap-2">
-        <Input readOnly value={linkToShare} />
-        <Tooltip title="Copy Link"><Button shape="circle" icon={<TbCopy />} onClick={handleCopy} /></Tooltip>
-      </div>
-      <div className="text-right mt-6"><Button onClick={onClose}>Close</Button></div>
-    </Dialog>
-  );
-};
-const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose, getAllUserDataOptions, user }) => {
-  const { type, data: wallItem, isOpen } = modalState;
-  if (!isOpen || !wallItem) return null;
-  const renderModalContent = () => {
-    switch (type) {
-      case "notification": return <AddNotificationDialog wallItem={wallItem} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
-      case "task": return <AssignTaskDialog wallItem={wallItem} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
-      case "calendar": return <AddScheduleDialog wallItem={wallItem} onClose={onClose} />;
-      case "activity": return <AddActivityDialog wallItem={wallItem} onClose={onClose} user={user} />;
-      case "match_opportunity": return <MatchingOpportunitiesDialog wallItem={wallItem} onClose={onClose} />;
-      case "share": return <ShareWallLinkDialog wallItem={wallItem} onClose={onClose} />;
-      default: return null;
-    }
-  };
-  return <>{renderModalContent()}</>;
-};
-// END: COLLAPSED MODALS SECTION
-
-// --- CSV Export ---
-const CSV_WALL_HEADERS = ["ID", "Product Name", "Company Name", "Member Name", "Category", "Subcategory", "Product Status", "Quantity", "Price", "Intent", "Created Date", "Record Status",];
-const CSV_WALL_KEYS: (keyof WallItem)[] = ["id", "product_name", "company_name", "member_name", "product_category", "product_subcategory", "product_status", "quantity", "price", "want_to", "created_date", "recordStatus",];
-function exportWallItemsToCsv(filename: string, rows: WallItem[]) {
-  if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
-  const separator = ",";
-  const csvContent = CSV_WALL_HEADERS.join(separator) + "\n" + rows.map((row) => {
-    return CSV_WALL_KEYS.map((k) => {
-      let cell = row[k] as any;
-      if (cell === null || cell === undefined) cell = "";
-      else if (k === "created_date" && cell instanceof Date) cell = dayjs(cell).format("YYYY-MM-DD HH:mm:ss");
-      else cell = String(cell).replace(/"/g, '""');
-      if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
-      return cell;
-    }).join(separator);
-  }).join("\n");
-  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;", });
-  const link = document.createElement("a");
-  if (link.download !== undefined) {
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url); link.setAttribute("download", filename); link.style.visibility = "hidden";
-    document.body.appendChild(link); link.click(); document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toast.push(<Notification title="Export Successful" type="success">Data exported to {filename}.</Notification>);
-    return true;
-  }
-  toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
-  return false;
+// --- START: Helper Components for Document Viewing ---
+interface ImageViewerProps {
+  images: { src: string; alt: string }[];
+  startIndex: number;
+  onClose: () => void;
 }
 
-// --- Child Components ---
-const StyledActionColumn = ({ onEdit, onViewDetail, onOpenModal, onSendEmail, onSendWhatsapp, rowData }: { onEdit: () => void; onViewDetail: () => void; onOpenModal: (type: WallModalType, data: WallItem) => void; onSendEmail: () => void; onSendWhatsapp: () => void; rowData: WallItem; }) => (
-  <div className="flex items-center justify-center">
-    {getMenuRights("wall_listing")?.is_edit && <Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 rounded-md" role="button" onClick={onEdit}><TbPencil /></div></Tooltip>}
-    <Tooltip title="View"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md" role="button" onClick={onViewDetail}><TbEye /></div></Tooltip>
-    <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-      <Dropdown.Item onClick={onSendEmail} className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
-      <Dropdown.Item onClick={onSendWhatsapp} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add Schedule</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("activity", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add to active</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("match_opportunity", rowData)} className="flex items-center gap-2"><TbBulb size={18} /> <span className="text-xs">Match Opportunity</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("share", rowData)} className="flex items-center gap-2"><TbShare size={18} /> <span className="text-xs">Share Wall Link</span></Dropdown.Item>
-    </Dropdown>
-  </div>
-);
+const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }) => {
+  const [currentIndex, setCurrentIndex] = useState(startIndex);
 
-const WallSearch = React.forwardRef<HTMLInputElement, { onInputChange: (value: string) => void; }>(({ onInputChange }, ref) => (<DebouceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch />} onChange={(e) => onInputChange(e.target.value)} />));
-WallSearch.displayName = "WallSearch";
+  const handleNext = useCallback(() => {
+    setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
+  }, [images.length]);
 
-const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDashboard }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onImport: () => void; onClearFilters: () => void; columns: ColumnDef<WallItem>[]; filteredColumns: ColumnDef<WallItem>[]; setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<WallItem>[]>>; isDashboard: boolean; activeFilterCount: number; }) => {
-  const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
-  const toggleColumn = (checked: boolean, colId: string) => { if (checked) { const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId); if (originalColumn) { setFilteredColumns(prev => { const newCols = [...prev, originalColumn]; newCols.sort((a, b) => { const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey)); const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey)); return indexA - indexB; }); return newCols; }); } } else { setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId)); } };
-  return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-      <div className="flex-grow"><WallSearch onInputChange={onSearchChange} /></div>
-      {!isDashboard && <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-        <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
-          <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-            {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(e) => toggleColumn(e, id)}>{col.header as string}</Checkbox></div>) })}
-          </div>
-        </Dropdown>
-        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
-        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
-        <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
-        <Button menuName="wall_listing" isExport={true} icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
-      </div>}
-    </div>
-  )
-};
+  const handlePrev = useCallback(() => {
+    setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
+  }, [images.length]);
 
-const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filterData: FilterFormData, onRemoveFilter: (key: keyof FilterFormData, value: any) => void; onClearAll: () => void; }) => {
-  const { filterRecordStatuses, filterIntents, quickFilters } = filterData;
-  const hasFilters = filterRecordStatuses?.length || filterIntents?.length || quickFilters;
-  if (!hasFilters) return null;
-  return (
-    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-      {filterRecordStatuses?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterRecordStatuses', item)} /></Tag>)}
-      {filterIntents?.map(item => <Tag key={`intent-${item.value}`} prefix>Intent: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterIntents', item)} /></Tag>)}
-      {quickFilters && <Tag prefix className="capitalize">{quickFilters.type}: {quickFilters.value} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('quickFilters', quickFilters)} /></Tag>}
-      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-    </div>
-  );
-};
-
-const WallTable = (props: { columns: ColumnDef<WallItem>[]; data: WallItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: WallItem[]; onPaginationChange: (page: number) => void; onSelectChange: (size: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: WallItem) => void; onAllRowSelect: (checked: boolean, rows: Row<WallItem>[]) => void; selectable?: boolean; }) => (<DataTable
-  menuName="wall_listing"
-  selectable={props.selectable} columns={props.columns} data={props.data} loading={props.loading} pagingData={props.pagingData} checkboxChecked={(row) => props.selectedItems.some((s) => s.id === row.id)} onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange} onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect} noData={!props.loading && props.data.length === 0} />);
-
-const WallSelectedFooter = ({ selectedItems, deleteConfirmOpen, setDeleteConfirmOpen, onConfirmDelete, isDeleting }: { selectedItems: WallItem[]; deleteConfirmOpen: boolean; setDeleteConfirmOpen: (open: boolean) => void; onConfirmDelete: () => void; isDeleting: boolean; }) => {
-  if (selectedItems.length === 0) return null;
-  return (
-    <>
-      <StickyFooter className="flex items-center justify-between py-4" stickyClass="-mx-4 sm:-mx-8 border-t px-8">
-        <div className="flex items-center justify-between w-full"><span className="flex items-center gap-2"><TbChecks className="text-xl text-primary-500" /><span className="font-semibold">{selectedItems.length} item{selectedItems.length > 1 ? "s" : ""}{" "}selected</span></span><Button size="sm" variant="plain" className="text-red-500 hover:text-red-700" onClick={() => setDeleteConfirmOpen(true)}>Delete Selected</Button></div>
-      </StickyFooter>
-      <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title="Delete Selected Wall Items" onClose={() => setDeleteConfirmOpen(false)} onRequestClose={() => setDeleteConfirmOpen(false)} onCancel={() => setDeleteConfirmOpen(false)} onConfirm={onConfirmDelete} loading={isDeleting}>
-        <p>Are you sure you want to delete {selectedItems.length} selected item{selectedItems.length > 1 ? "s" : ""}?{" "}</p>
-      </ConfirmDialog>
-    </>
-  );
-};
-
-const BookmarkButton = React.memo(({ is_bookmarked }: { is_bookmarked: boolean }) => (<Tooltip title={is_bookmarked ? "Bookmarked" : "Not Bookmarked"}><button onClick={(e) => e.stopPropagation()} className="p-0 m-0 bg-transparent border-none cursor-pointer"><TbBookmark size={14} className={is_bookmarked ? "text-amber-500 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"} /></button></Tooltip>));
-BookmarkButton.displayName = 'BookmarkButton';
-
-
-// --- Main Component ---
-const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
-  const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const { user } = useSelector(authSelector);
-  // MODIFIED - Destructure MemberData and CountriesData
-  const { wallListing, AllProductsData, ParentCategories, subCategoriesForSelectedCategoryData, BrandData, MemberTypeData, ProductSpecificationsData, Employees, AllCompanyData, getAllUserData, MemberData, CountriesData, status: masterLoadingStatus } = useSelector(masterSelector, shallowEqual);
-  const [initialLoading, setInitialLoading] = useState(true);
-  // --- Add this new state for instant feedback on data refetch ---
-  const [isRefetching, setIsRefetching] = useState(false);
-  const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
-  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<WallItem | null>(null);
-  const [deleteSelectedConfirmOpen, setDeleteSelectedConfirmOpen] = useState(false);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
-  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
-  const [selectedItems, setSelectedItems] = useState<WallItem[]>([]);
-  const [modalState, setModalState] = useState<WallModalState>({ isOpen: false, type: null, data: null });
-  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(filterFormSchema.parse({}));
-  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "created_at" }, query: "" });
-  const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
-  const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
-
-  const mapApiToWallItem = useCallback((apiItem: ApiWallItemFromSource): WallItem => ({ id: apiItem.id as number, productId: apiItem.product_id, product_name: apiItem.product?.name || ' ', company_name: apiItem.company_name || "", companyId: apiItem.company_id || undefined, member_name: apiItem.member?.name || ' ', memberId: String(apiItem.member?.id || ""), memberTypeId: apiItem.member_type_id, member_email: apiItem.member?.email || "", member_phone: apiItem.member?.number || "", product_category: apiItem.product?.category?.name || "", productCategoryId: apiItem.product?.category_id, product_subcategory: apiItem.product?.sub_category?.name || "", subCategoryId: apiItem.product?.sub_category_id, product_description: apiItem.product?.description || "", product_specs: apiItem.product_spec?.name || "", productSpecId: apiItem.product_spec_id, product_status: apiItem.product_status, quantity: Number(apiItem.qty) || 0, price: Number(apiItem.price) || 0, want_to: apiItem.want_to as WallIntent | string, listing_type: apiItem.listing_type || "", shipping_options: apiItem.shipping_options || "", payment_method: apiItem.payment_method || "", warranty: apiItem.warranty_info || "", return_policy: apiItem.return_policy || "", listing_url: apiItem.product_url || "", brand: apiItem.product?.brand?.name || "", brandId: apiItem.product?.brand_id, product_images: apiItem.product?.product_images_array || [], created_date: new Date(apiItem.created_at), updated_at: new Date(apiItem.updated_at), visibility: apiItem.visibility || "", priority: apiItem.priority || "", assigned_to: apiItem.assigned_to_name || "", interaction_type: apiItem.interaction_type || "", action: apiItem.action || "", recordStatus: apiItem.status as WallRecordStatus, cartoonTypeId: apiItem.cartoon_type_id, created_from: apiItem.created_from || "", deviceCondition: (apiItem.device_condition as WallProductCondition | null) || null, inquiry_count: Number(apiItem.inquiries) || 0, share_count: Number(apiItem.share) || 0, is_bookmarked: apiItem.bookmark === 1, updated_by_user: apiItem.updated_by_user || null, createdById: apiItem.created_by, member: apiItem?.member || null, }), []);
-  // MODIFIED - Add member_ids and country_ids to API params
-  const apiParams = useMemo(() => { const formatMultiSelect = (items: { value: any }[] | undefined) => { if (!items || items.length === 0) return undefined; return items.map((item) => item.value).join(","); }; const params: any = { page: tableData.pageIndex, per_page: tableData.pageSize, search: tableData.query || undefined, sort_by: tableData.sort?.key || undefined, sort_order: tableData.sort?.order || undefined, status: formatMultiSelect(filterCriteria.filterRecordStatuses), company_ids: formatMultiSelect(filterCriteria.filterCompanyIds), want_to: formatMultiSelect(filterCriteria.filterIntents), product_ids: formatMultiSelect(filterCriteria.filterProductIds), category_ids: formatMultiSelect(filterCriteria.categories), subcategory_ids: formatMultiSelect(filterCriteria.subcategories), brand_ids: formatMultiSelect(filterCriteria.brands), product_status: formatMultiSelect(filterCriteria.productStatus), member_type_ids: formatMultiSelect(filterCriteria.memberType), created_by_ids: formatMultiSelect(filterCriteria.createdBy), product_spec_ids: formatMultiSelect(filterCriteria.productSpec), source: formatMultiSelect(filterCriteria.source), customer_ids: formatMultiSelect(filterCriteria.filterMembers), country_ids: formatMultiSelect(filterCriteria.filterCountries) }; if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) { params.start_date = filterCriteria.dateRange[0] ? dayjs(filterCriteria.dateRange[0]).format("YYYY-MM-DD") : undefined; params.end_date = filterCriteria.dateRange[1] ? dayjs(filterCriteria.dateRange[1]).format("YYYY-MM-DD") : undefined; } if (filterCriteria.quickFilters) { if (filterCriteria.quickFilters.type === 'intent') params.want_to = filterCriteria.quickFilters.value; if (filterCriteria.quickFilters.type === 'status') params.status = filterCriteria.quickFilters.value; } Object.keys(params).forEach((key) => { if (params[key] === undefined || params[key] === null) { delete params[key]; } }); return params; }, [tableData, filterCriteria]);
-
-  // MODIFIED - Fetch Members and Countries data on initial load
-  useEffect(() => { const fetchInitialData = async () => { setInitialLoading(true); try { await Promise.all([dispatch(getWallListingAction(apiParams)), dispatch(getProductsDataAsync()), dispatch(getParentCategoriesAction()), dispatch(getSubcategoriesByCategoryIdAction(0)), dispatch(getBrandAction()), dispatch(getMemberTypeAction()), dispatch(getProductSpecificationsAction()), dispatch(getEmployeesAction()), dispatch(getAllCompany()), dispatch(getAllUsersAction()), dispatch(getMemberAction()), dispatch(getCountriesAction())]); } catch (error) { console.error("Failed to fetch initial data", error); toast.push(<Notification type="danger" title="Error">Could not load initial data.</Notification>); } finally { setInitialLoading(false); } }; fetchInitialData(); }, [dispatch]);
-  useEffect(() => { const timerId = setTimeout(() => { if (!initialLoading) { dispatch(getWallListingAction(apiParams)).then(() => { setIsRefetching(false) }); } }, 300); return () => { clearTimeout(timerId); }; }, [dispatch, apiParams, initialLoading]);
-
-  // --- Add this useEffect to manage the refetching state ---
   useEffect(() => {
-    // When the data is no longer loading, the refetch is complete
-    if (masterLoadingStatus !== 'loading') {
-      setIsRefetching(false);
-    }
-  }, [masterLoadingStatus]);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') handleNext();
+      if (e.key === 'ArrowLeft') handlePrev();
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleNext, handlePrev, onClose]);
 
-  const pageData = useMemo(() => { return Array.isArray(wallListing?.data?.data) ? wallListing.data.data.map(mapApiToWallItem) : []; }, [wallListing, mapApiToWallItem]);
-  const total = wallListing?.data?.total || 0;
+  if (!images || images.length === 0) {
+    return null;
+  }
 
-  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
-  const openAddDrawer = useCallback(() => navigate("/sales-leads/wall-item/add"), [navigate]);
-  const openEditDrawer = useCallback((item: WallItem) => navigate("/sales-leads/wall-item/add", { state: item?.id }), [navigate]);
-  const openViewDrawer = useCallback((item: WallItem) => { navigate(`/sales-leads/wall-item/${item.id}`) }, []);
-  const closeViewDrawer = useCallback(() => { setIsViewDrawerOpen(false); setEditingItem(null); }, []);
-  const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
-  const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-  const handleOpenModal = useCallback((type: WallModalType, wallItem: WallItem) => { setModalState({ isOpen: true, type, data: wallItem }); }, []);
-  const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
-  const handleSendEmail = useCallback((item: WallItem) => { if (!item.member_email) { toast.push(<Notification type="warning" title="No Email Address" children="This member does not have a valid email address." />); return; } const subject = `Regarding your wall listing: ${item.product_name}`; const body = `Dear ${item.member_name},\n\nI am interested in your listing for "${item.product_name}".\n\nKind regards,`; window.open(`mailto:${item.member_email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`); }, []);
-  const handleSendWhatsapp = useCallback((item: WallItem) => { const phone = item.member_phone?.replace(/\D/g, ''); if (!phone) { toast.push(<Notification type="warning" title="No Mobile Number" children="This member does not have a valid phone number." />); return; } const message = `Hi ${item.member_name}, I'm interested in your listing for "${item.product_name}".`; window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank'); }, []);
-  const onConfirmDeleteSelectedItems = useCallback(async () => { if (selectedItems.length === 0) { toast.push(<Notification title="No items selected" type="info">Please select items to delete.</Notification>); return; } setDeleteSelectedConfirmOpen(false); const ids = selectedItems.map((item) => item.id).join(","); try { await dispatch(deleteAllWallAction({ ids })).unwrap(); toast.push(<Notification title="Success" type="success">{selectedItems.length} item(s) deleted.</Notification>); setSelectedItems([]); dispatch(getWallListingAction(apiParams)); } catch (error: any) { toast.push(<Notification title="Error" type="danger">{error.message || "Bulk delete failed."}</Notification>); } }, [dispatch, selectedItems, apiParams]);
-  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setIsRefetching(true); setFilterCriteria(prev => ({ ...prev, ...data, quickFilters: null })); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
-  const onClearFilters = useCallback(() => { setIsRefetching(true); const defaults = filterFormSchema.parse({}); filterFormMethods.reset(defaults); setFilterCriteria(defaults); handleSetTableData({ query: "", pageIndex: 1 }); }, [filterFormMethods, handleSetTableData]);
-  const handleCardClick = (type: 'status' | 'intent', value: string) => { setIsRefetching(true); const newFilters = filterFormSchema.parse({}); if (type === 'status' && value === 'today') { const todayStart = dayjs().startOf('day').toDate(); const todayEnd = dayjs().endOf('day').toDate(); newFilters.dateRange = [todayStart, todayEnd]; } else if (type === 'status') { const statusOption = recordStatusOptions.find(opt => opt.value === value); if (statusOption) { newFilters.filterRecordStatuses = [statusOption]; } } else if (type === 'intent') { const intentOption = intentOptions.find(opt => opt.value === value); if (intentOption) { newFilters.filterIntents = [intentOption]; } } setFilterCriteria(newFilters); handleSetTableData({ query: "", pageIndex: 1 }); };
-  const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: any) => { setIsRefetching(true); setFilterCriteria(prev => { const newFilters = { ...prev }; const currentValues = prev[key] as { value: any }[] | undefined; if (Array.isArray(currentValues)) { (newFilters as any)[key] = currentValues.filter(item => item.value !== value.value); } else { (newFilters as any)[key] = null; } return newFilters; }); }, []);
-  const handleOpenExportReasonModal = useCallback(() => { if (total === 0) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true); }, [total, exportReasonFormMethods]);
-  const handleConfirmExportWithReason = useCallback(async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const moduleName = "WallListing"; const timestamp = dayjs().format("YYYY-MM-DD"); const fileName = `wall_listing_export_${timestamp}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName, })).unwrap(); toast.push(<Notification title="Reason Submitted" type="info" duration={2000} message="Now fetching data for export..." />); const exportParams = { ...apiParams, per_page: 0, page: 1 }; const exportDataResponse = await dispatch(getWallListingAction(exportParams)).unwrap(); if (!exportDataResponse?.status) { throw new Error(exportDataResponse?.message || "Failed to fetch data for export."); } const allFilteredData = (exportDataResponse?.data?.data || []).map(mapApiToWallItem); const success = exportWallItemsToCsv(fileName, allFilteredData); if (success) { setIsExportReasonModalOpen(false); } } catch (error: any) { toast.push(<Notification title="Failed to Export" type="danger" message={error.message || "An unknown error occurred"} />); } finally { setIsSubmittingExportReason(false); } }, [apiParams, dispatch, mapApiToWallItem]);
-
-  // --- Update all data refetch handlers to set isRefetching to true ---
-  const handlePaginationChange = (page: number) => { setIsRefetching(true); handleSetTableData({ pageIndex: page }); };
-  const handlePageSizeChange = (value: number) => { setIsRefetching(true); handleSetTableData({ pageSize: value, pageIndex: 1 }); setSelectedItems([]); };
-  const handleSort = (sort: OnSortParam) => { setIsRefetching(true); handleSetTableData({ sort, pageIndex: 1 }); };
-  const handleSearchChange = (query: string) => { setIsRefetching(true); handleSetTableData({ query, pageIndex: 1 }); };
-
-  const handleRowSelect = (checked: boolean, row: WallItem) => setSelectedItems((prev) => checked ? [...prev, row] : prev.filter((item) => item.id !== row.id));
-  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<WallItem>[]) => { const originals = currentRows.map((r) => r.original); if (checked) { setSelectedItems((prev) => { const oldIds = new Set(prev.map((i) => i.id)); return [...prev, ...originals.filter((o) => !oldIds.has(o.id))]; }); } else { const currentIds = new Set(originals.map((o) => o.id)); setSelectedItems((prev) => prev.filter((i) => !currentIds.has(i.id))); } }, []);
-  const handleImportData = useCallback(() => setImportDialogOpen(true), []);
-  const handleImportFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (file) { toast.push(<Notification title="Import Started" type="info">File processing initiated. (Dummy)</Notification>); setImportDialogOpen(false); } if (event.target) event.target.value = ""; }, []);
-
-  const columns: ColumnDef<WallItem>[] = useMemo(() => { const baseColumns: ColumnDef<WallItem>[] = [{ header: "Overview", accessorKey: "product_name", size: 280, cell: ({ row }) => { const { product_name, productId, want_to, recordStatus } = row.original; const intent = want_to as WallIntent; return (<div className="flex flex-col"> <div className="flex items-center gap-2 mb-2"> <Link to={`/sales-leads/wall-item/${row.original.id}`} className="font-semibold leading-normal text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer" > {product_name} </Link> </div> <div className="flex flex-col gap-1 text-xs"> {recordStatus && (<div className="flex items-center gap-2"> <Tag className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize`}> {recordStatus} </Tag> {want_to && (<Tag className={`capitalize text-xs px-1 py-0.5 ${intentTagColor[intent] || productApiStatusColor.default}`}> {want_to} </Tag>)} </div>)} </div> </div>); }, }, { header: "Member", accessorKey: "member", size: 240, cell: ({ row }) => { const { name, member_code, email, number, number_code } = row.original?.member || {}; return (<div className="flex flex-col gap-0.5 text-xs"> {member_code && (<span className="font-semibold text-gray-500 dark:text-gray-400 mb-1">{member_code}</span>)} {name && (<span className="font-semibold text-gray-800 dark:text-gray-100">{name}</span>)} {email && (<a href={`mailto:${email}`} className="block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300 truncate">{email}</a>)} {number && (<span className="block text-gray-600 dark:text-gray-300">{number_code} {number}</span>)} </div>); }, }, { header: "Created At", accessorKey: "created_date", size: 160, cell: ({ row }) => { const { created_date } = row.original; return (<div className="flex flex-col text-xs"> <span className="font-semibold text-gray-800 dark:text-gray-100"> {dayjs(created_date).format('DD MMM YYYY, h:mm A')} </span> </div>); }, }, { header: "Details", accessorKey: "details", size: 220, cell: ({ row }) => { const { product_specs, product_status, cartoonTypeId, created_from, deviceCondition, quantity } = row?.original || {}; const currentProductApiStatus = product_status?.toLowerCase() || "default"; return (<div className="flex flex-col gap-1 text-xs"> <div className="flex items-center gap-2"> <TbStack2 className="text-base text-gray-500" /> <span className="text-gray-700 dark:text-gray-300"> Qty: <strong className="text-blue-600 dark:text-blue-400 font-bold">{quantity ?? " "}</strong> </span> </div> {product_status && (<span><Tag className={`capitalize text-xs px-1 py-0.5 ${productApiStatusColor[currentProductApiStatus] || productApiStatusColor.default}`}>{product_status}</Tag></span>)} {deviceCondition && (<Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{deviceCondition}</Tag>)} {product_specs && (<Tooltip title={product_specs}><span className="truncate max-w-[200px]">{product_specs}</span></Tooltip>)} </div>); }, },]; if (!isDashboard) { baseColumns.push({ header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<WallItem, any>) => (<StyledActionColumn onViewDetail={() => openViewDrawer(props.row.original)} onEdit={() => openEditDrawer(props.row.original)} onOpenModal={handleOpenModal} onSendEmail={() => handleSendEmail(props.row.original)} onSendWhatsapp={() => handleSendWhatsapp(props.row.original)} rowData={props.row.original} />), }); } return baseColumns; }, [isDashboard, openViewDrawer, openEditDrawer, handleOpenModal, handleSendEmail, handleSendWhatsapp]);
-
-  const [filteredColumns, setFilteredColumns] = useState<ColumnDef<WallItem>[]>([]);
-  useEffect(() => { setFilteredColumns(columns) }, [columns]);
-  // MODIFIED - Add new filters to active count
-  const activeFilterCount = useMemo(() => { let count = 0; if (filterCriteria.filterRecordStatuses?.length) count++; if (filterCriteria.filterIntents?.length) count++; if (filterCriteria.filterProductIds?.length) count++; if (filterCriteria.filterCompanyIds?.length) count++; if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) count++; if (filterCriteria.quickFilters) count++; if (filterCriteria.filterMembers?.length) count++; if (filterCriteria.filterCountries?.length) count++; return count; }, [filterCriteria]);
-  const counts = wallListing?.counts || { active: 0, buy: 0, non_active: 0, pending: 0, rejected: 0, sell: 0, today: 0, total: 0 };
-  const cardClass = "rounded-sm border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
-  const renderCardContent = (content: number | undefined, colorClass: string) => { if (initialLoading) { return <Skeleton width={40} height={20} />; } return <b className={colorClass}>{content ?? 0}</b>; };
-  const skeletonColumns: ColumnDef<WallItem>[] = useMemo(() => columns.map((column) => ({ ...column, cell: () => <Skeleton height={40} className="my-2" />, })), [columns]);
-  const skeletonData = useMemo(() => Array.from({ length: tableData.pageSize }, (_, i) => ({ id: `skeleton-${i}` } as any)), [tableData.pageSize]);
+  const currentImage = images[currentIndex];
 
   return (
-    <>
-      <Container className="h-auto">
-        <AdaptiveCard className="h-full" bodyClass="h-full">
-          {!isDashboard && (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-              <h5 className="mb-2 sm:mb-0">Wall Listing</h5>
-              <div className="flex gap-2"><Button menuName="wall_listing" isAdd={true} variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={initialLoading}>Add New</Button></div>
+    <div
+      className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-50 transition-opacity duration-300 p-4"
+      onClick={onClose}
+    >
+      <Button
+        type="button"
+        shape="circle"
+        variant="solid"
+        icon={<TbX />}
+        className="absolute top-4 right-4 z-[52] bg-black/50 hover:bg-black/80"
+        onClick={onClose}
+      />
+
+      <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+        <div className="relative flex-grow flex items-center justify-center w-full max-w-6xl overflow-hidden">
+          <Button
+            type="button"
+            shape="circle"
+            variant="solid"
+            size="lg"
+            icon={<TbChevronLeft />}
+            className="absolute left-2 md:left-4 opacity-70 hover:opacity-100 transition-opacity z-[51] bg-black/50 hover:bg-black/80"
+            onClick={handlePrev}
+          />
+
+          <div className="flex flex-col items-center justify-center h-full">
+            <img
+              src={currentImage.src}
+              alt={currentImage.alt}
+              className="max-h-[calc(100%-4rem)] max-w-full object-contain select-none transition-transform duration-300"
+            />
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md">
+              {currentImage.alt} ({currentIndex + 1} / {images.length})
             </div>
-          )}
-          {!isDashboard && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 mb-4 mt-4 gap-2 ">
-              <Tooltip title="Click to show all listings"><div onClick={onClearFilters}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-blue-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={20} /></div><div className="flex flex-col">{renderCardContent(counts.total, "text-blue-500")}<span className="font-semibold text-[11px]">Total</span></div></Card></div></Tooltip>
-              <Tooltip title="Click to show listings created today"><div onClick={() => handleCardClick('status', 'today')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-emerald-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCalendar size={20} /></div><div className="flex flex-col">{renderCardContent(counts.today, "text-emerald-500")}<span className="font-semibold text-[11px]">Today</span></div></Card></div></Tooltip>
-              <Tooltip title="Click to show 'Buy' listings"><div onClick={() => handleCardClick('intent', 'Buy')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-violet-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbBox size={20} /></div><div className="flex flex-col">{renderCardContent(counts.buy, "text-violet-500")}<span className="font-semibold text-[11px]">Buy</span></div></Card></div></Tooltip>
-              <Tooltip title="Click to show 'Sell' listings"><div onClick={() => handleCardClick('intent', 'Sell')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-pink-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbPackageExport size={20} /></div><div className="flex flex-col">{renderCardContent(counts.sell, "text-pink-500")}<span className="font-semibold text-[11px]">Sell</span></div></Card></div></Tooltip>
-              <Tooltip title="Click to show active listings"><div onClick={() => handleCardClick('status', 'Active')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-green-300")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbCircleCheck size={20} /></div><div className="flex flex-col">{renderCardContent(counts.active, "text-green-500")}<span className="font-semibold text-[11px]">Active</span></div></Card></div></Tooltip>
-              <Tooltip title="Click to show non-active listings"><div onClick={() => handleCardClick('status', 'Non-Active')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-red-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={20} /></div><div className="flex flex-col">{renderCardContent(counts.non_active, "text-red-500")}<span className="font-semibold text-[11px]">Inactive</span></div></Card></div></Tooltip>
-              <Tooltip title="Click to show pending listings"><div onClick={() => handleCardClick('status', 'Pending')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-orange-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbProgress size={20} /></div><div className="flex flex-col">{renderCardContent(counts.pending, "text-orange-500")}<span className="font-semibold text-[11px]">Pending</span></div></Card></div></Tooltip>
-              <Tooltip title="Click to show rejected listings"><div onClick={() => handleCardClick('status', 'Rejected')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-red-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbBoxOff size={20} /></div><div className="flex flex-col">{renderCardContent(counts.rejected, "text-red-500")}<span className="font-semibold text-[11px]">Rejected</span></div></Card></div></Tooltip>
-            </div>
-          )}
-          <WallTableTools isDashboard={!!isDashboard} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onImport={handleImportData} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
-          {!isDashboard && <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />}
-          <div className="mt-4">
-            {/* --- Updated rendering logic --- */}
-            {initialLoading || isRefetching ? (
-              <WallTable
-                columns={skeletonColumns}
-                data={skeletonData}
-                loading={true}
-                selectable={false}
-                pagingData={{ total: total || tableData.pageSize, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
-                onPaginationChange={() => { }} onSelectChange={() => { }} onRowSelect={() => { }} onAllRowSelect={() => { }} onSort={() => { }}
-                selectedItems={[]}
-              />
-            ) : (
-              <WallTable
-                selectable={!isDashboard}
-                columns={filteredColumns} data={pageData} loading={masterLoadingStatus === 'loading'}
-                pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
-                selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handlePageSizeChange} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} onSort={handleSort} />
-            )}
           </div>
-        </AdaptiveCard>
-      </Container>
-      {!isDashboard && (
-        <WallSelectedFooter selectedItems={selectedItems} deleteConfirmOpen={deleteSelectedConfirmOpen} setDeleteConfirmOpen={setDeleteSelectedConfirmOpen} onConfirmDelete={onConfirmDeleteSelectedItems} isDeleting={masterLoadingStatus === "loading"} />
-      )}
-      <WallModals modalState={modalState} onClose={handleCloseModal} user={user} getAllUserDataOptions={useMemo(() => getAllUserData?.map((user: any) => ({ value: user?.id, label: user?.name })), [getAllUserData])} />
-      <Drawer title="View Wall Item Details" isOpen={isViewDrawerOpen} onClose={closeViewDrawer} onRequestClose={closeViewDrawer} width={700}>
-        {editingItem && (
-          <div className="p-4 space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              {Object.entries(editingItem).filter(([key]) => !["product_images", "product_name", "id"].includes(key)).map(([key, value]) => (
-                <div key={key} className="border-b border-gray-200 dark:border-gray-700 pb-2">
-                  <strong className="capitalize text-gray-700 dark:text-gray-200">{key.replace(/([A-Z])/g, " $1").replace(/_/g, " ")}:</strong>{" "}
-                  <span className="text-gray-600 dark:text-gray-400">{value instanceof Date ? dayjs(value).format("MMM D, YYYY h:mm A") : value !== null && value !== "" ? String(value) : " "}</span>
-                </div>
+
+          <Button
+            type="button"
+            shape="circle"
+            variant="solid"
+            size="lg"
+            icon={<TbChevronRight />}
+            className="absolute right-2 md:right-4 opacity-70 hover:opacity-100 transition-opacity z-[51] bg-black/50 hover:bg-black/80"
+            onClick={handleNext}
+          />
+        </div>
+
+        <div className="w-full max-w-5xl flex-shrink-0 mt-4">
+          <div className="flex justify-center p-2">
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {images.map((image, index) => (
+                <button
+                  type="button"
+                  key={index}
+                  onClick={() => setCurrentIndex(index)}
+                  className={classNames(
+                    "w-24 h-16 flex-shrink-0 rounded-md border-2 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-white",
+                    {
+                      'border-white opacity-100 scale-105': currentIndex === index,
+                      'border-transparent opacity-60 hover:opacity-100': currentIndex !== index
+                    }
+                  )}
+                >
+                  <img
+                    src={image.src}
+                    alt={image.alt}
+                    className="w-full h-full object-cover rounded-sm"
+                  />
+                </button>
               ))}
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DocumentPlaceholder = ({ fileName }: { fileName: string; }) => {
+  const getFileIcon = () => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    switch (extension) {
+      case 'pdf':
+        return <TbFileTypePdf className="text-red-500" size={32} />;
+      case 'xls':
+      case 'xlsx':
+      case 'csv':
+        return <TbFileSpreadsheet className="text-green-500" size={32} />;
+      default:
+        return <TbFile className="text-gray-500" size={32} />;
+    }
+  };
+
+  return (
+    <div
+      className="w-full h-full p-2 flex flex-col items-center justify-center text-center"
+    >
+      {getFileIcon()}
+      <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 break-all">
+        {fileName}
+      </p>
+    </div>
+  );
+};
+
+const GenericFileViewer = ({ file, onClose }: { file: File | string; onClose: () => void; }) => {
+  const fileUrl = useMemo(() => (file instanceof File ? URL.createObjectURL(file) : file), [file]);
+  const fileName = useMemo(() => (file instanceof File ? file.name : (file.split('/').pop() || 'file')), [file]);
+  const fileExtension = useMemo(() => fileName.split('.').pop()?.toLowerCase(), [fileName]);
+
+  const isPdf = fileExtension === 'pdf';
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const getFileIcon = () => {
+    switch (fileExtension) {
+      case 'pdf': return <TbFileTypePdf className="text-red-500" size={64} />;
+      case 'xls': case 'xlsx': case 'csv': return <TbFileSpreadsheet className="text-green-500" size={64} />;
+      default: return <TbFile className="text-gray-500" size={64} />;
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-50 transition-opacity duration-300 p-4"
+      onClick={onClose}
+    >
+      <Button
+        type="button"
+        shape="circle"
+        variant="solid"
+        icon={<TbX />}
+        className="absolute top-4 right-4 z-[52] bg-black/50 hover:bg-black/80"
+        onClick={onClose}
+      />
+
+      <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+        {isPdf ? (
+          <iframe src={fileUrl} title={fileName} className="w-full h-full border-none rounded-lg bg-white" />
+        ) : (
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center flex flex-col items-center justify-center max-w-md">
+            {getFileIcon()}
+            <h4 className="mb-2 mt-4">Preview not available</h4>
+            <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-xs">
+              This file type can't be shown here. You can open it in a new tab to view or download it.
+            </p>
+            <Button
+              variant="solid"
+              onClick={() => window.open(fileUrl, '_blank')}
+            >
+              Open '{fileName}'
+            </Button>
+          </div>
         )}
-      </Drawer>
-      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={540}
-        footer={
-          <div className="text-right w-full">
-            <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear All</Button>
-            <Button size="sm" variant="solid" form="filterWallForm" type="submit">Apply</Button>
-          </div>
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md">
+          {fileName}
+        </div>
+      </div>
+    </div>
+  );
+};
+// --- END: Helper Components ---
+
+// --- Type Definitions ---
+interface ReferenceItemFE {
+  id?: string;
+  person_name?: string;
+  company_id?: { label: string; value: string };
+  number?: string;
+  number_code?: { label: string; value: string };
+  remark?: string;
+}
+interface CompanyMemberItemFE {
+  id?: string;
+  member_id?: { label: string; value: string };
+  designation?: string;
+  person_name?: string;
+  number?: string;
+}
+
+interface CompanyTeamItemFE {
+  id?: string;
+  team_name?: string;
+  designation?: string;
+  person_name?: string;
+  number?: string;
+}
+
+interface SpotVerificationItemFE {
+  id?: string;
+  verified?: boolean;
+  verified_by_id?: { label: string; value: string };
+  photo_upload?: File | string | null;
+  remark?: string;
+}
+
+interface CompanyBankDetailItemFE {
+  id?: string;
+  bank_account_number?: string;
+  bank_name?: string;
+  ifsc_code?: string;
+  swift_code?: string;
+  verification_photo?: File | string | null;
+  type?: { label: string; value: string };
+  is_default?: boolean;
+}
+
+
+interface CertificateItemFE {
+  id?: string;
+  certificate_id?: string;
+  certificate_name?: string;
+  upload_certificate?: File | string | null;
+}
+
+interface BranchItemFE {
+  id?: string;
+  office_type?: { label: string; value: string };
+  office_name?: string;
+  address?: string;
+  country_id?: { label: string; value: string };
+  state?: string;
+  city?: string;
+  zip_code?: string;
+  gst_number?: string;
+  contact_person?: string;
+  office_email?: string;
+  office_phone?: string;
+}
+
+interface BillingDocItemFE {
+  id?: string;
+  document_name?: { label: string; value: string };
+  document?: File | string | null;
+}
+
+interface EnabledBillingDocItemFE {
+  id?: string;
+  document_name?: { label: string; value: string };
+  document?: File | string | null;
+}
+
+// This is the single source of truth for the form's shape
+export type CompanyFormSchema = z.infer<typeof companySchema>;
+
+export interface FormSectionBaseProps {
+  control: Control<CompanyFormSchema>;
+  errors: FieldErrors<CompanyFormSchema>;
+  formMethods: UseFormReturn<CompanyFormSchema>;
+  getValues: UseFormReturn<CompanyFormSchema>['getValues'];
+  handlePreviewClick: (file: File | string | null | undefined, label: string) => void;
+}
+
+interface ApiSingleCompanyItem {
+  id: number;
+  company_name?: string;
+  status?: string;
+  primary_contact_number?: string;
+  primary_contact_number_code?: string;
+  general_contact_number?: string;
+  general_contact_number_code?: string;
+  alternate_contact_number?: string | null;
+  alternate_contact_number_code?: string | null;
+  primary_email_id?: string;
+  alternate_email_id?: string | null;
+  ownership_type?: string;
+  owner_name?: string;
+  company_address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  country_id?: string;
+  continent_id?: string;
+  continent?: { id: string | number, name: string };
+  country?: { id: string | number, name: string };
+  gst_number?: string;
+  pan_number?: string;
+  trn_number?: string | null;
+  tan_number?: string | null;
+  establishment_year?: string | null;
+  no_of_employees?: number | string | null;
+  company_website?: string | null;
+  company_logo?: string | null;
+  primary_business_type?: string | null;
+  support_email?: string | null;
+  notification_email?: string | null;
+  kyc_verified?: boolean | string;
+  company_certificate?: Array<{ id: number; certificate_id: string; certificate_name: string; upload_certificate: string | null; upload_certificate_path?: string; }>;
+  office_info?: Array<{ id: number; office_type: string; office_name: string; address: string; country_id: string; state: string; city: string; zip_code: string; gst_number: string | null; contact_person?: string; office_email?: string; office_phone?: string; }>;
+
+  ['206AB_file']?: string | null;
+  ['206AB_verified']?: boolean | string;
+  ['206AB_remark']?: string | null;
+  ABCQ_file?: string | null;
+  ABCQ_verified?: boolean | string;
+  ABCQ_remark?: string | null;
+  office_photo_file?: string | null;
+  office_photo_verified?: boolean | string;
+  office_photo_remark?: string | null;
+  gst_certificate_file?: string | null;
+  gst_certificate_verified?: boolean | string;
+  gst_certificate_remark?: string | null;
+  authority_letter_file?: string | null;
+  authority_letter_verified?: boolean | string;
+  authority_letter_remark?: string | null;
+  visiting_card_file?: string | null;
+  visiting_card_verified?: boolean | string;
+  visiting_card_remark?: string | null;
+  cancel_cheque_file?: string | null;
+  cancel_cheque_verified?: boolean | string;
+  cancel_cheque_remark?: string | null;
+  aadhar_card_file?: string | null;
+  aadhar_card_verified?: boolean | string;
+  aadhar_card_remark?: string | null;
+  pan_card_file?: string | null;
+  pan_card_verified?: boolean | string;
+  pan_card_remark?: string | null;
+  other_document_file?: string | null;
+  other_document_verified?: boolean | string;
+  other_document_remark?: string | null;
+
+  primary_account_number?: string | null;
+  primary_bank_name?: string | null;
+  primary_benificeiry_name?: string | null;
+  primary_ifsc_code?: string | null;
+  primary_swift_code?: string | null;
+  primary_bank_verification_photo?: string | null;
+  primary_is_default?: boolean | string;
+  secondary_account_number?: string | null;
+  secondary_benificeiry_name?: string | null;
+  secondary_bank_name?: string | null;
+  secondary_ifsc_code?: string | null;
+  secondary_swift_code?: string | null;
+  secondary_bank_verification_photo?: string | null;
+  secondary_is_default?: boolean | string;
+  company_bank_details?: Array<{ id: number; bank_account_number: string; bank_name: string; ifsc_code: string; swift_code?: string; type: string; verification_photo: string | null; is_default?: boolean | string; }>;
+  billing_documents?: Array<{ id: number; document_name: { label: string; value: string }; document: string | null; }>;
+  enable_billing_documents?: Array<{ id: number; document_name: { label: string; value: string }; document: string | null; }>;
+  company_member_management?: Array<{ member_id: string; designation: string; person_name: string; number: string; }>;
+  company_team_members?: Array<{ team_name: string; designation: string; person_name: string; number: string; }>;
+  company_spot_verification?: Array<{ id: number; verified_by_id?: string | number; verified_by_name?: string; verified: boolean | string; remark: string | null; photo_upload: string | null; }>;
+  company_references?: Array<{ id: number; person_name: string; company_id: string; number: string; number_code: string; remark: string | null; }>;
+}
+
+// --- Helper to transform API data to CompanyFormSchema for EDIT mode ---
+const transformApiToFormSchema = (
+  apiData: ApiSingleCompanyItem,
+  allCountries: Array<{ id: string | number; name: string }>,
+  allContinents: Array<{ id: string | number; name: string }>,
+  allMembers: Array<{ value: string; label: string }>,
+  allEmployees: Array<{ value: string; label: string }>,
+  allCompaniesForRef: Array<{ value: string; label: string }>,
+  documentTypeOptions: Array<{ value: string; label: string }>
+): Partial<CompanyFormSchema> => {
+  const stringToBoolean = (value: any) => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') {
+      const lowerVal = value.toLowerCase();
+      return lowerVal === '1' || lowerVal === 'true' || lowerVal === 'yes' || lowerVal === 'on' || lowerVal === 'checked' || lowerVal === 'enable' || lowerVal === 'enabled' || lowerVal === 'default';
+    }
+    if (typeof value === 'number') return value === 1;
+    return false;
+  };
+
+  const findOptionByValue = (options: Array<{ value: string; label: string }>, value?: string | number | null) => {
+    if (value === null || value === undefined) return undefined;
+    return options.find(opt => String(opt.value) === String(value));
+  };
+  const findOptionByLabel = (options: Array<{ value: string; label: string }>, label?: string | null) => {
+    if (!label) return undefined;
+    return options.find(opt => opt.label.toLowerCase().includes(label.toLowerCase()));
+  };
+
+  const mapCountries = allCountries.map(c => ({ value: String(c.id), label: c.name }));
+  const mapContinents = allContinents.map(c => ({ value: String(c.id), label: c.name }));
+
+  return {
+    id: apiData.id,
+    company_name: apiData.company_name || '',
+    primary_contact_number: apiData.primary_contact_number || '',
+    primary_contact_number_code: apiData.primary_contact_number_code ? { label: apiData.primary_contact_number_code, value: apiData.primary_contact_number_code } : undefined,
+    general_contact_number: apiData.general_contact_number || '',
+    general_contact_number_code: apiData.general_contact_number_code ? { label: apiData.general_contact_number_code, value: apiData.general_contact_number_code } : undefined,
+    alternate_contact_number: apiData.alternate_contact_number || '',
+    alternate_contact_number_code: apiData.alternate_contact_number_code ? { label: apiData.alternate_contact_number_code, value: apiData.alternate_contact_number_code } : null,
+    primary_email_id: apiData.primary_email_id || '',
+    alternate_email_id: apiData.alternate_email_id || '',
+    ownership_type: apiData.ownership_type ? { label: apiData.ownership_type, value: apiData.ownership_type } : undefined,
+    owner_name: apiData.owner_name || '',
+    company_address: apiData.company_address || '',
+    city: apiData.city || '',
+    state: apiData.state || '',
+    zip_code: apiData.zip_code || '',
+    country_id: findOptionByValue(mapCountries, apiData.country_id) || (apiData.country?.name ? { label: apiData.country.name, value: String(apiData.country_id) } : undefined),
+    continent_id: findOptionByValue(mapContinents, apiData.continent_id) || (apiData.continent?.name ? { label: apiData.continent.name, value: String(apiData.continent_id) } : null),
+    gst_number: apiData.gst_number || '',
+    pan_number: apiData.pan_number || '',
+    trn_number: apiData.trn_number || '',
+    tan_number: apiData.tan_number || '',
+    establishment_year: apiData.establishment_year || '',
+    no_of_employees: apiData.no_of_employees || '',
+    company_website: apiData.company_website || '',
+    company_logo: apiData.company_logo || null,
+    primary_business_type: apiData.primary_business_type ? { label: apiData.primary_business_type, value: apiData.primary_business_type } : null,
+    status: apiData.status ? { label: apiData.status, value: apiData.status } : undefined,
+    support_email: apiData.support_email || '',
+    notification_email: apiData.notification_email || '',
+
+    company_certificate: apiData.company_certificate?.map(cert => ({
+      id: String(cert.id),
+      certificate_id: String(cert.certificate_id),
+      certificate_name: cert.certificate_name || '',
+      upload_certificate: cert.upload_certificate || cert.upload_certificate_path || null,
+    })) || [],
+    office_info: apiData.office_info?.map(office => ({
+      id: String(office.id),
+      office_type: office.office_type ? { label: office.office_type, value: office.office_type } : undefined,
+      office_name: office.office_name || '',
+      address: office.address || '',
+      country_id: findOptionByValue(mapCountries, office.country_id),
+      state: office.state || '',
+      city: office.city || '',
+      zip_code: office.zip_code || '',
+      gst_number: office.gst_number || '',
+      contact_person: office.contact_person || '',
+      office_email: office.office_email || '',
+      office_phone: office.office_phone || '',
+    })) || [],
+
+    declaration_206ab: apiData["206AB_file"] || null,
+    declaration_206ab_remark: apiData["206AB_remark"] || '',
+    declaration_206ab_remark_enabled: stringToBoolean(apiData["206AB_verified"]),
+    ABCQ_file: apiData.ABCQ_file || null,
+    ABCQ_remark: apiData.ABCQ_remark || '',
+    ABCQ_remark_enabled: stringToBoolean(apiData.ABCQ_verified),
+    office_photo_file: apiData.office_photo_file || null,
+    office_photo_remark: apiData.office_photo_remark || "",
+    office_photo_remark_enabled: stringToBoolean(apiData.office_photo_verified),
+    gst_certificate_file: apiData.gst_certificate_file || null,
+    gst_certificate_remark: apiData.gst_certificate_remark || "",
+    gst_certificate_remark_enabled: stringToBoolean(apiData.gst_certificate_verified),
+    authority_letter_file: apiData.authority_letter_file || null,
+    authority_letter_remark: apiData.authority_letter_remark || "",
+    authority_letter_remark_enabled: stringToBoolean(apiData.authority_letter_verified),
+    visiting_card_file: apiData.visiting_card_file || null,
+    visiting_card_remark: apiData.visiting_card_remark || "",
+    visiting_card_remark_enabled: stringToBoolean(apiData.visiting_card_verified),
+    cancel_cheque_file: apiData.cancel_cheque_file || null,
+    cancel_cheque_remark: apiData.cancel_cheque_remark || "",
+    cancel_cheque_remark_enabled: stringToBoolean(apiData.cancel_cheque_verified),
+    aadhar_card_file: apiData.aadhar_card_file || null,
+    aadhar_card_remark: apiData.aadhar_card_remark || "",
+    aadhar_card_remark_enabled: stringToBoolean(apiData.aadhar_card_verified),
+    pan_card_file: apiData.pan_card_file || null,
+    pan_card_remark: apiData.pan_card_remark || "",
+    pan_card_remark_enabled: stringToBoolean(apiData.pan_card_verified),
+    other_document_file: apiData.other_document_file || null,
+    other_document_remark: apiData.other_document_remark || "",
+    other_document_remark_enabled: stringToBoolean(apiData.other_document_verified),
+
+    primary_account_number: apiData.primary_account_number || '',
+    primary_bank_name: apiData.primary_bank_name || '',
+    primary_benificeiry_name: apiData.primary_benificeiry_name || '',
+    primary_ifsc_code: apiData.primary_ifsc_code || '',
+    primary_swift_code: apiData.primary_swift_code || '',
+    primary_bank_verification_photo: apiData.primary_bank_verification_photo || null,
+    primary_is_default: stringToBoolean(apiData.primary_is_default),
+    secondary_account_number: apiData.secondary_account_number || '',
+    secondary_benificeiry_name: apiData?.secondary_benificeiry_name || '',
+    secondary_bank_name: apiData.secondary_bank_name || '',
+    secondary_ifsc_code: apiData.secondary_ifsc_code || '',
+    secondary_swift_code: apiData.secondary_swift_code || '',
+    secondary_bank_verification_photo: apiData.secondary_bank_verification_photo || null,
+    secondary_is_default: stringToBoolean(apiData.secondary_is_default),
+    company_bank_details: apiData.company_bank_details?.map(bank => ({
+      id: String(bank.id),
+      bank_account_number: bank.bank_account_number || '',
+      bank_name: bank.bank_name || '',
+      ifsc_code: bank.ifsc_code || '',
+      swift_code: bank.swift_code || '',
+      type: bank.type ? { label: bank.type, value: bank.type } : undefined,
+      verification_photo: bank.verification_photo || null,
+      is_default: stringToBoolean(bank.is_default),
+    })) || [],
+
+    USER_ACCESS: stringToBoolean(apiData.kyc_verified),
+    billing_documents: apiData.billing_documents?.map(doc => ({
+      id: String(doc.id),
+      document_name: findOptionByValue(documentTypeOptions, doc.document_name as any), // Cast to any to handle potential type mismatch
+      document: doc.document || null,
+    })) || [],
+    enabled_billing_docs: apiData.enable_billing_documents?.map(doc => ({
+      id: String(doc.id),
+      document_name: findOptionByValue(documentTypeOptions, doc.document_name as any), // Cast to any
+      document: doc.document || null
+    })) || [],
+
+    company_members: apiData.company_member_management?.map(m => ({
+      member_id: findOptionByValue(allMembers, m.member_id),
+      designation: m.designation || 'Sales Executive',
+      person_name: m.person_name || '',
+      number: m.number || '',
+    })) || [],
+    company_teams: apiData.company_team_members?.map(m => ({
+      team_name: m.team_name || '',
+      designation: m.designation || '',
+      person_name: m.person_name || '',
+      number: m.number || '',
+    })) || [],
+
+    company_spot_verification: apiData.company_spot_verification?.map(item => ({
+      id: String(item.id),
+      verified: stringToBoolean(item.verified),
+      verified_by_id: findOptionByValue(allEmployees, item.verified_by_id) || findOptionByLabel(allEmployees, item.verified_by_name),
+      photo_upload: item.photo_upload || null,
+      remark: item.remark || '',
+    })) || [],
+  company_references: apiData.company_references?.map(ref => ({
+      id: String(ref.id),
+      person_name: ref.person_name || '',
+      company_id: findOptionByValue(allCompaniesForRef, ref.company_id),
+      number: ref.number || '',
+      number_code: ref.number_code ? { label: String(ref.number_code), value: String(ref.number_code) } : undefined,
+      remark: ref.remark || '',
+    })) || [],
+  };
+};
+
+const preparePayloadForApi = (
+  formData: CompanyFormSchema,
+  isEditMode: boolean
+): FormData => {
+  const apiPayload = new FormData();
+  const data: any = { ...formData };
+
+  const appendField = (key: string, value: any) => {
+    if (value === null || value === undefined) {
+      // Keep it empty for backend
+    } else if (typeof value === 'boolean') {
+      apiPayload.append(key, value ? "1" : "0");
+    } else if (value instanceof File) {
+      apiPayload.append(key, value);
+    } else if (typeof value === 'object' && !Array.isArray(value) && value.value !== undefined) {
+      apiPayload.append(key, value.value);
+    }
+    else {
+      apiPayload.append(key, String(value));
+    }
+  };
+
+  if (isEditMode && data.id) {
+    apiPayload.append("id", String(data.id));
+    apiPayload.append("_method", "PUT");
+  }
+
+  const simpleFields: (keyof CompanyFormSchema)[] = [
+    "company_name", "primary_contact_number", "primary_contact_number_code", "general_contact_number", "general_contact_number_code",
+    "alternate_contact_number", "alternate_contact_number_code", "primary_email_id", "alternate_email_id", "ownership_type", "owner_name",
+    "company_address", "city", "state", "zip_code", "country_id", "continent_id", "gst_number", "pan_number", "trn_number", "tan_number",
+    "establishment_year", "no_of_employees", "company_website", "primary_business_type", "status", "support_email", "notification_email",
+    "primary_account_number", "primary_benificeiry_name", "primary_bank_name", "primary_ifsc_code", "primary_swift_code", "primary_is_default",
+    "secondary_account_number", "secondary_benificeiry_name", "secondary_bank_name", "secondary_ifsc_code", "secondary_swift_code", "secondary_is_default"
+  ];
+  simpleFields.forEach(field => {
+    if (data[field] !== undefined) appendField(field, data[field])
+  });
+
+  appendField("kyc_verified", data.USER_ACCESS);
+  appendField("company_logo", data.company_logo);
+  appendField("primary_bank_verification_photo", data.primary_bank_verification_photo);
+  appendField("secondary_bank_verification_photo", data.secondary_bank_verification_photo);
+
+  data.company_certificate
+    ?.filter((cert: CertificateItemFE) => cert.certificate_id || cert.certificate_name || cert.upload_certificate)
+    .forEach((cert: CertificateItemFE, index: number) => {
+      if (cert.id) appendField(`company_certificate[${index}][id]`, cert.id);
+      appendField(`company_certificate[${index}][certificate_id]`, cert.certificate_id);
+      appendField(`company_certificate[${index}][certificate_name]`, cert.certificate_name);
+      appendField(`company_certificate[${index}][upload_certificate]`, cert.upload_certificate);
+    });
+
+  data.office_info
+    ?.filter((office: BranchItemFE) => Object.values(office).some(val => val))
+    .forEach((office: BranchItemFE, index: number) => {
+      if (office.id) appendField(`office_info[${index}][id]`, office.id);
+      appendField(`office_info[${index}][office_type]`, office.office_type);
+      appendField(`office_info[${index}][office_name]`, office.office_name);
+      appendField(`office_info[${index}][address]`, office.address);
+      appendField(`office_info[${index}][country_id]`, office.country_id);
+      appendField(`office_info[${index}][state]`, office.state);
+      appendField(`office_info[${index}][city]`, office.city);
+      appendField(`office_info[${index}][zip_code]`, office.zip_code);
+      appendField(`office_info[${index}][gst_number]`, office.gst_number);
+      appendField(`office_info[${index}][contact_person]`, office.contact_person);
+      appendField(`office_info[${index}][office_email]`, office.office_email);
+      appendField(`office_info[${index}][office_phone]`, office.office_phone);
+    });
+
+  const kycDocsConfig = [
+    { feFileKey: "declaration_206ab", beFileKey: "declaration_206AB_file", feVerifyKey: "declaration_206ab_remark_enabled", beVerifyKey: "declaration_206AB_verified", feRemarkKey: "declaration_206ab_remark", beRemarkKey: "declaration_206AB_remark" },
+    { feFileKey: "ABCQ_file", beFileKey: "ABCQ_file", feVerifyKey: "ABCQ_remark_enabled", beVerifyKey: "ABCQ_verified", feRemarkKey: "ABCQ_remark", beRemarkKey: "ABCQ_remark" },
+    { feFileKey: "office_photo_file", beFileKey: "office_photo_file", feVerifyKey: "office_photo_remark_enabled", beVerifyKey: "office_photo_verified", feRemarkKey: "office_photo_remark", beRemarkKey: "office_photo_remark" },
+    { feFileKey: "gst_certificate_file", beFileKey: "gst_certificate_file", feVerifyKey: "gst_certificate_remark_enabled", beVerifyKey: "gst_certificate_verified", feRemarkKey: "gst_certificate_remark", beRemarkKey: "gst_certificate_remark" },
+    { feFileKey: "authority_letter_file", beFileKey: "authority_letter_file", feVerifyKey: "authority_letter_remark_enabled", beVerifyKey: "authority_letter_verified", feRemarkKey: "authority_letter_remark", beRemarkKey: "authority_letter_remark" },
+    { feFileKey: "visiting_card_file", beFileKey: "visiting_card_file", feVerifyKey: "visiting_card_remark_enabled", beVerifyKey: "visiting_card_verified", feRemarkKey: "visiting_card_remark", beRemarkKey: "visiting_card_remark" },
+    { feFileKey: "cancel_cheque_file", beFileKey: "cancel_cheque_file", feVerifyKey: "cancel_cheque_remark_enabled", beVerifyKey: "cancel_cheque_verified", feRemarkKey: "cancel_cheque_remark", beRemarkKey: "cancel_cheque_remark" },
+    { feFileKey: "aadhar_card_file", beFileKey: "aadhar_card_file", feVerifyKey: "aadhar_card_remark_enabled", beVerifyKey: "aadhar_card_verified", feRemarkKey: "aadhar_card_remark", beRemarkKey: "aadhar_card_remark" },
+    { feFileKey: "pan_card_file", beFileKey: "pan_card_file", feVerifyKey: "pan_card_remark_enabled", beVerifyKey: "pan_card_verified", feRemarkKey: "pan_card_remark", beRemarkKey: "pan_card_remark" },
+    { feFileKey: "other_document_file", beFileKey: "other_document_file", feVerifyKey: "other_document_remark_enabled", beVerifyKey: "other_document_verified", feRemarkKey: "other_document_remark", beRemarkKey: "other_document_remark" },
+  ];
+  kycDocsConfig.forEach(doc => {
+    appendField(doc.beFileKey, data[doc.feFileKey]);
+    appendField(doc.beVerifyKey, data[doc.feVerifyKey]);
+    appendField(doc.beRemarkKey, data[doc.feRemarkKey]);
+  });
+
+  data.company_bank_details
+    ?.filter((bank: CompanyBankDetailItemFE) => Object.values(bank).some(val => val))
+    .forEach((bank: CompanyBankDetailItemFE, index: number) => {
+      if (bank.id) appendField(`company_bank_details[${index}][id]`, bank.id);
+      appendField(`company_bank_details[${index}][bank_account_number]`, bank.bank_account_number);
+      appendField(`company_bank_details[${index}][bank_name]`, bank.bank_name);
+      appendField(`company_bank_details[${index}][ifsc_code]`, bank.ifsc_code);
+      appendField(`company_bank_details[${index}][swift_code]`, bank.swift_code);
+      appendField(`company_bank_details[${index}][type]`, bank.type);
+      appendField(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
+      appendField(`company_bank_details[${index}][is_default]`, bank.is_default);
+    });
+
+  data.billing_documents
+    ?.filter((doc: BillingDocItemFE) => doc.document_name?.value || doc.document)
+    .forEach((doc: BillingDocItemFE, index: number) => {
+      if (doc.id) appendField(`billing_documents[${index}][id]`, doc.id);
+      appendField(`billing_documents[${index}][document_name]`, doc.document_name);
+      appendField(`billing_documents[${index}][document]`, doc.document);
+    });
+
+  data.enabled_billing_docs
+    ?.filter((doc: EnabledBillingDocItemFE) => doc.document_name?.value || doc.document)
+    .forEach((doc: EnabledBillingDocItemFE, index: number) => {
+      if (doc.id) appendField(`enable_billing_documents[${index}][id]`, doc.id);
+      appendField(`enable_billing_documents[${index}][document_name]`, doc.document_name);
+      appendField(`enable_billing_documents[${index}][document]`, doc.document);
+    });
+
+  data.company_members
+    ?.filter((member: CompanyMemberItemFE) => member.member_id?.value || member.designation || member.person_name || member.number)
+    .forEach((member: CompanyMemberItemFE, index: number) => {
+      if (member.id) appendField(`company_member_management[${index}][id]`, member.id);
+      appendField(`company_member_management[${index}][member_id]`, member.member_id);
+      appendField(`company_member_management[${index}][designation]`, member.designation);
+      appendField(`company_member_management[${index}][person_name]`, member.person_name);
+      appendField(`company_member_management[${index}][number]`, member.number);
+    });
+
+  data.company_teams
+    ?.filter((member: CompanyTeamItemFE) => member.team_name || member.designation || member.person_name || member.number)
+    .forEach((member: CompanyTeamItemFE, index: number) => {
+      if (member.id) appendField(`company_team_members[${index}][id]`, member.id);
+      appendField(`company_team_members[${index}][team_name]`, member.team_name);
+      appendField(`company_team_members[${index}][designation]`, member.designation);
+      appendField(`company_team_members[${index}][person_name]`, member.person_name);
+      appendField(`company_team_members[${index}][number]`, member.number);
+    });
+
+  data.company_spot_verification
+    ?.filter((item: SpotVerificationItemFE) => item.verified_by_id?.value || item.remark || item.photo_upload)
+    .forEach((item: SpotVerificationItemFE, index: number) => {
+      if (item.id) appendField(`company_spot_verification[${index}][id]`, item.id);
+      appendField(`company_spot_verification[${index}][verified]`, item.verified);
+      appendField(`company_spot_verification[${index}][verified_by_id]`, item.verified_by_id);
+      appendField(`company_spot_verification[${index}][remark]`, item.remark);
+      appendField(`company_spot_verification[${index}][photo_upload]`, item.photo_upload);
+    });
+
+  data.company_references
+    ?.filter((ref: ReferenceItemFE) => ref.person_name || ref.company_id?.value || ref.number)
+    .forEach((ref: ReferenceItemFE, index: number) => {
+      if (ref.id) appendField(`company_references[${index}][id]`, ref.id);
+      appendField(`company_references[${index}][person_name]`, ref.person_name);
+      appendField(`company_references[${index}][company_id]`, ref.company_id);
+      appendField(`company_references[${index}][number]`, ref.number);
+      appendField(`company_references[${index}][number_code]`, ref.number_code);
+      appendField(`company_references[${index}][remark]`, ref.remark);
+    });
+
+  return apiPayload;
+};
+
+// --- Navigator Component ---
+const companyNavigationList = [
+  { label: "Company Details", link: "companyDetails" },
+  { label: "KYC Documents", link: "kycDocuments" },
+  { label: "Bank Details", link: "bankDetails" },
+  { label: "Spot Verification", link: "spotVerification" },
+  { label: "Reference", link: "reference" },
+  { label: "Accessibility", link: "accessibility" },
+  { label: "Member Management", link: "memberManagement" },
+  { label: "Team Management", link: "teamManagement" },
+];
+type NavigatorComponentProps = {
+  activeSection: string;
+  onNavigate: (sectionKey: string) => void;
+};
+const NavigatorComponent = (props: NavigatorComponentProps) => {
+  const { activeSection, onNavigate } = props;
+  return (
+    <div className="flex flex-row items-center justify-between gap-x-1 md:gap-x-2 py-2 flex-nowrap overflow-x-auto">
+      {companyNavigationList.map((nav) => (
+        <button
+          type="button"
+          key={nav.link}
+          className={classNames(
+            "cursor-pointer px-2 md:px-3 py-2 rounded-md group text-center transition-colors duration-150 flex-1 basis-0 min-w-max",
+            "hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none",
+            {
+              "bg-indigo-50 dark:bg-indigo-700/60 text-[#00baf2] dark:text-indigo-200 font-semibold":
+                activeSection === nav.link,
+              "bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200":
+                activeSection !== nav.link,
+            }
+          )}
+          onClick={() => onNavigate(nav.link)}
+          title={nav.label}
+        >
+          <span className="font-medium text-[10px] xxs:text-xs sm:text-sm truncate">
+            {nav.label}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+};
+
+// --- CompanyDetailsSection ---
+const CompanyDetailsSection = ({
+  control,
+  errors,
+  formMethods,
+  handlePreviewClick,
+}: FormSectionBaseProps) => {
+  const {
+    CountriesData = [],
+    ContinentsData = [],
+  } = useSelector(masterSelector);
+  const { watch, setValue } = formMethods;
+
+  const countryOptions = useMemo(() => {
+    const uniqueCountriesMap = new Map();
+    (CountriesData || []).forEach((country: any) => {
+      uniqueCountriesMap.set(country.id, country);
+    });
+    return Array.from(uniqueCountriesMap.values()).map((value: any) => ({
+      value: String(value.id),
+      label: value.name,
+    }));
+  }, [CountriesData]);
+
+  const countryCodeOptions = CountriesData
+    .map((c: any) => ({
+      value: `${c.phone_code}`,
+      label: `${c.phone_code}`,
+    })).filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i);
+
+  const continentOptions = useMemo(() => ContinentsData.map((value: any) => ({
+    value: String(value.id),
+    label: value.name,
+  })), [ContinentsData]);
+
+  const ownershipTypeOptions = [
+    { value: "Sole Proprietorship", label: "Sole Proprietorship" },
+    { value: "Partner", label: "Partner" },
+    { value: "LLC", label: "LLC" },
+    { value: "Corporate", label: "Corporate" },
+    { value: "Private Limited", label: "Private Limited" },
+    { value: "Public Limited", label: "Public Limited" },
+    { value: "Others", label: "Others" },
+  ];
+  const primaryBusinessTypeOptions = [
+    { value: "Manufacturer", label: "Manufacturer" },
+    { value: "Distributor", label: "Distributor" },
+    { value: "Wholesaler", label: "Wholesaler" },
+    { value: "Retailer", label: "Retailer" },
+    { value: "Corporate", label: "Corporate" },
+    { value: "Others", label: "Others" },
+  ];
+  const statusOptions = [
+    { value: "Active", label: "Active" },
+    { value: "Disabled", label: "Disabled" },
+    { value: "Blocked", label: "Blocked" },
+    { value: "Inactive", label: "Inactive" },
+  ];
+  const officeTypeOptions = [
+    { label: "Head Office", value: "Head Office" },
+    { label: "Branch", value: "Branch" },
+    { label: "Regional Office", value: "Regional Office" },
+    { label: "Warehouse", value: "Warehouse" },
+    { label: "Pick up location", value: "Pick up location" },
+    { label: "Delivery location", value: "Delivery location" },
+    { label: "Manufacturing unit", value: "Manufacturing unit" },
+    { label: "Other", value: "Other" },
+  ];
+
+  const { fields: certFields, append: appendCert, remove: removeCert } = useFieldArray({ control, name: "company_certificate" });
+  const { fields: branchFields, append: appendBranch, remove: removeBranch } = useFieldArray({ control, name: "office_info" });
+
+  const companyLogoValue = watch("company_logo");
+  const selectedCountry = watch("country_id");
+  const isIndiaSelected = selectedCountry?.value === '101' || selectedCountry?.value === '1' ; // '101' is typically India's ID
+
+  console.log("isIndiaSelected",isIndiaSelected);
+  console.log("selectedCountry?.value",selectedCountry?.value);
+  
+  useEffect(() => {
+    if (selectedCountry) {
+      if (isIndiaSelected) {
+        setValue('trn_number', '', { shouldValidate: true });
+        setValue('tan_number', '', { shouldValidate: true });
+      } else {
+        setValue('gst_number', '', { shouldValidate: true });
+        setValue('pan_number', '', { shouldValidate: true });
+      }
+    }
+  }, [isIndiaSelected, selectedCountry, setValue]);
+
+  const isViewableImage = (file: unknown): boolean => {
+    if (file instanceof File) return file.type.startsWith('image/');
+    if (typeof file === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(file);
+    return false;
+  }
+
+  return (
+    <Card id="companyDetails">
+      <h4 className="mb-4">Primary Information</h4>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+        <FormItem label={<div>Status<span className="text-red-500"> * </span></div>} invalid={!!errors.status} errorMessage={errors.status?.message as string}>
+          <Controller name="status" control={control} render={({ field }) => (<Select options={statusOptions} placeholder="Select Status" {...field} />)} />
+        </FormItem>
+        <FormItem label={<div>Company Name<span className="text-red-500"> * </span></div>} invalid={!!errors.company_name} errorMessage={errors.company_name?.message as string}>
+          <Controller name="company_name" control={control} render={({ field }) => (<Input placeholder="Company Name" {...field} onInput={(e: any) => { if (e.target.value) e.target.value = e.target.value.toUpperCase() }} />)} />
+        </FormItem>
+        <FormItem label={<div>Ownership Type<span className="text-red-500"> * </span></div>} invalid={!!errors.ownership_type} errorMessage={errors.ownership_type?.message as string}>
+          <Controller name="ownership_type" control={control} render={({ field }) => (<Select placeholder="Select Ownership" options={ownershipTypeOptions} {...field} />)} />
+        </FormItem>
+        <FormItem label={<div>Owner/Director Name<span className="text-red-500"> * </span></div>} invalid={!!errors.owner_name} errorMessage={errors.owner_name?.message as string}>
+          <Controller name="owner_name" control={control} render={({ field }) => (<Input placeholder="Owner/Director Name" {...field} />)} />
+        </FormItem>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 mt-4">
+        <FormItem label={<div>Country<span className="text-red-500"> * </span></div>} invalid={!!errors.country_id} errorMessage={errors.country_id?.message as string}>
+          <Controller name="country_id" control={control} render={({ field }) => (<Select placeholder="Select Country" options={countryOptions} {...field} />)} />
+        </FormItem>
+        <FormItem label="Continent" invalid={!!errors.continent_id} errorMessage={errors.continent_id?.message as string}>
+          <Controller name="continent_id" control={control} render={({ field }) => (<Select placeholder="Select Continent" options={continentOptions} {...field} />)} />
+        </FormItem>
+        <FormItem label={<div>City</div>} invalid={!!errors.city} errorMessage={errors.city?.message as string}>
+          <Controller name="city" control={control} render={({ field }) => (<Input placeholder="Enter city" {...field} />)} />
+        </FormItem>
+        <FormItem label={<div>State</div>} invalid={!!errors.state} errorMessage={errors.state?.message as string}>
+          <Controller name="state" control={control} render={({ field }) => (<Input placeholder="Enter state" {...field} />)} />
+        </FormItem>
+        <FormItem
+  label={<div>Pincode</div>}
+  invalid={!!errors.zip_code}
+  errorMessage={errors.zip_code?.message as string}
+>
+  <Controller
+    name="zip_code"
+    control={control}
+    // Keep your validation rules as a fallback
+    
+    render={({ field }) => {
+      // Create a custom onChange handler
+      const handleNumericChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        // Use a regex to allow only numbers (and an empty string)
+        if (/^[0-9]*$/.test(value)) {
+          // If the value is numeric, call the original onChange from react-hook-form
+          field.onChange(value);
         }
-      >
-        <UiForm id="filterWallForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col h-full">
-          <div className="overflow-y-auto p-1 flex-grow">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormItem label="Status"><Controller name="filterRecordStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status..." options={recordStatusOptions} {...field} />)} /></FormItem>
-              <FormItem label="Companies"><Controller name="filterCompanyIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select companies..." options={AllCompanyData?.map((p: any) => ({ value: p.id, label: p.company_name }))} {...field} />)} /></FormItem>
-              <FormItem label="Intent (Want to)"><Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select intents..." options={intentOptions} {...field} />)} /></FormItem>
-              <FormItem label="Products"><Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select products..." options={AllProductsData?.data?.map((p: any) => ({ value: p.id, label: p.name })) || []} {...field} />)} /></FormItem>
-              <FormItem label="Categories"><Controller name="categories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Categories..." options={ParentCategories.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
-              <FormItem label="Sub Categories"><Controller name="subcategories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Sub Cate..." options={subCategoriesForSelectedCategoryData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
-              <FormItem label="Brands"><Controller name="brands" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Brands..." options={BrandData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
-              <FormItem label="Availability Status"><Controller name="productStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Availability..." options={Object.keys(productApiStatusColor).filter((k) => k !== "default").map((s) => ({ label: s.charAt(0).toUpperCase() + s.slice(1), value: s }))} {...field} />)} /></FormItem>
-              <FormItem label="Created Date Range"><Controller name="dateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date | null, Date | null] | null} onChange={field.onChange} placeholder="Select date range" />)} /></FormItem>
-              <FormItem label="Product Spec (Example)"><Controller name="productSpec" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Product Spec..." options={ProductSpecificationsData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
-              <FormItem label="Member Type (Example)"><Controller name="memberType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Member Type..." options={MemberTypeData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
-              <FormItem label="Created By (Example)"><Controller name="createdBy" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Employee..." options={Employees?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
-              {/* START: ADDED - Member and Country filters */}
-              <FormItem label="Members">
-                <Controller name="filterMembers" control={filterFormMethods.control} render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select Members..." options={(MemberData?.data || []).map((m: any) => ({ value: m.id, label: m.name }))} {...field} />
-                )} />
-              </FormItem>
-              <FormItem label="Countries">
-                <Controller name="filterCountries" control={filterFormMethods.control} render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select Countries..." options={(CountriesData || []).map((c: any) => ({ value: c.id, label: c.name }))} {...field} />
-                )} />
-              </FormItem>
-              {/* END: ADDED */}
-            </div>
+      };
+
+      return (
+        <Input
+          placeholder="Pincode"
+          // Spread the rest of the field props (like onBlur, name, ref)
+          {...field}
+          // But override the onChange with our custom one
+          onChange={handleNumericChange}
+          // Keep the value from the field to ensure it's controlled
+          value={field.value}
+          // For the best mobile UX, use inputMode="numeric" and type="text"
+          inputMode="numeric"
+          type="text"
+        />
+      );
+    }}
+  />
+</FormItem>
+        <FormItem label={<div>Company Address</div>} invalid={!!errors.company_address} errorMessage={errors.company_address?.message as string} className="md:col-span-5">
+          <Controller name="company_address" control={control} render={({ field }) => (<Input placeholder="Company Address" {...field} />)} />
+        </FormItem>
+      </div>
+
+      <hr className="my-6" />
+      <h4 className="mb-4">Contact Information</h4>
+      <div className="sm:grid md:grid-cols-12 gap-3">
+        <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>Primary Email ID</div>} invalid={!!errors.primary_email_id} errorMessage={errors.primary_email_id?.message as string}>
+          <Controller name="primary_email_id" control={control} render={({ field }) => (<Input type="email" placeholder="Primary Email" {...field} />)} />
+        </FormItem>
+        <FormItem className="sm:col-span-6 lg:col-span-8" label="Alternate E-mail ID" invalid={!!errors.alternate_email_id} errorMessage={errors.alternate_email_id?.message as string}>
+          <Controller name="alternate_email_id" control={control} render={({ field }) => (<Input type="email" placeholder="Alternate Email" {...field} />)} />
+        </FormItem>
+
+        <FormItem 
+    className="sm:col-span-6 lg:col-span-4" 
+    label={<div>Primary Contact Number <span className="text-red-500">*</span></div>} 
+    invalid={!!errors.primary_contact_number || !!errors.primary_contact_number_code} 
+    errorMessage={(errors.primary_contact_number?.message || (errors.primary_contact_number_code as any)?.message) as string}
+>
+    <div className="flex items-start gap-2">
+        <div className="w-2/6">
+            <Controller 
+                name="primary_contact_number_code" 
+                control={control} 
+                render={({ field }) => (
+                    <Select options={countryCodeOptions} placeholder="Code" {...field} />
+                )} 
+            />
+        </div>
+        <div className="w-3/5">
+            <Controller 
+                name="primary_contact_number" 
+                control={control} 
+                render={({ field }) => (
+                    <Input 
+                        placeholder="Primary Contact" 
+                        {...field} // Spread the other field props (value, onBlur, ref)
+                        // Override the onChange handler
+                        onChange={(e) => {
+                            const value = e.target.value;
+                            // Use regex to remove any non-digit characters
+                            const numericValue = value.replace(/\D/g, '');
+                            // Call the original onChange from react-hook-form with the sanitized value
+                            field.onChange(numericValue);
+                        }} 
+                    />
+                )} 
+            />
+        </div>
+    </div>
+</FormItem>
+        <FormItem className="sm:col-span-6 lg:col-span-4" label="Alternate Contact Number">
+  <div className="flex items-start gap-2">
+    <div className="w-2/6">
+      <Controller
+        name="alternate_contact_number_code"
+        control={control}
+        render={({ field }) => (
+          <Select options={countryCodeOptions} placeholder="Code" {...field} />
+        )}
+      />
+    </div>
+    <div className="w-3/5">
+      <Controller
+        name="alternate_contact_number"
+        control={control}
+        render={({ field }) => (
+          <Input
+            placeholder="Alternate Contact"
+            {...field}
+            onChange={(e) => {
+              // Allow only numeric input by removing non-digit characters
+              const numericValue = e.target.value.replace(/\D/g, '');
+              field.onChange(numericValue);
+            }}
+          />
+        )}
+      />
+    </div>
+  </div>
+</FormItem>
+        <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>Landline</div>} invalid={!!errors.general_contact_number || !!errors.general_contact_number_code} errorMessage={(errors.general_contact_number?.message || (errors.general_contact_number_code as any)?.message) as string}>
+          <div className="flex items-start gap-2">
+            <div className="w-3/3"> <Controller name="general_contact_number" control={control} render={({ field }) => (<Input placeholder="Company Landline" {...field} />)} /> </div>
           </div>
-        </UiForm>
-      </Drawer>
-      <Dialog isOpen={importDialogOpen} onClose={() => setImportDialogOpen(false)} onRequestClose={() => setImportDialogOpen(false)} title="Import Wall Items">
-        <div className="p-4">
-          <p>Upload a CSV file to import Wall Items. (This is a dummy import)</p>
-          <FormItem label="CSV File"><Input type="file" accept=".csv" onChange={handleImportFileSelect} /></FormItem>
-          <div className="text-right mt-4"><Button size="sm" onClick={() => setImportDialogOpen(false)}>Cancel</Button></div>
+        </FormItem>
+      </div>
+
+      <hr className="my-6" />
+      <h4 className="mb-4">Trade Information</h4>
+      <div className="grid md:grid-cols-2 gap-3">
+        {isIndiaSelected ? (
+          <>
+            <FormItem label={<div>GST Number<span className="text-red-500"> *</span></div>} invalid={!!errors.gst_number} errorMessage={errors.gst_number?.message as string}><Controller name="gst_number" control={control} render={({ field }) => (<Input placeholder="GST Number" {...field} />)} /></FormItem>
+            <FormItem label={<div>PAN Number<span className="text-red-500"> *</span></div>} invalid={!!errors.pan_number} errorMessage={errors.pan_number?.message as string}><Controller name="pan_number" control={control} render={({ field }) => (<Input placeholder="PAN Number" {...field} />)} /></FormItem>
+          </>
+        ) : (
+          <>
+            <FormItem label={<div>TRN Number</div>} invalid={!!errors.trn_number} errorMessage={errors.trn_number?.message as string}>
+              <Controller name="trn_number" control={control} render={({ field }) => (<Input placeholder="TRN Number" {...field} />)} />
+            </FormItem>
+            <FormItem label={<div>TAN Number</div>} invalid={!!errors.tan_number} errorMessage={errors.tan_number?.message as string}>
+              <Controller name="tan_number" control={control} render={({ field }) => (<Input placeholder="TAN Number" {...field} />)} />
+            </FormItem>
+          </>
+        )}
+      </div>
+
+      <hr className="my-6" />
+      <h4 className="mb-4">Company Information</h4>
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <FormItem label="Establishment Year" invalid={!!errors.establishment_year} errorMessage={errors.establishment_year?.message as string}>
+          <Controller name="establishment_year" control={control} render={({ field }) => (<NumericInput placeholder="YYYY" maxLength={4} {...field} onChange={(value) => field.onChange(value)} />)} />
+        </FormItem>
+        <FormItem label="No. of Employees" invalid={!!errors.no_of_employees} errorMessage={errors.no_of_employees?.message as string}>
+          <Controller name="no_of_employees" control={control} render={({ field }) => (<NumericInput placeholder="e.g., 100" {...field} onChange={(value) => field.onChange(value)} />)} />
+        </FormItem>
+        <FormItem label="Company Logo/Brochure" invalid={!!errors.company_logo} errorMessage={errors.company_logo?.message as string}>
+          <Controller
+            name="company_logo"
+            control={control}
+            render={({ field: { value, onChange, ...rest } }) => (
+              <Input
+                {...rest}
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => onChange(e.target.files?.[0] || null)}
+              />
+            )} />
+          {companyLogoValue && (
+            <div className="mt-2 group relative">
+              <button
+                type="button"
+                onClick={() => handlePreviewClick(companyLogoValue, 'Company Logo')}
+                className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+              >
+                {isViewableImage(companyLogoValue) ? (
+                  <img
+                    src={companyLogoValue instanceof File ? URL.createObjectURL(companyLogoValue) : String(companyLogoValue)}
+                    alt="Company Logo Preview"
+                    className="max-h-full max-w-full object-contain"
+                  />
+                ) : (
+                  <DocumentPlaceholder
+                    fileName={companyLogoValue instanceof File ? companyLogoValue.name : companyLogoValue.split('/').pop() || 'Document'}
+                  />
+                )}
+              </button>
+              <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => setValue('company_logo', null, { shouldDirty: true })} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title="Remove Logo" />
+            </div>
+          )}
+        </FormItem>
+        <FormItem label="Company Website" invalid={!!errors.company_website} errorMessage={errors.company_website?.message as string}>
+          <Controller name="company_website" control={control} render={({ field }) => (<Input type="url" placeholder="https://example.com" {...field} />)} />
+        </FormItem>
+      </div>
+
+      <hr className="my-6" />
+      <div className="flex justify-between items-center mb-4">
+        <h4 className="mb-0">Certificates</h4>
+        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => appendCert({ certificate_id: undefined, certificate_name: "", upload_certificate: null })}> Add Certificate </Button>
+      </div>
+      {certFields.map((item, index) => {
+        const uploadCertificateValue = watch(`company_certificate.${index}.upload_certificate`);
+        const certificateName = watch(`company_certificate.${index}.certificate_name`);
+        return (
+          <Card key={item.id} className="mb-4 rounded-md border dark:border-gray-600" bodyClass="p-4">
+            <div className="grid md:grid-cols-10 gap-3 items-start">
+             <FormItem 
+    label={`Certificate ID ${index + 1}`} 
+    className="col-span-10 md:col-span-3" 
+    invalid={!!errors.company_certificate?.[index]?.certificate_id} 
+    errorMessage={(errors.company_certificate?.[index]?.certificate_id as any)?.message as string}
+>
+    <Controller 
+        name={`company_certificate.${index}.certificate_id`} 
+        control={control} 
+        render={({ field }) => (
+            <Input 
+                placeholder="e.g., 12345 or select" 
+                {...field}
+                // Add the onChange handler to restrict input to numbers only
+                onChange={(e) => {
+                    const numericValue = e.target.value.replace(/\D/g, '');
+                    field.onChange(numericValue);
+                }}
+            />
+        )} 
+    />
+</FormItem>
+              <FormItem label={`Name ${index + 1}`} className="col-span-10 md:col-span-3" invalid={!!errors.company_certificate?.[index]?.certificate_name} errorMessage={errors.company_certificate?.[index]?.certificate_name?.message as string}>
+                <Controller name={`company_certificate.${index}.certificate_name`} control={control} render={({ field }) => (<Input placeholder="e.g., ISO 9001" {...field} />)} />
+              </FormItem>
+              <FormItem label={`Upload ${index + 1}`} className="col-span-10 md:col-span-3">
+                <Controller
+                  name={`company_certificate.${index}.upload_certificate`}
+                  control={control}
+                  render={({ field: { value, onChange, ...rest } }) => (
+                    <Input
+                      {...rest}
+                      type="file"
+                      accept="image/*,application/pdf"
+                      onChange={(e) => onChange(e.target.files?.[0] || null)}
+                    />
+                  )} />
+                {uploadCertificateValue && (
+                  <div className="mt-2 group relative">
+                    <button
+                      type="button"
+                      onClick={() => handlePreviewClick(uploadCertificateValue, certificateName || `Certificate ${index + 1}`)}
+                      className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+                    >
+                      {isViewableImage(uploadCertificateValue) ? (
+                        <img
+                          src={uploadCertificateValue instanceof File ? URL.createObjectURL(uploadCertificateValue) : String(uploadCertificateValue)}
+                          alt="Certificate Preview"
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      ) : (
+                        <DocumentPlaceholder
+                          fileName={uploadCertificateValue instanceof File ? uploadCertificateValue.name : uploadCertificateValue.split('/').pop() || 'Document'}
+                        />
+                      )}
+                    </button>
+                    <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => setValue(`company_certificate.${index}.upload_certificate`, null, { shouldDirty: true })} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title="Remove Certificate" />
+                  </div>
+                )}
+              </FormItem>
+              <div className="text-right col-span-10 md:col-span-1 md:self-center">
+                <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => removeCert(index)} variant="plain" className="text-red-500 hover:text-red-700" />
+              </div>
+            </div>
+          </Card>
+        );
+      })}
+
+      <hr className="my-6" />
+      <div className="flex justify-between items-center mb-4">
+        <h4 className="mb-0">Office Information</h4>
+        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => appendBranch({ office_type: undefined, office_name: "", address: "", country_id: undefined, state: "", city: "", zip_code: "", gst_number: "", contact_person: "", office_email: "", office_phone: "" })}> Add Office </Button>
+      </div>
+      {branchFields.map((item, index) => (
+        <Card key={item.id} className="mb-4 border dark:border-gray-600 rounded-md relative" bodyClass="p-4">
+          <Button type="button" size="xs" variant="plain" icon={<TbTrash size={16} />} onClick={() => removeBranch(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10" > Remove </Button>
+          <div className="grid md:grid-cols-4 gap-4">
+            <FormItem label={`Office Type ${index + 1}`} invalid={!!errors.office_info?.[index]?.office_type} errorMessage={(errors.office_info?.[index]?.office_type as any)?.message as string}>
+              <Controller name={`office_info.${index}.office_type`} control={control} render={({ field }) => (<Select placeholder="Select Office Type" options={officeTypeOptions} {...field} />)} />
+            </FormItem>
+            <FormItem label={`Office Name ${index + 1}`} invalid={!!errors.office_info?.[index]?.office_name} errorMessage={errors.office_info?.[index]?.office_name?.message as string}>
+              <Controller name={`office_info.${index}.office_name`} control={control} render={({ field }) => (<Input placeholder="e.g. Main Office" {...field} />)} />
+            </FormItem>
+            <FormItem label={`GST/REG Number ${index + 1}`}>
+              <Controller name={`office_info.${index}.gst_number`} control={control} render={({ field }) => (<Input placeholder="GST or Registration Number" {...field} />)} />
+            </FormItem>
+            <FormItem label={`Contact Person ${index + 1}`} invalid={!!errors.office_info?.[index]?.contact_person} errorMessage={errors.office_info?.[index]?.contact_person?.message as string}>
+              <Controller name={`office_info.${index}.contact_person`} control={control} render={({ field }) => (<Input placeholder="John Doe" {...field} />)} />
+            </FormItem>
+            <FormItem label={`Email ${index + 1}`} invalid={!!errors.office_info?.[index]?.office_email} errorMessage={errors.office_info?.[index]?.office_email?.message as string}>
+              <Controller name={`office_info.${index}.office_email`} control={control} render={({ field }) => (<Input type="email" placeholder="office.contact@example.com" {...field} />)} />
+            </FormItem>
+            <FormItem 
+    label={`Phone ${index + 1}`} 
+    invalid={!!errors.office_info?.[index]?.office_phone} 
+    errorMessage={errors.office_info?.[index]?.office_phone?.message as string}
+>
+    <Controller 
+        name={`office_info.${index}.office_phone`} 
+        control={control} 
+        render={({ field }) => (
+            <Input 
+                type="tel" 
+                placeholder="Office Phone Number" 
+                {...field}
+                // Add the onChange handler to restrict input
+                onChange={(e) => {
+                    // Remove any character that is not a number
+                    const numericValue = e.target.value.replace(/\D/g, '');
+                    // Update the form state with the sanitized value
+                    field.onChange(numericValue);
+                }}
+            />
+        )} 
+    />
+</FormItem>
+
+            <div className="md:col-span-4 border-t dark:border-gray-600 pt-4 mt-2">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <FormItem label={`Country ${index + 1}`} invalid={!!errors.office_info?.[index]?.country_id} errorMessage={(errors.office_info?.[index]?.country_id as any)?.message as string}>
+                  <Controller name={`office_info.${index}.country_id`} control={control} render={({ field }) => (<Select placeholder="Select Country" options={countryOptions} {...field} />)} />
+                </FormItem>
+                <FormItem label={`State ${index + 1}`} invalid={!!errors.office_info?.[index]?.state} errorMessage={errors.office_info?.[index]?.state?.message as string}>
+                  <Controller name={`office_info.${index}.state`} control={control} render={({ field }) => (<Input placeholder="Enter state" {...field} />)} />
+                </FormItem>
+                <FormItem label={`City ${index + 1}`} invalid={!!errors.office_info?.[index]?.city} errorMessage={errors.office_info?.[index]?.city?.message as string}>
+                  <Controller name={`office_info.${index}.city`} control={control} render={({ field }) => (<Input placeholder="Enter city" {...field} />)} />
+                </FormItem>
+                <FormItem 
+    label={`Pincode ${index + 1}`} 
+    invalid={!!errors.office_info?.[index]?.zip_code} 
+    errorMessage={errors.office_info?.[index]?.zip_code?.message as string}
+>
+    <Controller 
+        name={`office_info.${index}.zip_code`} 
+        control={control} 
+        render={({ field }) => (
+            <Input 
+                placeholder="Pincode" 
+                {...field}
+                // Add the onChange handler to restrict to numeric input
+                onChange={(e) => {
+                    const numericValue = e.target.value.replace(/\D/g, '');
+                    field.onChange(numericValue);
+                }}
+            />
+        )} 
+    />
+</FormItem>
+              </div>
+            </div>
+            <FormItem label={`Address ${index + 1}`} className="md:col-span-4" invalid={!!errors.office_info?.[index]?.address} errorMessage={errors.office_info?.[index]?.address?.message as string}>
+              <Controller name={`office_info.${index}.address`} control={control} render={({ field }) => (<Input placeholder="Full Address" {...field} />)} />
+            </FormItem>
+          </div>
+        </Card>
+      ))}
+    </Card>
+  );
+};
+
+// --- KYCDetailSection ---
+const KYCDetailSection = ({ control, errors, formMethods, handlePreviewClick }: FormSectionBaseProps) => {
+  const { watch, getValues, setValue } = formMethods;
+  const selectedCountry = watch("country_id");
+  const isIndiaSelected = selectedCountry?.value === '101';
+
+  const handleShare = useCallback(async (shareType: 'email' | 'whatsapp' | 'native', file: File | string | null, docLabel: string) => {
+    if (!file) {
+      toast.push(<Notification type="warning" title="No File">No document to share.</Notification>);
+      return;
+    }
+
+    const companyName = getValues("company_name") || "this company";
+    const subject = `${docLabel} for ${companyName}`;
+    const message = `Please find the ${docLabel} for ${companyName}.`;
+
+    if (typeof file === 'string' && (file.startsWith('http') || file.startsWith('blob:'))) {
+      const fullMessage = `${message}\n\nLink: ${file}`;
+      const encodedMessage = encodeURIComponent(fullMessage);
+      let shareUrl = '';
+
+      if (shareType === 'email') {
+        const encodedSubject = encodeURIComponent(subject);
+        shareUrl = `mailto:?subject=${encodedSubject}&body=${encodedMessage}`;
+      } else if (shareType === 'whatsapp') {
+        shareUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
+      }
+
+      if (shareUrl) {
+        window.open(shareUrl, '_blank', 'noopener,noreferrer');
+      }
+      return;
+    }
+
+    if (file instanceof File) {
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: subject,
+            text: message,
+          });
+        } catch (error: any) {
+          if (error.name !== 'AbortError') {
+            console.error("Web Share API failed:", error);
+            toast.push(<Notification type="danger" title="Sharing Failed">Could not share the file directly.</Notification>);
+          }
+        }
+      } else {
+        toast.push(
+          <Notification type="info" title="Action Required" duration={6000}>
+            To share this new file, please save the company first. Your browser doesn't support direct sharing of unsaved files.
+          </Notification>
+        );
+      }
+      return;
+    }
+
+    toast.push(<Notification type="danger" title="Unsupported File">Cannot share this file type.</Notification>);
+
+  }, [getValues]);
+
+  const kycDocs = useMemo(() => [
+    { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_remark_enabled" as const, required: isIndiaSelected },
+    { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_remark_enabled" as const, required: isIndiaSelected },
+    { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_remark_enabled" as const, required: false },
+    { label: "Visiting Card", name: "visiting_card_file" as const, remarkName: "visiting_card_remark" as const, enabledName: "visiting_card_remark_enabled" as const },
+    { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_remark_enabled" as const, required: false },
+    { label: "Authority Letter", name: "authority_letter_file" as const, remarkName: "authority_letter_remark" as const, enabledName: "authority_letter_remark_enabled" as const },
+    { label: "Cancelled Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_remark_enabled" as const, required: false },
+    { label: "194Q Declaration", name: "ABCQ_file" as const, remarkName: "ABCQ_remark" as const, enabledName: "ABCQ_remark_enabled" as const },
+    { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_remark_enabled" as const },
+  ], [isIndiaSelected]);
+
+  const isViewableImage = (file: unknown): boolean => {
+    if (file instanceof File) return file.type.startsWith('image/');
+    if (typeof file === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(file);
+    return false;
+  }
+
+  return (
+    <Card id="kycDocuments">
+      <h5 className="mb-4">KYC Documents</h5>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-6">
+        {kycDocs.map((doc) => {
+          const fileValue = watch(doc.name);
+          return (
+            <div key={doc.name}>
+              <label className="flex items-center gap-2 mb-1">
+                <Controller
+                  name={doc.enabledName}
+                  control={control}
+                  render={({ field }) => (
+                    <Checkbox
+                      checked={!!field.value}
+                      onChange={field.onChange}
+                      disabled={!fileValue}
+                    />
+                  )}
+                />
+                {doc.label} {doc.required && <span className="text-red-500">*</span>}
+              </label>
+              <FormItem invalid={!!(errors as any)[doc.name]} errorMessage={(errors as any)[doc.name]?.message as string} >
+                <Controller
+                  name={doc.name}
+                  control={control}
+                  render={({ field: { value, onChange, ...rest } }) => (
+                    <Input
+                      {...rest}
+                      type="file"
+                      accept="image/*,application/pdf"
+                      onChange={(e) => onChange(e.target.files?.[0] || null)}
+                    />
+                  )}
+                />
+              </FormItem>
+
+              {fileValue && (
+                <div className="mt-2 group relative">
+                  <button
+                    type="button"
+                    onClick={() => handlePreviewClick(fileValue, doc.label)}
+                    className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+                  >
+                    {isViewableImage(fileValue) ? (
+                      <img
+                        src={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
+                        alt={doc.label}
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    ) : (
+                      <DocumentPlaceholder
+                        fileName={fileValue instanceof File ? fileValue.name : fileValue.split('/').pop() || 'Document'}
+                      />
+                    )}
+                  </button>
+                  <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => setValue(doc.name, null, { shouldDirty: true })} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title={`Remove ${doc.label}`} />
+
+                  {doc.name === 'cancel_cheque_file' && (
+                    <div className="mt-2 flex items-center justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="xs"
+                        icon={<TbMail />}
+                        onClick={() => handleShare('email', fileValue, doc.label)}
+                        title="Share via Email"
+                      >
+                        Email
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="xs"
+                        icon={<TbBrandWhatsapp />}
+                        onClick={() => handleShare('whatsapp', fileValue, doc.label)}
+                        title="Share on WhatsApp"
+                      >
+                        WhatsApp
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+              <FormItem className="mt-2" invalid={!!(errors as any)[doc.remarkName]} errorMessage={(errors as any)[doc.remarkName]?.message as string} >
+                <Controller name={doc.remarkName} control={control} render={({ field }) => (<Input placeholder={`Remark for ${doc.label}`} {...field} />)} />
+              </FormItem>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+};
+
+// --- BankDetailsSection ---
+const BankDetailsSection = ({ control, errors, formMethods, handlePreviewClick }: FormSectionBaseProps) => {
+  const { watch, setValue, getValues } = formMethods;
+  const bankTypeOptions = [{ value: "Primary", label: "Primary" }, { value: "Secondary", label: "Secondary" }, { value: "Other", label: "Other" }];
+
+  const { fields, append, remove } = useFieldArray({ control, name: "company_bank_details" });
+
+  const primaryBankPhotoValue = watch("primary_bank_verification_photo");
+  const secondaryBankPhotoValue = watch("secondary_bank_verification_photo");
+
+  const isViewableImage = (file: unknown): boolean => {
+    if (file instanceof File) return file.type.startsWith('image/');
+    if (typeof file === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(file);
+    return false;
+  }
+
+  const handleShare = useCallback((shareType: 'email' | 'whatsapp', file: File | string | null, docLabel: string) => {
+    if (!file) {
+      toast.push(<Notification type="warning" title="No File">No document to share.</Notification>);
+      return;
+    }
+
+    if (typeof file !== 'string' || !file.startsWith('http')) {
+      toast.push(
+        <Notification type="info" title="Action Required" duration={5000}>
+          Please save the company first. Sharing is only available for uploaded documents.
+        </Notification>
+      );
+      return;
+    }
+
+    const documentUrl = file;
+    const companyName = getValues("company_name") || "this company";
+    const subject = `${docLabel} for ${companyName}`;
+    const message = `Please find the ${docLabel} for ${companyName} at the following link: ${documentUrl}`;
+    const encodedMessage = encodeURIComponent(message);
+
+    let shareUrl = '';
+    if (shareType === 'email') {
+      const encodedSubject = encodeURIComponent(subject);
+      shareUrl = `mailto:?subject=${encodedSubject}&body=${encodedMessage}`;
+    } else if (shareType === 'whatsapp') {
+      shareUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
+    }
+
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'noopener,noreferrer');
+    }
+  }, [getValues]);
+
+  const handleSetDefaultBank = useCallback((type: 'primary' | 'secondary' | 'additional', index?: number) => {
+    // Reset all defaults first
+    setValue('primary_is_default', false, { shouldDirty: true });
+    setValue('secondary_is_default', false, { shouldDirty: true });
+    const additionalBanks = getValues('company_bank_details') || [];
+    const updatedAdditionalBanks = additionalBanks.map(bank => ({ ...bank, is_default: false }));
+
+    // Set the new default
+    if (type === 'primary') {
+      setValue('primary_is_default', true, { shouldDirty: true });
+    } else if (type === 'secondary') {
+      setValue('secondary_is_default', true, { shouldDirty: true });
+    } else if (type === 'additional' && index !== undefined) {
+      updatedAdditionalBanks[index].is_default = true;
+    }
+
+    setValue('company_bank_details', updatedAdditionalBanks, { shouldDirty: true, shouldTouch: true });
+  }, [getValues, setValue]);
+
+  const renderPreviewWithRemove = (fileValue: File | string | null, label: string, onRemove: () => void) => {
+    if (!fileValue) return null;
+    return (
+      <div className="group relative w-24 h-24">
+        <button
+          type="button"
+          onClick={() => handlePreviewClick(fileValue, label)}
+          className="w-full h-full border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+        >
+          {isViewableImage(fileValue) ? (
+            <img
+              src={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
+              alt={label}
+              className="max-h-full max-w-full object-contain"
+            />
+          ) : (
+            <DocumentPlaceholder
+              fileName={fileValue instanceof File ? fileValue.name : fileValue.split('/').pop() || 'Document'}
+            />
+          )}
+        </button>
+        <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={onRemove} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title={`Remove ${label}`} />
+      </div>
+    )
+  }
+
+  return (
+    <Card id="bankDetails">
+      <h4 className="mb-6">Bank Details (Primary)</h4>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
+        <FormItem label="Primary Beneficiary Name" invalid={!!errors.primary_benificeiry_name} errorMessage={errors.primary_benificeiry_name?.message as string}>
+          <Controller name="primary_benificeiry_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Beneficiary Name" />)} />
+        </FormItem>
+        <FormItem label="Primary Bank Name" invalid={!!errors.primary_bank_name} errorMessage={errors.primary_bank_name?.message as string}>
+          <Controller name="primary_bank_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
+        </FormItem>
+        <FormItem label="Primary IFSC Code" invalid={!!errors.primary_ifsc_code} errorMessage={errors.primary_ifsc_code?.message as string}>
+          <Controller name="primary_ifsc_code" control={control} render={({ field }) => (<Input placeholder="Primary IFSC" {...field} />)} />
+        </FormItem>
+       <FormItem 
+    label="Primary Account Number" 
+    invalid={!!errors.primary_account_number} 
+    errorMessage={errors.primary_account_number?.message as string}
+>
+    <Controller 
+        name="primary_account_number" 
+        control={control} 
+        render={({ field }) => (
+            <Input 
+                placeholder="Primary Account No." 
+                {...field}
+                // Add the onChange handler to restrict to numeric input
+                onChange={(e) => {
+                    const numericValue = e.target.value.replace(/\D/g, '');
+                    field.onChange(numericValue);
+                }}
+            />
+        )} 
+    />
+</FormItem>
+        <FormItem label="Primary Bank Verification Photo" className="md:col-span-3" invalid={!!errors.primary_bank_verification_photo} errorMessage={(errors.primary_bank_verification_photo as any)?.message as string}>
+          <Controller
+            name="primary_bank_verification_photo"
+            control={control}
+            render={({ field: { value, onChange, ...rest } }) => (
+              <Input {...rest} type="file" accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+            )} />
+          {primaryBankPhotoValue && (
+            <div className="mt-2 flex items-start gap-4">
+              {renderPreviewWithRemove(primaryBankPhotoValue, 'Primary Bank Verification Photo', () => setValue('primary_bank_verification_photo', null))}
+              <div className="flex flex-col gap-2">
+                <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', primaryBankPhotoValue, 'Primary Bank Verification Photo')}>Email</Button>
+                <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', primaryBankPhotoValue, 'Primary Bank Verification Photo')}>WhatsApp</Button>
+              </div>
+            </div>
+          )}
+        </FormItem>
+        <FormItem label="Primary Swift Code" invalid={!!errors.primary_swift_code} errorMessage={errors.primary_swift_code?.message as string}>
+          <Controller name="primary_swift_code" control={control} render={({ field }) => (<Input placeholder="Primary Swift Code" {...field} />)} />
+        </FormItem>
+      </div>
+      <div className="border-t dark:border-gray-600 mt-4 pt-3">
+        <Controller name="primary_is_default" control={control} render={({ field }) => (<Checkbox checked={field.value} onChange={(e) => { field.onChange(e); if (e) handleSetDefaultBank('primary'); }}>Set as Default</Checkbox>)} />
+      </div>
+
+      <hr className="my-6" />
+
+      <h4 className="mb-6">Bank Details (Secondary)</h4>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
+        <FormItem label="Secondary Beneficiary Number" invalid={!!errors.secondary_benificeiry_name} errorMessage={errors.secondary_benificeiry_name?.message as string}>
+          <Controller name="secondary_benificeiry_name" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
+        </FormItem>
+        <FormItem label="Secondary Bank Name" invalid={!!errors.secondary_bank_name} errorMessage={errors.secondary_bank_name?.message as string}>
+          <Controller name="secondary_bank_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
+        </FormItem>
+        <FormItem label="Secondary IFSC Code" invalid={!!errors.secondary_ifsc_code} errorMessage={errors.secondary_ifsc_code?.message as string}>
+          <Controller name="secondary_ifsc_code" control={control} render={({ field }) => (<Input placeholder="Secondary IFSC" {...field} />)} />
+        </FormItem>
+        <FormItem 
+    label="Secondary Account Number" 
+    invalid={!!errors.secondary_account_number} 
+    errorMessage={errors.secondary_account_number?.message as string}
+>
+    <Controller 
+        name="secondary_account_number" 
+        control={control} 
+        render={({ field }) => (
+            <Input 
+                placeholder="Secondary Account No." 
+                {...field}
+                // Add the onChange handler to restrict input
+                onChange={(e) => {
+                    // Remove any character that is not a number
+                    const numericValue = e.target.value.replace(/\D/g, '');
+                    // Update the form state with the sanitized value
+                    field.onChange(numericValue);
+                }}
+            />
+        )} 
+    />
+</FormItem>
+        <FormItem label="Secondary Bank Verification Photo" className="md:col-span-3" invalid={!!errors.secondary_bank_verification_photo} errorMessage={(errors.secondary_bank_verification_photo as any)?.message as string}>
+          <Controller
+            name="secondary_bank_verification_photo"
+            control={control}
+            render={({ field: { value, onChange, ...rest } }) => (
+              <Input {...rest} type="file" accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+            )} />
+          {secondaryBankPhotoValue && (
+            <div className="mt-2 flex items-start gap-4">
+              {renderPreviewWithRemove(secondaryBankPhotoValue, 'Secondary Bank Verification Photo', () => setValue('secondary_bank_verification_photo', null))}
+              <div className="flex flex-col gap-2">
+                <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', secondaryBankPhotoValue, 'Secondary Bank Verification Photo')}>Email</Button>
+                <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', secondaryBankPhotoValue, 'Secondary Bank Verification Photo')}>WhatsApp</Button>
+              </div>
+            </div>
+          )}
+        </FormItem>
+        <FormItem label="Secondary Swift Code" invalid={!!errors.secondary_swift_code} errorMessage={errors.secondary_swift_code?.message as string}>
+          <Controller name="secondary_swift_code" control={control} render={({ field }) => (<Input placeholder="Secondary Swift Code" {...field} />)} />
+        </FormItem>
+      </div>
+      <div className="border-t dark:border-gray-600 mt-4 pt-3">
+        <Controller name="secondary_is_default" control={control} render={({ field }) => (<Checkbox checked={field.value} onChange={(e) => { field.onChange(e); if (e) handleSetDefaultBank('secondary'); }}>Set as Default</Checkbox>)} />
+      </div>
+
+      <hr className="my-6" />
+      <div className="flex justify-between items-center mb-4">
+        <h4 className="mb-0">Additional Bank Details</h4>
+        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ bank_account_number: "", bank_name: undefined, ifsc_code: "", swift_code: "", verification_photo: null, type: undefined, is_default: false })}> Add More Banks </Button>
+      </div>
+      {fields.map((item, index) => {
+        const bankPhotoValue = watch(`company_bank_details.${index}.verification_photo`);
+        const photoLabel = `Bank ${index + 1} Verification Photo`;
+        return (
+          <Card key={item.id} className="mb-4 border dark:border-gray-600 relative rounded-md" bodyClass="p-4">
+            <Button type="button" size="xs" variant="plain" icon={<TbTrash size={16} />} onClick={() => remove(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10"> Remove </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 items-start">
+              <FormItem label={`Type ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.type} errorMessage={(errors.company_bank_details?.[index]?.type as any)?.message as string}>
+                <Controller name={`company_bank_details.${index}.type`} control={control} render={({ field }) => (<Select placeholder="Select Type" options={bankTypeOptions} {...field} />)} />
+              </FormItem>
+             <FormItem 
+    label={`Account Number ${index + 1}`} 
+    invalid={!!errors.company_bank_details?.[index]?.bank_account_number} 
+    errorMessage={errors.company_bank_details?.[index]?.bank_account_number?.message as string}
+>
+    <Controller 
+        name={`company_bank_details.${index}.bank_account_number`} 
+        control={control} 
+        render={({ field }) => (
+            <Input 
+                placeholder="Account No." 
+                {...field}
+                // Add the onChange handler to restrict to numeric input
+                onChange={(e) => {
+                    const numericValue = e.target.value.replace(/\D/g, '');
+                    field.onChange(numericValue);
+                }}
+            />
+        )} 
+    />
+</FormItem>
+              <FormItem label={`Bank Name ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.bank_name} errorMessage={(errors.company_bank_details?.[index] as any)?.bank_name?.message as string}>
+                <Controller name={`company_bank_details.${index}.bank_name`} control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
+              </FormItem>
+              <FormItem label={`IFSC Code ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.ifsc_code} errorMessage={errors.company_bank_details?.[index]?.ifsc_code?.message as string}>
+                <Controller name={`company_bank_details.${index}.ifsc_code`} control={control} render={({ field }) => (<Input placeholder="IFSC" {...field} />)} />
+              </FormItem>
+              <FormItem label={`Swift Code ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.swift_code} errorMessage={errors.company_bank_details?.[index]?.swift_code?.message as string}>
+                <Controller name={`company_bank_details.${index}.swift_code`} control={control} render={({ field }) => (<Input placeholder="Swift Code" {...field} />)} />
+              </FormItem>
+              <FormItem label={photoLabel} className="md:col-span-1">
+                <Controller
+                  name={`company_bank_details.${index}.verification_photo`}
+                  control={control}
+                  render={({ field: { value, onChange, ...rest } }) => (
+                    <Input {...rest} type="file" accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+                  )} />
+                {bankPhotoValue && (
+                  <div className="mt-2 flex items-start gap-4">
+                    {renderPreviewWithRemove(bankPhotoValue, photoLabel, () => setValue(`company_bank_details.${index}.verification_photo`, null))}
+                    <div className="flex flex-col gap-2">
+                      <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', bankPhotoValue, photoLabel)}>Email</Button>
+                      <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', bankPhotoValue, photoLabel)}>WhatsApp</Button>
+                    </div>
+                  </div>
+                )}
+              </FormItem>
+            </div>
+            <div className="border-t dark:border-gray-600 mt-4 pt-3">
+              <Controller name={`company_bank_details.${index}.is_default`} control={control} render={({ field }) => (<Checkbox checked={field.value} onChange={(e) => { field.onChange(e); if (e) handleSetDefaultBank('additional', index); }}>Set as Default</Checkbox>)} />
+            </div>
+          </Card>
+        );
+      })}
+    </Card>
+  );
+};
+
+// --- SpotVerificationSection ---
+const SpotVerificationSection = ({ control, errors, formMethods, handlePreviewClick }: FormSectionBaseProps) => {
+  const { watch, setValue } = formMethods;
+  const { fields, append, remove } = useFieldArray({ control, name: "company_spot_verification" });
+  const { EmployeesList } = useSelector(masterSelector);
+
+  const employeeOptions = useMemo(() => {
+    const employeeDataSource = EmployeesList?.data?.data || EmployeesList?.data || EmployeesList;
+    const actualList = Array.isArray(employeeDataSource) ? employeeDataSource : [];
+
+    return actualList.map((m: any) => ({
+      value: String(m.id),
+      label: `(${m.employee_id}) - ${m.name || ' '}`,
+    }));
+  }, [EmployeesList]);
+
+  const isViewableImage = (file: unknown): boolean => {
+    if (file instanceof File) return file.type.startsWith('image/');
+    if (typeof file === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(file);
+    return false;
+  }
+
+  return (
+    <Card id="spotVerification">
+      <div className="flex justify-between items-center mb-4">
+        <h4 className="mb-0">Spot Verifications</h4>
+        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ verified: false, verified_by_id: undefined, photo_upload: null, remark: "" })}> Add Verification Entry </Button>
+      </div>
+      {fields.map((item, index) => {
+        const photoValue = watch(`company_spot_verification.${index}.photo_upload`);
+        const photoLabel = `Spot Verification Document ${index + 1}`;
+        return (
+          <Card key={item.id} className="mb-4 border dark:border-gray-600 rounded-md relative" bodyClass="p-4">
+            <Button type="button" variant="plain" size="xs" icon={<TbTrash size={16} />} onClick={() => remove(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10" > Remove </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 items-start">
+              <div className="flex items-center gap-4">
+                <Controller name={`company_spot_verification.${index}.verified`} control={control} render={({ field }) => (<Checkbox checked={!!field.value} onChange={field.onChange} />)} />
+                <FormItem label={`Verified By ${index + 1}`} className="flex-grow" invalid={!!errors.company_spot_verification?.[index]?.verified_by_id} errorMessage={(errors.company_spot_verification?.[index]?.verified_by_id as any)?.message as string}>
+                  <Controller name={`company_spot_verification.${index}.verified_by_id`} control={control} render={({ field }) => (<Select placeholder="Select Employee" options={employeeOptions} {...field} />)} />
+                </FormItem>
+              </div>
+              <FormItem label={photoLabel}>
+                <Controller
+                  name={`company_spot_verification.${index}.photo_upload`}
+                  control={control}
+                  render={({ field: { value, onChange, ...rest } }) => (
+                    <Input {...rest} type="file" accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+                  )} />
+                {photoValue && (
+                  <div className="mt-2 group relative">
+                    <button
+                      type="button"
+                      onClick={() => handlePreviewClick(photoValue, photoLabel)}
+                      className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+                    >
+                      {isViewableImage(photoValue) ? (
+                        <img
+                          src={photoValue instanceof File ? URL.createObjectURL(photoValue) : String(photoValue)}
+                          alt={photoLabel}
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      ) : (
+                        <DocumentPlaceholder
+                          fileName={photoValue instanceof File ? photoValue.name : photoValue.split('/').pop() || 'Document'}
+                        />
+                      )}
+                    </button>
+                    <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => setValue(`company_spot_verification.${index}.photo_upload`, null, { shouldDirty: true })} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title={`Remove ${photoLabel}`} />
+                  </div>
+                )}
+              </FormItem>
+              <FormItem label={`Remark ${index + 1}`} className="md:col-span-2">
+                <Controller name={`company_spot_verification.${index}.remark`} control={control} render={({ field }) => (<Input placeholder="Add remark here..." {...field} />)} />
+              </FormItem>
+            </div>
+          </Card>
+        );
+      })}
+    </Card>
+  );
+};
+
+// --- ReferenceSection ---
+const ReferenceSection = ({ control, errors }: FormSectionBaseProps) => {
+  const { CompanyData, CountriesData } = useSelector(masterSelector);
+
+  const companyOptions = useMemo(() =>
+    (CompanyData?.data || []).map((c: any) => ({
+      value: String(c.id),
+      label: `(${c.company_code}) - ${c.company_name}`,
+    })), [CompanyData]);
+
+  const countryCodeOptions = CountriesData
+    .map((c: any) => ({
+      value: `${c.phone_code}`,
+      label: `${c.phone_code}`,
+    })).filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i);
+  const { fields, append, remove } = useFieldArray({ control, name: "company_references" });
+
+  return (
+    <Card id="reference">
+      <div className="flex justify-between items-center mb-4">
+        <h4 className="mb-0">References</h4>
+        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ person_name: "", company_id: undefined, number: "", remark: "" })}> Add Reference </Button>
+      </div>
+      {fields.map((item, index) => (
+        <Card key={item.id} className="mb-4 border dark:border-gray-600 relative rounded-md" bodyClass="p-4">
+          <Button type="button" variant="plain" size="xs" icon={<TbTrash size={16} />} onClick={() => remove(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10" > Remove </Button>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-2 gap-x-4 items-start">
+            <FormItem label={`Person Name ${index + 1}`} invalid={!!errors.company_references?.[index]?.person_name} errorMessage={errors.company_references?.[index]?.person_name?.message as string}>
+              <Controller name={`company_references.${index}.person_name`} control={control} render={({ field }) => (<Input placeholder="Person's Name" {...field} />)} />
+            </FormItem>
+            <FormItem label={`Company Name ${index + 1}`} invalid={!!errors.company_references?.[index]?.company_id} errorMessage={(errors.company_references?.[index]?.company_id as any)?.message as string}>
+              <Controller name={`company_references.${index}.company_id`} control={control} render={({ field }) => (<Select placeholder="Company Name" options={companyOptions} {...field} />)} />
+            </FormItem>
+
+            <FormItem 
+    label={`Contact Number ${index + 1}`} 
+    invalid={!!errors.company_references?.[index]?.number} 
+    errorMessage={errors.company_references?.[index]?.number?.message as string}
+>
+    <div className="flex items-start gap-2">
+        <div className="w-2/6">
+            <Controller 
+                name={`company_references.${index}.number_code`} 
+                control={control} 
+                render={({ field }) => (
+                    <Select options={countryCodeOptions} placeholder="Code" {...field} />
+                )} 
+            />
+        </div>
+        <div className="w-3/5">
+            <Controller 
+                name={`company_references.${index}.number`} 
+                control={control} 
+                render={({ field }) => (
+                    <Input  
+                        placeholder="Contact Number" 
+                        {...field} // Spread props first
+                        // Then override the onChange
+                        onChange={(e) => {
+                            const numericValue = e.target.value.replace(/\D/g, '');
+                            field.onChange(numericValue);
+                        }} 
+                    />
+                )} 
+            />
+        </div>
+    </div>
+</FormItem>
+            <FormItem label={`Remark ${index + 1}`} className="sm:col-span-3">
+              <Controller name={`company_references.${index}.remark`} control={control} render={({ field }) => (<Input placeholder="Add remarks here..." {...field} />)} />
+            </FormItem>
+          </div>
+        </Card>
+      ))}
+    </Card>
+  );
+};
+
+// --- AccessibilitySection ---
+const AccessibilitySection = ({ control, errors, formMethods, handlePreviewClick }: FormSectionBaseProps) => {
+  const { watch, setValue } = formMethods;
+
+  const { fields, append, remove } = useFieldArray({ control, name: "billing_documents" });
+  const { fields: enabledFields, append: appendEnabled, remove: removeEnabled } = useFieldArray({ control, name: "enabled_billing_docs" });
+  const { DocumentListData = [] } = useSelector(masterSelector);
+
+  const documentTypeOptions = useMemo(() => {
+    return Array.isArray(DocumentListData) ? DocumentListData.map((d: any) => ({ value: d.id, label: d.name })) : [];
+  }, [DocumentListData]);
+
+  const isViewableImage = (file: unknown): boolean => {
+    if (file instanceof File) return file.type.startsWith('image/');
+    if (typeof file === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(file);
+    return false;
+  }
+
+  const renderPreviewWithRemove = (fileValue: File | string | null, label: string, onRemove: () => void) => {
+    if (!fileValue) return null;
+    return (
+      <div className="mt-2 group relative">
+        <button
+          type="button"
+          onClick={() => handlePreviewClick(fileValue, label)}
+          className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+        >
+          {isViewableImage(fileValue) ? (
+            <img
+              src={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
+              alt={label}
+              className="max-h-full max-w-full object-contain"
+            />
+          ) : (
+            <DocumentPlaceholder
+              fileName={fileValue instanceof File ? fileValue.name : fileValue.split('/').pop() || 'Document'}
+            />
+          )}
+        </button>
+        <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={onRemove} variant="solid" color="red-500" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" title={`Remove ${label}`} />
+      </div>
+    )
+  }
+
+  return (
+    <Card id="accessibility">
+      <h4 className="mb-6">Accessibility & Configuration</h4>
+      <div className="grid grid-cols-1 gap-y-6">
+        <div className="flex items-center gap-x-8">
+          <FormItem label={<div>User Access</div>} invalid={!!errors.USER_ACCESS} errorMessage={(errors.USER_ACCESS as any)?.message as string}>
+            <Controller name="USER_ACCESS" control={control} render={({ field }) => (<Checkbox checked={!!field.value} onChange={field.onChange}> Enabled </Checkbox>)} />
+          </FormItem>
+        </div>
+        <hr />
+        <div className="flex justify-between items-center">
+          <h5 className="mb-0">Billing Documents</h5>
+          <div className="flex gap-2">
+            <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ document_name: undefined, document: null })}> Add Document </Button>
+            <Button type="button" icon={<TbPlus />} size="sm" onClick={() => appendEnabled({ document_name: undefined, document: null })}> Add Enable Billing Documents </Button>
+          </div>
+        </div>
+
+        {fields.map((item, index) => {
+          const docFileValue = watch(`billing_documents.${index}.document`);
+          const docName = watch(`billing_documents.${index}.document_name`)?.label;
+          const finalLabel = `${docName || `Billing Document ${index + 1}`}`;
+          return (
+            <Card key={item.id} className="border dark:border-gray-600 rounded-md" bodyClass="p-4">
+              <div className="md:grid grid-cols-1 md:grid-cols-9 gap-4 items-start">
+                <FormItem label={`Doc Name ${index + 1}`} className="md:col-span-4" invalid={!!errors.billing_documents?.[index]?.document_name} errorMessage={(errors.billing_documents?.[index]?.document_name as any)?.message as string}>
+                  <Controller name={`billing_documents.${index}.document_name`} control={control} render={({ field }) => (
+                    <Select placeholder="Document Name" options={documentTypeOptions} {...field} />
+                  )} />
+                </FormItem>
+                <FormItem label={`Upload Doc ${index + 1}`} className="md:col-span-4">
+                  <Controller
+                    name={`billing_documents.${index}.document`}
+                    control={control}
+                    render={({ field: { value, onChange, ...rest } }) => (
+                      <Input {...rest} type="file" accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+                    )} />
+                  {renderPreviewWithRemove(docFileValue, finalLabel, () => setValue(`billing_documents.${index}.document`, null))}
+                </FormItem>
+                <Button type="button" shape="circle" size="sm" className="mt-2 md:mt-0 md:self-center" icon={<TbTrash />} onClick={() => remove(index)} variant="plain" />
+              </div>
+            </Card>
+          );
+        })}
+
+        {enabledFields.length > 0 && <h6 className="mt-4 -mb-2">Enabled Billing Documents</h6>}
+        {enabledFields.map((item, index) => {
+          const docFileValue = watch(`enabled_billing_docs.${index}.document`);
+          const docName = watch(`enabled_billing_docs.${index}.document_name`)?.label;
+          const finalLabel = `${docName || `Enabled Billing Document ${index + 1}`}`;
+          return (
+            <Card key={item.id} className="border dark:border-gray-600 rounded-md" bodyClass="p-4">
+              <div className="md:grid grid-cols-1 md:grid-cols-9 gap-4 items-start">
+                <FormItem label={`Document Type ${index + 1}`} className="md:col-span-4" invalid={!!errors.enabled_billing_docs?.[index]?.document_name} errorMessage={(errors.enabled_billing_docs?.[index]?.document_name as any)?.message as string}>
+                  <Controller name={`enabled_billing_docs.${index}.document_name`} control={control} render={({ field }) => (
+                    <Select placeholder="Document Name" options={documentTypeOptions} {...field} />
+                  )} />
+                </FormItem>
+                <FormItem label={`Upload File ${index + 1}`} className="md:col-span-4">
+                  <Controller
+                    name={`enabled_billing_docs.${index}.document`}
+                    control={control}
+                    render={({ field: { value, onChange, ...rest } }) => (
+                      <Input {...rest} type="file" accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+                    )} />
+                  {renderPreviewWithRemove(docFileValue, finalLabel, () => setValue(`enabled_billing_docs.${index}.document`, null))}
+                </FormItem>
+                <Button type="button" shape="circle" size="sm" className="mt-2 md:mt-0 md:self-center" icon={<TbTrash />} onClick={() => removeEnabled(index)} variant="plain" />
+              </div>
+            </Card>
+          )
+        })}
+      </div>
+    </Card>
+  );
+};
+
+// --- START: New Member Add Form (for Modal) ---
+const memberAddSchema = z.object({
+  status: z.object({ value: z.string().min(1), label: z.string() }, { required_error: 'Status is required.' }),
+  name: z.string().trim().min(1, { message: "Full Name is required." }),
+  mobile_no: z.string().trim().min(7, { message: "A valid mobile number is required." }).regex(/^\d+$/, "Only digits are allowed."),
+  contact_country_code: z.object({ value: z.string().min(1), label: z.string() }, { required_error: 'Country code is required.' }),
+  email: z.string().trim().min(1, { message: "Email is required." }).email("Invalid email format."),
+  password: z.string().min(8, { message: "Password must be at least 8 characters." }).optional().or(z.literal("")),
+  country_id: z.object({ value: z.string().min(1), label: z.string() }, { required_error: 'Country is required.' }),
+  interested_category_ids: z.array(z.object({ value: z.string(), label: z.string() })).min(1, { message: "At least one category is required." }),
+});
+
+type MemberAddFormSchema = z.infer<typeof memberAddSchema>;
+
+const preparePayloadForApiAdd = (formData: MemberAddFormSchema): any => {
+  const getValue = (field: any) => (typeof field === 'object' && field !== null ? field.value : field);
+
+  const payload = {
+    "name": formData.name,
+    "email": formData.email,
+    "password": formData.password,
+    "mobile_no": formData.mobile_no,
+    "contact_country_code": {
+      "value": formData.contact_country_code?.value || "",
+      "label": formData.contact_country_code?.value || ""
+    },
+    "number": formData.mobile_no,
+    "number_code": formData.contact_country_code?.value || "",
+    "country_id": getValue(formData.country_id),
+    "interested_category_ids": formData.interested_category_ids.map(c => parseInt(getValue(c))),
+    "status": getValue(formData.status),
+    "role_type": { "label": "Member", "value": "0" },
+    "interested_subcategory_ids": [],
+    "favourite_brands": [],
+    "permanent_id": "",
+    "city": "",
+    "state": "",
+    "customer_ids": "",
+    "pincode": "",
+    "company_code": null,
+    "address": "",
+    "company_description": "",
+    "company_address": "",
+    "whatsapp_no": null,
+    "whatsapp_country_code": null,
+    "alternate_contact_number": null,
+    "landline_number": null,
+    "fax_number": null,
+    "alternate_email": null,
+    "botim": "",
+    "skype": "",
+    "we_chat": "",
+    "website": null,
+    "business_type": null,
+    "gst_number": "",
+    "pan_number": "",
+    "bank_account_no": "",
+    "ifsc_code": "",
+    "bank_name": "",
+    "branch_name": "",
+    "swift_code": "",
+    "fssai_license": "",
+    "drug_license": "",
+    "iec_code": "",
+    "iso_certificate": "",
+    "other_trading_license": "",
+    "usfda_license": "",
+    "other_trading_license_2": "",
+    "interested_in": null,
+    "customer_code_permanent": "",
+    "product_upload_permission": "",
+    "membership_plan_text": "",
+    "request_description": "",
+    "favourite_product_id": [],
+    "business_opportunity": [],
+    "remarks": "",
+    "linkedin_profile": null,
+    "facebook_profile": null,
+    "instagram_profile": "",
+    "is_blacklisted": "",
+    "dynamic_member_profiles": [],
+    "company_temp": "",
+    "company_actual": "",
+    "alternate_contact_number_code": null,
+    "member_grade": null,
+    "relationship_manager_id": null,
+    "dealing_in_bulk": "No",
+    "wall_enquiry_permission": null,
+    "trade_inquiry_allowed": null,
+    "membership_plan": "",
+    "upgrade_your_plan": null
+  };
+  return payload;
+};
+
+const MemberAddForm = ({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void; }) => {
+  const dispatch = useAppDispatch();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const {
+    CountriesData = [],
+    ParentCategories = [],
+    status: masterLoadingStatus
+  } = useSelector(masterSelector);
+
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<MemberAddFormSchema>({
+    resolver: zodResolver(memberAddSchema),
+    defaultValues: {
+      status: { label: "Active", value: "Active" },
+      name: '', mobile_no: '', contact_country_code: undefined, email: '', password: '', country_id: undefined, interested_category_ids: [],
+    },
+    mode: 'onChange',
+  });
+
+  useEffect(() => {
+    dispatch(getParentCategoriesAction());
+  }, [dispatch]);
+
+  const countryOptions = useMemo(() => {
+    const uniqueCountriesMap = new Map();
+    (CountriesData || []).forEach((country: any) => {
+      uniqueCountriesMap.set(country.id, country);
+    });
+    return Array.from(uniqueCountriesMap.values()).map((country: any) => ({
+      value: String(country.id),
+      label: country.name
+    }));
+  }, [CountriesData]);
+
+  const countryCodeOptions = useMemo(() => {
+    const uniqueCodes = new Set<string>();
+    (CountriesData || []).forEach((c: any) => {
+      if (c.phone_code) uniqueCodes.add(`${c.phone_code}`);
+    });
+    return Array.from(uniqueCodes).sort((a, b) => a.localeCompare(b)).map(code => ({ value: code, label: code }));
+  }, [CountriesData]);
+
+  const categoryOptions = useMemo(() =>
+    ParentCategories.map((c: any) => ({ value: String(c.id), label: c.name }))
+    , [ParentCategories]);
+
+  const statusOptions = [
+    { label: "Active", value: "Active" }, { label: "Unregistered", value: "Unregistered" }, { label: "Disabled", value: "Disabled" },
+  ];
+
+  const handleFormSubmit = async (data: MemberAddFormSchema) => {
+    setIsSubmitting(true);
+    const payload = preparePayloadForApiAdd(data);
+    try {
+      await dispatch(addMemberAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Member Created">New member added successfully.</Notification>);
+      onSuccess();
+    } catch (error: any) {
+      const errorMessage = error?.message || "Failed to create member.";
+      toast.push(<Notification type="danger" title="Creation Failed">{errorMessage}</Notification>);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (masterLoadingStatus === 'loading') {
+    return <div className="p-8 flex justify-center"><Spinner /></div>;
+  }
+
+  return (
+    <form onSubmit={handleSubmit(handleFormSubmit)}>
+      <div className="grid md:grid-cols-2 gap-x-6 gap-y-4 p-4">
+        <FormItem label="Status" invalid={!!errors.status} errorMessage={(errors.status as any)?.message}>
+          <Controller name="status" control={control} render={({ field }) => (<Select {...field} placeholder="Select Status" options={statusOptions} />)} />
+        </FormItem>
+        <FormItem label="Full Name" invalid={!!errors.name} errorMessage={errors.name?.message}>
+          <Controller name="name" control={control} render={({ field }) => (<Input {...field} prefix={<TbUserCircle />} placeholder="Member’s full name" onInput={(e: any) => { if (e.target.value) e.target.value = e.target.value.toUpperCase() }} />)} />
+        </FormItem>
+        <FormItem label="Mobile Number" invalid={!!errors.mobile_no || !!errors.contact_country_code} errorMessage={errors.mobile_no?.message || (errors.contact_country_code as any)?.message}>
+          <div className="flex items-center gap-2">
+            <Controller name="contact_country_code" control={control} render={({ field }) => (<Select {...field} placeholder="Code" className="w-36" options={countryCodeOptions} />)} />
+            <Controller name="mobile_no" control={control} render={({ field }) => (<Input {...field} prefix={<TbPhone />} placeholder="Primary contact number" />)} />
+          </div>
+        </FormItem>
+        <FormItem label="Email" invalid={!!errors.email} errorMessage={errors.email?.message}>
+          <Controller name="email" control={control} render={({ field }) => (<Input {...field} type="email" prefix={<TbMail />} placeholder="example@domain.com" />)} />
+        </FormItem>
+        <FormItem label="Password" invalid={!!errors.password} errorMessage={errors.password?.message}>
+          <Controller name="password" control={control} render={({ field }) => (<Input {...field} type="password" placeholder="Enter new password" />)} />
+        </FormItem>
+        <FormItem label="Country" invalid={!!errors.country_id} errorMessage={(errors.country_id as any)?.message}>
+          <Controller name="country_id" control={control} render={({ field }) => (<Select {...field} prefix={<TbWorld />} placeholder="Select Country" options={countryOptions} />)} />
+        </FormItem>
+        <FormItem label="Interested Categories" className="md:col-span-2" invalid={!!errors.interested_category_ids} errorMessage={errors.interested_category_ids?.message}>
+          <Controller name="interested_category_ids" control={control} render={({ field }) => (<Select {...field} isMulti prefix={<TbCategory />} placeholder="Select interested categories" options={categoryOptions} />)} />
+        </FormItem>
+      </div>
+
+      <div className="flex justify-end gap-4 mt-6 p-4 border-t dark:border-gray-700">
+        <Button type="button" onClick={onCancel} disabled={isSubmitting}>
+          Cancel
+        </Button>
+        <Button
+          variant="solid"
+          type="button" // FIX: Changed from "submit" to prevent parent form submission
+          onClick={handleSubmit(handleFormSubmit)} // FIX: Trigger form submission via onClick
+          loading={isSubmitting}
+          disabled={!isValid || isSubmitting}
+        >
+          Create Member
+        </Button>
+      </div>
+    </form>
+  );
+};
+// --- END: New Member Add Form ---
+
+
+// --- MemberManagementSection ---
+const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
+  const dispatch = useAppDispatch();
+  const { MemberData } = useSelector(masterSelector);
+  const { fields, append, remove } = useFieldArray({ control, name: "company_members" });
+  const { setValue } = formMethods;
+
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+
+  const memberOptions = useMemo(() => {
+    const data = MemberData?.data || MemberData || [];
+    return Array.isArray(data)
+      ? data.map((m: any) => ({
+        value: String(m.id),
+        label: `(${m.customer_code}) - ${m.name || ' '}`,
+        status: m.status,
+      }))
+      : [];
+  }, [MemberData]);
+
+  const handleMemberAdded = useCallback(() => {
+    setIsAddMemberModalOpen(false);
+    dispatch(getMemberAction());
+  }, [dispatch]);
+
+  return (
+    <>
+      <Card id="memberManagement">
+        <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+          <h4 className="mb-0">Member Management</h4>
+          <div className="flex gap-2">
+            <Button type="button" size="sm" icon={<TbPlus />} onClick={() => append({ member_id: undefined, designation: "", person_name: "", number: "" })}>
+              Add Member to Company
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="solid"
+              icon={<TbPlus />}
+              onClick={() => setIsAddMemberModalOpen(true)}
+            >
+              Create New Member
+            </Button>
+          </div>
+        </div>
+
+        {fields.map((item, index) => (
+          <Card key={item.id} className="mb-4 border dark:border-gray-600 relative rounded-md" bodyClass="p-4">
+            <Button type="button" variant="plain" size="xs" icon={<TbTrash size={16} />} onClick={() => remove(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10">Remove</Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-start">
+              <FormItem label={`Member ${index + 1}`} invalid={!!errors.company_members?.[index]?.member_id} errorMessage={(errors.company_members?.[index]?.member_id as any)?.message as string}>
+                <Controller
+                  name={`company_members.${index}.member_id`}
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      placeholder="Select Member"
+                      options={memberOptions}
+                      value={field.value}
+                      onChange={(selectedOption) => {
+                        field.onChange(selectedOption);
+                        const fullMemberDataList = MemberData?.data || MemberData || [];
+                        const selectedMemberData = Array.isArray(fullMemberDataList)
+                          ? fullMemberDataList.find(m => String(m.id) === selectedOption?.value)
+                          : null;
+                        if (selectedMemberData) {
+                          setValue(`company_members.${index}.person_name`, selectedMemberData.name || '', { shouldValidate: true });
+                          setValue(`company_members.${index}.number`, selectedMemberData.number || '', { shouldValidate: true });
+                        } else {
+                          setValue(`company_members.${index}.person_name`, '', { shouldValidate: true });
+                          setValue(`company_members.${index}.number`, '', { shouldValidate: true });
+                        }
+                      }}
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem label={`Designation ${index + 1}`} invalid={!!errors.company_members?.[index]?.designation} errorMessage={errors.company_members?.[index]?.designation?.message as string}>
+                <Controller name={`company_members.${index}.designation`} control={control} render={({ field }) => (<Input  disabled placeholder="Sales Executive" {...field} />)} />
+              </FormItem>
+              <FormItem label={`Person Name ${index + 1}`} invalid={!!errors.company_members?.[index]?.person_name} errorMessage={errors.company_members?.[index]?.person_name?.message as string}>
+                <Controller name={`company_members.${index}.person_name`} control={control} render={({ field }) => (<Input placeholder="Display Name" {...field} />)} />
+              </FormItem>
+             <FormItem 
+    label={`Contact No. ${index + 1}`} 
+    invalid={!!errors.company_members?.[index]?.number} 
+    errorMessage={errors.company_members?.[index]?.number?.message as string}
+>
+    <Controller 
+        name={`company_members.${index}.number`} 
+        control={control} 
+        render={({ field }) => (
+            <Input 
+                type="tel" 
+                placeholder="Contact Number" 
+                {...field} // Spread the field props first
+                // Then, override the onChange handler
+                onChange={(e) => {
+                    // Remove any non-digit characters
+                    const numericValue = e.target.value.replace(/\D/g, '');
+                    // Update the form state with the clean value
+                    field.onChange(numericValue);
+                }} 
+            />
+        )} 
+    />
+</FormItem>
+            </div>
+          </Card>
+        ))}
+      </Card>
+
+      <Dialog
+        isOpen={isAddMemberModalOpen}
+        onClose={() => setIsAddMemberModalOpen(false)}
+        onRequestClose={() => setIsAddMemberModalOpen(false)}
+        width={900}
+        closable={false}
+      >
+        <h5 className="mb-4">Create a New Member</h5>
+        <p className="mb-6 text-sm">Create a new member record. Once created, it will be available in the 'Member' dropdown to add to this company.</p>
+        <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '1rem' }}>
+          <MemberAddForm
+            onSuccess={handleMemberAdded}
+            onCancel={() => setIsAddMemberModalOpen(false)}
+          />
         </div>
       </Dialog>
-      <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
-        <form id="exportReasonForm" onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4 mt-2">
-          <FormItem label="Please provide a reason for exporting this data:" isRequired invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
-            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
-          </FormItem>
-        </form>
-      </ConfirmDialog>
     </>
   );
 };
 
-export default WallListing;
+
+// --- TeamManagementSection ---
+const TeamManagementSection = ({ control, errors }: FormSectionBaseProps) => {
+  const { fields, append, remove } = useFieldArray({ control, name: "company_teams" });
+
+  return (
+    <Card id="teamManagement">
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+        <h4 className="mb-0">Team Management</h4>
+        <Button type="button" size="sm" icon={<TbPlus />} onClick={() => append({ team_name: "", designation: "", person_name: "", number: "" })}>Add Team Member</Button>
+      </div>
+      {fields.map((item, index) => (
+        <Card key={item.id} className="mb-4 border dark:border-gray-600 relative rounded-md" bodyClass="p-4">
+          <Button type="button" variant="plain" size="xs" icon={<TbTrash size={16} />} onClick={() => remove(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10">Remove</Button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-start">
+            <FormItem label={`Designation ${index + 1}`} invalid={!!errors.company_teams?.[index]?.designation} errorMessage={errors.company_teams?.[index]?.designation?.message as string}>
+              <Controller name={`company_teams.${index}.designation`} control={control} render={({ field }) => (<Input placeholder="e.g., Manager" {...field} />)} />
+            </FormItem>
+            <FormItem label={`Person Name ${index + 1}`} invalid={!!errors.company_teams?.[index]?.person_name} errorMessage={errors.company_teams?.[index]?.person_name?.message as string}>
+              <Controller name={`company_teams.${index}.person_name`} control={control} render={({ field }) => (<Input placeholder="Person Name" {...field} />)} />
+            </FormItem>
+            <FormItem 
+    label={`Contact No. ${index + 1}`} 
+    invalid={!!errors.company_teams?.[index]?.number} 
+    errorMessage={errors.company_teams?.[index]?.number?.message as string}
+>
+    <Controller 
+        name={`company_teams.${index}.number`} 
+        control={control} 
+        render={({ field }) => (
+            <Input 
+                type="tel" 
+                placeholder="Contact Number" 
+                {...field} // Spread the field props first
+                // Then, override the onChange handler
+                onChange={(e) => {
+                    // Remove any non-digit characters from the input
+                    const numericValue = e.target.value.replace(/\D/g, '');
+                    // Update the form state with the sanitized value
+                    field.onChange(numericValue);
+                }} 
+            />
+        )} 
+    />
+</FormItem>
+          </div>
+        </Card>
+      ))}
+    </Card>
+  );
+};
+
+// --- START: ZOD VALIDATION SCHEMA ---
+
+// Helper for optional email validation: allows an empty string or a valid email, but not an invalid one.
+const optionalEmail = z.string().email({ message: "Invalid email format" }).or(z.literal("")).optional().nullable();
+// Helper for file inputs
+const fileSchema = z.any().optional().nullable();
+
+// The main validation schema for the entire company form
+const companySchema = z.object({
+  id: z.union([z.string(), z.number()]).optional(),
+  company_name: z.string().trim().min(1, "Company Name is required."),
+  status: z.object({ value: z.string().min(1), label: z.string() }, { required_error: "Status is required." }),
+  ownership_type: z.object({ value: z.string().min(1), label: z.string() }, { required_error: "Ownership Type is required." }),
+  owner_name: z.string().trim().min(1, "Owner/Director Name is required."),
+  country_id: z.object({ value: z.string().min(1), label: z.string() }, { required_error: "Country is required." }),
+  continent_id: z.object({ value: z.string(), label: z.string() }).optional().nullable(),
+  city: z.string().trim().optional().nullable(),
+  state: z.string().trim().optional().nullable(),
+  zip_code: z.string().trim().optional().nullable(),
+  company_address: z.string().trim().optional().nullable(),
+
+  primary_email_id: optionalEmail,
+  alternate_email_id: optionalEmail,
+  support_email: optionalEmail,
+  notification_email: optionalEmail,
+
+  primary_contact_number_code: z.object({ value: z.string().min(1), label: z.string() }, { required_error: 'Code is required.' }),
+  primary_contact_number: z.string().trim().min(7, "Must be at least 7 digits.").regex(/^\d+$/, "Only digits allowed."),
+  alternate_contact_number_code: z.object({ value: z.string(), label: z.string() }).optional().nullable(),
+  alternate_contact_number: z.string().trim().regex(/^\d*$/, "Only digits allowed.").optional().nullable(),
+  general_contact_number: z.string().trim().regex(/^\d*$/, "Only digits allowed.").optional().nullable(),
+
+  gst_number: z.string().trim().optional().nullable(),
+  pan_number: z.string().trim().optional().nullable(),
+  trn_number: z.string().trim().optional().nullable(),
+  tan_number: z.string().trim().optional().nullable(),
+
+  establishment_year: z.string().trim().regex(/^\d{4}$/, "Invalid year format (YYYY).").or(z.literal("")).optional().nullable(),
+  no_of_employees: z.union([z.string(), z.number()]).optional().nullable(),
+  company_logo: fileSchema,
+  company_website: z.string().url("Invalid URL format").or(z.literal("")).optional().nullable(),
+
+  company_certificate: z.array(z.object({
+    certificate_id: z.string().optional().nullable(),
+    certificate_name: z.string().optional().nullable(),
+    upload_certificate: fileSchema,
+  })).optional(),
+
+  office_info: z.array(z.object({
+    office_type: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
+    office_name: z.string().trim().optional(),
+    address: z.string().trim().optional(),
+    country_id: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
+    state: z.string().trim().optional(),
+    city: z.string().trim().optional(),
+    zip_code: z.string().trim().optional().nullable(),
+    gst_number: z.string().trim().optional().nullable(),
+    contact_person: z.string().trim().optional().nullable(),
+    office_email: optionalEmail,
+    office_phone: z.string().optional().nullable(),
+  })).optional(),
+
+  // KYC Docs
+  aadhar_card_file: fileSchema, pan_card_file: fileSchema, gst_certificate_file: fileSchema,
+  visiting_card_file: fileSchema, office_photo_file: fileSchema, authority_letter_file: fileSchema,
+  cancel_cheque_file: fileSchema, ABCQ_file: fileSchema, other_document_file: fileSchema,
+
+  // Bank Details
+  primary_account_number: z.string().optional().nullable(),
+  primary_benificeiry_name: z.string().optional().nullable(),
+  primary_bank_name: z.string().optional().nullable(),
+  primary_ifsc_code: z.string().optional().nullable(),
+  primary_swift_code: z.string().optional().nullable(),
+  primary_bank_verification_photo: fileSchema,
+  primary_is_default: z.boolean().optional().nullable(),
+  secondary_account_number: z.string().optional().nullable(),
+  secondary_benificeiry_name: z.string().optional().nullable(),
+  secondary_bank_name: z.string().optional().nullable(),
+  secondary_ifsc_code: z.string().optional().nullable(),
+  secondary_swift_code: z.string().optional().nullable(),
+  secondary_bank_verification_photo: fileSchema,
+  secondary_is_default: z.boolean().optional().nullable(),
+
+  company_bank_details: z.array(z.object({
+    id: z.string().optional(),
+    bank_account_number: z.string().optional().nullable(),
+    bank_name: z.string().optional().nullable(),
+    ifsc_code: z.string().optional().nullable(),
+    swift_code: z.string().optional().nullable(),
+    verification_photo: fileSchema,
+    type: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
+    is_default: z.boolean().optional().nullable(),
+  }).superRefine((data, ctx) => {
+    // Validate only if user has interacted with the row
+    const isRowActive = Object.values(data).some(v => v);
+    if (!isRowActive) return;
+
+    if (!data.type?.value) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['type'], message: 'Type is required.' });
+    if (!data.bank_account_number) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['bank_account_number'], message: 'Account No. is required.' });
+    if (!data.bank_name) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['bank_name'], message: 'Bank Name is required.' });
+    if (!data.ifsc_code) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['ifsc_code'], message: 'IFSC Code is required.' });
+  })
+  ).optional(),
+
+  USER_ACCESS: z.boolean().optional(),
+  billing_documents: z.array(z.object({ document_name: z.any().optional(), document: fileSchema })).optional(),
+  enabled_billing_docs: z.array(z.object({ document_name: z.any().optional(), document: fileSchema })).optional(),
+
+  company_spot_verification: z.array(z.object({
+    verified: z.boolean().optional().nullable(),
+    verified_by_id: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
+    photo_upload: fileSchema,
+    remark: z.string().optional().nullable(),
+  }).superRefine((data, ctx) => {
+    const isRowActive = data.verified || !!data.verified_by_id?.value || !!data.photo_upload || !!data.remark;
+    if (isRowActive && !data.verified_by_id?.value) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['verified_by_id'], message: 'Verified By is required.' });
+    }
+  })
+  ).optional(),
+
+ company_references: z.array(z.object({
+    person_name: z.string().optional().nullable(),
+    company_id: z.any().optional().nullable(),
+    number: z.string().optional().nullable(),
+    number_code: z.object({ value: z.string(), label: z.string() }).optional().nullable(),
+    remark: z.string().optional().nullable(),
+  })).optional(),
+
+  company_members: z.array(z.object({
+    member_id: z.object({ value: z.string(), label: z.string() }).optional().nullable(),
+    designation: z.string().optional().nullable(),
+    person_name: z.string().optional().nullable(),
+    number: z.string().optional().nullable(),
+  }).superRefine((data, ctx) => {
+    const isRowActive = !!data.member_id?.value || !!data.designation || !!data.person_name || !!data.number;
+    if (isRowActive && !data.member_id?.value) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['member_id'], message: 'Member selection is required' });
+    }
+  })
+  ).optional(),
+
+  company_teams: z.array(z.object({
+    designation: z.string().optional().nullable(),
+    person_name: z.string().optional().nullable(),
+    number: z.string().optional().nullable(),
+  }).superRefine((data, ctx) => {
+    const isRowActive = (data.designation && data.designation.trim() !== '') || (data.number && data.number.trim() !== '');
+    if (isRowActive && (!data.person_name || data.person_name.trim() === '')) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['person_name'], message: 'Person Name is required.' });
+    }
+  })
+  ).optional(),
+
+}).passthrough() // Allow fields not defined in schema
+  .superRefine((data, ctx) => {
+    // Conditional validation for India-specific fields
+    if (data.country_id?.value === '101') {
+      if (!data.gst_number || !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(data.gst_number)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Valid GST Number is required for India.", path: ['gst_number'] });
+      }
+      if (!data.pan_number || !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(data.pan_number)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Valid PAN Number is required for India.", path: ['pan_number'] });
+      }
+    }
+  });
+// --- END: ZOD VALIDATION SCHEMA ---
+
+
+// --- CompanyFormComponent ---
+type CompanyFormComponentProps = {
+  onFormSubmit: (values: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => void;
+  defaultValues?: Partial<CompanyFormSchema>;
+  isEditMode?: boolean;
+  onDiscard?: () => void;
+  isSubmitting?: boolean;
+};
+
+const CompanyFormComponent = (props: CompanyFormComponentProps) => {
+  const { onFormSubmit, defaultValues, isEditMode, onDiscard, isSubmitting } = props;
+  const [activeSection, setActiveSection] = useState<string>(companyNavigationList[0].link);
+  const [imageViewerState, setImageViewerState] = useState({ isOpen: false, startIndex: 0 });
+  const [genericFileViewerState, setGenericFileViewerState] = useState<{ isOpen: boolean, file: File | string | null }>({ isOpen: false, file: null });
+
+  const formMethods = useForm<CompanyFormSchema>({
+    defaultValues: defaultValues || {},
+    resolver: zodResolver(companySchema),
+    mode: "onTouched",
+  });
+  const { handleSubmit, formState: { errors }, control, getValues, watch } = formMethods;
+
+  const allImageDocsForViewer = useMemo(() => {
+    const images: { src: string; alt: string }[] = [];
+    const isImage = (file: unknown) => (file instanceof File && file.type.startsWith('image/')) || (typeof file === 'string' && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(file));
+    const getSrc = (file: any) => file instanceof File ? URL.createObjectURL(file) : String(file);
+
+    const formData = getValues();
+    const addImage = (file: any, alt: string) => {
+      if (file && isImage(file)) images.push({ src: getSrc(file), alt });
+    };
+
+    addImage(formData.company_logo, 'Company Logo');
+    addImage(formData.aadhar_card_file, 'Aadhar Card');
+    addImage(formData.pan_card_file, 'PAN Card');
+    // ... add all other single file fields
+    formData.company_certificate?.forEach((cert, i) => addImage(cert.upload_certificate, cert.certificate_name || `Certificate ${i + 1}`));
+    formData.company_bank_details?.forEach((bank, i) => addImage(bank.verification_photo, `Bank ${i + 1} Verification`));
+    // ... add all other array file fields
+
+    return images;
+  }, [getValues, watch()]); // Re-run when any form value changes
+
+  const handlePreviewClick = useCallback((file: File | string | null | undefined, label: string) => {
+    if (!file) return;
+
+    const isImage = (f: unknown): boolean => {
+      if (f instanceof File) return f.type.startsWith('image/');
+      if (typeof f === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(f);
+      return false;
+    }
+
+    if (isImage(file)) {
+      const src = file instanceof File ? URL.createObjectURL(file) : String(file);
+      const index = allImageDocsForViewer.findIndex(img => img.src === src);
+      setImageViewerState({ isOpen: true, startIndex: Math.max(0, index) });
+    } else {
+      setGenericFileViewerState({ isOpen: true, file: file as File | string });
+    }
+  }, [allImageDocsForViewer]);
+
+  const internalFormSubmit = (values: CompanyFormSchema) => {
+    onFormSubmit?.(values, formMethods);
+  };
+
+  const handleInvalidSubmit = (errors: FieldErrors<CompanyFormSchema>) => {
+    console.error("Validation Errors: ", errors);
+    toast.push(<Notification type="danger" title="Validation Error"> Please fix the highlighted errors before submitting. </Notification>);
+  };
+
+  const navigationKeys = companyNavigationList.map((item) => item.link);
+  const handleNext = () => {
+    const currentIndex = navigationKeys.indexOf(activeSection);
+    if (currentIndex < navigationKeys.length - 1)
+      setActiveSection(navigationKeys[currentIndex + 1]);
+  };
+  const handlePrevious = () => {
+    const currentIndex = navigationKeys.indexOf(activeSection);
+    if (currentIndex > 0) setActiveSection(navigationKeys[currentIndex - 1]);
+  };
+
+  const renderActiveSection = () => {
+    const sectionProps = { errors, control, formMethods, getValues, handlePreviewClick };
+    switch (activeSection) {
+      case "companyDetails": return <CompanyDetailsSection {...sectionProps} />;
+      case "kycDocuments": return <KYCDetailSection {...sectionProps} />;
+      case "bankDetails": return <BankDetailsSection {...sectionProps} />;
+      case "spotVerification": return <SpotVerificationSection {...sectionProps} />;
+      case "reference": return <ReferenceSection {...sectionProps} />;
+      case "accessibility": return <AccessibilitySection {...sectionProps} />;
+      case "memberManagement": return <MemberManagementSection {...sectionProps} />;
+      case "teamManagement": return <TeamManagementSection {...sectionProps} />;
+      default: return <CompanyDetailsSection {...sectionProps} />;
+    }
+  };
+
+  return (
+    <>
+      <div className="flex gap-1 items-end mb-3">
+        <NavLink to="/business-entities/company">
+          <h6 className="font-semibold hover:text-primary-600">Company</h6>
+        </NavLink>
+        <BiChevronRight size={22} />
+        <h6 className="font-semibold text-primary-600 dark:text-primary-300">
+          {isEditMode ? "Edit Company" : "Add New Company"}
+        </h6>
+      </div>
+      <Card className="mb-6" bodyClass="px-4 py-2 md:px-6">
+        <NavigatorComponent activeSection={activeSection} onNavigate={setActiveSection} />
+      </Card>
+
+      <form onSubmit={handleSubmit(internalFormSubmit, handleInvalidSubmit)} className="flex flex-col gap-4 pb-20">
+        {renderActiveSection()}
+      </form>
+
+      {imageViewerState.isOpen && (
+        <ImageViewer
+          images={allImageDocsForViewer}
+          startIndex={imageViewerState.startIndex}
+          onClose={() => setImageViewerState({ isOpen: false, startIndex: 0 })}
+        />
+      )}
+      {genericFileViewerState.isOpen && genericFileViewerState.file && (
+        <GenericFileViewer
+          file={genericFileViewerState.file}
+          onClose={() => setGenericFileViewerState({ isOpen: false, file: null })}
+        />
+      )}
+
+      <Card className="mt-auto sticky bottom-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-between items-center p-4">
+          <div>
+            {onDiscard && (
+              <Button type="button" customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"} icon={<TbTrash />} onClick={onDiscard} disabled={isSubmitting} >
+                Discard
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button type="button" onClick={handlePrevious} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === 0} > Previous </Button>
+            <Button type="button" onClick={handleNext} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === navigationKeys.length - 1} > Next </Button>
+            <Button
+              variant="solid"
+              type="button"
+              loading={isSubmitting}
+              onClick={handleSubmit(internalFormSubmit, handleInvalidSubmit)}
+              disabled={isSubmitting}
+            >
+              {isEditMode ? "Update" : "Create"}
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </>
+  );
+};
+
+// --- CompanyFormPage (Combined Add/Edit Page) ---
+const CompanyCreate = () => {
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const { id } = useParams<{ id?: string }>();
+  const isEditMode = Boolean(id);
+
+  const [initialData, setInitialData] = useState<Partial<CompanyFormSchema> | null>(null);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { CountriesData, ContinentsData, MemberData, CompanyData: AllCompaniesData, EmployeesList, DocumentListData } = useSelector(masterSelector);
+
+  const getEmptyFormValues = useCallback((): CompanyFormSchema => ({
+    company_name: "", primary_contact_number: "", primary_contact_number_code: undefined,
+    general_contact_number: "", ownership_type: undefined,
+    alternate_contact_number: "", alternate_contact_number_code: null,
+    primary_email_id: "", alternate_email_id: "",
+    owner_name: "", company_address: "", city: "", state: "", zip_code: "",
+    country_id: undefined, continent_id: null, gst_number: "", pan_number: "",
+    trn_number: "", tan_number: "", establishment_year: "", no_of_employees: "",
+    company_website: "", company_logo: null,
+    status: undefined, support_email: "", notification_email: "",
+    company_certificate: [], office_info: [],
+    primary_account_number: "", primary_benificeiry_name: "", primary_bank_name: "", primary_ifsc_code: "",
+    primary_swift_code: "", primary_bank_verification_photo: null, primary_is_default: false,
+    secondary_account_number: "", secondary_benificeiry_name: "", secondary_bank_name: "", secondary_ifsc_code: "",
+    secondary_swift_code: "", secondary_bank_verification_photo: null, secondary_is_default: false,
+    company_bank_details: [],
+    USER_ACCESS: false, billing_documents: [], enabled_billing_docs: [],
+    company_members: [], company_teams: [],
+    company_spot_verification: [], company_references: [],
+  }), []);
+
+  useEffect(() => {
+    dispatch(getCountriesAction());
+    dispatch(getContinentsAction());
+    dispatch(getEmployeesListingAction());
+    dispatch(getMemberAction());
+    dispatch(getCompanyAction());
+    dispatch(getDocumentListAction());
+  }, [dispatch]);
+
+  const lookupsReady = useMemo(() => {
+    return !!(CountriesData?.length && ContinentsData?.length && MemberData && AllCompaniesData && EmployeesList && DocumentListData);
+  }, [AllCompaniesData, CountriesData, ContinentsData, DocumentListData, EmployeesList, MemberData]);
+
+  useEffect(() => {
+    if (isEditMode) {
+      if (id && lookupsReady) {
+        const fetchCompanyData = async () => {
+          try {
+            const actionResult = await dispatch(getCompanyByIdAction(id)).unwrap();
+            if (actionResult) {
+              const documentTypeOptions = Array.isArray(DocumentListData) ? DocumentListData.map((d: any) => ({ value: d.id, label: d.name })) : [];
+              const allMembersForSelect = (MemberData?.data || []).map((m: any) => ({ value: String(m.id), label: `(${m.customer_code}) - ${m.name}` }));
+              const employeeDataSource = EmployeesList?.data?.data || EmployeesList?.data || EmployeesList;
+              const allEmployeesForSelect = (Array.isArray(employeeDataSource) ? employeeDataSource : []).map((m: any) => ({ value: String(m.id), label: `(${m.employee_id}) - ${m.name || ' '}` }));
+              const allCompaniesForRefSelect = (AllCompaniesData?.data || []).map((c: any) => ({ value: String(c.id), label: `(${c.company_code}) - ${c.company_name}` }));
+
+              const transformed = transformApiToFormSchema(actionResult, CountriesData, ContinentsData, allMembersForSelect, allEmployeesForSelect, allCompaniesForRefSelect, documentTypeOptions);
+              setInitialData({ ...getEmptyFormValues(), ...transformed });
+            } else {
+              toast.push(<Notification type="danger" title="Fetch Error">Company data not found.</Notification>);
+              navigate("/business-entities/company");
+            }
+          } catch (error: any) {
+            toast.push(<Notification type="danger" title="Fetch Error">{error?.message || "Error fetching company data."}</Notification>);
+            navigate("/business-entities/company");
+          } finally {
+            setPageLoading(false);
+          }
+        };
+        fetchCompanyData();
+      }
+    } else {
+      setInitialData(getEmptyFormValues());
+      setPageLoading(false);
+    }
+  }, [isEditMode, dispatch, navigate, getEmptyFormValues, id, lookupsReady, AllCompaniesData, CountriesData, ContinentsData, DocumentListData, EmployeesList, MemberData]);
+
+  const handleFormSubmit = useCallback(async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
+    setIsSubmitting(true);
+    const payload = preparePayloadForApi(formValues, isEditMode);
+    try {
+      if (isEditMode && id) {
+        await dispatch(editCompanyAction({ id: id, payload })).unwrap();
+        toast.push(<Notification type="success" title="Company Updated"> Details updated successfully. </Notification>);
+      } else {
+        await dispatch(addcompanyAction(payload)).unwrap();
+        toast.push(<Notification type="success" title="Company Created"> New company created successfully. </Notification>);
+      }
+      navigate("/business-entities/company");
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || `Failed to ${isEditMode ? "update" : "create"} company.`;
+      if (error?.response?.data?.errors) {
+        const validationErrors = error.response.data.errors;
+        Object.keys(validationErrors).forEach((key) => {
+          const message = Array.isArray(validationErrors[key]) ? validationErrors[key][0] : validationErrors[key];
+          try {
+            formMethods.setError(key as keyof CompanyFormSchema, { type: "manual", message: message });
+          } catch (e) {
+            console.warn(`API error for unmapped/unexpected key: ${key} - ${message}`);
+          }
+        });
+        toast.push(<Notification type="danger" title="Validation Error"> Please check the form fields. </Notification>);
+      } else {
+        toast.push(<Notification type="danger" title={`${isEditMode ? "Update" : "Creation"} Failed`}> {errorMessage} </Notification>);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [dispatch, isEditMode, id, navigate]);
+
+  const openDiscardDialog = () => setDiscardConfirmationOpen(true);
+  const closeDiscardDialog = () => setDiscardConfirmationOpen(false);
+  const handleConfirmDiscard = async () => {
+    closeDiscardDialog();
+    navigate("/business-entities/company");
+  };
+
+  if (pageLoading || !initialData) {
+    return (
+      <Container className="h-full flex justify-center items-center">
+        <Spinner size="40px" />
+      </Container>
+    );
+  }
+
+  return (
+    <Container className="h-full">
+      <div className="flex flex-col min-h-screen">
+        <div className="flex-grow">
+          <CompanyFormComponent
+            onFormSubmit={handleFormSubmit}
+            defaultValues={initialData}
+            isEditMode={isEditMode}
+            onDiscard={openDiscardDialog}
+            isSubmitting={isSubmitting}
+          />
+        </div>
+        <ConfirmDialog
+          isOpen={discardConfirmationOpen}
+          type="danger"
+          title={isEditMode ? "Discard Changes" : "Cancel Creation"}
+          onClose={closeDiscardDialog}
+          onRequestClose={closeDiscardDialog}
+          onCancel={closeDiscardDialog}
+          onConfirm={handleConfirmDiscard}
+        >
+          <p> Are you sure you want to {isEditMode ? "discard changes" : "cancel creating this company"}? This action cannot be undone. </p>
+        </ConfirmDialog>
+      </div>
+    </Container>
+  );
+};
+
+export default CompanyCreate;
