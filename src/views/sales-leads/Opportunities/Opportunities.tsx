@@ -3122,21 +3122,29 @@ const SpbSummaryRow: React.FC<SpbSummaryRowProps> = ({
 interface ExpandedAutoSpbDetailsProps {
   row: Row<OpportunityItem>;
 }
-const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
-  row,
-}) => {
+// START: Sorter Icon Helper
+const SorterIcon = ({ direction }: { direction: 'asc' | 'desc' }) => (
+  direction === 'asc' ? <span className="ml-1 text-xs">▲</span> : <span className="ml-1 text-xs">▼</span>
+);
+// END: Sorter Icon Helper
+
+const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({ row }) => {
   const navigate = useNavigate();
   const [selectedBuyItems, setSelectedBuyItems] = useState<AutoSpbApiItem[]>([]);
   const [selectedSellItems, setSelectedSellItems] = useState<AutoSpbApiItem[]>([]);
-  
-  // START: New state for filtering
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
-  // END: New state for filtering
+
+  // START: New state for search and sort
+  const [buySearchQuery, setBuySearchQuery] = useState('');
+  const [sellSearchQuery, setSellSearchQuery] = useState('');
+  type SortConfig = { key: keyof AutoSpbApiItem | null; direction: 'asc' | 'desc'; };
+  const [buySortConfig, setBuySortConfig] = useState<SortConfig>({ key: 'customer_name', direction: 'asc' });
+  const [sellSortConfig, setSellSortConfig] = useState<SortConfig>({ key: 'customer_name', direction: 'asc' });
+  // END: New state for search and sort
 
   const buyItems = row.original._rawSpbBuyItems || [];
   const sellItems = row.original._rawSpbSellItems || [];
 
-  // START: Reusable map for filter options
   const filterOptionMap: Record<string, { label: string; key: keyof AutoSpbApiItem }> = {
     product_status: { label: "Product Status", key: "product_status" },
     product_specs: { label: "Product Specs", key: "product_specs" },
@@ -3150,27 +3158,65 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
     eta_details: { label: "ETA", key: "eta_details" },
     location: { label: "Location", key: "location" },
   };
-  // END: Reusable map
 
-  // START: Client-side filtering logic
-  const { filteredBuyItems, filteredSellItems } = useMemo(() => {
-    if (activeFilters.length === 0) {
-      return { filteredBuyItems: buyItems, filteredSellItems: sellItems };
-    }
+  // START: Enhanced processing logic with search and sort
+  const { processedBuyItems, processedSellItems } = useMemo(() => {
+    const processList = (
+      items: AutoSpbApiItem[],
+      filters: string[],
+      searchQuery: string,
+      sortConfig: SortConfig
+    ): AutoSpbApiItem[] => {
+      let processed = [...items];
 
-    const filterPredicate = (item: AutoSpbApiItem) => {
-      return activeFilters.every(filterKey => {
-        const value = item[filterKey as keyof AutoSpbApiItem];
-        // Filter out items where the specified key is null, undefined, or an empty string
-        return value !== null && value !== undefined && String(value).trim() !== '';
-      });
+      // 1. Apply activeFilters (global filters)
+      if (filters.length > 0) {
+        processed = processed.filter(item => {
+          return filters.every(filterKey => {
+            const value = item[filterKey as keyof AutoSpbApiItem];
+            return value !== null && value !== undefined && String(value).trim() !== '';
+          });
+        });
+      }
+
+      // 2. Apply search query (local search)
+      if (searchQuery) {
+        const lowercasedQuery = searchQuery.toLowerCase();
+        processed = processed.filter(item =>
+          item.customer_name?.toLowerCase().includes(lowercasedQuery) ||
+          item.customer_code?.toLowerCase().includes(lowercasedQuery)
+        );
+      }
+
+      // 3. Apply sorting
+      if (sortConfig.key) {
+        processed.sort((a, b) => {
+          const key = sortConfig.key as keyof AutoSpbApiItem;
+          const aVal = a[key];
+          const bVal = b[key];
+
+          if (aVal === null || aVal === undefined) return 1;
+          if (bVal === null || bVal === undefined) return -1;
+
+          let comparison = 0;
+          if (key === 'qty' || key === 'price') {
+            comparison = Number(aVal) - Number(bVal);
+          } else {
+            comparison = String(aVal).localeCompare(String(bVal));
+          }
+
+          return sortConfig.direction === 'asc' ? comparison : -comparison;
+        });
+      }
+      return processed;
     };
 
     return {
-      filteredBuyItems: buyItems.filter(filterPredicate),
-      filteredSellItems: sellItems.filter(filterPredicate),
+      processedBuyItems: processList(buyItems, activeFilters, buySearchQuery, buySortConfig),
+      processedSellItems: processList(sellItems, activeFilters, sellSearchQuery, sellSortConfig),
     };
-  }, [buyItems, sellItems, activeFilters]);
+  }, [buyItems, sellItems, activeFilters, buySearchQuery, sellSearchQuery, buySortConfig, sellSortConfig]);
+  // END: Enhanced processing logic
 
   const handleToggleFilter = (filterKey: string) => {
     setActiveFilters(prev =>
@@ -3179,13 +3225,20 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
         : [...prev, filterKey]
     );
   };
-  // END: Client-side filtering logic
 
-  // Clear selections when filters change to avoid confusion
+  // Clear selections when data view changes
   useEffect(() => {
-      setSelectedBuyItems([]);
-      setSelectedSellItems([]);
-  }, [activeFilters]);
+    setSelectedBuyItems([]);
+    setSelectedSellItems([]);
+  }, [activeFilters, buySearchQuery, sellSearchQuery, buySortConfig, sellSortConfig]);
+
+  // START: Sort options constant
+  const sortOptions: { label: string; key: keyof AutoSpbApiItem }[] = [
+    { label: 'Name', key: 'customer_name' },
+    { label: 'Quantity', key: 'qty' },
+    { label: 'Price', key: 'price' },
+  ];
+  // END: Sort options constant
 
   const handleCreateLead = useCallback(() => {
     if (selectedBuyItems.length !== 1 || selectedSellItems.length !== 1) {
@@ -3286,9 +3339,9 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
   };
   const handleSelectAll = (type: 'Buy' | 'Sell', isChecked: boolean) => {
     if (type === 'Buy') {
-      setSelectedBuyItems(isChecked ? filteredBuyItems : []);
+      setSelectedBuyItems(isChecked ? processedBuyItems : []);
     } else {
-      setSelectedSellItems(isChecked ? filteredSellItems : []);
+      setSelectedSellItems(isChecked ? processedSellItems : []);
     }
   }
 
@@ -3297,7 +3350,6 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
       bordered
       className="m-1 my-2 rounded-lg bg-gray-50 dark:bg-gray-900/50"
     >
-       {/* START: New Filter UI Section */}
        <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-4">
                 <Dropdown
@@ -3339,30 +3391,63 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
                 </Button>
             )}
         </div>
-        {/* END: New Filter UI Section */}
 
       <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
-          <div className="flex justify-between items-center mb-2">
+          <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
             <h6 className="text-sm font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-2">
-              <TbChecks /> Buyer ({filteredBuyItems.length})
+              <TbChecks /> Buyer ({processedBuyItems.length})
             </h6>
-            {filteredBuyItems.length > 0 &&
-              <label className="flex items-center gap-2 text-xs cursor-pointer">
-                <Checkbox
-                  checked={selectedBuyItems.length === filteredBuyItems.length && filteredBuyItems.length > 0}
-                  indeterminate={selectedBuyItems.length > 0 && selectedBuyItems.length < filteredBuyItems.length}
-                  onChange={(checked) => handleSelectAll('Buy', checked)}
-                />
-                <span>Select All</span>
-              </label>
-            }
+            <div className="flex items-center gap-2">
+              <Input
+                size="sm"
+                placeholder="Search Buyers..."
+                className="w-40"
+                prefix={<TbSearch className="text-lg" />}
+                value={buySearchQuery}
+                onChange={(e) => setBuySearchQuery(e.target.value)}
+              />
+              <Dropdown
+                renderTitle={
+                  <Button variant="default" size="sm">
+                    Sort By: {sortOptions.find(o => o.key === buySortConfig.key)?.label || '...'}
+                    {buySortConfig.key && <SorterIcon direction={buySortConfig.direction} />}
+                  </Button>
+                }
+              >
+                {sortOptions.map(opt => (
+                  <Dropdown.Item
+                    key={opt.key}
+                    onClick={() => {
+                      const direction = buySortConfig.key === opt.key && buySortConfig.direction === 'asc' ? 'desc' : 'asc';
+                      setBuySortConfig({ key: opt.key, direction });
+                    }}
+                    className="flex justify-between"
+                  >
+                    <span>{opt.label}</span>
+                    {buySortConfig.key === opt.key && <SorterIcon direction={buySortConfig.direction} />}
+                  </Dropdown.Item>
+                ))}
+              </Dropdown>
+            </div>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-md">
+            <div className="flex justify-end px-2 py-1 border-b dark:border-gray-700">
+              {processedBuyItems.length > 0 &&
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <Checkbox
+                    checked={selectedBuyItems.length === processedBuyItems.length && processedBuyItems.length > 0}
+                    indeterminate={selectedBuyItems.length > 0 && selectedBuyItems.length < processedBuyItems.length}
+                    onChange={(checked) => handleSelectAll('Buy', checked)}
+                  />
+                  <span>Select All</span>
+                </label>
+              }
+            </div>
             <div className="max-h-60 overflow-y-auto">
-              {filteredBuyItems.length > 0 ? (
+              {processedBuyItems.length > 0 ? (
                 <div className="px-2">
-                  {filteredBuyItems.map((item) => (
+                  {processedBuyItems.map((item) => (
                     <SpbSummaryRow
                       key={`buy-${item.id}`}
                       item={item}
@@ -3381,26 +3466,60 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
           </div>
         </div>
         <div>
-          <div className="flex justify-between items-center mb-2">
+          <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
             <h6 className="text-sm font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-2">
-              <TbBox /> Seller ({filteredSellItems.length})
+              <TbBox /> Seller ({processedSellItems.length})
             </h6>
-            {filteredSellItems.length > 0 &&
-              <label className="flex items-center gap-2 text-xs cursor-pointer">
-                <Checkbox
-                  checked={selectedSellItems.length === filteredSellItems.length && filteredSellItems.length > 0}
-                  indeterminate={selectedSellItems.length > 0 && selectedSellItems.length < filteredSellItems.length}
-                  onChange={(checked) => handleSelectAll('Sell', checked)}
-                />
-                <span>Select All</span>
-              </label>
-            }
+            <div className="flex items-center gap-2">
+              <Input
+                size="sm"
+                placeholder="Search Sellers..."
+                className="w-40"
+                prefix={<TbSearch className="text-lg" />}
+                value={sellSearchQuery}
+                onChange={(e) => setSellSearchQuery(e.target.value)}
+              />
+              <Dropdown
+                renderTitle={
+                  <Button variant="default" size="sm">
+                    Sort By: {sortOptions.find(o => o.key === sellSortConfig.key)?.label || '...'}
+                    {sellSortConfig.key && <SorterIcon direction={sellSortConfig.direction} />}
+                  </Button>
+                }
+              >
+                {sortOptions.map(opt => (
+                  <Dropdown.Item
+                    key={opt.key}
+                    onClick={() => {
+                      const direction = sellSortConfig.key === opt.key && sellSortConfig.direction === 'asc' ? 'desc' : 'asc';
+                      setSellSortConfig({ key: opt.key, direction });
+                    }}
+                    className="flex justify-between"
+                  >
+                    <span>{opt.label}</span>
+                    {sellSortConfig.key === opt.key && <SorterIcon direction={sellSortConfig.direction} />}
+                  </Dropdown.Item>
+                ))}
+              </Dropdown>
+            </div>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-md">
+            <div className="flex justify-end px-2 py-1 border-b dark:border-gray-700">
+              {processedSellItems.length > 0 &&
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <Checkbox
+                    checked={selectedSellItems.length === processedSellItems.length && processedSellItems.length > 0}
+                    indeterminate={selectedSellItems.length > 0 && selectedSellItems.length < processedSellItems.length}
+                    onChange={(checked) => handleSelectAll('Sell', checked)}
+                  />
+                  <span>Select All</span>
+                </label>
+              }
+            </div>
             <div className="max-h-60 overflow-y-auto">
-              {filteredSellItems.length > 0 ? (
+              {processedSellItems.length > 0 ? (
                 <div className="px-2">
-                  {filteredSellItems.map((item) => (
+                  {processedSellItems.map((item) => (
                     <SpbSummaryRow
                       key={`sell-${item.id}`}
                       item={item}
