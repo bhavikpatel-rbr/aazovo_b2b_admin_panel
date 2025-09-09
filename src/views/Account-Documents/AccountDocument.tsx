@@ -491,6 +491,7 @@ const PendingLeadsModal = ({
     navigate(path);
   };
 
+console.log("pendingLeads",pendingLeads);
 
   return (
     <>
@@ -534,7 +535,7 @@ const PendingLeadsModal = ({
                         <div className="text-xs">
                           <p>
                             <strong>B:</strong>{" "}
-                            {item?.lead_info?.buyer?.name || " "}
+                            {item?.lead_info?.buyer?.name ||item?.lead_member_detail?.name }
                           </p>
                           <p>
                             <strong>S:</strong>{" "}

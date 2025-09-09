@@ -182,7 +182,7 @@ const PendingLeadViewModal = ({
           <Card bodyClass="p-4" className="mt-4">
             <h6 className="mb-2 text-base font-semibold">Member Information</h6>
             <dl>
-              {renderDetail('Buyer', <span>{lead.lead_info?.buyer?.name} <span className="text-gray-500">({lead.lead_info?.buyer?.member_code})</span></span>)}
+              {renderDetail('Buyer', <span>{lead.lead_info?.buyer?.name || lead?.lead_member_detail?.name} <span className="text-gray-500">({lead.lead_info?.buyer?.member_code})</span></span>)}
               {renderDetail('Supplier', <span>{lead.lead_info?.seller?.name} <span className="text-gray-500">({lead.lead_info?.seller?.member_code})</span></span>)}
             </dl>
           </Card>
@@ -255,6 +255,7 @@ const PendingLeadsModal = ({
     setSelectedLead(leadData);
     setIsViewModalOpen(true);
   };
+console.log("pendingLeads",pendingLeads);
 
   return (
     <>
@@ -279,12 +280,13 @@ const PendingLeadsModal = ({
                 </Table.THead>
                 <Table.TBody>
                   {pendingLeads.map((item) => (
+                    
                     <Table.Tr key={item.id}>
                       <Table.Td>{item.lead?.lead_number || `LD-${item.lead?.id}`}</Table.Td>
                       <Table.Td>{item.lead?.product?.name || ' '}</Table.Td>
                       <Table.Td>
                         <div className="text-xs">
-                          <p><strong>B:</strong> {item.lead?.lead_info?.buyer?.name || ' '}</p>
+                          <p><strong>B:</strong> {item?.lead_info?.buyer?.name ||item?.lead?.lead_member_detail?.name }</p>
                           <p><strong>S:</strong> {item.lead?.lead_info?.seller?.name || ' '}</p>
                         </div>
                       </Table.Td>
