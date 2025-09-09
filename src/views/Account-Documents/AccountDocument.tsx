@@ -354,7 +354,7 @@ const PendingLeadViewModal: React.FC<{
           <HeaderCard lead={leadData} />
         </div>
 
-        <div className="flex flex-row items-center border-b border-gray-200 dark:border-gray-600 mb-3 flex-wrap">
+        <div className="flex max-h-[60vh] overflow-y-auto flex-row items-center border-b border-gray-200 dark:border-gray-600 mb-3 flex-wrap">
           {tabList.map((tab) => (
             <button
               type="button"
@@ -370,7 +370,7 @@ const PendingLeadViewModal: React.FC<{
           ))}
         </div>
 
-        <div className="min-h-[200px]">
+        <div className="max-h-[60vh]">
           {renderActiveTabContent()}
         </div>
 
@@ -502,7 +502,7 @@ console.log("pendingLeads",pendingLeads);
         width={1000}
         bodyOpenClassName="overflow-hidden"
       >
-        <div className="flex flex-col h-full max-h-[80vh]">
+        <div className=" max-h-[60vh] flex flex-col  ">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <h5 className="mb-0">Done Leads for Verification</h5>
           </div>
