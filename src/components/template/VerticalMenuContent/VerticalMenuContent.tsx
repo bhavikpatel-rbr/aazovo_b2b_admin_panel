@@ -54,6 +54,7 @@ const VerticalMenuContent = (props: VerticalMenuContentProps) => {
     }, [activedRoute?.parentKey])
 
     const handleLinkClick = () => {
+        
         onMenuItemClick?.()
     }
 
@@ -63,6 +64,7 @@ const VerticalMenuContent = (props: VerticalMenuContentProps) => {
         indent?: boolean,
     ) => {
         const nextCascade = cascade + 1
+console.log("navTree",navTree);
 
         return (
             <>

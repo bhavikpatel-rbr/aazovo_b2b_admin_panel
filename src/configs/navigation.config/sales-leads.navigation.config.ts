@@ -36,6 +36,22 @@ const salesLeadsNavigationConfig: NavigationTree[] = [
                 subMenu: [],
             },
             {
+                key: 'salesLeads.AutowallListing',
+                path: `${SALES_LEADS_PREFIX_PATH}/auto-wall-listing`,
+                title: 'Auto Wall Listing',
+                translateKey: 'nav.salesLeads.AutowallListing',
+                icon: 'wallListing',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN, USER],
+                meta: {
+                    description: {
+                        translateKey: 'nav.salesLeads.wallListingDesc',
+                        label: 'Manage wall listings',
+                    },
+                },
+                subMenu: [],
+            },
+            {
                 key: 'salesLeads.opportunities',
                 path: `${SALES_LEADS_PREFIX_PATH}/opportunities`,
                 title: 'Opportunities',

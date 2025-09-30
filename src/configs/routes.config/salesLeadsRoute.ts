@@ -14,6 +14,15 @@ const salesLeadsRoute: Routes = [
     },
   },
   {
+    key: "salesLeads.AutowallListing",
+    path: `${SALES_LEADS_PREFIX_PATH}/auto-wall-listing`,
+    component: lazy(() => import("@/views/sales-Leads/AutowallList/Autowalllist")),
+    authority: [ADMIN, USER],
+    meta: {
+      pageContainerType: "contained",
+    },
+  },
+  {
     key: "salesLeads.wallListing",
     path: `${SALES_LEADS_PREFIX_PATH}/wall-item/add`,
     component: lazy(
@@ -118,7 +127,7 @@ const salesLeadsRoute: Routes = [
       pageContainerType: "contained",
     },
   },
-    {
+  {
     key: "salesLeads.lead",
     path: `${SALES_LEADS_PREFIX_PATH}/lead/view/:id`,
     component: lazy(() => import("@/views/sales-Leads/Lead/Leadeview")),
@@ -127,7 +136,7 @@ const salesLeadsRoute: Routes = [
       pageContainerType: "contained",
     },
   },
-    {
+  {
     key: "salesLeads.lead",
     path: `${SALES_LEADS_PREFIX_PATH}/lead`,
     component: lazy(() => import("@/views/sales-Leads/Lead")),
@@ -165,19 +174,19 @@ const salesLeadsRoute: Routes = [
       pageContainerType: "contained",
     },
   },
-{
-  key: "salesLeads.offersDemands",
-  path: `${SALES_LEADS_PREFIX_PATH}/demands/create`,
-  component: lazy(
-    () =>
-      import("@/views/sales-Leads/Offers-Demands/DemandCreate/CreateDemand")
-  ),
-  authority: [ADMIN, USER],
-  meta: {
-    pageContainerType: "contained",
+  {
+    key: "salesLeads.offersDemands",
+    path: `${SALES_LEADS_PREFIX_PATH}/demands/create`,
+    component: lazy(
+      () =>
+        import("@/views/sales-Leads/Offers-Demands/DemandCreate/CreateDemand")
+    ),
+    authority: [ADMIN, USER],
+    meta: {
+      pageContainerType: "contained",
+    },
   },
-},
-{
+  {
     key: 'salesLeads.lead', // Distinct key
     path: `${SALES_LEADS_PREFIX_PATH}/lead/add`,
     component: lazy(
