@@ -124,89 +124,89 @@ import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- START: Skeleton Components ---
 const Skeleton = ({ className }: { className?: string }) => (
-    <div
-        className={classNames(
-            'animate-pulse rounded bg-gray-200 dark:bg-gray-700',
-            className,
-        )}
-    />
+  <div
+    className={classNames(
+      'animate-pulse rounded bg-gray-200 dark:bg-gray-700',
+      className,
+    )}
+  />
 );
 
 const CardSkeleton = () => (
-    <div className="rounded-md border border-gray-200 dark:border-gray-700">
-        <div className="flex gap-2 p-1">
-            <Skeleton className="h-8 w-8 rounded-md" />
-            <div className="flex flex-col gap-1.5 flex-grow">
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-2 w-3/4" />
-            </div>
-        </div>
+  <div className="rounded-md border border-gray-200 dark:border-gray-700">
+    <div className="flex gap-2 p-1">
+      <Skeleton className="h-8 w-8 rounded-md" />
+      <div className="flex flex-col gap-1.5 flex-grow">
+        <Skeleton className="h-4 w-1/2" />
+        <Skeleton className="h-2 w-3/4" />
+      </div>
     </div>
+  </div>
 );
 
 const ToolbarSkeleton = () => (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
-        <Skeleton className="h-10 w-full md:w-64" />
-        <div className="flex gap-2">
-            <Skeleton className="h-10 w-10" />
-            <Skeleton className="h-10 w-10" />
-            <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-10 w-28" />
-        </div>
+  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
+    <Skeleton className="h-10 w-full md:w-64" />
+    <div className="flex gap-2">
+      <Skeleton className="h-10 w-10" />
+      <Skeleton className="h-10 w-10" />
+      <Skeleton className="h-10 w-24" />
+      <Skeleton className="h-10 w-28" />
     </div>
+  </div>
 );
 
 const TableSkeleton = ({ columns, pageSize }: { columns: ColumnDef<any>[], pageSize: number }) => (
-    <div className=" rounded-lg overflow-hidden dark:border-gray-700">
-        <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-800">
-                <tr>
-                    <th className="p-4 w-12"><Skeleton className="h-5 w-5" /></th>
-                    {columns.map((col, index) => (
-                        <th key={index} className="p-4 text-left">
-                            <Skeleton className="h-4 w-3/4" />
-                        </th>
-                    ))}
-                </tr>
-            </thead>
-            <tbody>
-                {Array.from({ length: pageSize }).map((_, rowIndex) => (
-                    <tr key={rowIndex} className=" dark:border-gray-700">
-                         <td className="p-4 w-12"><Skeleton className="h-5 w-5" /></td>
-                        {columns.map((col, colIndex) => (
-                            <td key={colIndex} className="p-4">
-                                <div className="flex flex-col gap-2">
-                                    <Skeleton className="h-4 w-full" />
-                                    {colIndex % 2 === 0 && <Skeleton className="h-3 w-2/3" />}
-                                </div>
-                            </td>
-                        ))}
-                    </tr>
-                ))}
-            </tbody>
-        </table>
-    </div>
+  <div className=" rounded-lg overflow-hidden dark:border-gray-700">
+    <table className="w-full">
+      <thead className="bg-gray-50 dark:bg-gray-800">
+        <tr>
+          <th className="p-4 w-12"><Skeleton className="h-5 w-5" /></th>
+          {columns.map((col, index) => (
+            <th key={index} className="p-4 text-left">
+              <Skeleton className="h-4 w-3/4" />
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {Array.from({ length: pageSize }).map((_, rowIndex) => (
+          <tr key={rowIndex} className=" dark:border-gray-700">
+            <td className="p-4 w-12"><Skeleton className="h-5 w-5" /></td>
+            {columns.map((col, colIndex) => (
+              <td key={colIndex} className="p-4">
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="h-4 w-full" />
+                  {colIndex % 2 === 0 && <Skeleton className="h-3 w-2/3" />}
+                </div>
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
 );
 
 const AlertNoteSkeleton = () => (
-    <div className="relative flex items-start gap-4 pl-12 animate-pulse">
-        <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
-            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700"></div>
-            <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
-        </div>
-        <div className="flex-grow rounded-lg shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-            <div className="p-4">
-                <header className="flex justify-between items-center mb-3">
-                    <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="h-3 w-1/4" />
-                </header>
-                <div className="space-y-2">
-                    <Skeleton className="h-3 w-full" />
-                    <Skeleton className="h-3 w-5/6" />
-                </div>
-            </div>
-        </div>
+  <div className="relative flex items-start gap-4 pl-12 animate-pulse">
+    <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
+      <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700"></div>
+      <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
     </div>
+    <div className="flex-grow rounded-lg shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <div className="p-4">
+        <header className="flex justify-between items-center mb-3">
+          <Skeleton className="h-4 w-1/3" />
+          <Skeleton className="h-3 w-1/4" />
+        </header>
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-5/6" />
+        </div>
+      </div>
+    </div>
+  </div>
 );
 // --- END: Skeleton Components ---
 
@@ -466,10 +466,18 @@ const companyFilterFormSchema = z.object({
 
 type CompanyFilterFormData = z.infer<typeof companyFilterFormSchema>;
 const exportReasonSchema = z.object({
-  reason: z
-    .string()
-    .min(10, "Reason for export is required minimum 10 characters.")
-    .max(255, "Reason cannot exceed 255 characters."),
+  reason: z.string().refine(
+    (value) => {
+      // Remove all whitespace characters and check the length
+      const withoutSpaces = value.replace(/\s/g, "");
+      return withoutSpaces.length >= 10 && withoutSpaces.length <= 255;
+    },
+    {
+      // You can provide a single message or separate refines for min and max
+      message:
+        "Reason must be between 10 and 255 characters, excluding spaces.",
+    }
+  ),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 const scheduleSchema = z.object({
@@ -1413,7 +1421,7 @@ const AddCompanyNotificationDialog: React.FC<{
     }
   };
   return (
-    <Dialog isOpen={true}  width={700} onClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose}>
       <h5 className="mb-4">Notify User about: {company.company_name}</h5>
       <UiForm onSubmit={handleSubmit(onSend)}>
         <div className="overflow-y-auto max-h-[60vh] min-h-[60vh] pr-4">
@@ -1468,7 +1476,7 @@ const AddCompanyNotificationDialog: React.FC<{
             Cancel
           </Button>
           <Button
-          style={{ marginLeft: 5 }}
+            style={{ marginLeft: 5 }}
             variant="solid"
             type="submit"
             loading={isLoading}
@@ -1505,7 +1513,7 @@ const AddCompanyScheduleDialog: React.FC<{
   });
 
   return (
-    <Dialog isOpen={true}  width={700} onClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose}>
       <h5 className="mb-4">Add Schedule for {company.company_name}</h5>
       <UiForm onSubmit={handleSubmit(onSubmit)}>
         <UiFormItem
@@ -1661,7 +1669,7 @@ const AssignCompanyTaskDialog: React.FC<{
     }
   };
   return (
-    <Dialog isOpen={true}  width={700} onClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose}>
       <h5 className="mb-4">Assign Task for {company.company_name}</h5>
       <UiForm onSubmit={handleSubmit(onAssignTask)}>
         <div className="overflow-y-auto max-h-[60vh] pr-4">
@@ -1676,51 +1684,51 @@ const AssignCompanyTaskDialog: React.FC<{
               render={({ field }) => <Input {...field} autoFocus />}
             />
           </UiFormItem>
-         
-            <UiFormItem
-              label="Assign To"
-              invalid={!!errors.assign_to}
-              errorMessage={errors.assign_to?.message}
-            >
-              <Controller
-                name="assign_to"
-                control={control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select User(s)"
-                    options={userOptions}
-                    value={userOptions.filter((o) =>
-                      field.value?.includes(o.value)
-                    )}
-                    onChange={(opts) =>
-                      field.onChange(opts?.map((o) => o.value) || [])
-                    }
-                  />
-                )}
-              />
-            </UiFormItem>
-            <UiFormItem
-              label="Priority"
-              invalid={!!errors.priority}
-              errorMessage={errors.priority?.message}
-            >
-              <Controller
-                name="priority"
-                control={control}
-                render={({ field }) => (
-                  <UiSelect
-                    placeholder="Select Priority"
-                    options={taskPriorityOptions}
-                    value={taskPriorityOptions.find(
-                      (p) => p.value === field.value
-                    )}
-                    onChange={(opt) => field.onChange(opt?.value)}
-                  />
-                )}
-              />
-            </UiFormItem>
-         
+
+          <UiFormItem
+            label="Assign To"
+            invalid={!!errors.assign_to}
+            errorMessage={errors.assign_to?.message}
+          >
+            <Controller
+              name="assign_to"
+              control={control}
+              render={({ field }) => (
+                <UiSelect
+                  isMulti
+                  placeholder="Select User(s)"
+                  options={userOptions}
+                  value={userOptions.filter((o) =>
+                    field.value?.includes(o.value)
+                  )}
+                  onChange={(opts) =>
+                    field.onChange(opts?.map((o) => o.value) || [])
+                  }
+                />
+              )}
+            />
+          </UiFormItem>
+          <UiFormItem
+            label="Priority"
+            invalid={!!errors.priority}
+            errorMessage={errors.priority?.message}
+          >
+            <Controller
+              name="priority"
+              control={control}
+              render={({ field }) => (
+                <UiSelect
+                  placeholder="Select Priority"
+                  options={taskPriorityOptions}
+                  value={taskPriorityOptions.find(
+                    (p) => p.value === field.value
+                  )}
+                  onChange={(opt) => field.onChange(opt?.value)}
+                />
+              )}
+            />
+          </UiFormItem>
+
           <UiFormItem
             label="Due Date (Optional)"
             invalid={!!errors.due_date}
@@ -2389,22 +2397,22 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     const fetchData = async () => {
-        setIsLoading(true);
-        try {
-            await Promise.allSettled([
-                dispatch(getPendingBillAction()),
-                dispatch(getCompanyAction()),
-                dispatch(getCountriesAction()),
-                dispatch(getContinentsAction()),
-                dispatch(getAllUsersAction()),
-                dispatch(getDocumentTypeAction()),
-            ]);
-        } catch(error) {
-            console.error("Failed to fetch initial company data", error);
-            toast.push(<Notification type="danger" title="Failed to load data" />);
-        } finally {
-            setIsLoading(false);
-        }
+      setIsLoading(true);
+      try {
+        await Promise.allSettled([
+          dispatch(getPendingBillAction()),
+          dispatch(getCompanyAction()),
+          dispatch(getCountriesAction()),
+          dispatch(getContinentsAction()),
+          dispatch(getAllUsersAction()),
+          dispatch(getDocumentTypeAction()),
+        ]);
+      } catch (error) {
+        console.error("Failed to fetch initial company data", error);
+        toast.push(<Notification type="danger" title="Failed to load data" />);
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchData();
   }, [dispatch]);
@@ -2956,7 +2964,7 @@ const CompanyListTable = () => {
     useState<CompanyItem | null>(null);
   const [isSubmittingBilling, setIsSubmittingBilling] = useState(false);
   const [isPendingRequestLoading, setIsPendingRequestLoading] = useState(false);
-console.log("PendingBillData",PendingBillData);
+  console.log("PendingBillData", PendingBillData);
 
   const [viewerState, setViewerState] = useState<{
     isOpen: boolean;
@@ -2986,7 +2994,7 @@ console.log("PendingBillData",PendingBillData);
       index: Math.max(prev.index - 1, 0),
     }));
   };
-  
+
   const documentTypeOptions = useMemo(() => {
     return Array.isArray(DocumentTypeData)
       ? DocumentTypeData.map((d: any) => ({
@@ -3060,11 +3068,11 @@ console.log("PendingBillData",PendingBillData);
     setIsPendingRequestLoading(true);
     setPendingRequestModalOpen(true);
     try {
-        await dispatch(getPendingBillAction()).unwrap();
+      await dispatch(getPendingBillAction()).unwrap();
     } catch (error) {
-        toast.push(<Notification type="danger" title="Failed to fetch requests" />);
+      toast.push(<Notification type="danger" title="Failed to fetch requests" />);
     } finally {
-        setIsPendingRequestLoading(false);
+      setIsPendingRequestLoading(false);
     }
   };
 
@@ -3128,7 +3136,7 @@ console.log("PendingBillData",PendingBillData);
       );
       dispatch(getCompanyAction());
       dispatch(getPendingBillAction()),
-      handleCloseEnableBillingModal();
+        handleCloseEnableBillingModal();
     } catch (error: any) {
       toast.push(
         <Notification type="danger" title="Submission Failed" duration={3000}>
@@ -3334,14 +3342,14 @@ console.log("PendingBillData",PendingBillData);
             selectedCities.includes(company.city)
           );
         }
-        
+
         if (filterCriteria.filterKycVerified?.value) {
           const shouldBeVerified = filterCriteria.filterKycVerified.value === 'Yes';
           filteredData = filteredData.filter(
             (company) => company.kyc_verified === shouldBeVerified
           );
         }
-        
+
         if (
           filterCriteria.filterEnableBilling &&
           filterCriteria.filterEnableBilling.length > 0
@@ -3550,7 +3558,7 @@ console.log("PendingBillData",PendingBillData);
       {
         header: "Company Info",
         accessorKey: "company_name",
-        id: "company_name", 
+        id: "company_name",
         size: 220,
         cell: ({ row }: { row: Row<CompanyItem> }) => {
           const {
@@ -3590,7 +3598,7 @@ console.log("PendingBillData",PendingBillData);
       {
         header: "Contact",
         accessorKey: "owner_name",
-        id: "owner_name", 
+        id: "owner_name",
         size: 180,
         cell: (props) => {
           const {
@@ -3637,7 +3645,7 @@ console.log("PendingBillData",PendingBillData);
       {
         header: "Identity & Status",
         accessorKey: "status",
-        id: "status", 
+        id: "status",
         size: 180,
         cell: ({ row }) => {
           const { gst_number, pan_number, trn_number, tan_number, status, country } = row.original;
@@ -3684,7 +3692,7 @@ console.log("PendingBillData",PendingBillData);
       {
         header: "Profile & Scores",
         accessorKey: "profile_completion",
-        id: "profile_completion", 
+        id: "profile_completion",
         size: 190,
         cell: ({ row }) => {
           const {
@@ -3897,216 +3905,216 @@ console.log("PendingBillData",PendingBillData);
       </div>
       {isLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
-            {Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)}
+          {Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)}
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
-            <Tooltip title="Click to show all companies">
-              <div onClick={onClearFilters}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(cardClass, "border-blue-200")}
-                >
-                  <div className="h-8 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
-                    <TbBuilding size={16} />
-                  </div>
-                  <div className="flex flex-col gap-0">
-                    <b className="text-sm ">{companyCount?.total ?? 0}</b>
-                    <span className="text-[9px] font-semibold">Total</span>
-                  </div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show Active companies">
-              <div onClick={() => handleCardClick("active")}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(cardClass, "border-green-200")}
-                >
-                  <div className="h-8 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500">
-                    <TbBuildingBank size={16} />
-                  </div>
-                  <div className="flex flex-col gap-0">
-                    <b className="text-sm pb-0 mb-0">{companyCount?.active ?? 0}</b>
-                    <span className="text-[9px] font-semibold">Active</span>
-                  </div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show Inactive companies">
-              <div onClick={() => handleCardClick("inactive")}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(cardClass, "border-red-200")}
-                >
-                  <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                    <TbCancel size={16} />
-                  </div>
-                  <div className="flex flex-col gap-0">
-                    <b className="text-sm pb-0 mb-0">
-                      {companyCount?.inactive ?? 0}
-                    </b>
-                    <span className="text-[9px] font-semibold">Inactive</span>
-                  </div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show Disabled companies">
-              <div onClick={() => handleCardClick("disabled")}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(cardClass, "border-red-200")}
-                >
-                  <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                    <TbCancel size={16} />
-                  </div>
-                  <div className="flex flex-col gap-0">
-                    <b className="text-sm pb-0 mb-0">
-                      {companyCount?.disabled ?? 0}
-                    </b>
-                    <span className="text-[9px] font-semibold">Disabled</span>
-                  </div>
-                </Card>
-              </div>
-            </Tooltip>
+          <Tooltip title="Click to show all companies">
+            <div onClick={onClearFilters}>
+              <Card
+                bodyClass={cardBodyClass}
+                className={classNames(cardClass, "border-blue-200")}
+              >
+                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                  <TbBuilding size={16} />
+                </div>
+                <div className="flex flex-col gap-0">
+                  <b className="text-sm ">{companyCount?.total ?? 0}</b>
+                  <span className="text-[9px] font-semibold">Total</span>
+                </div>
+              </Card>
+            </div>
+          </Tooltip>
+          <Tooltip title="Click to show Active companies">
+            <div onClick={() => handleCardClick("active")}>
+              <Card
+                bodyClass={cardBodyClass}
+                className={classNames(cardClass, "border-green-200")}
+              >
+                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                  <TbBuildingBank size={16} />
+                </div>
+                <div className="flex flex-col gap-0">
+                  <b className="text-sm pb-0 mb-0">{companyCount?.active ?? 0}</b>
+                  <span className="text-[9px] font-semibold">Active</span>
+                </div>
+              </Card>
+            </div>
+          </Tooltip>
+          <Tooltip title="Click to show Inactive companies">
+            <div onClick={() => handleCardClick("inactive")}>
+              <Card
+                bodyClass={cardBodyClass}
+                className={classNames(cardClass, "border-red-200")}
+              >
+                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                  <TbCancel size={16} />
+                </div>
+                <div className="flex flex-col gap-0">
+                  <b className="text-sm pb-0 mb-0">
+                    {companyCount?.inactive ?? 0}
+                  </b>
+                  <span className="text-[9px] font-semibold">Inactive</span>
+                </div>
+              </Card>
+            </div>
+          </Tooltip>
+          <Tooltip title="Click to show Disabled companies">
+            <div onClick={() => handleCardClick("disabled")}>
+              <Card
+                bodyClass={cardBodyClass}
+                className={classNames(cardClass, "border-red-200")}
+              >
+                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                  <TbCancel size={16} />
+                </div>
+                <div className="flex flex-col gap-0">
+                  <b className="text-sm pb-0 mb-0">
+                    {companyCount?.disabled ?? 0}
+                  </b>
+                  <span className="text-[9px] font-semibold">Disabled</span>
+                </div>
+              </Card>
+            </div>
+          </Tooltip>
 
-            <Tooltip title="Click to show KYC Verified companies">
-              <div onClick={() => handleCardClick("verified")}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(cardClass, "border-emerald-200")}
-                >
-                  <div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500">
-                    <TbCircleCheck size={16} />
-                  </div>
-                  <div className="flex flex-col gap-0">
-                    <b className="text-sm pb-0 mb-0">
-                      {companyCount?.verified ?? 0}
-                    </b>
-                    <span className="text-[9px] font-semibold">Verified</span>
-                  </div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show Non-KYC Verified companies">
-              <div onClick={() => handleCardClick("non_verified")}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(cardClass, "border-yellow-200")}
-                >
-                  <div className="h-8 w-8 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500">
-                    <TbCircleX size={16} />
-                  </div>
-                  <div className="flex flex-col gap-0">
-                    <b className="text-sm pb-0 mb-0">
-                      {companyCount?.non_verified ?? 0}
-                    </b>
-                    <span className="text-[9px] font-semibold">Non Verified</span>
-                  </div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show Eligible companies (KYC and Billing enabled)">
-              <div onClick={() => handleCardClick("eligible")}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className="rounded-md border border-violet-200"
-                >
-                  <div className="h-8 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                    <TbShieldCheck size={16} />
-                  </div>
-                  <div className="flex flex-col gap-0">
-                    <b className="text-sm pb-0 mb-0">
-                      {companyCount?.eligible ?? 0}
-                    </b>
-                    <span className="text-[9px] font-semibold">Eligible</span>
-                  </div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show Not Eligible companies (KYC or Billing disabled)">
-              <div onClick={() => handleCardClick("not_eligible")}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className="rounded-md border border-red-200"
-                >
-                  <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                    <TbShieldX size={16} />
-                  </div>
-                  <div className="flex flex-col gap-0">
-                    <b className="text-sm pb-0 mb-0">
-                      {companyCount?.not_eligible ?? 0}
-                    </b>
-                    <span className="text-[9px] font-semibold">Not Eligible</span>
-                  </div>
-                </Card>
-              </div>
-            </Tooltip>
+          <Tooltip title="Click to show KYC Verified companies">
+            <div onClick={() => handleCardClick("verified")}>
+              <Card
+                bodyClass={cardBodyClass}
+                className={classNames(cardClass, "border-emerald-200")}
+              >
+                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500">
+                  <TbCircleCheck size={16} />
+                </div>
+                <div className="flex flex-col gap-0">
+                  <b className="text-sm pb-0 mb-0">
+                    {companyCount?.verified ?? 0}
+                  </b>
+                  <span className="text-[9px] font-semibold">Verified</span>
+                </div>
+              </Card>
+            </div>
+          </Tooltip>
+          <Tooltip title="Click to show Non-KYC Verified companies">
+            <div onClick={() => handleCardClick("non_verified")}>
+              <Card
+                bodyClass={cardBodyClass}
+                className={classNames(cardClass, "border-yellow-200")}
+              >
+                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500">
+                  <TbCircleX size={16} />
+                </div>
+                <div className="flex flex-col gap-0">
+                  <b className="text-sm pb-0 mb-0">
+                    {companyCount?.non_verified ?? 0}
+                  </b>
+                  <span className="text-[9px] font-semibold">Non Verified</span>
+                </div>
+              </Card>
+            </div>
+          </Tooltip>
+          <Tooltip title="Click to show Eligible companies (KYC and Billing enabled)">
+            <div onClick={() => handleCardClick("eligible")}>
+              <Card
+                bodyClass={cardBodyClass}
+                className="rounded-md border border-violet-200"
+              >
+                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                  <TbShieldCheck size={16} />
+                </div>
+                <div className="flex flex-col gap-0">
+                  <b className="text-sm pb-0 mb-0">
+                    {companyCount?.eligible ?? 0}
+                  </b>
+                  <span className="text-[9px] font-semibold">Eligible</span>
+                </div>
+              </Card>
+            </div>
+          </Tooltip>
+          <Tooltip title="Click to show Not Eligible companies (KYC or Billing disabled)">
+            <div onClick={() => handleCardClick("not_eligible")}>
+              <Card
+                bodyClass={cardBodyClass}
+                className="rounded-md border border-red-200"
+              >
+                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                  <TbShieldX size={16} />
+                </div>
+                <div className="flex flex-col gap-0">
+                  <b className="text-sm pb-0 mb-0">
+                    {companyCount?.not_eligible ?? 0}
+                  </b>
+                  <span className="text-[9px] font-semibold">Not Eligible</span>
+                </div>
+              </Card>
+            </div>
+          </Tooltip>
         </div>
       )}
       {isLoading ? (
-          <ToolbarSkeleton />
+        <ToolbarSkeleton />
       ) : (
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
-            <DebouceInput
-              placeholder="Quick Search..."
-              suffix={<TbSearch className="text-lg" />}
-              onChange={(val) =>
-                handleSetTableData({ query: val.target.value, pageIndex: 1 })
-              }
-              value={tableData.query}
-            />
-            <div className="flex gap-2">
-              <Dropdown
-                renderTitle={<Button icon={<TbColumns />} />}
-                placement="bottom-end"
-              >
-                <div className="flex flex-col p-2">
-                  <div className="font-semibold mb-1 border-b pb-1">
-                    Toggle Columns
-                  </div>
-                  {columns.map((col) => {
-                    const id = col.id || (col.accessorKey as string);
-                    if (!col.header) return null;
-                    return (
-                      <div
-                        key={id}
-                        className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"
-                      >
-                        <Checkbox
-                          checked={isColumnVisible(id)}
-                          onChange={(checked) => toggleColumn(checked, id)}
-                        >
-                          {col.header as string}
-                        </Checkbox>
-                      </div>
-                    );
-                  })}
+          <DebouceInput
+            placeholder="Quick Search..."
+            suffix={<TbSearch className="text-lg" />}
+            onChange={(val) =>
+              handleSetTableData({ query: val.target.value, pageIndex: 1 })
+            }
+            value={tableData.query}
+          />
+          <div className="flex gap-2">
+            <Dropdown
+              renderTitle={<Button icon={<TbColumns />} />}
+              placement="bottom-end"
+            >
+              <div className="flex flex-col p-2">
+                <div className="font-semibold mb-1 border-b pb-1">
+                  Toggle Columns
                 </div>
-              </Dropdown>
-              <Tooltip title="Clear Filters & Reload">
-                <Button icon={<TbReload />} onClick={onRefreshData} />
-              </Tooltip>
-              <Button icon={<TbFilter />} onClick={openFilterDrawer}>
-                Filter
-                {activeFilterCount > 0 && (
-                  <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </Button>
-              <Button
-                isExport={true}
-                menuName="company"
-                icon={<TbCloudUpload />}
-                onClick={handleOpenExportReasonModal}
-                disabled={
-                  !allFilteredAndSortedData || allFilteredAndSortedData.length === 0
-                }
-              >
-                Export
-              </Button>
-            </div>
+                {columns.map((col) => {
+                  const id = col.id || (col.accessorKey as string);
+                  if (!col.header) return null;
+                  return (
+                    <div
+                      key={id}
+                      className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"
+                    >
+                      <Checkbox
+                        checked={isColumnVisible(id)}
+                        onChange={(checked) => toggleColumn(checked, id)}
+                      >
+                        {col.header as string}
+                      </Checkbox>
+                    </div>
+                  );
+                })}
+              </div>
+            </Dropdown>
+            <Tooltip title="Clear Filters & Reload">
+              <Button icon={<TbReload />} onClick={onRefreshData} />
+            </Tooltip>
+            <Button icon={<TbFilter />} onClick={openFilterDrawer}>
+              Filter
+              {activeFilterCount > 0 && (
+                <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
+            <Button
+              isExport={true}
+              menuName="company"
+              icon={<TbCloudUpload />}
+              onClick={handleOpenExportReasonModal}
+              disabled={
+                !allFilteredAndSortedData || allFilteredAndSortedData.length === 0
+              }
+            >
+              Export
+            </Button>
+          </div>
         </div>
       )}
       <ActiveFiltersDisplay
@@ -4118,22 +4126,22 @@ console.log("PendingBillData",PendingBillData);
         <TableSkeleton columns={columns} pageSize={tableData.pageSize as number} />
       ) : (
         <DataTable
-            menuName="company"
-            columns={filteredColumns}
-            data={pageData}
-            noData={!isLoading && pageData.length === 0}
-            loading={false}
-            pagingData={{
+          menuName="company"
+          columns={filteredColumns}
+          data={pageData}
+          noData={!isLoading && pageData.length === 0}
+          loading={false}
+          pagingData={{
             total,
             pageIndex: tableData.pageIndex as number,
             pageSize: tableData.pageSize as number,
-            }}
-            onPaginationChange={handlePaginationChange}
-            onSelectChange={handleSelectChange}
-            onSort={handleSort}
-            onCheckBoxChange={handleRowSelect}
-            onIndeterminateCheckBoxChange={handleAllRowSelect}
-            selectable
+          }}
+          onPaginationChange={handlePaginationChange}
+          onSelectChange={handleSelectChange}
+          onSort={handleSort}
+          onCheckBoxChange={handleRowSelect}
+          onIndeterminateCheckBoxChange={handleAllRowSelect}
+          selectable
         />
       )}
       <Drawer
@@ -4398,20 +4406,20 @@ console.log("PendingBillData",PendingBillData);
             </thead>
             <tbody>
               {isPendingRequestLoading ? (
-                    Array.from({ length: 3 }).map((_, i) => (
-                        <tr key={i} className="dark:border-gray-700 animate-pulse">
-                            <td className="py-3 px-4"><Skeleton className="h-4 w-3/4" /></td>
-                            <td className="py-3 px-4"><Skeleton className="h-4 w-1/2" /></td>
-                            <td className="py-3 px-4"><Skeleton className="h-8 w-20" /></td>
-                            <td className="py-3 px-4">
-                                <div className="flex justify-center gap-2">
-                                    <Skeleton className="h-8 w-8 rounded-full" />
-                                    <Skeleton className="h-8 w-8 rounded-full" />
-                                </div>
-                            </td>
-                        </tr>
-                    ))
-                ) : PendingBillData?.data && PendingBillData?.data?.length > 0 ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <tr key={i} className="dark:border-gray-700 animate-pulse">
+                    <td className="py-3 px-4"><Skeleton className="h-4 w-3/4" /></td>
+                    <td className="py-3 px-4"><Skeleton className="h-4 w-1/2" /></td>
+                    <td className="py-3 px-4"><Skeleton className="h-8 w-20" /></td>
+                    <td className="py-3 px-4">
+                      <div className="flex justify-center gap-2">
+                        <Skeleton className="h-8 w-8 rounded-full" />
+                        <Skeleton className="h-8 w-8 rounded-full" />
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : PendingBillData?.data && PendingBillData?.data?.length > 0 ? (
                 PendingBillData?.data?.map((item: any) => (
                   <tr key={item.id} className="border-b dark:border-gray-700">
                     <td className="py-3 px-4 text-sm font-medium">
