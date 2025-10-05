@@ -1749,7 +1749,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
               <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
               {columns.map((col) => {
                 const id = col.id || col.accessorKey as string;
-                if (!col.header || id === 'action') return null;
+                if (!col.header ) return null;
                 return (
                   <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
                     <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
