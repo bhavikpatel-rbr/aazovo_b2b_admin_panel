@@ -3500,7 +3500,7 @@ const AccountDocument = () => {
         ),
       },
       {
-        header: "Document Type",
+        header: "Form Type",
         accessorKey: "formType",
         size: 180,
         cell: (props) => {
