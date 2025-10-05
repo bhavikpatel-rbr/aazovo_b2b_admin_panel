@@ -497,7 +497,18 @@ const exportReasonSchema = z.object({
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 const scheduleSchema = z.object({
-  event_title: z.string().min(3, "Title must be at least 3 characters."),
+  event_title: z.string().refine(
+    (value) => {
+      // Remove all whitespace characters and check the length
+      const withoutSpaces = value.replace(/\s/g, "");
+      return withoutSpaces.length >= 3;
+    },
+    {
+      // You can provide a single message or separate refines for min and max
+      message:
+        "Text at least 3 characters, excluding spaces.",
+    }
+  ),
   event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
   date_time: z.date({ required_error: "Event date & time is required." }),
   remind_from: z.date().nullable().optional(),
@@ -860,7 +871,22 @@ const ChangePasswordDialog: React.FC<{ member: FormItem; onClose: () => void; }>
 };
 const AddNotificationDialog: React.FC<{ member: FormItem; onClose: () => void; userOptions: SelectOption[] }> = ({ member, onClose, userOptions }) => {
   const dispatch = useAppDispatch(); const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(z.object({ notification_title: z.string().min(3), send_users: z.array(z.number()).min(1), message: z.string().min(10) })), defaultValues: { notification_title: `Regarding Member: ${member.name}`, send_users: [], message: `This is a notification for member "${member.name}" (${member.customer_code}). Please review their details.`, }, mode: 'onChange', });
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
+    resolver: zodResolver(z.object({
+      notification_title: z.string().refine(
+        (value) => {
+          // Remove all whitespace characters and check the length
+          const withoutSpaces = value.replace(/\s/g, "");
+          return withoutSpaces.length >= 3;
+        },
+        {
+          // You can provide a single message or separate refines for min and max
+          message:
+            "Text at least 3 characters, excluding spaces.",
+        }
+      ), send_users: z.array(z.number()).min(1), message: z.string().min(10)
+    })), defaultValues: { notification_title: `Regarding Member: ${member.name}`, send_users: [], message: `This is a notification for member "${member.name}" (${member.customer_code}). Please review their details.`, }, mode: 'onChange',
+  });
   const onSend = async (formData: any) => { setIsLoading(true); const payload = { ...formData, module_id: String(member.id), module_name: 'Member' }; try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed" children={error?.message} />); } finally { setIsLoading(false); } };
   return (<Dialog isOpen={true} width={700} onClose={onClose}> <h5 className="mb-4">Notify User about: {member.name}</h5> <UiForm onSubmit={handleSubmit(onSend)}> {/* START: Responsive Fix */} <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4"> <UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter((o) => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map((o) => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> </div> {/* END: Responsive Fix */} <div className="text-right mt-6 flex-shrink-0"><Button style={{ marginRight: 5 }} type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Send</Button></div> </UiForm> </Dialog>);
 };
@@ -889,7 +915,7 @@ const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; onSub
 
   return (
     <Dialog isOpen={true} width={700} onClose={onClose}>
-      <h5 className="mb-4">Add Schedule for {member.name}</h5>
+      <h5 className="mb-4">Add Schedule for {member.name || ""}</h5>
       <UiForm onSubmit={handleSubmit(onSubmit)}>
         <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
           <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
@@ -1034,7 +1060,7 @@ const AddActivityDialog: React.FC<{ member: FormItem; onClose: () => void; user:
     <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Activity Log for "{member.name}"</h5>
       <Form onSubmit={handleSubmit(onAddActivity)}>
-        <FormItem label="Activity" invalid={!!errors.item} errorMessage={errors.item?.message}>
+        <FormItem label={<div>Activity<span className="text-red-500"> * </span></div>} invalid={!!errors.item} errorMessage={errors.item?.message}>
           <Controller name="item" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Followed up with member" />} />
         </FormItem>
         <FormItem label="Notes (Optional)" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
@@ -1336,6 +1362,11 @@ const ActionColumn = ({ rowData, onOpenModal }: { rowData: FormItem; onOpenModal
       return;
     }
     const fullNumber = member.number.replace(/\D/g, '');
+    const message = member.name + ' ' + member.email; // Your custom message.
+
+    const url = `https://wa.me/${fullNumber}?text=${encodeURIComponent(message)}`;
+
+    window.open(url, '_blank');
     window.open(`https://wa.me/${fullNumber}`, '_blank');
   };
 
