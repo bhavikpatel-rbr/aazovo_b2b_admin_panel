@@ -50,7 +50,6 @@ import {
   TbChecks,
   TbCircleCheck,
   TbCircleX,
-  TbCloudUpload,
   TbColumns,
   TbEye,
   TbFilter,
@@ -76,6 +75,7 @@ import type {
 } from "@/components/shared/DataTable";
 
 // Redux imports
+import shallowEqual from "@/components/ui/utils/shallowEqual";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addNotificationAction,
@@ -91,11 +91,10 @@ import {
 import { useAppDispatch } from "@/reduxtool/store";
 import axiosInstance from '@/services/api/api';
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
+import { getMenuRights } from "@/utils/getMenuRights";
 import dayjs from "dayjs";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { useSelector } from "react-redux";
-import shallowEqual from "@/components/ui/utils/shallowEqual";
-import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Export Reason Schema ---
 const exportReasonSchema = z.object({
@@ -908,7 +907,7 @@ console.log("usersData",getAllUserData);
 
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<AssignUpdateFormData>({
     resolver: zodResolver(assigntoUpdateSchema),
-    defaultValues: { assigned_to: inquiry.assigned_to || '' },
+    defaultValues: { assigned_to: '' },
     mode: 'onChange',
   });
 
