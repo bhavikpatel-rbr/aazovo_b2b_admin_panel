@@ -1173,7 +1173,8 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
         {isIndiaSelected ? (
           <>
             <FormItem
-              label={<div>GST Number<span className="text-red-500"> * </span></div>}
+              // label={<div>GST Number<span className="text-red-500"> * </span></div>}
+              label={'GST Number'}
               invalid={!!errors.gst_number}
               errorMessage={errors.gst_number?.message as string}
             >
