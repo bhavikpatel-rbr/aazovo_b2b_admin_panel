@@ -100,7 +100,20 @@ const selectOptionSchema = z.object({ value: z.any(), label: z.string() });
 // MODIFIED - Added filterMembers and filterCountries
 const filterFormSchema = z.object({ filterRecordStatuses: z.array(selectOptionSchema).optional().default([]), filterProductIds: z.array(selectOptionSchema).optional().default([]), filterCompanyIds: z.array(selectOptionSchema).optional().default([]), filterIntents: z.array(selectOptionSchema).optional().default([]), dateRange: z.array(z.date().nullable()).length(2).nullable().optional(), categories: z.array(selectOptionSchema).optional().default([]), subcategories: z.array(selectOptionSchema).optional().default([]), brands: z.array(selectOptionSchema).optional().default([]), productStatus: z.array(selectOptionSchema).optional().default([]), source: z.array(selectOptionSchema).optional().default([]), productSpec: z.array(selectOptionSchema).optional().default([]), memberType: z.array(selectOptionSchema).optional().default([]), createdBy: z.array(selectOptionSchema).optional().default([]), filterMembers: z.array(selectOptionSchema).optional().default([]), filterCountries: z.array(selectOptionSchema).optional().default([]), quickFilters: z.object({ type: z.string(), value: z.string() }).nullable().optional(), });
 type FilterFormData = z.infer<typeof filterFormSchema>;
-const exportReasonSchema = z.object({ reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters."), });
+const exportReasonSchema = z.object({
+  reason: z.string().refine(
+    (value) => {
+      // Remove all whitespace characters and check the length
+      const withoutSpaces = value.replace(/\s/g, "");
+      return withoutSpaces.length >= 10 && withoutSpaces.length <= 255;
+    },
+    {
+      // You can provide a single message or separate refines for min and max
+      message:
+        "Reason must be between 10 and 255 characters, excluding spaces.",
+    }
+  ),
+});
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 const scheduleSchema = z.object({ event_title: z.string().min(3, "Title must be at least 3 characters."), event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."), date_time: z.date({ required_error: "Event date & time is required." }), remind_from: z.date().nullable().optional(), notes: z.string().optional(), });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
