@@ -1187,7 +1187,8 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
               />
             </FormItem>
             <FormItem
-              label={<div>PAN Number<span className="text-red-500"> * </span></div>}
+              // label={<div>PAN Number<span className="text-red-500"> * </span></div>}
+              label={'PAN Number'}
               invalid={!!errors.pan_number}
               errorMessage={errors.pan_number?.message as string}
             >
