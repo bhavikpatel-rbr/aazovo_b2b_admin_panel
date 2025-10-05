@@ -1899,7 +1899,7 @@ const memberNavigationList = [
   { label: "Contact Info", link: "socialContactInformation" },
   { label: "Member Profile", link: "memberProfile" },
   { label: "Accessibilities", link: "memberAccessibility" },
-  { label: "Membership Details", link: "membershipPlanDetails" },
+  // { label: "Membership Details", link: "membershipPlanDetails" },
   // { label: "Feedback / Requests", link: "requestAndFeedbacks" },
 ];
 const NavigatorComponent = (props: {
