@@ -78,10 +78,13 @@ const CompanyProfileHeader = ({ company }: { company: ApiSingleCompanyItem }) =>
                 <div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">PAN:</span><span>{company.pan_number || ' '}</span></div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-y-2 gap-x-4 text-sm">
-
+{company.tan_number &&
                 <div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">TAN:</span><span>{company.tan_number || ' '}</span></div>
+}
+{company.trn_number &&
                 <div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">TRN:</span><span>{company.trn_number || ' '}</span></div>
-            </div>
+}
+                </div>
             <div className="flex flex-col sm:flex-row lg:flex-col gap-2">
                 <Button variant="solid" icon={<TbPencil />} onClick={() => navigate(`/business-entities/company-edit/${company.id}`)}>Edit Company</Button>
                 <Button icon={<TbArrowLeft />} onClick={() => navigate('/business-entities/company')}>Back to List</Button>
