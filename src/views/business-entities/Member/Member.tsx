@@ -1054,6 +1054,11 @@ const MemberAlertModal: React.FC<{ member: FormItem; onClose: () => void }> = ({
   const [isFetching, setIsFetching] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const dispatch = useAppDispatch();
+  // --- START: MODIFICATION 1 ---
+  // Add a state for the editor's key.
+  const [editorKey, setEditorKey] = useState(Date.now());
+  // --- END: MODIFICATION 1 ---
+
   const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
     resolver: zodResolver(alertNoteSchema),
     defaultValues: { newNote: '' },
@@ -1078,15 +1083,19 @@ const MemberAlertModal: React.FC<{ member: FormItem; onClose: () => void }> = ({
     setIsFetching(true);
     dispatch(getAlertsAction({ module_id: member.id, module_name: 'Member' }))
       .unwrap()
-      .then((data) => setAlerts(data.data || []))
+      .then((data) => {
+        const sortedAlerts = (data.data || []).sort((a: AlertNote, b: AlertNote) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        setAlerts(sortedAlerts);
+      })
       .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
       .finally(() => setIsFetching(false));
   }, [member.id, dispatch]);
 
   useEffect(() => {
     fetchAlerts();
-    reset({ newNote: '' });
-  }, [fetchAlerts, reset]);
+  }, [fetchAlerts]);
 
   const onAddNote = async (data: AlertNoteFormData) => {
     setIsSubmitting(true);
@@ -1094,7 +1103,11 @@ const MemberAlertModal: React.FC<{ member: FormItem; onClose: () => void }> = ({
       await dispatch(addAllAlertsAction({ note: data.newNote, module_id: member.id, module_name: 'Member' })).unwrap();
       toast.push(<Notification type="success" title="Alert Note Added" />);
       reset({ newNote: '' });
-      fetchAlerts(); // Re-fetch alerts to show the new one
+      // --- START: MODIFICATION 2 ---
+      // Change the key to force the RichTextEditor to re-mount and clear its state.
+      setEditorKey(Date.now());
+      // --- END: MODIFICATION 2 ---
+      fetchAlerts();
     } catch (error: any) {
       toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
     } finally {
@@ -1110,7 +1123,7 @@ const MemberAlertModal: React.FC<{ member: FormItem; onClose: () => void }> = ({
       width={1200}
       contentClassName="p-0 flex flex-col max-h-[90vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
     >
-      {/* --- Header --- */}
+      {/* Header remains the same */}
       <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 flex-shrink-0 rounded-t-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1123,16 +1136,12 @@ const MemberAlertModal: React.FC<{ member: FormItem; onClose: () => void }> = ({
         </div>
       </header>
 
-      {/* --- Main Content: Grid for two columns --- */}
       <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-hidden">
-
-        {/* --- Left Column: Activity Timeline (This column scrolls internally) --- */}
+        {/* Left Column remains the same */}
         <div className="relative flex flex-col h-full overflow-hidden">
           <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
             Activity Timeline
           </h6>
-
-          {/* The scrollable container for the timeline */}
           <div className="flex-grow overflow-y-auto lg:pr-4 lg:-mr-4">
             {isFetching ? (
               <div className="flex justify-center items-center h-full"><Spinner size="lg" /></div>
@@ -1180,7 +1189,7 @@ const MemberAlertModal: React.FC<{ member: FormItem; onClose: () => void }> = ({
           </div>
         </div>
 
-        {/* --- Right Column: Add New Note (Stays in place) --- */}
+        {/* Right Column */}
         <div className="flex flex-col mt-8 lg:mt-0 h-full">
           <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
             <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
@@ -1197,6 +1206,10 @@ const MemberAlertModal: React.FC<{ member: FormItem; onClose: () => void }> = ({
                   render={({ field }) => (
                     <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
                       <RichTextEditor
+                        // --- START: MODIFICATION 3 ---
+                        // Add the key prop here.
+                        key={editorKey}
+                        // --- END: MODIFICATION 3 ---
                         {...field}
                         onChange={(val) => field.onChange(val.html)}
                         className="flex-grow min-h-[150px] sm:min-h-[200px]"
@@ -1216,7 +1229,6 @@ const MemberAlertModal: React.FC<{ member: FormItem; onClose: () => void }> = ({
     </Dialog>
   );
 };
-
 const MemberModals: React.FC<{ modalState: MemberModalState; onClose: () => void; userOptions: SelectOption[]; }> = ({ modalState, onClose, userOptions }) => {
   const { type, data: member, isOpen } = modalState;
   const dispatch = useAppDispatch();
