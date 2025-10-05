@@ -375,7 +375,7 @@ const RolesListing = () => {
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), [tableData]);
   const handleSearchChange = useCallback((query: string) => handleSetTableData({ query, pageIndex: 1 }), [handleSetTableData]);
   const handleApplyFilters = useCallback((filters: RoleFilterFormData) => { setActiveFilters(filters); handleSetTableData({ pageIndex: 1 }); }, [handleSetTableData]);
-  const onClearFiltersAndReload = useCallback(() => { setActiveFilters({}); handleSetTableData({ query: '', pageIndex: 1 }); refreshData(); }, [refreshData, handleSetTableData]);
+  const onClearFiltersAndReload = useCallback(() => { setVisibleColumnKeys(columns.filter(c => c.header).map(c => c.header as string));; setActiveFilters({}); handleSetTableData({ query: '', pageIndex: 1 }); refreshData(); }, [refreshData, handleSetTableData]);
   const handleRemoveFilter = useCallback((key: keyof RoleFilterFormData, value: string) => {
     setActiveFilters(prev => {
       const newFilters = { ...prev };
