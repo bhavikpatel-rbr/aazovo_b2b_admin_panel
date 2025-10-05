@@ -99,10 +99,18 @@ import { getMenuRights } from "@/utils/getMenuRights";
 
 // --- Export Reason Schema ---
 const exportReasonSchema = z.object({
-  reason: z
-    .string()
-    .min(1, "Reason for export is required.")
-    .max(255, "Reason cannot exceed 255 characters."),
+  reason: z.string().refine(
+    (value) => {
+      // Remove all whitespace characters and check the length
+      const withoutSpaces = value.replace(/\s/g, "");
+      return withoutSpaces.length >= 10 && withoutSpaces.length <= 255;
+    },
+    {
+      // You can provide a single message or separate refines for min and max
+      message:
+        "Reason must be between 10 and 255 characters, excluding spaces.",
+    }
+  ),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
