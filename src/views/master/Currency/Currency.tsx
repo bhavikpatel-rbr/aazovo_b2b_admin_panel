@@ -48,7 +48,20 @@ export type SelectOption = { value: string | number; label: string };
 type CurrencyFilterSchema = { filterCodes: string[]; filterSymbols: string[]; countryIds: string[]; status: ('Active' | 'Inactive')[]; };
 const currencyFormSchema = z.object({ currency_code: z.string().min(1, 'Currency code is required.').max(10, 'Code cannot exceed 10 characters.'), currency_symbol: z.string().min(1, 'Currency symbol is required.').max(5, 'Symbol cannot exceed 5 characters.'), country_id: z.array(z.number()).min(1, "Please select at least one country."), status: z.enum(['Active', 'Inactive'], { required_error: 'Status is required.' }), });
 type CurrencyFormData = z.infer<typeof currencyFormSchema>;
-const exportReasonSchema = z.object({ reason: z.string().min(1, 'Reason for export is required.').max(255, 'Reason cannot exceed 255 characters.'), });
+const exportReasonSchema = z.object({
+  reason: z.string().refine(
+    (value) => {
+      // Remove all whitespace characters and check the length
+      const withoutSpaces = value.replace(/\s/g, "");
+      return withoutSpaces.length >= 10 && withoutSpaces.length <= 255;
+    },
+    {
+      // You can provide a single message or separate refines for min and max
+      message:
+        "Reason must be between 10 and 255 characters, excluding spaces.",
+    }
+  ),
+});
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 const statusOptions: SelectOption[] = [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }];
 

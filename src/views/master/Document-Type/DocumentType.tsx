@@ -49,7 +49,20 @@ export type SelectOption = { value: string | number; label: string };
 type DocumentTypeFilterSchema = { names: string[]; departmentIds: string[]; status: ('Active' | 'Inactive')[]; };
 const documentTypeFormSchema = z.object({ name: z.string().min(1, 'Document type name is required.').max(100, 'Name cannot exceed 100 characters.'), department_id: z.array(z.number()).min(1, "Please select at least one department."), status: z.enum(['Active', 'Inactive'], { required_error: 'Status is required.' }), });
 type DocumentTypeFormData = z.infer<typeof documentTypeFormSchema>;
-const exportReasonSchema = z.object({ reason: z.string().min(1, 'Reason for export is required.').max(255, 'Reason cannot exceed 255 characters.'), });
+const exportReasonSchema = z.object({
+  reason: z.string().refine(
+    (value) => {
+      // Remove all whitespace characters and check the length
+      const withoutSpaces = value.replace(/\s/g, "");
+      return withoutSpaces.length >= 10 && withoutSpaces.length <= 255;
+    },
+    {
+      // You can provide a single message or separate refines for min and max
+      message:
+        "Reason must be between 10 and 255 characters, excluding spaces.",
+    }
+  ),
+});
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 const statusOptions: SelectOption[] = [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }];
 

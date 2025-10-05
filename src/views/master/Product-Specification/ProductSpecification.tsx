@@ -48,7 +48,20 @@ export type SelectOption = { value: string | number; label: string };
 type ProductSpecificationFilterSchema = { names: string[]; countryIds: string[]; status: ('Active' | 'Inactive')[]; };
 const productSpecificationFormSchema = z.object({ flag_icon: z.union([z.instanceof(File), z.null()]).optional().nullable(), name: z.string().min(1, 'Specification name is required.').max(100, 'Name cannot exceed 100 characters.'), country_id: z.string().min(1, 'Country is required.'), note_details: z.string().nullable().optional(), status: z.enum(['Active', 'Inactive'], { required_error: 'Status is required.' }), });
 type ProductSpecificationFormData = z.infer<typeof productSpecificationFormSchema>;
-const exportReasonSchema = z.object({ reason: z.string().min(1, 'Reason for export is required.').max(255, 'Reason cannot exceed 255 characters.'), });
+const exportReasonSchema = z.object({
+  reason: z.string().refine(
+    (value) => {
+      // Remove all whitespace characters and check the length
+      const withoutSpaces = value.replace(/\s/g, "");
+      return withoutSpaces.length >= 10 && withoutSpaces.length <= 255;
+    },
+    {
+      // You can provide a single message or separate refines for min and max
+      message:
+        "Reason must be between 10 and 255 characters, excluding spaces.",
+    }
+  ),
+});
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 const statusOptions: SelectOption[] = [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }];
 
