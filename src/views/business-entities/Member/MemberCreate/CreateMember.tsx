@@ -2951,8 +2951,8 @@ const MemberFormComponent = (props: {
       mobile_no: z
         .string()
         .trim()
-        .min(1, "Mobile number is required")
-        .regex(/^[0-9]*$/, { message: "Only numbers are allowed" }),
+        .min(6, "Mobile number is required")
+        .regex(/^[1-9][0-9]*$/, "Only numbers are allowed and the number cannot start with 0"),
       contact_country_code: z
         .union([
           z.string(),
@@ -3008,7 +3008,7 @@ const MemberFormComponent = (props: {
         .nullable(),
     })
     .passthrough();
-    
+
   const formMethods = useForm<MemberFormSchema>({
     defaultValues,
     resolver: zodResolver(memberSchema),
@@ -3039,20 +3039,20 @@ const MemberFormComponent = (props: {
   // Step 1: Define which fields belong to which section
   const sectionFields: Record<string, (keyof MemberFormSchema)[]> = {
     personalDetails: [
-      'status', 'name', 'mobile_no', 'contact_country_code', 'email', 
-      'company_name_temp', 'company_name', 'country_id', 'continent_id', 
+      'status', 'name', 'mobile_no', 'contact_country_code', 'email',
+      'company_name_temp', 'company_name', 'country_id', 'continent_id',
       'state', 'city', 'pincode', 'password', 'address'
     ],
     socialContactInformation: [
-      'whatsapp_no', 'whatsapp_country_code', 'alternate_contact_number', 
-      'alternate_contact_country_code', 'landline_number', 'fax_number', 
-      'alternate_email', 'botim', 'skype', 'we_chat', 'linkedin_profile', 
+      'whatsapp_no', 'whatsapp_country_code', 'alternate_contact_number',
+      'alternate_contact_country_code', 'landline_number', 'fax_number',
+      'alternate_email', 'botim', 'skype', 'we_chat', 'linkedin_profile',
       'facebook_profile', 'instagram_profile', 'website'
     ],
     memberProfile: [
-      'interested_category_ids', 'interested_subcategory_ids', 'business_type', 
-      'interested_in', 'dealing_in_bulk', 'business_opportunity', 
-      'favourite_product_id', 'member_grade', 'relationship_manager_id', 
+      'interested_category_ids', 'interested_subcategory_ids', 'business_type',
+      'interested_in', 'dealing_in_bulk', 'business_opportunity',
+      'favourite_product_id', 'member_grade', 'relationship_manager_id',
       'remarks', 'dynamic_member_profiles'
     ],
     memberAccessibility: [
@@ -3434,13 +3434,13 @@ const MemberCreate = () => {
     return (
       <Container className="h-full flex justify-center items-center">
         <div className="flex items-center justify-center w-[100vw] h-[100vh]">
-                    <div className='relative h-[500px] w-[500px] flex items-center justify-center'>
-                        <div className=' absolute border-9 border-primary border-b-0 border-r-0 animate-spin rounded-full h-[360px] w-[360px]'></div>
-                        <div className='flex object-center'>
-                            <img src="/img/logo/Aazovo-02.png" alt="" className='w-[220px] dark:filter-[invert(1)]' />
-                        </div>
-                    </div>
-                </div>
+          <div className='relative h-[500px] w-[500px] flex items-center justify-center'>
+            <div className=' absolute border-9 border-primary border-b-0 border-r-0 animate-spin rounded-full h-[360px] w-[360px]'></div>
+            <div className='flex object-center'>
+              <img src="/img/logo/Aazovo-02.png" alt="" className='w-[220px] dark:filter-[invert(1)]' />
+            </div>
+          </div>
+        </div>
       </Container>
     );
   if (!initialData)
