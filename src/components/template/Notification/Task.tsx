@@ -525,7 +525,7 @@ const _Tasks = ({ className }: { className?: string }) => {
     const onDrawerOpen = () => { if (!drawerIsOpen) { dispatch(getAllTaskAction()); dispatch(getEmployeesAction()); } setDrawerIsOpen(true); };
     const onDrawerClose = () => setDrawerIsOpen(false);
     const handleConfirmAddTask = async (data: TaskFormData) => { /* ...omitted for brevity... */ try { await dispatch(addTaskAction(data)).unwrap(); toast.push(<Notification type="success" title="Task Added!" />); } catch (e) { toast.push(<Notification type="danger" title="Failed to Add Task">{e.message || 'Error'}</Notification>); throw e; } };
-    const handleChangeStatus = (id: string, status: TaskStatus) => dispatch(updateTaskStatusAPI({ id, status }));
+    const handleChangeStatus = async (id: string, status: TaskStatus) => { await dispatch(updateTaskStatusAPI({ id, status })); await dispatch(getAllTaskAction()); }
     const openDeleteConfirmation = (task: Task) => { setTaskToDelete(task); setDeleteConfirmIsOpen(true); };
     const closeDeleteConfirmation = () => { setTaskToDelete(null); setDeleteConfirmIsOpen(false); };
     const handleConfirmDelete = async () => { /* ...omitted for brevity... */ if (!taskToDelete) return; try { await dispatch(deleteTaskAction(taskToDelete.id)).unwrap(); toast.push(<Notification type="success" title="Task Deleted" />); closeDeleteConfirmation(); } catch (e) { toast.push(<Notification type="danger" title="Failed to Delete">{e.message || 'Error'}</Notification>); closeDeleteConfirmation(); } };
