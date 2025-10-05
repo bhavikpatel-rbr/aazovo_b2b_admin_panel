@@ -1,36 +1,35 @@
-import {
-    useMemo,
-    useRef,
-    useEffect,
-    useState,
-    useImperativeHandle,
-} from 'react'
-import classNames from 'classnames'
-import Table from '@/components/ui/Table'
+import FileNotFound from '@/assets/svg/FileNotFound'
+import type { CheckboxProps } from '@/components/ui/Checkbox'
+import Checkbox from '@/components/ui/Checkbox'
 import Pagination from '@/components/ui/Pagination'
 import Select from '@/components/ui/Select'
-import Checkbox from '@/components/ui/Checkbox'
-import TableRowSkeleton from './loaders/TableRowSkeleton'
-import Loading from './Loading'
-import FileNotFound from '@/assets/svg/FileNotFound'
+import type { SkeletonProps } from '@/components/ui/Skeleton'
+import type { TableProps } from '@/components/ui/Table'
+import Table from '@/components/ui/Table'
+import { getMenuRights } from '@/utils/getMenuRights'
 import {
-    useReactTable,
+    CellContext,
+    ColumnDef,
+    ColumnSort,
+    flexRender,
     getCoreRowModel,
     getFilteredRowModel,
     getPaginationRowModel,
     getSortedRowModel,
-    flexRender,
-    ColumnDef,
-    ColumnSort,
     Row,
-    CellContext,
+    useReactTable,
 } from '@tanstack/react-table'
-import type { TableProps } from '@/components/ui/Table'
-import type { SkeletonProps } from '@/components/ui/Skeleton'
-import type { Ref, ChangeEvent, ReactNode } from 'react'
-import type { CheckboxProps } from '@/components/ui/Checkbox'
-import { getMenuRights } from '@/utils/getMenuRights'
+import classNames from 'classnames'
+import type { ChangeEvent, ReactNode, Ref } from 'react'
+import {
+    useEffect,
+    useImperativeHandle,
+    useMemo,
+    useRef,
+    useState,
+} from 'react'
 import { LuShieldAlert } from 'react-icons/lu'
+import TableRowSkeleton from './loaders/TableRowSkeleton'
 
 export type OnSortParam = { order: 'asc' | 'desc' | ''; key: string | number }
 
@@ -298,7 +297,7 @@ function DataTable<T>(props: DataTableProps<T>) {
                             </Tr>
                         ))}
                     </THead>
-                    {loading && data.length === 0 ? (
+                    {loading ? (
                         <TableRowSkeleton
                             columns={(finalColumns as Array<T>).length}
                             rows={pagingData.pageSize}
@@ -386,5 +385,5 @@ function DataTable<T>(props: DataTableProps<T>) {
     )
 }
 
-export type { ColumnDef, Row, CellContext }
+export type { CellContext, ColumnDef, Row }
 export default DataTable
