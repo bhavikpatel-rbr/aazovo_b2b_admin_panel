@@ -174,7 +174,7 @@ const AddTaskModal = ({
                 <Form onSubmit={handleSubmit(onSubmit)}>
                     <div className="space-y-4">
                         <FormItem
-                            label="Task Title"
+                            label={<div>Task Title<span className="text-red-500"> * </span></div>}
                             invalid={!!errors.task_title}
                             errorMessage={errors.task_title?.message}
                         >
@@ -190,60 +190,60 @@ const AddTaskModal = ({
                                 )}
                             />
                         </FormItem>
-                       
-                            <FormItem
-                                label="Assign To"
-                                invalid={!!errors.assign_to}
-                                errorMessage={errors.assign_to?.message}
-                            >
-                                <Controller
-                                    name="assign_to"
-                                    control={control}
-                                    render={({ field }) => (
-                                        <Select
-                                            isMulti
-                                            placeholder="Select User(s)"
-                                            options={employeeOptions}
-                                            value={employeeOptions.filter((o) =>
-                                                field.value?.includes(o.value)
-                                            )}
-                                            onChange={(options) =>
-                                                field.onChange(
-                                                    options
-                                                        ? options.map(
-                                                              (o) => o.value
-                                                          )
-                                                        : []
-                                                )
-                                            }
-                                        />
-                                    )}
-                                />
-                            </FormItem>
-                            
-                        
+
                         <FormItem
-                                label="Priority"
-                                invalid={!!errors.priority}
-                                errorMessage={errors.priority?.message}
-                            >
-                                <Controller
-                                    name="priority"
-                                    control={control}
-                                    render={({ field }) => (
-                                        <Select
-                                            placeholder="Select Priority"
-                                            options={priorityOptions}
-                                            value={priorityOptions.find(
-                                                (p) => p.value === field.value
-                                            )}
-                                            onChange={(opt) =>
-                                                field.onChange(opt?.value)
-                                            }
-                                        />
-                                    )}
-                                />
-                            </FormItem>
+                            label={<div>Assign To<span className="text-red-500"> * </span></div>}
+                            invalid={!!errors.assign_to}
+                            errorMessage={errors.assign_to?.message}
+                        >
+                            <Controller
+                                name="assign_to"
+                                control={control}
+                                render={({ field }) => (
+                                    <Select
+                                        isMulti
+                                        placeholder="Select User(s)"
+                                        options={employeeOptions}
+                                        value={employeeOptions.filter((o) =>
+                                            field.value?.includes(o.value)
+                                        )}
+                                        onChange={(options) =>
+                                            field.onChange(
+                                                options
+                                                    ? options.map(
+                                                        (o) => o.value
+                                                    )
+                                                    : []
+                                            )
+                                        }
+                                    />
+                                )}
+                            />
+                        </FormItem>
+
+
+                        <FormItem
+                            label="Priority"
+                            invalid={!!errors.priority}
+                            errorMessage={errors.priority?.message}
+                        >
+                            <Controller
+                                name="priority"
+                                control={control}
+                                render={({ field }) => (
+                                    <Select
+                                        placeholder="Select Priority"
+                                        options={priorityOptions}
+                                        value={priorityOptions.find(
+                                            (p) => p.value === field.value
+                                        )}
+                                        onChange={(opt) =>
+                                            field.onChange(opt?.value)
+                                        }
+                                    />
+                                )}
+                            />
+                        </FormItem>
                         <FormItem
                             label="Due Date (Optional)"
                             invalid={!!errors.due_date}
@@ -525,7 +525,7 @@ const _Tasks = ({ className }: { className?: string }) => {
     const onDrawerOpen = () => { if (!drawerIsOpen) { dispatch(getAllTaskAction()); dispatch(getEmployeesAction()); } setDrawerIsOpen(true); };
     const onDrawerClose = () => setDrawerIsOpen(false);
     const handleConfirmAddTask = async (data: TaskFormData) => { /* ...omitted for brevity... */ try { await dispatch(addTaskAction(data)).unwrap(); toast.push(<Notification type="success" title="Task Added!" />); } catch (e) { toast.push(<Notification type="danger" title="Failed to Add Task">{e.message || 'Error'}</Notification>); throw e; } };
-    const handleChangeStatus = (id: string, status: TaskStatus) => dispatch(updateTaskStatusAPI({ id, status }));
+    const handleChangeStatus = async (id: string, status: TaskStatus) => { await dispatch(updateTaskStatusAPI({ id, status })); await dispatch(getAllTaskAction()); }
     const openDeleteConfirmation = (task: Task) => { setTaskToDelete(task); setDeleteConfirmIsOpen(true); };
     const closeDeleteConfirmation = () => { setTaskToDelete(null); setDeleteConfirmIsOpen(false); };
     const handleConfirmDelete = async () => { /* ...omitted for brevity... */ if (!taskToDelete) return; try { await dispatch(deleteTaskAction(taskToDelete.id)).unwrap(); toast.push(<Notification type="success" title="Task Deleted" />); closeDeleteConfirmation(); } catch (e) { toast.push(<Notification type="danger" title="Failed to Delete">{e.message || 'Error'}</Notification>); closeDeleteConfirmation(); } };
@@ -542,7 +542,17 @@ const _Tasks = ({ className }: { className?: string }) => {
     }, [AllTaskData]);
 
     const filteredTasks = useMemo(() => {
-        const tasks = Array.isArray(AllTaskData) ? AllTaskData : [];
+        let tasks = Array.isArray(AllTaskData) ? AllTaskData : [];
+        tasks = JSON.parse(JSON.stringify((tasks)))?.sort((a, b) => {
+            return b.id - a.id;
+        });
+        tasks = JSON.parse(JSON.stringify((tasks)))?.sort((a, b) => {
+            const dateA = a.due_date ? new Date(a.due_date).getTime() : 0;
+            const dateB = b.due_date ? new Date(b.due_date).getTime() : 0;
+
+            return dateA - dateB;
+        });
+
         if (statusFilter === 'all') return tasks;
         return tasks.filter((task) => task.status === statusFilter);
     }, [AllTaskData, statusFilter]);

@@ -855,10 +855,10 @@ const ChangePasswordDialog: React.FC<{ member: FormItem; onClose: () => void; }>
     <Dialog isOpen={true} onClose={onClose}>
       <h5 className="mb-4">Change Password for {member.name}</h5>
       <UiForm onSubmit={handleSubmit(onSubmitPassword)}>
-        <UiFormItem label="New Password" invalid={!!errors.password} errorMessage={errors.password?.message}>
+        <UiFormItem label={<div>New Password<span className="text-red-500"> * </span></div>} invalid={!!errors.password} errorMessage={errors.password?.message}>
           <Controller name="password" control={control} render={({ field }) => <Input type="password" {...field} autoFocus />} />
         </UiFormItem>
-        <UiFormItem label="Confirm New Password" invalid={!!errors.confirmPassword} errorMessage={errors.confirmPassword?.message}>
+        <UiFormItem label={<div>Confirm New Password<span className="text-red-500"> * </span></div>} invalid={!!errors.confirmPassword} errorMessage={errors.confirmPassword?.message}>
           <Controller name="confirmPassword" control={control} render={({ field }) => <Input type="password" {...field} />} />
         </UiFormItem>
         <div className="text-right mt-6">
@@ -888,7 +888,7 @@ const AddNotificationDialog: React.FC<{ member: FormItem; onClose: () => void; u
     })), defaultValues: { notification_title: `Regarding Member: ${member.name}`, send_users: [], message: `This is a notification for member "${member.name}" (${member.customer_code}). Please review their details.`, }, mode: 'onChange',
   });
   const onSend = async (formData: any) => { setIsLoading(true); const payload = { ...formData, module_id: String(member.id), module_name: 'Member' }; try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed" children={error?.message} />); } finally { setIsLoading(false); } };
-  return (<Dialog isOpen={true} width={700} onClose={onClose}> <h5 className="mb-4">Notify User about: {member.name}</h5> <UiForm onSubmit={handleSubmit(onSend)}> {/* START: Responsive Fix */} <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4"> <UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter((o) => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map((o) => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> </div> {/* END: Responsive Fix */} <div className="text-right mt-6 flex-shrink-0"><Button style={{ marginRight: 5 }} type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Send</Button></div> </UiForm> </Dialog>);
+  return (<Dialog isOpen={true} width={700} onClose={onClose}> <h5 className="mb-4">Notify User about: {member.name}</h5> <UiForm onSubmit={handleSubmit(onSend)}> {/* START: Responsive Fix */} <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4"> <UiFormItem label={<div>Title<span className="text-red-500"> * </span></div>} invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <UiFormItem label={<div>Send To<span className="text-red-500"> * </span></div>} invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter((o) => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map((o) => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> </div> {/* END: Responsive Fix */} <div className="text-right mt-6 flex-shrink-0"><Button style={{ marginRight: 5 }} type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Send</Button></div> </UiForm> </Dialog>);
 };
 
 const AssignTaskDialog: React.FC<{ member: FormItem; onClose: () => void; userOptions: SelectOption[] }> = ({ member, onClose, userOptions }) => {
@@ -918,18 +918,18 @@ const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; onSub
       <h5 className="mb-4">Add Schedule for {member.name || ""}</h5>
       <UiForm onSubmit={handleSubmit(onSubmit)}>
         <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
-          <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+          <UiFormItem label={<div>Event Title<span className="text-red-500"> * </span></div>} invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
             <Controller name="event_title" control={control} render={({ field }) => <Input {...field} autoFocus />} />
           </UiFormItem>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
+            <UiFormItem label={<div>Event Type<span className="text-red-500"> * </span></div>} invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
               <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} />
             </UiFormItem>
-            <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
+            <UiFormItem label={<div>Event Date & Time<span className="text-red-500"> * </span></div>} invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
               <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date & time" value={field.value} onChange={field.onChange} />)} />
             </UiFormItem>
           </div>
-          <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+          <UiFormItem label={<div>Reminder Date & Time (Optional)<span className="text-red-500"> * </span></div>} invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
             <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select reminder date & time" value={field.value} onChange={field.onChange} />)} />
           </UiFormItem>
           <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>

@@ -81,10 +81,11 @@ const ActivityEvent = ({ data, compact }: ActivityEventProps) => {
     const options: HTMLReactParserOptions = {
         // eslint-disable-next-line  @typescript-eslint/no-explicit-any
         replace: (node: any) => {
+            const isNullCheck = (node) => { return node?.children[0]?.data === null || undefined || "null" ? "" : node?.children[0]?.data; }
             if (node.type === 'tag' && node?.name === 'strong') {
                 return (
                     <HighlightedText key={node?.children[0]?.data}>
-                        {node?.children[0]?.data}
+                        {(isNullCheck(node)) || ""}
                     </HighlightedText>
                 )
             }
