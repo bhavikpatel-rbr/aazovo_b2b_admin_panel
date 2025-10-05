@@ -606,7 +606,7 @@ function exportToCsv(filename: string, rows: FormItem[]) {
   }
   const CSV_HEADERS = [
     "Member Name", "Member Code", "Contact Number", "Email ID", "Status",
-    "City", "State", "Country", "Company (Temp)", "Company (Actual)",
+    "City", "State", "Country", "Company (Temp)",
     "Interested Category", "Interested Sub Category", "Business Type",
     "Business Opportunity", "Grade", "Relationship Manager"
   ];
