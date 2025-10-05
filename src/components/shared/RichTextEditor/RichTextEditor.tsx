@@ -17,6 +17,8 @@ import StarterKit from '@tiptap/starter-kit'
 import type { Editor, EditorContentProps, JSONContent } from '@tiptap/react'
 import type { ReactNode, JSX, Ref } from 'react'
 import type { BaseToolButtonProps, HeadingLevel } from './toolButtons/types'
+import { Extension } from '@tiptap/core'
+import { Plugin, PluginKey } from '@tiptap/pm/state'
 
 export type RichTextEditorRef = HTMLDivElement
 
@@ -67,6 +69,54 @@ type RichTextEditorProps = {
     ref?: Ref<RichTextEditorRef>
 } & Omit<EditorContentProps, 'editor' | 'ref' | 'onChange'>
 
+/**
+ * Custom Tiptap extension to manage whitespace.
+ * - `transformPastedText`: Cleans up pasted content.
+ * - `handleTextInput`: Prevents leading spaces on new lines and double spaces.
+ */
+const Whitespace = Extension.create({
+    name: 'whitespace',
+
+    addProseMirrorPlugins() {
+        return [
+            new Plugin({
+                key: new PluginKey('whitespace'),
+                props: {
+                    // 1. Handle pasted content
+                    transformPastedText(text) {
+                        return text.replace(/\s+/g, ' ').trim()
+                    },
+                    // 2. Handle direct user input
+                    handleTextInput(view, from, to, text) {
+                        // Only apply logic when the user is typing a space
+                        if (text === ' ') {
+                            const { state } = view
+                            const { $from } = state.selection
+
+                            // Condition 1: Prevent leading space at the start of a new block.
+                            // `$from.parentOffset` is 0 if the cursor is at the very beginning of the parent node (e.g., a paragraph).
+                            if ($from.parentOffset === 0) {
+                                return true // Prevents the space
+                            }
+
+                            // Condition 2: Prevent double spaces.
+                            // Check the character immediately before the cursor's position.
+                            const charBefore = state.doc.textBetween(from - 1, from)
+                            if (charBefore === ' ') {
+                                return true // Prevents the second space
+                            }
+                        }
+
+                        // For any other character or valid spaces, allow the default behavior.
+                        return false
+                    },
+                },
+            }),
+        ]
+    },
+})
+
+
 const RichTextEditor = (props: RichTextEditorProps) => {
     const {
         content = '',
@@ -91,6 +141,7 @@ const RichTextEditor = (props: RichTextEditorProps) => {
                           keepMarks: true,
                       },
                   }),
+                  Whitespace,
               ],
               editorProps: {
                   attributes: {
