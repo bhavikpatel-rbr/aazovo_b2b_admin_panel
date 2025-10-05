@@ -210,133 +210,133 @@ export interface MemberFormSchema {
     categories?: Array<{ label: string; value: string | number }>;
   }[];
 }
-  
+
 export const transformApiToFormSchema = (
-    apiData: any, 
-    allCategories: any[], 
-    allSubCategories: any[]
+  apiData: any,
+  allCategories: any[],
+  allSubCategories: any[]
 ): Partial<MemberFormSchema> => {
 
-    // Helper to convert a simple value to a { value, label } object for Select components
-    const toSelectOption = (value: string | undefined | null) =>
-        value ? { value: String(value), label: String(value) } : undefined;
+  // Helper to convert a simple value to a { value, label } object for Select components
+  const toSelectOption = (value: string | undefined | null) =>
+    value ? { value: String(value), label: String(value) } : undefined;
 
-    // Helper to parse a JSON string that's supposed to be an array of primitives
-    const parseJsonStringToArray = (jsonString: string | undefined | null): any[] => {
-        if (!jsonString || typeof jsonString !== 'string' || !jsonString.startsWith('[')) {
-            return [];
-        }
+  // Helper to parse a JSON string that's supposed to be an array of primitives
+  const parseJsonStringToArray = (jsonString: string | undefined | null): any[] => {
+    if (!jsonString || typeof jsonString !== 'string' || !jsonString.startsWith('[')) {
+      return [];
+    }
+    try {
+      const data = JSON.parse(jsonString);
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      console.error("Failed to parse JSON string to array:", jsonString, e);
+      return [];
+    }
+  };
+
+  // Helper to parse a JSON string of IDs and map them to { value, label } objects
+  // using a provided master list for name lookups.
+  const createOptionsFromIdString = (idString: string, masterList: any[]) => {
+    const ids = parseJsonStringToArray(idString);
+    if (!ids.length || !masterList || !masterList.length) {
+      return [];
+    }
+    const masterMap = new Map(masterList.map((item) => [String(item.id), item.name]));
+    return ids.map((id) => ({
+      value: String(id),
+      label: masterMap.get(String(id)) || `Unknown ID: ${id}`,
+    }));
+  };
+
+  const createCountryCodeOption = (code: string | undefined | null) => {
+    const normalized = code ? String(code).replace(/^\+\+/, "+") : undefined;
+    return normalized ? { value: normalized, label: normalized } : undefined;
+  };
+
+  return {
+    // --- Personal Details ---
+    id: apiData.id,
+    name: apiData.name || "",
+    email: apiData.email || "",
+    mobile_no: apiData.number || "",
+    contact_country_code: createCountryCodeOption(apiData.number_code),
+    company_name_temp: apiData.company_name_tmp || "",
+    company_name: apiData.company_name_acl || apiData.company_name || "", // Prefer acl, fallback to company_name
+    company_code: apiData.customer_code_permanent || apiData.customer_code || "",
+    status: toSelectOption(apiData.status),
+    continent_id: apiData.continent ? { value: String(apiData.continent.id), label: apiData.continent.name } : undefined,
+    country_id: apiData.country ? { value: String(apiData.country.id), label: apiData.country.name } : undefined,
+    state: apiData.state || "",
+    city: apiData.city || "",
+    pincode: apiData.pincode || "",
+    address: apiData.address || "",
+
+    // --- Contact & Social Info ---
+    whatsapp_no: apiData.whatsapp_no || "",
+    whatsapp_country_code: createCountryCodeOption(apiData.whatsapp_country_code),
+    alternate_contact_number: apiData.alternate_contact_number || apiData.alt_mobile || "",
+    alternate_contact_country_code: createCountryCodeOption(apiData.alternate_contact_number_code),
+    landline_number: apiData.landline_number || apiData.office_no || "",
+    fax_number: apiData.fax_number || "",
+    alternate_email: apiData.alternate_email || apiData.alt_email || "",
+    botim: apiData.botim || "",
+    skype: apiData.skype || "",
+    we_chat: apiData.we_chat || "",
+    linkedin_profile: apiData.linkedin_profile || "",
+    facebook_profile: apiData.facebook_profile || "",
+    instagram_profile: apiData.instagram_profile || "",
+    website: apiData.website || "",
+
+    // --- Member Profile Section ---
+    business_opportunity: parseJsonStringToArray(apiData.business_opportunity).map((item: string) => ({ value: item, label: item })),
+    business_type: toSelectOption(apiData.business_type),
+    favourite_product_id: apiData.favourite_products_list?.map((p: any) => ({ value: String(p.id), label: p.name })) || [],
+    interested_in: toSelectOption(apiData.interested_for),
+    interested_category_ids: createOptionsFromIdString(apiData.interested_category_ids, allCategories),
+    interested_subcategory_ids: createOptionsFromIdString(apiData.interested_subcategory_ids, allSubCategories),
+    member_grade: toSelectOption(apiData.member_grade),
+    relationship_manager_id: apiData.relationship_manager ? { value: String(apiData.relationship_manager.id), label: apiData.relationship_manager.name } : undefined,
+    dealing_in_bulk: apiData.dealing_in_bulk || "No",
+    remarks: apiData.remarks || "",
+
+    // --- Dynamic Member Profiles ---
+    dynamic_member_profiles: apiData.dynamic_member_profiles?.map((apiProfile: any) => {
+      const createSelectOptions = (idJsonString: string, names: string[]) => {
         try {
-            const data = JSON.parse(jsonString);
-            return Array.isArray(data) ? data : [];
+          if (typeof idJsonString !== "string" || !idJsonString.startsWith("[")) return [];
+          const ids: (string | number)[] = JSON.parse(idJsonString);
+          const safeNames = Array.isArray(names) ? names : [];
+          if (!Array.isArray(ids) || ids.length !== safeNames.length) return [];
+          return ids.map((id, index) => ({
+            value: id,
+            label: safeNames[index],
+          }));
         } catch (e) {
-            console.error("Failed to parse JSON string to array:", jsonString, e);
-            return [];
+          console.error("Failed to parse ID JSON string:", idJsonString, e);
+          return [];
         }
-    };
+      };
+      return {
+        db_id: apiProfile.id,
+        member_type: {
+          value: apiProfile.member_type.id,
+          label: apiProfile.member_type.name,
+        },
+        brands: createSelectOptions(apiProfile.brand_id, apiProfile.brand_names),
+        categories: createSelectOptions(apiProfile.category_id, apiProfile.category_names),
+        sub_categories: createSelectOptions(apiProfile.sub_category_id, apiProfile.sub_category_names),
+      };
+    }) || [],
 
-    // Helper to parse a JSON string of IDs and map them to { value, label } objects
-    // using a provided master list for name lookups.
-    const createOptionsFromIdString = (idString: string, masterList: any[]) => {
-        const ids = parseJsonStringToArray(idString);
-        if (!ids.length || !masterList || !masterList.length) {
-            return [];
-        }
-        const masterMap = new Map(masterList.map((item) => [String(item.id), item.name]));
-        return ids.map((id) => ({
-            value: String(id),
-            label: masterMap.get(String(id)) || `Unknown ID: ${id}`,
-        }));
-    };
-
-    const createCountryCodeOption = (code: string | undefined | null) => {
-        const normalized = code ? String(code).replace(/^\+\+/, "+") : undefined;
-        return normalized ? { value: normalized, label: normalized } : undefined;
-    };
-
-    return {
-        // --- Personal Details ---
-        id: apiData.id,
-        name: apiData.name || "",
-        email: apiData.email || "",
-        mobile_no: apiData.number || "",
-        contact_country_code: createCountryCodeOption(apiData.number_code),
-        company_name_temp: apiData.company_name_tmp || "",
-        company_name: apiData.company_name_acl || apiData.company_name || "", // Prefer acl, fallback to company_name
-        company_code: apiData.customer_code_permanent || apiData.customer_code || "",
-        status: toSelectOption(apiData.status),
-        continent_id: apiData.continent ? { value: String(apiData.continent.id), label: apiData.continent.name } : undefined,
-        country_id: apiData.country ? { value: String(apiData.country.id), label: apiData.country.name } : undefined,
-        state: apiData.state || "",
-        city: apiData.city || "",
-        pincode: apiData.pincode || "",
-        address: apiData.address || "",
-
-        // --- Contact & Social Info ---
-        whatsapp_no: apiData.whatsapp_no || "",
-        whatsapp_country_code: createCountryCodeOption(apiData.whatsapp_country_code),
-        alternate_contact_number: apiData.alternate_contact_number || apiData.alt_mobile || "",
-        alternate_contact_country_code: createCountryCodeOption(apiData.alternate_contact_number_code),
-        landline_number: apiData.landline_number || apiData.office_no || "",
-        fax_number: apiData.fax_number || "",
-        alternate_email: apiData.alternate_email || apiData.alt_email || "",
-        botim: apiData.botim || "",
-        skype: apiData.skype || "",
-        we_chat: apiData.we_chat || "",
-        linkedin_profile: apiData.linkedin_profile || "",
-        facebook_profile: apiData.facebook_profile || "",
-        instagram_profile: apiData.instagram_profile || "",
-        website: apiData.website || "",
-
-        // --- Member Profile Section ---
-        business_opportunity: parseJsonStringToArray(apiData.business_opportunity).map((item: string) => ({ value: item, label: item })),
-        business_type: toSelectOption(apiData.business_type),
-        favourite_product_id: apiData.favourite_products_list?.map((p: any) => ({ value: String(p.id), label: p.name })) || [],
-        interested_in: toSelectOption(apiData.interested_for),
-        interested_category_ids: createOptionsFromIdString(apiData.interested_category_ids, allCategories),
-        interested_subcategory_ids: createOptionsFromIdString(apiData.interested_subcategory_ids, allSubCategories),
-        member_grade: toSelectOption(apiData.member_grade),
-        relationship_manager_id: apiData.relationship_manager ? { value: String(apiData.relationship_manager.id), label: apiData.relationship_manager.name } : undefined,
-        dealing_in_bulk: apiData.dealing_in_bulk || "No",
-        remarks: apiData.remarks || "",
-
-        // --- Dynamic Member Profiles ---
-        dynamic_member_profiles: apiData.dynamic_member_profiles?.map((apiProfile: any) => {
-            const createSelectOptions = (idJsonString: string, names: string[]) => {
-                try {
-                    if (typeof idJsonString !== "string" || !idJsonString.startsWith("[")) return [];
-                    const ids: (string | number)[] = JSON.parse(idJsonString);
-                    const safeNames = Array.isArray(names) ? names : [];
-                    if (!Array.isArray(ids) || ids.length !== safeNames.length) return [];
-                    return ids.map((id, index) => ({
-                        value: id,
-                        label: safeNames[index],
-                    }));
-                } catch (e) {
-                    console.error("Failed to parse ID JSON string:", idJsonString, e);
-                    return [];
-                }
-            };
-            return {
-                db_id: apiProfile.id,
-                member_type: {
-                    value: apiProfile.member_type.id,
-                    label: apiProfile.member_type.name,
-                },
-                brands: createSelectOptions(apiProfile.brand_id, apiProfile.brand_names),
-                categories: createSelectOptions(apiProfile.category_id, apiProfile.category_names),
-                sub_categories: createSelectOptions(apiProfile.sub_category_id, apiProfile.sub_category_names),
-            };
-        }) || [],
-
-        // --- Accessibility & Membership ---
-        product_upload_permission: apiData.product_upload_permission === true || apiData.product_upload_permission === "1",
-        wall_enquiry_permission: toSelectOption(apiData.wall_enquiry_permission),
-        trade_inquiry_allowed: toSelectOption(apiData.trade_inquiry_allowed),
-        membership_plan_text: apiData.membership_plan || "",
-        upgrade_plan: toSelectOption(apiData.upgrade_your_plan),
-        is_blacklisted: apiData.is_blacklisted === true || apiData.is_blacklisted === "1",
-    };
+    // --- Accessibility & Membership ---
+    product_upload_permission: apiData.product_upload_permission === true || apiData.product_upload_permission === "1",
+    wall_enquiry_permission: toSelectOption(apiData.wall_enquiry_permission),
+    trade_inquiry_allowed: toSelectOption(apiData.trade_inquiry_allowed),
+    membership_plan_text: apiData.membership_plan || "",
+    upgrade_plan: toSelectOption(apiData.upgrade_your_plan),
+    is_blacklisted: apiData.is_blacklisted === true || apiData.is_blacklisted === "1",
+  };
 };
 
 /**
@@ -346,118 +346,118 @@ export const transformApiToFormSchema = (
  * @returns A clean object ready to be sent to the API.
  */
 export const preparePayloadForApi = (
-    formData: Partial<MemberFormSchema>,
-    isEditMode: boolean
+  formData: Partial<MemberFormSchema>,
+  isEditMode: boolean
 ): any => {
-    // Helper to safely extract 'value' from a select object
-    const getValue = (field: any) =>
-        typeof field === 'object' && field !== null && 'value' in field
-            ? field.value
-            : field;
+  // Helper to safely extract 'value' from a select object
+  const getValue = (field: any) =>
+    typeof field === 'object' && field !== null && 'value' in field
+      ? field.value
+      : field;
 
-    /**
-     * NEW HELPER FUNCTION
-     * Safely processes an array from the form. It handles three cases:
-     * 1. The data is already a proper array of objects (from react-select).
-     * 2. The data is a JSON string representing an array (from API response).
-     * 3. The data is null, undefined, or not an array/string.
-     */
-    const getArrayPayload = (formField: any) => {
-        if (Array.isArray(formField)) {
-            // Case 1: Already a proper array, map over it.
-            return formField.map(item => getValue(item));
-        }
-        if (typeof formField === 'string' && formField.startsWith('[')) {
-            // Case 2: It's a JSON string, parse it.
-            try {
-                const parsed = JSON.parse(formField);
-                return Array.isArray(parsed) ? parsed : [];
-            } catch (e) {
-                return []; // Return empty array on parsing error
-            }
-        }
-        // Case 3: It's something else, return an empty array.
-        return [];
-    };
-
-    const payload: any = {
-        // --- Personal Details ---
-        id: formData.id,
-        name: formData.name || "",
-        number: formData.mobile_no || "",
-        number_code: getValue(formData.contact_country_code) || null,
-        email: formData.email || "",
-        company_temp: formData.company_name_temp || "",
-        company_actual: getValue(formData.company_name) || "",
-        company_code: formData.company_code || null,
-        status: getValue(formData.status) || null,
-        continent_id: getValue(formData.continent_id) || null,
-        country_id: getValue(formData.country_id) || null,
-        state: formData.state || "",
-        city: formData.city || "",
-        pincode: formData.pincode || "",
-        address: formData.address || "",
-
-        // --- Contact & Social Info ---
-        whatsapp_no: formData.whatsapp_no || null,
-        whatsapp_country_code: getValue(formData.whatsapp_country_code) || null,
-        alternate_contact_number: formData.alternate_contact_number || null,
-        alternate_contact_number_code: getValue(formData.alternate_contact_country_code) || null,
-        landline_number: formData.landline_number || null,
-        fax_number: formData.fax_number || null,
-        alternate_email: formData.alternate_email || null,
-        botim: formData.botim || null,
-        skype: formData.skype || null,
-        we_chat: formData.we_chat || null,
-        linkedin_profile: formData.linkedin_profile || null,
-        facebook_profile: formData.facebook_profile || null,
-        instagram_profile: formData.instagram_profile || null,
-        website: formData.website || null,
-
-        // --- Member Profile Section (USING THE NEW HELPER) ---
-        business_opportunity: getArrayPayload(formData.business_opportunity),
-        business_type: getValue(formData.business_type) || null,
-        favourite_product_id: getArrayPayload(formData.favourite_product_id),
-        interested_in: getValue(formData.interested_in) || null,
-        interested_category_ids: getArrayPayload(formData.interested_category_ids),
-        interested_subcategory_ids: getArrayPayload(formData.interested_subcategory_ids),
-        member_grade: getValue(formData.member_grade) || null,
-        relationship_manager_id: getValue(formData.relationship_manager_id) || null,
-        dealing_in_bulk: formData.dealing_in_bulk || "No",
-        remarks: formData.remarks || "",
-        
-        // --- Accessibility & Membership ---
-        product_upload_permission: formData.product_upload_permission ? "1" : "0",
-        wall_enquiry_permission: getValue(formData.wall_enquiry_permission) || null,
-        trade_inquiry_allowed: getValue(formData.trade_inquiry_allowed) || null,
-        membership_plan: formData.membership_plan_text || "",
-        upgrade_your_plan: getValue(formData.upgrade_plan) || null,
-        is_blacklisted: formData.is_blacklisted ? "1" : "0",
-    };
-
-    // --- Dynamic Member Profiles ---
-    if (formData.dynamic_member_profiles) {
-        payload.dynamic_member_profiles = formData.dynamic_member_profiles.map(formProfile => {
-            const apiProfile: any = {
-                id: formProfile.db_id,
-                member_type_id: getValue(formProfile.member_type),
-                brand_id: getArrayPayload(formProfile.brands),
-                category_id: getArrayPayload(formProfile.categories),
-                sub_category_id: getArrayPayload(formProfile.sub_categories),
-            };
-            if (apiProfile.id === undefined) {
-                delete apiProfile.id;
-            }
-            return apiProfile;
-        });
+  /**
+   * NEW HELPER FUNCTION
+   * Safely processes an array from the form. It handles three cases:
+   * 1. The data is already a proper array of objects (from react-select).
+   * 2. The data is a JSON string representing an array (from API response).
+   * 3. The data is null, undefined, or not an array/string.
+   */
+  const getArrayPayload = (formField: any) => {
+    if (Array.isArray(formField)) {
+      // Case 1: Already a proper array, map over it.
+      return formField.map(item => getValue(item));
     }
-
-    // --- Conditional Password Handling ---
-    if (formData.password) {
-        payload.password = formData.password;
+    if (typeof formField === 'string' && formField.startsWith('[')) {
+      // Case 2: It's a JSON string, parse it.
+      try {
+        const parsed = JSON.parse(formField);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return []; // Return empty array on parsing error
+      }
     }
+    // Case 3: It's something else, return an empty array.
+    return [];
+  };
 
-    return payload;
+  const payload: any = {
+    // --- Personal Details ---
+    id: formData.id,
+    name: formData.name || "",
+    number: formData.mobile_no || "",
+    number_code: getValue(formData.contact_country_code) || null,
+    email: formData.email || "",
+    company_temp: formData.company_name_temp || "",
+    company_actual: getValue(formData.company_name) || "",
+    company_code: formData.company_code || null,
+    status: getValue(formData.status) || null,
+    continent_id: getValue(formData.continent_id) || null,
+    country_id: getValue(formData.country_id) || null,
+    state: formData.state || "",
+    city: formData.city || "",
+    pincode: formData.pincode || "",
+    address: formData.address || "",
+
+    // --- Contact & Social Info ---
+    whatsapp_no: formData.whatsapp_no || null,
+    whatsapp_country_code: getValue(formData.whatsapp_country_code) || null,
+    alternate_contact_number: formData.alternate_contact_number || null,
+    alternate_contact_number_code: getValue(formData.alternate_contact_country_code) || null,
+    landline_number: formData.landline_number || null,
+    fax_number: formData.fax_number || null,
+    alternate_email: formData.alternate_email || null,
+    botim: formData.botim || null,
+    skype: formData.skype || null,
+    we_chat: formData.we_chat || null,
+    linkedin_profile: formData.linkedin_profile || null,
+    facebook_profile: formData.facebook_profile || null,
+    instagram_profile: formData.instagram_profile || null,
+    website: formData.website || null,
+
+    // --- Member Profile Section (USING THE NEW HELPER) ---
+    business_opportunity: getArrayPayload(formData.business_opportunity),
+    business_type: getValue(formData.business_type) || null,
+    favourite_product_id: getArrayPayload(formData.favourite_product_id),
+    interested_in: getValue(formData.interested_in) || null,
+    interested_category_ids: getArrayPayload(formData.interested_category_ids),
+    interested_subcategory_ids: getArrayPayload(formData.interested_subcategory_ids),
+    member_grade: getValue(formData.member_grade) || null,
+    relationship_manager_id: getValue(formData.relationship_manager_id) || null,
+    dealing_in_bulk: formData.dealing_in_bulk || "No",
+    remarks: formData.remarks || "",
+
+    // --- Accessibility & Membership ---
+    product_upload_permission: formData.product_upload_permission ? "1" : "0",
+    wall_enquiry_permission: getValue(formData.wall_enquiry_permission) || null,
+    trade_inquiry_allowed: getValue(formData.trade_inquiry_allowed) || null,
+    membership_plan: formData.membership_plan_text || "",
+    upgrade_your_plan: getValue(formData.upgrade_plan) || null,
+    is_blacklisted: formData.is_blacklisted ? "1" : "0",
+  };
+
+  // --- Dynamic Member Profiles ---
+  if (formData.dynamic_member_profiles) {
+    payload.dynamic_member_profiles = formData.dynamic_member_profiles.map(formProfile => {
+      const apiProfile: any = {
+        id: formProfile.db_id,
+        member_type_id: getValue(formProfile.member_type),
+        brand_id: getArrayPayload(formProfile.brands),
+        category_id: getArrayPayload(formProfile.categories),
+        sub_category_id: getArrayPayload(formProfile.sub_categories),
+      };
+      if (apiProfile.id === undefined) {
+        delete apiProfile.id;
+      }
+      return apiProfile;
+    });
+  }
+
+  // --- Conditional Password Handling ---
+  if (formData.password) {
+    payload.password = formData.password;
+  }
+
+  return payload;
 };
 // --- END: Detailed Type Definitions ---
 
@@ -480,7 +480,20 @@ const filterFormSchema = z.object({
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
-const exportReasonSchema = z.object({ reason: z.string().min(10, "Reason must be at least 10 characters.").max(255, "Reason cannot exceed 255 characters."), });
+const exportReasonSchema = z.object({
+  reason: z.string().refine(
+    (value) => {
+      // Remove all whitespace characters and check the length
+      const withoutSpaces = value.replace(/\s/g, "");
+      return withoutSpaces.length >= 10 && withoutSpaces.length <= 255;
+    },
+    {
+      // You can provide a single message or separate refines for min and max
+      message:
+        "Reason must be between 10 and 255 characters, excluding spaces.",
+    }
+  ),
+});
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 const scheduleSchema = z.object({
@@ -597,7 +610,7 @@ function exportToCsv(filename: string, rows: FormItem[]) {
     "Interested Category", "Interested Sub Category", "Business Type",
     "Business Opportunity", "Grade", "Relationship Manager"
   ];
-  
+
   const preparedRows = rows.map(row => ({
     member_name: row.name || '',
     member_code: row.customer_code || '',
@@ -646,7 +659,7 @@ function exportToCsv(filename: string, rows: FormItem[]) {
     toast.push(<Notification title="Export Successful" type="success">Data exported to {filename}.</Notification>);
     return true;
   }
-  
+
   toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
   return false;
 }
@@ -810,9 +823,9 @@ const ChangePasswordDialog: React.FC<{ member: FormItem; onClose: () => void; }>
   });
 
   const onSubmitPassword = async (data: PasswordFormData) => {
-   
-      toast.push(<Notification type="danger" title="Function Under Developement"  />);
-   
+
+    toast.push(<Notification type="danger" title="Function Under Developement" />);
+
   };
 
   return (
@@ -837,7 +850,7 @@ const AddNotificationDialog: React.FC<{ member: FormItem; onClose: () => void; u
   const dispatch = useAppDispatch(); const [isLoading, setIsLoading] = useState(false);
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(z.object({ notification_title: z.string().min(3), send_users: z.array(z.number()).min(1), message: z.string().min(10) })), defaultValues: { notification_title: `Regarding Member: ${member.name}`, send_users: [], message: `This is a notification for member "${member.name}" (${member.customer_code}). Please review their details.`, }, mode: 'onChange', });
   const onSend = async (formData: any) => { setIsLoading(true); const payload = { ...formData, module_id: String(member.id), module_name: 'Member' }; try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed" children={error?.message} />); } finally { setIsLoading(false); } };
-  return (<Dialog isOpen={true} width={700} onClose={onClose}> <h5 className="mb-4">Notify User about: {member.name}</h5> <UiForm onSubmit={handleSubmit(onSend)}> {/* START: Responsive Fix */} <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4"> <UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter((o) => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map((o) => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> </div> {/* END: Responsive Fix */} <div className="text-right mt-6 flex-shrink-0"><Button  style={{marginRight:5}} type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Send</Button></div> </UiForm> </Dialog>);
+  return (<Dialog isOpen={true} width={700} onClose={onClose}> <h5 className="mb-4">Notify User about: {member.name}</h5> <UiForm onSubmit={handleSubmit(onSend)}> {/* START: Responsive Fix */} <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4"> <UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter((o) => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map((o) => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> </div> {/* END: Responsive Fix */} <div className="text-right mt-6 flex-shrink-0"><Button style={{ marginRight: 5 }} type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Send</Button></div> </UiForm> </Dialog>);
 };
 
 const AssignTaskDialog: React.FC<{ member: FormItem; onClose: () => void; userOptions: SelectOption[] }> = ({ member, onClose, userOptions }) => {
@@ -846,13 +859,13 @@ const AssignTaskDialog: React.FC<{ member: FormItem; onClose: () => void; userOp
   today.setHours(0, 0, 0, 0);
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({ resolver: zodResolver(taskValidationSchema), defaultValues: { task_title: `Follow up with ${member.name}`, assign_to: [], priority: 'Medium', }, mode: 'onChange' });
   const onAssignTask = async (data: TaskFormData) => { setIsLoading(true); const payload = { ...data, due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined, module_id: String(member.id), module_name: 'Member', }; try { await dispatch(addTaskAction(payload)).unwrap(); toast.push(<Notification type="success" title="Task Assigned!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message} />); } finally { setIsLoading(false); } };
-  return (<Dialog width={700} isOpen={true} onClose={onClose}> <h5 className="mb-4">Assign Task for {member.name}</h5> <UiForm onSubmit={handleSubmit(onAssignTask)}> {/* START: Responsive Fix */} <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4"> <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> 
-   <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem> 
-  <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></UiFormItem> 
-  
-  <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) =>
-    <DatePicker minDate={today} placeholder="Select date" value={field.value} onChange={field.onChange} />} />
-  </UiFormItem> <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> </div> {/* END: Responsive Fix */} <div className="text-right mt-6 flex-shrink-0"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" style={{marginLeft:5}} type="submit" loading={isLoading} disabled={!isValid}>Assign Task</Button></div> </UiForm> </Dialog>);
+  return (<Dialog width={700} isOpen={true} onClose={onClose}> <h5 className="mb-4">Assign Task for {member.name}</h5> <UiForm onSubmit={handleSubmit(onAssignTask)}> {/* START: Responsive Fix */} <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4"> <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem>
+    <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem>
+    <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></UiFormItem>
+
+    <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) =>
+      <DatePicker minDate={today} placeholder="Select date" value={field.value} onChange={field.onChange} />} />
+    </UiFormItem> <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> </div> {/* END: Responsive Fix */} <div className="text-right mt-6 flex-shrink-0"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" style={{ marginLeft: 5 }} type="submit" loading={isLoading} disabled={!isValid}>Assign Task</Button></div> </UiForm> </Dialog>);
 };
 
 const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; onSubmit: (data: ScheduleFormData) => void; isLoading: boolean; }> = ({ member, onClose, onSubmit, isLoading }) => {
@@ -867,27 +880,27 @@ const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; onSub
       <h5 className="mb-4">Add Schedule for {member.name}</h5>
       <UiForm onSubmit={handleSubmit(onSubmit)}>
         <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
-            <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+          <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
             <Controller name="event_title" control={control} render={({ field }) => <Input {...field} autoFocus />} />
-            </UiFormItem>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          </UiFormItem>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
-                <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} />
+              <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} />
             </UiFormItem>
             <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
-                <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date & time" value={field.value} onChange={field.onChange} />)} />
+              <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date & time" value={field.value} onChange={field.onChange} />)} />
             </UiFormItem>
-            </div>
-            <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+          </div>
+          <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
             <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select reminder date & time" value={field.value} onChange={field.onChange} />)} />
-            </UiFormItem>
-            <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+          </UiFormItem>
+          <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
             <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} value={field.value ?? ""} />} />
-            </UiFormItem>
+          </UiFormItem>
         </div>
         <div className="text-right mt-6 flex-shrink-0">
           <Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button>
-          <Button style={{marginLeft:5}} variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Save Event</Button>
+          <Button style={{ marginLeft: 5 }} variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Save Event</Button>
         </div>
       </UiForm>
     </Dialog>
@@ -1298,7 +1311,7 @@ const ActionColumn = ({ rowData, onOpenModal }: { rowData: FormItem; onOpenModal
       toast.push(<Notification type="warning" title="Missing Number" children="Primary contact number is not available." />);
       return;
     }
-    const fullNumber =  member.number.replace(/\D/g, '');
+    const fullNumber = member.number.replace(/\D/g, '');
     window.open(`https://wa.me/${fullNumber}`, '_blank');
   };
 
@@ -1354,13 +1367,13 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filt
 // MODIFIED: This component is heavily refactored for server-side operations.
 const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: FilterFormData; setFilterCriteria: React.Dispatch<React.SetStateAction<FilterFormData>>; }) => {
   const dispatch = useAppDispatch();
-  const { 
-    MemberlistData: MemberData, 
-    CountriesData, 
-    ParentCategories, 
-    BrandData, 
-    subCategoriesForSelectedCategoryData, 
-    status: masterLoadingStatus 
+  const {
+    MemberlistData: MemberData,
+    CountriesData,
+    ParentCategories,
+    BrandData,
+    subCategoriesForSelectedCategoryData,
+    status: masterLoadingStatus
   } = useSelector(masterSelector);
   const [isLoading, setIsLoading] = useState(false);
   const { setSelectedMembers, userOptions } = useMemberList();
@@ -1417,11 +1430,11 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
       dispatch(getMemberlistingAction(params))
         .unwrap()
         .catch((error: any) => {
-            console.error("Failed to fetch members:", error);
-            toast.push(<Notification type="danger" title="Data Fetch Failed" children={error?.message || 'An unexpected error occurred.'} />);
+          console.error("Failed to fetch members:", error);
+          toast.push(<Notification type="danger" title="Data Fetch Failed" children={error?.message || 'An unexpected error occurred.'} />);
         })
         .finally(() => {
-            setIsLoading(false);
+          setIsLoading(false);
         });
     };
 
@@ -1436,25 +1449,25 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   // --- START: DEPENDENT DROPDOWN LOGIC ---
   const watchedFilterCategory = watchFilter("filterCategory");
   useEffect(() => {
-      if (isFilterDrawerOpen) {
-          if (watchedFilterCategory && watchedFilterCategory.length === 1) {
-              dispatch(getSubcategoriesByCategoryIdAction(Number(watchedFilterCategory[0].value)));
-          } else {
-              setSubcategoryOptions([]);
-              const currentFilterSubCat = getFilterValues("filterSubCategory");
-              if (currentFilterSubCat && currentFilterSubCat.length > 0) {
-                  setFilterFormValue("filterSubCategory", []);
-              }
-          }
+    if (isFilterDrawerOpen) {
+      if (watchedFilterCategory && watchedFilterCategory.length === 1) {
+        dispatch(getSubcategoriesByCategoryIdAction(Number(watchedFilterCategory[0].value)));
+      } else {
+        setSubcategoryOptions([]);
+        const currentFilterSubCat = getFilterValues("filterSubCategory");
+        if (currentFilterSubCat && currentFilterSubCat.length > 0) {
+          setFilterFormValue("filterSubCategory", []);
+        }
       }
+    }
   }, [watchedFilterCategory, isFilterDrawerOpen, dispatch, getFilterValues, setFilterFormValue]);
 
   useEffect(() => {
     if (masterLoadingStatus !== 'loading') {
       setSubcategoryOptions(
         Array.isArray(subCategoriesForSelectedCategoryData)
-        ? subCategoriesForSelectedCategoryData.map((sc: any) => ({ value: String(sc.id), label: sc.name }))
-        : []
+          ? subCategoriesForSelectedCategoryData.map((sc: any) => ({ value: String(sc.id), label: sc.name }))
+          : []
       );
     }
   }, [subCategoriesForSelectedCategoryData, masterLoadingStatus]);
@@ -1651,19 +1664,19 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   }, [pageData]);
 
   const allCountryOptions = useMemo(() => {
-      return Array.isArray(CountriesData)
-          ? CountriesData.map((c: any) => ({ value: String(c.id), label: c.name }))
-          : [];
+    return Array.isArray(CountriesData)
+      ? CountriesData.map((c: any) => ({ value: String(c.id), label: c.name }))
+      : [];
   }, [CountriesData]);
-  
+
   // --- START: ADDED OPTIONS ---
   const categoryOptions = useMemo(() =>
     Array.isArray(ParentCategories) ? ParentCategories.map((c: any) => ({ value: String(c.id), label: c.name })) : [],
-  [ParentCategories]);
-  
+    [ParentCategories]);
+
   const brandOptions = useMemo(() =>
     Array.isArray(BrandData) ? BrandData.map((b: any) => ({ value: String(b.id), label: b.name })) : [],
-  [BrandData]);
+    [BrandData]);
   // --- END: ADDED OPTIONS ---
 
 
@@ -1714,10 +1727,10 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
               </UiFormItem>
               <UiFormItem label="Sub Category">
                 <Controller name="filterSubCategory" control={filterFormMethods.control} render={({ field }) => (
-                  <UiSelect 
-                    isMulti 
+                  <UiSelect
+                    isMulti
                     placeholder={!watchedFilterCategory || watchedFilterCategory.length !== 1 ? "Select category first" : "Select Sub Category"}
-                    options={subcategoryOptions} 
+                    options={subcategoryOptions}
                     {...field}
                     isDisabled={!watchedFilterCategory || watchedFilterCategory.length !== 1 || (subcategoryOptions.length === 0 && masterLoadingStatus !== 'loading')}
                   />
@@ -1788,7 +1801,7 @@ const FormListSelected = () => {
         <h5 className="mb-2">Send Message</h5>
         <Avatar.Group chained maxCount={6}>{selectedMembers.map(m => (<Tooltip key={m.id} title={m.name}><Avatar src={m.full_profile_pic || undefined} icon={<TbUserCircle />} /></Tooltip>))}</Avatar.Group>
         <div className="my-4"><RichTextEditor /></div>
-        <div className="text-right gap-2"><Button size="sm" onClick={() => setSendMessageDialogOpen(false)}>Cancel</Button><Button style={{marginLeft:5}} size="sm" variant="solid" loading={sendMessageLoading} onClick={handleSend}>Send</Button></div>
+        <div className="text-right gap-2"><Button size="sm" onClick={() => setSendMessageDialogOpen(false)}>Cancel</Button><Button style={{ marginLeft: 5 }} size="sm" variant="solid" loading={sendMessageLoading} onClick={handleSend}>Send</Button></div>
       </Dialog>
     </>
   );
