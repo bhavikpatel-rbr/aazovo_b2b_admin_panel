@@ -2814,7 +2814,7 @@ const InquiryListTable = () => {
               </span>
             )}
           </Button>
-          <Button
+          {/* <Button
             menuName="inquiry"
             isExport={true}
             icon={<TbCloudUpload />}
@@ -2822,7 +2822,7 @@ const InquiryListTable = () => {
             disabled={allFilteredAndSortedData.length === 0}
           >
             Export
-          </Button>
+          </Button> */}
         </div>
       </div>
       <ActiveFiltersDisplay
