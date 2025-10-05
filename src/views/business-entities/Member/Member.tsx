@@ -918,18 +918,18 @@ const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; onSub
       <h5 className="mb-4">Add Schedule for {member.name || ""}</h5>
       <UiForm onSubmit={handleSubmit(onSubmit)}>
         <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
-          <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+          <UiFormItem label={<div>Event Title<span className="text-red-500"> * </span></div>} invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
             <Controller name="event_title" control={control} render={({ field }) => <Input {...field} autoFocus />} />
           </UiFormItem>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
+            <UiFormItem label={<div>Event Type<span className="text-red-500"> * </span></div>} invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
               <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} />
             </UiFormItem>
-            <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
+            <UiFormItem label={<div>Event Date & Time<span className="text-red-500"> * </span></div>} invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
               <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date & time" value={field.value} onChange={field.onChange} />)} />
             </UiFormItem>
           </div>
-          <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+          <UiFormItem label={<div>Reminder Date & Time (Optional)<span className="text-red-500"> * </span></div>} invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
             <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select reminder date & time" value={field.value} onChange={field.onChange} />)} />
           </UiFormItem>
           <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
