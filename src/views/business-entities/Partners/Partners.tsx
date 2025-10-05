@@ -3,12 +3,11 @@ import classNames from "classnames";
 import dayjs from "dayjs";
 import { config } from "localforage";
 import React, {
-  createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
-  useState,
+  useState
 } from "react";
 import { Controller, useForm } from "react-hook-form";
 // Icons
@@ -35,7 +34,6 @@ import {
   TbDownload,
   TbEye,
   TbFile,
-  TbFileDescription,
   TbFileTypePdf,
   TbFilter,
   TbMail,
@@ -48,7 +46,7 @@ import {
   TbTagStarred,
   TbUser,
   TbUserCircle,
-  TbX,
+  TbX
 } from "react-icons/tb";
 import { useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
@@ -58,12 +56,12 @@ import type { TableQueries } from "@/@types/common";
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
-import DataTable from "@/components/shared/DataTable";
 import type {
   ColumnDef,
   OnSortParam,
   Row,
 } from "@/components/shared/DataTable";
+import DataTable from "@/components/shared/DataTable";
 import DebouceInput from "@/components/shared/DebouceInput";
 import RichTextEditor from "@/components/shared/RichTextEditor";
 import StickyFooter from "@/components/shared/StickyFooter";
@@ -1249,7 +1247,7 @@ const AddPartnerScheduleDialog: React.FC<{
       event_type: undefined,
       date_time: null as any,
       remind_from: null,
-      notes: `Regarding partner ${partner.partner_name} (${partner.partner_code}).`,
+      notes: `Regarding partner ${partner.partner_name} (${String(partner?.id).padStart(5, "0")}).`,
     },
     mode: "onChange",
   });

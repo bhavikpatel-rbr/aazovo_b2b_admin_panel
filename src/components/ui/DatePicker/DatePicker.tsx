@@ -15,16 +15,16 @@ const DEFAULT_INPUT_FORMAT = 'YYYY-MM-DD'
 
 export interface DatePickerProps
     extends CommonProps,
-        Omit<
-            CalendarSharedProps,
-            | 'onMonthChange'
-            | 'onChange'
-            | 'isDateInRange'
-            | 'isDateFirstInRange'
-            | 'isDateLastInRange'
-            | 'month'
-        >,
-        BasePickerSharedProps {
+    Omit<
+        CalendarSharedProps,
+        | 'onMonthChange'
+        | 'onChange'
+        | 'isDateInRange'
+        | 'isDateFirstInRange'
+        | 'isDateLastInRange'
+        | 'month'
+    >,
+    BasePickerSharedProps {
     closePickerOnChange?: boolean
     defaultOpen?: boolean
     defaultValue?: Date | null
@@ -261,9 +261,7 @@ const DatePicker = (props: DatePickerProps) => {
             className={className}
             name={name}
             inputLabel={inputState}
-            clearable={
-                type === 'date' ? false : clearable && !!_value && !disabled
-            }
+            clearable={false}
             clearButton={clearButton}
             disabled={disabled}
             type={type}
