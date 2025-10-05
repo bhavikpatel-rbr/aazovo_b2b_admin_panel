@@ -112,16 +112,18 @@ const Log = ({
                             {dayjs.unix(log.date).format('dddd, DD MMMM')}
                         </div>
                         <Timeline>
-                            {visibleEvents.map((event, eventIndex) => (
-                                <Timeline.Item
-                                    key={log.id + event.type + eventIndex}
-                                    media={<ActivityAvatar data={event} />}
-                                >
-                                    <div className="mt-1">
-                                        <ActivityEvent data={event} />
-                                    </div>
-                                </Timeline.Item>
-                            ))}
+                            {visibleEvents.map((event, eventIndex) => {
+                                return (
+                                    <Timeline.Item
+                                        key={log.id + event.type + eventIndex}
+                                        media={<ActivityAvatar data={event} />}
+                                    >
+                                        <div className="mt-1">
+                                            <ActivityEvent data={event} />
+                                        </div>
+                                    </Timeline.Item>
+                                )
+                            })}
                         </Timeline>
                     </div>
                 )
@@ -274,7 +276,7 @@ const Notification = () => {
                     dateTime: dayjs(item.created_at).unix(),
                     userName: item.created_by_user?.name || 'System User',
                     userImg: item.created_by_user?.profile_pic_path || undefined,
-                    comment: `<strong>${item.notification_title}</strong><br/>${item.message}`,
+                    comment: `${item.message}`,
                     ticket: String(item.id),
                 })),
             }))
