@@ -531,9 +531,21 @@ interface AlertNote {
 
 // START: Activity Schema
 const activitySchema = z.object({
-  item: z.string().min(3, "Activity item is required and must be at least 3 characters."),
+  item: z.string().refine(
+    (value) => {
+      // Remove all whitespace characters and check the length
+      const withoutSpaces = value.replace(/\s/g, "");
+      return withoutSpaces.length >= 3;
+    },
+    {
+      // You can provide a single message or separate refines for min and max
+      message:
+        "Activity item is required and must be at least 3 characters.",
+    }
+  ),
   notes: z.string().optional(),
 });
+
 type ActivityFormData = z.infer<typeof activitySchema>;
 // END: Activity Schema
 
@@ -606,7 +618,7 @@ function exportToCsv(filename: string, rows: FormItem[]) {
   }
   const CSV_HEADERS = [
     "Member Name", "Member Code", "Contact Number", "Email ID", "Status",
-    "City", "State", "Country", "Company (Temp)", "Company (Actual)",
+    "City", "State", "Country", "Company (Temp)",
     "Interested Category", "Interested Sub Category", "Business Type",
     "Business Opportunity", "Grade", "Relationship Manager"
   ];
