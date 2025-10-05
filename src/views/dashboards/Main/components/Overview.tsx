@@ -1,13 +1,13 @@
 import { DataTable, DebouceInput } from '@/components/shared'
 import { Avatar, Dialog, Table, Tag, Tooltip } from '@/components/ui'
 import Card from '@/components/ui/Card'
-import Select from '@/components/ui/Select'
 import THead from '@/components/ui/Table/THead'
 import Td from '@/components/ui/Table/Td'
 import Th from '@/components/ui/Table/Th'
 import Tr from '@/components/ui/Table/Tr'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 import {
+    getAllActionAction,
     getDashboardCompanyAction,
     getDashboardCountsAction,
     getDashboardMemberAction,
@@ -24,12 +24,12 @@ import {
     BarChart4,
     Boxes,
     Building2,
+    CheckCircle2,
     Handshake,
     Info,
     Search,
     UserCircle,
     Users,
-    CheckCircle2,
     XCircle
 } from 'lucide-react'
 import {
@@ -44,10 +44,10 @@ import {
     Bar,
     BarChart,
     CartesianGrid,
+    Tooltip as RechartsTooltip,
     ResponsiveContainer,
     XAxis,
     YAxis,
-    Tooltip as RechartsTooltip,
 } from 'recharts'
 
 // --- Type Definitions ---
@@ -377,16 +377,16 @@ const STATUS_CHART_COLORS: Record<string, string> = {
     inactive: '#64748B',     // Slate (Muted)
     disabled: '#EF4444',     // Red (Danger)
     pending: '#F97316',      // Orange (Warning)
-    
+
     // Verification & Registration
     verified: '#22C55E',     // Strong Green
     unverified: '#EAB308',   // Amber
     unregistered: '#78716C', // Stone
-    
+
     // Product specific
     categories: '#06B6D4',   // Cyan
     brands: '#6366F1',       // Indigo
-    
+
     // Team specific
     'on notice': '#F59E0B',    // Amber (different shade)
 };
@@ -419,6 +419,10 @@ const Overview = () => {
     // --- DATA FETCHING ---
     useEffect(() => {
         dispatch(getDashboardCountsAction())
+        const fetchInitialData = async () => {
+            await Promise.all([dispatch(getAllActionAction())])
+        }
+        fetchInitialData()
     }, [dispatch])
 
     useEffect(() => {
