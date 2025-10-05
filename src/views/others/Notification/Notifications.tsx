@@ -186,7 +186,7 @@ const LogAction = ({
                     onChange={onCheckboxChange}
                 />
             </div>
-            <Dropdown
+            {/* <Dropdown
                 placement="bottom-end"
                 renderTitle={
                     <button
@@ -213,7 +213,7 @@ const LogAction = ({
                         <span>{item.label}</span>
                     </Dropdown.Item>
                 ))}
-            </Dropdown>
+            </Dropdown> */}
         </div>
     )
 }
