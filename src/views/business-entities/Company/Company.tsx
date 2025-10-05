@@ -4450,7 +4450,7 @@ const CompanyListTable = () => {
                             {itemDocs.map((doc, index) => (
                               <Tooltip
                                 key={index}
-                                title={`View: ${doc.name}`}
+                                title={`View: ${1}`}
                               >
                                 <button
                                   type="button"
