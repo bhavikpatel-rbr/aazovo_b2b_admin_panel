@@ -2249,7 +2249,12 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   const formMethods = useForm<CompanyFormSchema>({
     resolver: zodResolver(companySchema),
     mode: 'onTouched',
-    defaultValues: defaultValues,
+    defaultValues: {
+      ...defaultValues, 
+      partner_name: "", // <-- THIS IS THE FIX
+      company_name: "",
+      primary_email_id: "",
+    },
   });
   const { handleSubmit, reset, formState: { errors }, control, watch, trigger } = formMethods;
 
