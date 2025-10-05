@@ -174,7 +174,7 @@ const AddTaskModal = ({
                 <Form onSubmit={handleSubmit(onSubmit)}>
                     <div className="space-y-4">
                         <FormItem
-                            label="Task Title"
+                            label={<div>Task Title<span className="text-red-500"> * </span></div>}
                             invalid={!!errors.task_title}
                             errorMessage={errors.task_title?.message}
                         >
@@ -192,7 +192,7 @@ const AddTaskModal = ({
                         </FormItem>
 
                         <FormItem
-                            label="Assign To"
+                            label={<div>Assign To<span className="text-red-500"> * </span></div>}
                             invalid={!!errors.assign_to}
                             errorMessage={errors.assign_to?.message}
                         >
