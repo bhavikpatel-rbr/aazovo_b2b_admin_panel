@@ -1655,8 +1655,8 @@ const BankDetailsSection = ({ control, errors, formMethods, handlePreviewClick }
 
       <h4 className="mb-6">Bank Details (Secondary)</h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
-        <FormItem label="Secondary Beneficiary Number" invalid={!!errors.secondary_benificeiry_name} errorMessage={errors.secondary_benificeiry_name?.message as string}>
-          <Controller name="secondary_benificeiry_name" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
+        <FormItem label="Secondary Beneficiary Name" invalid={!!errors.secondary_benificeiry_name} errorMessage={errors.secondary_benificeiry_name?.message as string}>
+          <Controller name="secondary_benificeiry_name" control={control} render={({ field }) => (<Input placeholder="Secondary Beneficiary Name" {...field} />)} />
         </FormItem>
         <FormItem label="Secondary Bank Name" invalid={!!errors.secondary_bank_name} errorMessage={errors.secondary_bank_name?.message as string}>
           <Controller name="secondary_bank_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
@@ -2699,7 +2699,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
 
   const handleInvalidSubmit = (errors: FieldErrors<CompanyFormSchema>) => {
     console.error("Validation Errors: ", errors);
-    toast.push(<Notification type="danger" title="Validation Error"> Please fix the highlighted errors before submitting. </Notification>);
+    // toast.push(<Notification type="danger" title="Validation Error"> Please fix the highlighted errors before submitting. </Notification>);
   };
 
   const navigationKeys = companyNavigationList.map((item) => item.link);
