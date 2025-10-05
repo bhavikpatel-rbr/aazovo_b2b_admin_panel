@@ -123,13 +123,13 @@ export type PartnerItem = {
   primary_email_id: string;
   partner_website?: string;
   status:
-    | "Active"
-    | "Pending"
-    | "Inactive"
-    | "Verified"
-    | "active"
-    | "inactive"
-    | "Non Verified";
+  | "Active"
+  | "Pending"
+  | "Inactive"
+  | "Verified"
+  | "active"
+  | "inactive"
+  | "Non Verified";
   country: { name: string };
   continent: { name: string };
   state: string;
@@ -315,9 +315,8 @@ function exportToCsv(filename: string, rows: PartnerItem[]) {
     partner_name: row.partner_name || " ",
     company_name: row.company_name || " ",
     owner_name: row.owner_name || " ",
-    mobile_number: `${row.primary_contact_number_code || ""} ${
-      row.primary_contact_number || ""
-    }`.trim(),
+    mobile_number: `${row.primary_contact_number_code || ""} ${row.primary_contact_number || ""
+      }`.trim(),
     email_id: row.primary_email_id || " ",
     gst_number: row.gst_number || " ",
     industrial_expertise: row.industrial_expertise || " ",
@@ -437,9 +436,9 @@ const PartnerListProvider: React.FC<{ children: React.ReactNode }> = ({
     () =>
       Array.isArray(getAllUserData)
         ? getAllUserData.map((b) => ({
-            value: b.id,
-            label: `(${b.employee_id}) - ${b.name || " "}`,
-          }))
+          value: b.id,
+          label: `(${b.employee_id}) - ${b.name || " "}`,
+        }))
         : [],
     [getAllUserData]
   );
@@ -526,9 +525,8 @@ const DocumentViewer: React.FC<{
           <img
             src={document.url}
             alt={document.name}
-            className={`max-h-full max-w-full object-contain transition-opacity duration-300 ${
-              isContentLoaded ? "opacity-100" : "opacity-0"
-            }`}
+            className={`max-h-full max-w-full object-contain transition-opacity duration-300 ${isContentLoaded ? "opacity-100" : "opacity-0"
+              }`}
             onLoad={() => setIsContentLoaded(true)}
           />
         );
@@ -537,9 +535,8 @@ const DocumentViewer: React.FC<{
           <iframe
             src={document.url}
             title={document.name}
-            className={`w-full h-full border-0 transition-opacity duration-300 ${
-              isContentLoaded ? "opacity-100" : "opacity-0"
-            }`}
+            className={`w-full h-full border-0 transition-opacity duration-300 ${isContentLoaded ? "opacity-100" : "opacity-0"
+              }`}
             onLoad={() => setIsContentLoaded(true)}
           ></iframe>
         );
@@ -1770,11 +1767,9 @@ const SendPartnerEmailAction: React.FC<{
       return;
     }
     const subject = `Regarding Your Partnership: ${partner.partner_name}`;
-    const body = `Hello ${
-      partner.owner_name || partner.partner_name
-    },\n\nWe are contacting you regarding your partnership profile (ID: ${
-      partner.partner_code
-    }).\n\nThank you.`;
+    const body = `Hello ${partner.owner_name || partner.partner_name
+      },\n\nWe are contacting you regarding your partnership profile (ID: ${partner.partner_code
+      }).\n\nThank you.`;
 
     window.open(
       `mailto:${partner.primary_email_id}?subject=${encodeURIComponent(
@@ -1808,9 +1803,8 @@ const SendPartnerWhatsAppAction: React.FC<{
     }
 
     const fullPhoneNumber = `${countryCode}${phone}`;
-    const message = `Hello ${
-      partner.owner_name || partner.partner_name
-    },\nThis is a message regarding your partnership with us.`;
+    const message = `Hello ${partner.owner_name || partner.partner_name
+      },\nThis is a message regarding your partnership with us.`;
 
     window.open(
       `https://wa.me/${fullPhoneNumber}?text=${encodeURIComponent(message)}`,
@@ -2594,11 +2588,37 @@ const PartnerListTable = () => {
   };
 
   // --- MODIFIED: useMemo for filtering logic ---
+  // --- MODIFIED: useMemo for filtering logic ---
+  // --- MODIFIED: useMemo for filtering logic ---
+  // --- MODIFIED: useMemo for filtering logic ---
   const { pageData, total, allFilteredAndSortedData, activeFilterCount } =
     useMemo(() => {
+      // --- START: New Recursive Deep Search Function ---
+      // This function can search through nested objects and arrays.
+      const deepSearch = (obj: any, query: string): boolean => {
+        if (obj === null || obj === undefined) {
+          return false;
+        }
+
+        // If the item is an array, search each element in the array
+        if (Array.isArray(obj)) {
+          return obj.some((item) => deepSearch(item, query));
+        }
+
+        // If the item is an object, search each value in the object
+        if (typeof obj === "object") {
+          return Object.values(obj).some((value) => deepSearch(value, query));
+        }
+
+        // For primitive values (string, number, boolean), check for inclusion
+        return String(obj).toLowerCase().includes(query);
+      };
+      // --- END: New Recursive Deep Search Function ---
+
       let filteredData = [...partnerList];
 
-      // --- Apply all active filters ---
+      // --- Apply all active filters (Status, Country, etc.) ---
+      // ... (code for other filters remains the same)
       if (
         filterCriteria.filterStatus &&
         filterCriteria.filterStatus.length > 0
@@ -2618,7 +2638,7 @@ const PartnerListTable = () => {
         filteredData = filteredData.filter(
           (p) => p.industrial_expertise && selected.includes(p.industrial_expertise)
         );
-      } // --- ADDED ---
+      }
       if (
         filterCriteria.filterContinent &&
         filterCriteria.filterContinent.length > 0
@@ -2668,16 +2688,16 @@ const PartnerListTable = () => {
         });
       }
 
-      // --- Apply search query ---
+
+      // --- Apply QUICK SEARCH query using the deepSearch function ---
       if (tableData.query) {
         const lowerCaseQuery = tableData.query.toLowerCase();
-        filteredData = filteredData.filter((i) =>
-          Object.values(i).some((v) =>
-            String(v).toLowerCase().includes(lowerCaseQuery)
-          )
+        filteredData = filteredData.filter((item) =>
+          deepSearch(item, lowerCaseQuery)
         );
       }
 
+      // ... (code for counting filters, sorting, and pagination remains the same)
       // --- Count active filters for the badge ---
       let count = 0;
       count += (filterCriteria.filterStatus?.length ?? 0) > 0 ? 1 : 0;
@@ -2690,7 +2710,7 @@ const PartnerListTable = () => {
       count += (filterCriteria.filterKycVerified?.length ?? 0) > 0 ? 1 : 0;
       count +=
         filterCriteria.filterCreatedDate?.[0] &&
-        filterCriteria.filterCreatedDate?.[1]
+          filterCriteria.filterCreatedDate?.[1]
           ? 1
           : 0;
 
@@ -2716,7 +2736,6 @@ const PartnerListTable = () => {
         activeFilterCount: count,
       };
     }, [partnerList, tableData, filterCriteria]);
-
   const handleSetTableData = useCallback(
     (d: Partial<TableQueries>) => setTableData((p) => ({ ...p, ...d })),
     []
@@ -2757,9 +2776,8 @@ const PartnerListTable = () => {
   };
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
-    const fileName = `partners_export_${
-      new Date().toISOString().split("T")[0]
-    }.csv`;
+    const fileName = `partners_export_${new Date().toISOString().split("T")[0]
+      }.csv`;
     try {
       await dispatch(
         submitExportReasonAction({
@@ -2866,7 +2884,7 @@ const PartnerListTable = () => {
           return (
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
-               
+
                 <Link to={`/business-entities/partner-view/${id}`}>
                   <h6 className="text-xs font-semibold">
                     <em className="text-blue-600">
