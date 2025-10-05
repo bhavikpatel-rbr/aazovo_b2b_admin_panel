@@ -1551,7 +1551,11 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
     setTableData(prev => ({ ...prev, pageIndex: 1 }));
   };
 
-  const onRefreshData = () => { onClearFilters(); }; // Clearing filters will trigger a re-fetch
+  const onRefreshData = () => {
+    onClearFilters(); toast.push(
+      <Notification title="Data Refreshed" type="success" duration={2000} />
+    );
+  }; // Clearing filters will trigger a re-fetch
 
   // Data for the table is now directly from the Redux store
   const pageData = useMemo(() => MemberData?.data?.data || [], [MemberData]);
