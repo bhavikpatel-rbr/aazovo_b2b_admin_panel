@@ -531,9 +531,21 @@ interface AlertNote {
 
 // START: Activity Schema
 const activitySchema = z.object({
-  item: z.string().min(3, "Activity item is required and must be at least 3 characters."),
+  item: z.string().refine(
+    (value) => {
+      // Remove all whitespace characters and check the length
+      const withoutSpaces = value.replace(/\s/g, "");
+      return withoutSpaces.length >= 3;
+    },
+    {
+      // You can provide a single message or separate refines for min and max
+      message:
+        "Activity item is required and must be at least 3 characters.",
+    }
+  ),
   notes: z.string().optional(),
 });
+
 type ActivityFormData = z.infer<typeof activitySchema>;
 // END: Activity Schema
 
