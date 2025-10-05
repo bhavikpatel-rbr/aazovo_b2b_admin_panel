@@ -302,7 +302,7 @@ const TeamsTabView = ({ partner }: { partner: ApiSinglePartnerItem }) => {
     const teams = partner.partner_team_members || []; if (teams.length === 0) return <NoDataMessage message="No team members found." />; return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{teams.map(t => (<InfoCard key={t.id} title={t.person_name} data={[
         { label: 'Team', value: t.team_name },
         { label: 'Company Name', value: t.company_name },
-        { label: 'Email ID', value: t.email_id },
+        { label: 'Email ID', value: t.email },
         { label: 'Designation', value: t.designation },
         { label: 'Contact Number', value: t.number },
     ]} />))}</div>
