@@ -65,6 +65,7 @@ import {
   TbUsers,
   TbX
 } from "react-icons/tb";
+
 // Types
 import type { TableQueries } from "@/@types/common";
 import type {
@@ -72,7 +73,8 @@ import type {
   OnSortParam,
   Row,
 } from "@/components/shared/DataTable";
-import shallowEqual from "@/components/ui/utils/shallowEqual";
+
+// Redux imports
 import shallowEqual from "@/components/ui/utils/shallowEqual";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
@@ -93,6 +95,9 @@ import { getMenuRights } from "@/utils/getMenuRights";
 import dayjs from "dayjs";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { useSelector } from "react-redux";
+
+// --- Export Reason Schema ---
+const exportReasonSchema = z.object({
   reason: z.string().refine(
     (value) => {
       // Remove all whitespace characters and check the length
@@ -842,7 +847,7 @@ const StatusUpdateModal: React.FC<{
     <Dialog
       isOpen={true}
       width={700}
-
+      
       onClose={onClose}
       onRequestClose={onClose}
       title={`Change Status for: ${inquiry.inquiry_id}`}
@@ -893,12 +898,12 @@ const AssignToUpdateModal: React.FC<{
   const dispatch = useAppDispatch();
   const { getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
 
-
+  
   const [isLoading, setIsLoading] = useState(false);
   const usersDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((sp: ApiLookupItem) => ({ value: String(sp.id), label: `(${sp.employee_id}) - ${sp.name || 'N/A'}` })) : [], [getAllUserData]);
 
-  console.log("usersDataOptions", usersDataOptions);
-  console.log("usersData", getAllUserData);
+console.log("usersDataOptions",usersDataOptions);
+console.log("usersData",getAllUserData);
 
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<AssignUpdateFormData>({
     resolver: zodResolver(assigntoUpdateSchema),
@@ -1198,7 +1203,7 @@ const FormattedDateDisplay = ({
   if (!dateString || dateString === " ")
     return (
       <div className="text-[10px] text-gray-500 dark:text-gray-400">
-        {label && <b>{label}: </b>}
+        {label && <b>{label}: </b>} 
       </div>
     );
   try {
