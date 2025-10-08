@@ -30,7 +30,7 @@ import {
     Tag,
     Checkbox,
     Avatar,
-    Skeleton, // Skeleton is already imported
+    Skeleton,
 } from '@/components/ui'
 
 // Icons
@@ -156,8 +156,10 @@ const jobPostFormSchema = z.object({
     job_plateforms: z.any().optional().nullable(),
 })
 type JobPostFormData = z.infer<typeof jobPostFormSchema>
-const filterFormSchema = z.object({ filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(), filterDepartment: z.array(z.object({ value: z.string(), label: z.string() })).optional() })
-type FilterFormData = z.infer<typeof filterFormSchema>
+
+// UPDATED: No Zod schema for dynamic filters. Using a simple type.
+type FilterFormData = Record<string, SelectOption[]>
+
 const exportReasonSchema = z.object({
   reason: z.string().refine(
     (value) => {
@@ -166,9 +168,7 @@ const exportReasonSchema = z.object({
       return withoutSpaces.length >= 10 && withoutSpaces.length <= 255;
     },
     {
-      // You can provide a single message or separate refines for min and max
-      message:
-        "Reason must be between 10 and 255 characters, excluding spaces.",
+      message: "Reason must be between 10 and 255 characters, excluding spaces.",
     }
   ),
 });
@@ -373,26 +373,33 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, co
     );
 };
 
-const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, departmentOptions }: {
+// UPDATED: ActiveFiltersDisplay is now dynamic
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, labelMap }: {
     filterData: FilterFormData;
-    onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
+    onRemoveFilter: (key: string, value: string) => void;
     onClearAll: () => void;
-    departmentOptions: JobDepartmentOption[];
+    labelMap: Map<string, string>;
 }) => {
-    const { filterStatus, filterDepartment } = filterData;
-    if (!filterStatus?.length && !filterDepartment?.length) return null;
+    const activeFilters = Object.entries(filterData).filter(([, values]) => values && values.length > 0);
 
-    const departmentLabelMap = new Map(departmentOptions.map(d => [d.value, d.label]));
+    if (activeFilters.length === 0) return null;
 
     return (
         <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
             <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatus', item.value)} /></Tag>)}
-            {filterDepartment?.map(item => <Tag key={`dept-${item.value}`} prefix>Dept: {departmentLabelMap.get(item.value) || item.value} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterDepartment', item.value)} /></Tag>)}
+            {activeFilters.map(([key, items]) => (
+                items.map(item => (
+                    <Tag key={`${key}-${item.value}`} prefix>
+                        {labelMap.get(key) || key}: {item.label}
+                        <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(key, item.value)} />
+                    </Tag>
+                ))
+            ))}
             <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
         </div>
     );
 };
+
 
 type JobPostsTableProps = { columns: ColumnDef<JobPostItem>[]; data: JobPostItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: JobPostItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: JobPostItem) => void; onAllRowSelect: (checked: boolean, rows: Row<JobPostItem>[]) => void }
 const JobPostsTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: JobPostsTableProps) => (<DataTable menuName="job_post" selectable columns={columns} data={data} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} noData={!loading && data.length === 0} />)
@@ -407,7 +414,20 @@ const JobPostsListing = () => {
     const { jobPostsData = { data: [], counts: {} }, departmentsData = { data: [] }, getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
     const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData.data.map((dept: JobDepartmentListItem) => ({ value: String(dept.id), label: dept.name })) : [], [departmentsData?.data]);
     const userOptions: SelectOption[] = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(user => ({ value: String(user.id), label: `(${user.employee_id}) - ${user.name || ' '}` })) : [], [getAllUserData]);
-    console.log("departmentsData", departmentsData?.data);
+
+    // NEW: Configuration for dynamic filters
+    const FILTERABLE_CONFIG = useMemo(() => [
+        { key: 'status', label: 'Status', type: 'select', options: JOB_POST_STATUS_OPTIONS_FORM },
+        { key: 'job_department_id', label: 'Department', type: 'select', options: departmentOptions },
+        { key: 'location', label: 'Location', type: 'text' },
+        { key: 'experience', label: 'Experience', type: 'text' },
+    ], [departmentOptions]);
+
+    const filterLabelMap = useMemo(() => {
+        const map = new Map<string, string>();
+        FILTERABLE_CONFIG.forEach(item => map.set(item.key, item.label));
+        return map;
+    }, [FILTERABLE_CONFIG]);
 
     const [initialLoading, setInitialLoading] = useState(true);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
@@ -435,7 +455,8 @@ const JobPostsListing = () => {
         }
     };
 
-    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({ filterStatus: [], filterDepartment: [] });
+    // UPDATED: filterCriteria state is now a generic object
+    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'created_at' }, query: '' });
     const [selectedItems, setSelectedItems] = useState<JobPostItem[]>([]);
 
@@ -461,7 +482,10 @@ const JobPostsListing = () => {
     const defaultFormValues: JobPostFormData = useMemo(() => ({ job_title: '', job_department_id: departmentOptions[0]?.value || '', description: '', location: '', experience: '', vacancies: '1', status: 'Active', job_plateforms: [{ portal: '', link: '', application_count: 0, id: null }] }), [departmentOptions]);
     const formMethods = useForm<JobPostFormData>({ resolver: zodResolver(jobPostFormSchema), defaultValues: defaultFormValues, mode: 'onChange' });
     useEffect(() => { if ((isAddDrawerOpen || isEditDrawerOpen) && departmentOptions.length > 0 && !formMethods.getValues('job_department_id')) { formMethods.setValue('job_department_id', defaultFormValues.job_department_id, { shouldValidate: true }) } }, [departmentOptions, isAddDrawerOpen, isEditDrawerOpen, formMethods, defaultFormValues.job_department_id]);
-    const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
+    
+    // UPDATED: No Zod resolver for dynamic filter form
+    const filterFormMethods = useForm<FilterFormData>({ defaultValues: filterCriteria });
+    
     const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: '' }, mode: 'onChange' });
     const openAddDrawer = useCallback(() => { formMethods.reset(defaultFormValues); setEditingItem(null); setIsAddDrawerOpen(true) }, [formMethods, defaultFormValues]);
     const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
@@ -510,12 +534,129 @@ const JobPostsListing = () => {
     const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true) }, [filterFormMethods, filterCriteria]);
     const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
     const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })) }, []);
-    const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterStatus: data.filterStatus || [], filterDepartment: data.filterDepartment || [] }); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer() }, [closeFilterDrawer, handleSetTableData]);
-    const onClearFilters = useCallback(() => { const defaultFilters = { filterStatus: [], filterDepartment: [] }; filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); handleSetTableData({ pageIndex: 1, query: '' }); dispatch(getJobPostsAction()); setIsFilterDrawerOpen(false); setFilteredColumns(columns); }, [filterFormMethods, dispatch, handleSetTableData]);
-    const handleCardClick = (status?: JobPostStatusForm | 'all') => { onClearFilters(); if (status && status !== 'all') { const statusOption = JOB_POST_STATUS_OPTIONS_FORM.find(opt => opt.value === status); if (statusOption) { setFilterCriteria({ filterStatus: [statusOption] }); } } };
-    const handleRemoveFilter = (key: keyof FilterFormData, value: string) => { setFilterCriteria(prev => { const newFilters = { ...prev }; const currentValues = prev[key] as { value: string; label: string }[] | undefined; if (currentValues) { const newValues = currentValues.filter(item => item.value !== value); (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined; } return newFilters; }); setTableData(prev => ({ ...prev, pageIndex: 1 })); };
-    const { pageData, total, allFilteredAndSortedData } = useMemo(() => { const sourceData: JobPostItem[] = Array.isArray(jobPostsData?.data) ? jobPostsData?.data : []; let processedData: JobPostItem[] = cloneDeep(sourceData); if (filterCriteria.filterStatus?.length) { const statusValues = filterCriteria.filterStatus.map((s) => s.value); processedData = processedData.filter((item) => statusValues.includes(item.status)) } if (filterCriteria.filterDepartment?.length) { const deptValues = filterCriteria.filterDepartment.map((d) => d.value); processedData = processedData.filter((item) => deptValues.includes(String(item.job_department_id))) } if (tableData.query && tableData.query.trim() !== '') { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter((item) => Object.values(item).some((val) => String(val).toLowerCase().includes(query))) } const { order, key } = tableData.sort as OnSortParam; if (order && key && processedData.length > 0 && typeof key === 'string') { processedData.sort((a, b) => { const aVal = a[key as keyof JobPostItem]; const bVal = b[key as keyof JobPostItem]; if (key === 'created_at' || key === 'updated_at') { const dateA = aVal ? new Date(aVal as string).getTime() : 0; const dateB = bVal ? new Date(bVal as string).getTime() : 0; return order === 'asc' ? dateA - dateB : dateB - dateA } if (key === 'vacancies') { const numA = parseInt(String(aVal), 10); const numB = parseInt(String(bVal), 10); if (!isNaN(numA) && !isNaN(numB)) { return order === 'asc' ? numA - numB : numB - numA } } const aStr = String(aVal ?? '').toLowerCase(); const bStr = String(bVal ?? '').toLowerCase(); return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr) }) } const currentTotal = processedData.length; const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number; const startIndex = (pageIndex - 1) * pageSize; return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData } }, [jobPostsData?.data, tableData, filterCriteria]);
-    const activeFilterCount = useMemo(() => { return Object.values(filterCriteria).filter(value => Array.isArray(value) && value.length > 0).length; }, [filterCriteria]);
+    
+    // UPDATED: onApplyFiltersSubmit now works with the dynamic form data
+    const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
+        const activeFilters = Object.entries(data).reduce((acc, [key, value]) => {
+            if (value && value.length > 0) {
+                acc[key] = value;
+            }
+            return acc;
+        }, {} as FilterFormData);
+        setFilterCriteria(activeFilters);
+        handleSetTableData({ pageIndex: 1 });
+        closeFilterDrawer();
+    }, [closeFilterDrawer, handleSetTableData]);
+    
+    // UPDATED: onClearFilters is simpler
+    const onClearFilters = useCallback(() => {
+        filterFormMethods.reset({});
+        setFilterCriteria({});
+        handleSetTableData({ pageIndex: 1, query: '' });
+        setIsFilterDrawerOpen(false);
+        setFilteredColumns(columns);
+    }, [filterFormMethods, handleSetTableData]);
+
+    // UPDATED: handleCardClick works with the new state
+    const handleCardClick = (status?: JobPostStatusForm | 'all') => {
+        onClearFilters();
+        if (status && status !== 'all') {
+            const statusOption = JOB_POST_STATUS_OPTIONS_FORM.find(opt => opt.value === status);
+            if (statusOption) {
+                setFilterCriteria({ status: [statusOption] });
+            }
+        }
+    };
+    
+    // UPDATED: handleRemoveFilter is now generic
+    const handleRemoveFilter = (key: string, valueToRemove: string) => {
+        setFilterCriteria(prev => {
+            const newFilters = { ...prev };
+            const currentValues = newFilters[key];
+            if (currentValues) {
+                const newValues = currentValues.filter(item => item.value !== valueToRemove);
+                if (newValues.length > 0) {
+                    newFilters[key] = newValues;
+                } else {
+                    delete newFilters[key]; // Remove the key if the array is empty
+                }
+            }
+            return newFilters;
+        });
+        setTableData(prev => ({ ...prev, pageIndex: 1 }));
+    };
+
+    const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+        const sourceData: JobPostItem[] = Array.isArray(jobPostsData?.data) ? jobPostsData?.data : [];
+        let processedData: JobPostItem[] = cloneDeep(sourceData);
+    
+        // UPDATED: Dynamic filtering logic
+        const activeFilters = Object.entries(filterCriteria).filter(
+            ([, values]) => values && values.length > 0
+        );
+
+        if (activeFilters.length > 0) {
+            processedData = processedData.filter((item) => {
+                return activeFilters.every(([key, filterValues]) => {
+                    const itemValue = item[key as keyof JobPostItem] as any;
+                    const selectedValues = filterValues.map((opt) => opt.value);
+
+                    if (itemValue === null || itemValue === undefined) {
+                        return false;
+                    }
+                    
+                    const config = FILTERABLE_CONFIG.find(c => c.key === key);
+                    
+                    if (config?.type === 'text') {
+                        // For text, it's a "contains" search
+                        return String(itemValue).toLowerCase().includes(String(selectedValues[0]).toLowerCase());
+                    } else {
+                        // For selects, it's an "is one of" search
+                        return selectedValues.includes(String(itemValue));
+                    }
+                });
+            });
+        }
+    
+        if (tableData.query && tableData.query.trim() !== '') {
+            const query = tableData.query.toLowerCase().trim();
+            processedData = processedData.filter((item) => Object.values(item).some((val) => String(val).toLowerCase().includes(query)))
+        }
+    
+        const { order, key } = tableData.sort as OnSortParam;
+        if (order && key && processedData.length > 0 && typeof key === 'string') {
+            processedData.sort((a, b) => {
+                const aVal = a[key as keyof JobPostItem];
+                const bVal = b[key as keyof JobPostItem];
+                if (key === 'created_at' || key === 'updated_at') {
+                    const dateA = aVal ? new Date(aVal as string).getTime() : 0;
+                    const dateB = bVal ? new Date(bVal as string).getTime() : 0;
+                    return order === 'asc' ? dateA - dateB : dateB - dateA;
+                }
+                if (key === 'vacancies') {
+                    const numA = parseInt(String(aVal), 10);
+                    const numB = parseInt(String(bVal), 10);
+                    if (!isNaN(numA) && !isNaN(numB)) {
+                        return order === 'asc' ? numA - numB : numB - numA;
+                    }
+                }
+                const aStr = String(aVal ?? '').toLowerCase();
+                const bStr = String(bVal ?? '').toLowerCase();
+                return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+            });
+        }
+    
+        const currentTotal = processedData.length;
+        const pageIndex = tableData.pageIndex as number;
+        const pageSize = tableData.pageSize as number;
+        const startIndex = (pageIndex - 1) * pageSize;
+        return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
+    }, [jobPostsData?.data, tableData, filterCriteria, FILTERABLE_CONFIG]);
+
+    // UPDATED: activeFilterCount calculation
+    const activeFilterCount = useMemo(() => {
+        return Object.values(filterCriteria).filter(value => Array.isArray(value) && value.length > 0).length;
+    }, [filterCriteria]);
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return } exportReasonFormMethods.reset({ reason: '' }); setIsExportReasonModalOpen(true) };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const moduleName = 'JobPosts'; const timestamp = new Date().toISOString().split('T')[0]; const fileName = `job_posts_export_${timestamp}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); const exportSuccess = exportJobPostsToCsv(fileName, allFilteredAndSortedData, departmentOptions); if (exportSuccess) { toast.push(<Notification title="Export Successful" type="success">Data exported to {fileName}.</Notification>) } else if (allFilteredAndSortedData && allFilteredAndSortedData.length > 0) { toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>) } setIsExportReasonModalOpen(false) } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message || 'Could not submit export reason.'}</Notification>) } finally { setIsSubmittingExportReason(false) } };
     const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
@@ -527,7 +668,7 @@ const JobPostsListing = () => {
 
     const columns: ColumnDef<JobPostItem>[] = useMemo(() => [
         { header: 'Job Title', accessorKey: 'job_title', size: 150, enableSorting: true, cell: (props) => { const value = props.getValue<string>() || ''; const maxLength = 20; const isTrimmed = value.length > maxLength; const displayValue = isTrimmed ? `${value.slice(0, maxLength)}...` : value; return (<Tooltip title={isTrimmed ? value : ''}><span className="font-semibold cursor-help">{displayValue}</span></Tooltip>) } },
-        { header: 'Department', accessorKey: 'job_department_id', size: 160, enableSorting: true, cell: (props) => { return props?.row?.original?.job_department?.name || "" } },
+        { header: 'Department', accessorKey: 'job_department_id', size: 160, enableSorting: true, cell: (props) => { return departmentOptions.find(d => d.value === String(props.getValue()))?.label || ""; } },
         { header: 'Location', accessorKey: 'location', size: 130, enableSorting: true },
         { header: 'Vacancies', accessorKey: 'vacancies', size: 90, enableSorting: true, meta: { cellClass: 'text-center', headerClass: 'text-center' } },
         { header: 'Status', accessorKey: 'status', size: 100, enableSorting: true, cell: (props) => { const statusVal = props.getValue<JobPostStatusApi>(); return (<Tag className={classNames('capitalize whitespace-nowrap text-center', jobStatusColor[statusVal] || 'bg-gray-100 text-gray-600')}>{statusVal}</Tag>) } },
@@ -628,7 +769,9 @@ const JobPostsListing = () => {
                             isDataReady={isDataReady}
                         />
                     </div>
-                    <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} departmentOptions={departmentOptions} />
+                    {/* UPDATED: ActiveFiltersDisplay call with new props */}
+                    <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} labelMap={filterLabelMap} />
+
                     <div className="mt-4"><JobPostsTable columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /></div>
                 </AdaptiveCard>
             </Container>
@@ -639,10 +782,46 @@ const JobPostsListing = () => {
             <Drawer title={editingItem ? 'Edit Job Post' : 'Add New Job Post'} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={700} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="jobPostForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? editingItem ? 'Saving...' : 'Adding...' : editingItem ? 'Save' : 'Save'}</Button></div>}>
                 <Form id="jobPostForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-1">{renderDrawerForm(formMethods, editingItem)}</Form>
             </Drawer>
+            
+            {/* UPDATED: Filter drawer is now fully dynamic */}
             <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={<div className="text-right w-full flex justify-end gap-2"><Button size="sm" onClick={onClearFilters} type="button">Clear</Button><Button size="sm" variant="solid" form="filterJobPostForm" type="submit">Apply</Button></div>}>
                 <Form id="filterJobPostForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
-                    <FormItem label="Filter by Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Status" options={JOB_POST_STATUS_OPTIONS_FORM.map((s) => ({ value: s.value, label: s.label }))} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
-                    <FormItem label="Filter by Department"><Controller name="filterDepartment" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder={departmentOptions.length > 0 ? 'Any Department' : 'Loading...'} options={departmentOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} disabled={initialLoading} />)} /></FormItem>
+                    {FILTERABLE_CONFIG.map(({ key, label, type, options }) => (
+                        <FormItem key={key} label={`Filter by ${label}`}>
+                            <Controller
+                                name={key}
+                                control={filterFormMethods.control}
+                                render={({ field }) => {
+                                    if (type === 'select') {
+                                        return (
+                                            <Select
+                                                isMulti
+                                                placeholder={`Any ${label}`}
+                                                options={options}
+                                                value={field.value || []}
+                                                onChange={(val) => field.onChange(val || [])}
+                                            />
+                                        );
+                                    }
+                                    if (type === 'text') {
+                                        return (
+                                            <Input
+                                                placeholder={`Enter ${label}...`}
+                                                value={field.value?.[0]?.value || ''}
+                                                onChange={(e) => {
+                                                    const text = e.target.value;
+                                                    // Store as SelectOption[] to keep filterCriteria structure consistent
+                                                    const newFieldValue = text ? [{ value: text, label: text }] : [];
+                                                    field.onChange(newFieldValue);
+                                                }}
+                                            />
+                                        );
+                                    }
+                                    return null;
+                                }}
+                            />
+                        </FormItem>
+                    ))}
                 </Form>
             </Drawer>
 
