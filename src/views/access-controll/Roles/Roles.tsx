@@ -191,12 +191,10 @@ const ActiveFiltersDisplay = ({ filters, onRemoveFilter, onClearAll, departmentO
   );
 };
 
-// FIX: Corrected the component props to include `activeFilters`.
 const RoleTableTools = ({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, departmentOptions, allDesignationOptions, columns, visibleColumnKeys, setVisibleColumnKeys, searchInputValue, isDataReady }) => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const { control, handleSubmit, reset } = useForm<RoleFilterFormData>({ defaultValues: { filterDisplayName: '', department_ids: [], designation_ids: [] } });
 
-  // This useEffect hook depends on `activeFilters` and was causing the error.
   useEffect(() => { reset(activeFilters); }, [activeFilters, reset]);
 
   const onSubmit = (data: RoleFilterFormData) => { onApplyFilters(data); setIsFilterDrawerOpen(false); };
@@ -505,13 +503,12 @@ const RolesListing = () => {
     return { pageData: processedData.slice(startIndex, startIndex + tableData.pageSize), total: totalCount, allFilteredAndSortedData: processedData };
   }, [Roles, departmentsData, designationsData, tableData, activeFilters]);
 
-  // IMPROVEMENT: Refined logic to be more explicit, inspired by reference.
   const activeFilterCount = useMemo(() => {
     return Object.values(activeFilters).filter(value => {
       if (Array.isArray(value)) {
         return value.length > 0;
       }
-      return !!value; // For non-array values, check if they are truthy (e.g., a non-empty string).
+      return !!value;
     }).length;
   }, [activeFilters]);
 
@@ -528,7 +525,6 @@ const RolesListing = () => {
           </div>
           <ActiveFiltersDisplay filters={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFiltersAndReload} departmentOptions={departmentOptions} designationOptions={allDesignationOptions} />
           <div className="flex-grow overflow-auto">
-            {/* FIX: Added onPagingChange prop to enable pagination functionality. */}
             <DataTable
               menuName="roles"
               columns={filteredColumns}
@@ -559,7 +555,11 @@ const RolesListing = () => {
                 {...field}
                 onChange={val => {
                   field.onChange(val?.value);
+                  // FIX: When department changes, reset all dependent fields as they are auto-generated.
                   setValue('designation_id', '');
+                  setValue('display_name', '');
+                  setValue('name', '');
+                  setValue('description', '');
                 }}
                 value={departmentOptions.find(o => o.value === field.value)}
               />}

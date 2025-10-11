@@ -1417,7 +1417,7 @@ const AddPartnerNotificationDialog: React.FC<{
     defaultValues: {
       notification_title: `Regarding Partner: ${partner.partner_name}`,
       send_users: [],
-      message: `This is a notification regarding partner "${partner.partner_name}" (${partner.partner_code}). Please review their details.`,
+      message: `This is a notification regarding partner "${partner.partner_name}" (${String(partner.id).padStart(5, "0")}). Please review their details.`,
     },
     mode: "onChange",
   });
@@ -1445,6 +1445,9 @@ const AddPartnerNotificationDialog: React.FC<{
       setIsLoading(false);
     }
   };
+
+  console.log("partner",partner);
+  
 
   return (
     <Dialog

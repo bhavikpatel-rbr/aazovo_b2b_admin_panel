@@ -1438,6 +1438,9 @@ const ViewDocumentDialog = ({
         const [structureResponse, dataResponse] = await Promise.all([structurePromise, dataPromise]);
 
         const uiStructure = transformApiDataToFormStructure(structureResponse);
+
+        console.log("uiStructure",uiStructure);
+        
         if (uiStructure) {
           setFormStructure(uiStructure);
           setFilledData(dataResponse?.form_data || {});
@@ -1472,6 +1475,8 @@ const ViewDocumentDialog = ({
 
   if (!document) return null;
 
+  console.log("document",document);
+  
   const {
     status,
     document_number,
@@ -1485,8 +1490,12 @@ const ViewDocumentDialog = ({
     company,
     form,
     document: docTypeInfo,
+    
   } = document;
 
+
+  console.log("form[0]?.form_name",form.form_name);
+  
   const statusKey = (status?.toLowerCase().replace(/ /g, "_") ??
     "pending") as keyof typeof accountDocumentStatusColor;
   const statusColor = accountDocumentStatusColor[statusKey] || "bg-gray-100";
@@ -1494,6 +1503,9 @@ const ViewDocumentDialog = ({
 
   const canVerify = status && status !== 'approved' && status !== 'rejected';
 
+
+  console.log("isFormLoading",isFormLoading);
+  
   return (
     <Dialog
       isOpen={true}
@@ -1533,8 +1545,8 @@ const ViewDocumentDialog = ({
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <InfoItem
                   icon={<TbFileCertificate size={20} />}
-                  label="Document Type"
-                  value={docTypeInfo?.name}
+                  label="Form Type"
+                  value={form.form_name}
                 />
                 <InfoItem
                   icon={<TbFileCheck size={20} />}
@@ -1588,13 +1600,8 @@ const ViewDocumentDialog = ({
         </div>
         {/* --- Dialog Footer --- */}
         <div className="flex justify-between items-center p-4 border-t dark:border-gray-700">
-          <Button
-            type="button"
-            onClick={onClose}
-            disabled={isVerifying}
-          >
-            {/* Close */}
-          </Button>
+         <div></div>
+           
           {canVerify && form?.id && (
             <Button
               variant="solid"
