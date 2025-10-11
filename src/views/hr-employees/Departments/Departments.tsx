@@ -565,7 +565,7 @@ const DepartmentListing = () => {
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1, query: "" });
     dispatch(getDepartmentsAction());
-    toast.push(<Notification title="Data Refreshed" type="success">Filters cleared and data reloaded.</Notification>)
+    // toast.push(<Notification title="Data Refreshed" type="success">Filters cleared and data reloaded.</Notification>)
     setIsFilterDrawerOpen(false);
 }, [filterFormMethods, handleSetTableData, dispatch]);
 

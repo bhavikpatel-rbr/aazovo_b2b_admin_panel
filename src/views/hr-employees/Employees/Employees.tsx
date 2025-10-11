@@ -419,7 +419,7 @@ const EmployeesListing = () => {
        
         setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
         dispatch(getEmployeesListingAction());
-        toast.push(<Notification title="Data Refreshed" type="success" duration={3000}>Filters cleared and data reloaded.</Notification>);
+        // toast.push(<Notification title="Data Refreshed" type="success" duration={3000}>Filters cleared and data reloaded.</Notification>);
     }, [filterFormMethods, dispatch]);
     
     const handleRemoveFilter = (key: keyof EmployeeFilterFormData, valueToRemove: string) => { setFilterCriteria(prev => { const newCriteria = { ...prev }; const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined; if (currentFilterArray) { (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove); } return newCriteria; }); handleSetTableData({ pageIndex: 1 }); };
