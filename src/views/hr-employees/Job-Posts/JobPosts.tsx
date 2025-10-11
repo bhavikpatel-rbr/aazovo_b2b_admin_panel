@@ -144,22 +144,24 @@ const taskSchema = z.object({
 });
 type TaskFormData = z.infer<typeof taskSchema>;
 
-const jobPlatformSchema = z.object({ id: z.union([z.string(), z.number(), z.null()]).optional().nullable(), portal: z.string().optional().nullable(), link: z.string().url('Must be a valid URL (e.g., https://...).'), application_count: z.coerce.number({ invalid_type_error: 'Count must be a number.' }).int('Count must be a whole number.').min(0, 'Count must be non-negative.') })
+const jobPlatformSchema = z.object({ id: z.union([z.string(), z.number(), z.null()]).optional().nullable(), portal: z.string().optional().nullable(), link: z.string().url('Must be a valid URL (e.g., https://...).').or(z.literal('')).optional().nullable(), application_count: z.coerce.number({ invalid_type_error: 'Count must be a number.' }).int('Count must be a whole number.').min(0, 'Count must be non-negative.') })
 const jobPostFormSchema = z.object({
     job_title: z.string().min(1, 'Job Title is required.').max(150, 'Title too long (max 150 chars).'),
     job_department_id: z.string().min(1, 'Please select a department.'),
     description: z.string().optional().or(z.literal('')),
     location: z.string().optional().nullable(),
     experience: z.string().optional().nullable(),
-    // UPDATED: Changed vacancies validation to only accept positive numbers.
+    // UPDATED: Made 'vacancies' a required field with a minimum of 1.
+    // This ensures client-side validation catches empty submissions before they
+    // are sent to the server, preventing the generic "Add Failed" error.
     vacancies: z.coerce
-        .number({ invalid_type_error: 'Vacancies must be a number.' })
+        .number({ required_error: 'Vacancies are required.', invalid_type_error: 'Vacancies must be a number.' })
         .int({ message: 'Vacancies must be a whole number.' })
-        .min(1, { message: 'Must have at least one vacancy.' })
-        .optional()
-        .nullable(),
+        .min(1, { message: 'Must have at least one vacancy.' }),
     status: z.enum(jobPostStatusFormValues, { errorMap: () => ({ message: 'Please select a status.' }) }),
-    job_plateforms: z.any().optional().nullable(),
+    // UPDATED: Switched from z.any() to a typed array schema.
+    // This enables proper validation for each platform's fields, like ensuring the link is a valid URL.
+    job_plateforms: z.array(jobPlatformSchema).optional().nullable(),
 })
 type JobPostFormData = z.infer<typeof jobPostFormSchema>
 
@@ -507,7 +509,7 @@ const JobPostsListing = () => {
         setIsSubmitting(true);
         const loggedInUserId = '1';
         const jobPlatformsString = JSON.stringify(data.job_plateforms);
-        const baseApiPayload = { status: data.status as JobPostStatusApi, job_title: data.job_title, description: data.description, location: data.location, vacancies: data.vacancies, experience: data.experience, job_plateforms: jobPlatformsString, job_department_id: parseInt(data.job_department_id, 10) };
+        const baseApiPayload = { status: data.status as JobPostStatusApi, job_title: data.job_title, description: data.description, location: data.location, vacancies: String(data.vacancies), experience: data.experience, job_plateforms: jobPlatformsString, job_department_id: parseInt(data.job_department_id, 10) };
         try {
             if (editingItem && editingItem.id) {
                 const editPayload = { ...baseApiPayload, id: editingItem.id, _method: 'PUT', created_by: editingItem.created_by || loggedInUserId };
@@ -624,7 +626,7 @@ const JobPostsListing = () => {
                 if (key === 'created_at' || key === 'updated_at') {
                     const dateA = aVal ? new Date(aVal as string).getTime() : 0;
                     const dateB = bVal ? new Date(bVal as string).getTime() : 0;
-                    return order === 'asc' ? dateA - dateB : dateB - dateA;
+                    return order === 'asc' ? dateA - dateB : dateB - aVal;
                 }
                 if (key === 'vacancies') {
                     const numA = parseInt(String(aVal), 10);
@@ -659,7 +661,6 @@ const JobPostsListing = () => {
     const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<JobPostItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA] }); else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))) } }, []);
 
     const columns: ColumnDef<JobPostItem>[] = useMemo(() => [
-        // UPDATED: Removed `cursor-help` class from the span to hide the `?` on hover.
         { header: 'Job Title', accessorKey: 'job_title', size: 150, enableSorting: true, cell: (props) => { const value = props.getValue<string>() || ''; const maxLength = 20; const isTrimmed = value.length > maxLength; const displayValue = isTrimmed ? `${value.slice(0, maxLength)}...` : value; return (<Tooltip title={isTrimmed ? value : ''}><span className="font-semibold">{displayValue}</span></Tooltip>) } },
         { header: 'Department', accessorKey: 'job_department_id', size: 160, enableSorting: true, cell: (props) => { return departmentOptions.find(d => d.value === String(props.getValue()))?.label || ""; } },
         { header: 'Location', accessorKey: 'location', size: 130, enableSorting: true },
@@ -707,7 +708,6 @@ const JobPostsListing = () => {
                 <FormItem label={<div>Status<span className="text-red-500"> *</span></div>} invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}><Controller name="status" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={JOB_POST_STATUS_OPTIONS_FORM} value={JOB_POST_STATUS_OPTIONS_FORM.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></FormItem>
                 <FormItem label="Location" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.location} errorMessage={currentFormMethods.formState.errors.location?.message}><Controller name="location" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbMapPin />} placeholder="e.g., Remote, New York" />)} /></FormItem>
                 <FormItem label="Experience Required" invalid={!!currentFormMethods.formState.errors.experience} errorMessage={currentFormMethods.formState.errors.experience?.message}><Controller name="experience" control={currentFormMethods.control} render={({ field }) => (<Input {...field} placeholder="e.g., 2+ Years, Entry Level" />)} /></FormItem>
-                {/* UPDATED: Changed vacancies input to type="number" and updated placeholder. */}
                 <FormItem label="Total Vacancies" invalid={!!currentFormMethods.formState.errors.vacancies} errorMessage={currentFormMethods.formState.errors.vacancies?.message}>
                     <Controller
                         name="vacancies"
@@ -733,7 +733,7 @@ const JobPostsListing = () => {
                 {fields.map((field, index) => (
                     <div key={field.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto_auto] gap-x-3 gap-y-2 border p-3 rounded-md mb-3 items-end border-gray-200">
                         <FormItem label="Portal" className="mb-0" invalid={!!currentFormMethods.formState.errors.job_plateforms?.[index]?.portal} errorMessage={currentFormMethods.formState.errors.job_plateforms?.[index]?.portal?.message}><Controller name={`job_plateforms.${index}.portal`} control={currentFormMethods.control} render={({ field: controllerField }) => (<Select {...controllerField} placeholder="Select Portal" options={PORTAL_OPTIONS} value={PORTAL_OPTIONS.find((o) => o.value === controllerField.value)} onChange={(opt) => controllerField.onChange(opt?.value)} />)} /></FormItem>
-                        <FormItem label="Link" className="mb-0" invalid={!!currentFormMethods.formState.errors.job_plateforms?.[index]?.link} errorMessage={currentFormMethods.formState.errors.job_plateforms?.[index]?.link?.message}><Controller name={`job_plateforms.${index}.link`} control={currentFormMethods.control} render={({ field: controllerField }) => (<Input {...controllerField} placeholder="https://linkedin.com/jobs/..." />)} /></FormItem>
+                        <FormItem label="Link" className="mb-0" invalid={!!currentFormMethods.formState.errors.job_plateforms?.[index]?.link} errorMessage={currentFormMethods.formState.errors.job_plateforms?.[index]?.link?.message}><Controller name={`job_plateforms.${index}.link`} control={currentFormMethods.control} render={({ field: controllerField }) => (<Input {...controllerField} value={controllerField.value ?? ''} placeholder="https://linkedin.com/jobs/..." />)} /></FormItem>
                         <FormItem label="App. Count" className="mb-0 md:w-32" invalid={!!currentFormMethods.formState.errors.job_plateforms?.[index]?.application_count} errorMessage={currentFormMethods.formState.errors.job_plateforms?.[index]?.application_count?.message}><Controller name={`job_plateforms.${index}.application_count`} control={currentFormMethods.control} render={({ field: controllerField }) => (<Input {...controllerField} type="number" min={0} placeholder="0" />)} /></FormItem>
                         <Button type="button" size="sm" variant="plain" icon={<TbTrash />} onClick={() => remove(index)} className="text-red-500 self-center mb-1 md:mb-0" disabled={fields.length <= 1}></Button>
                     </div>
