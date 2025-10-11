@@ -97,7 +97,7 @@ import { getMenuRights } from '@/utils/getMenuRights'
 dayjs.extend(isToday)
 
 // --- TYPE DEFINITIONS & SCHEMAS ---
-interface JobApplicationApiItem { id: number; job_department_id: string | null; name: string; email: string; mobile_no: string | null; city?: string | null; state?: string | null; country?: string | null; nationality?: string | null; work_experience: string | null; job_title: string | null; application_date: string | null; status: string; resume_url?: string | null; application_link?: string | null; note?: string | null; job_id?: string | null; avatar?: string | null; is_schedule: number;[key: string]: any; }
+interface JobApplicationApiItem { id: number; job_department_id: string | null; name: string; email: string; mobile_no: string | null; city?: string | null; state?: string | null; country?: string | null; nationality?: string | null; work_experience: string | null; job_title: string | null; application_date: string | null; status: string; resume_url?: string | null; application_link?: string | null; note?: string | null; job_id?: string | null; avatar?: string | null; is_schedule: number; created_at?: string;[key: string]: any; }
 interface DepartmentItem { id: string | number; name: string; }
 interface UserItem { id: string | number; name: string; }
 type SelectOption = { value: any; label: string };
@@ -266,7 +266,8 @@ const JobApplicationListing = () => {
                 departmentName: apiItem.job_department_id ? departmentMap.get(String(apiItem.job_department_id)) || 'Unknown Dept.' : ' ',
                 jobTitle: apiItem.job_title || '',
                 workExperience: apiItem.work_experience || '',
-                applicationDate: apiItem.application_date ? new Date(apiItem.application_date) : new Date(),
+                // Use created_at for accurate "Today" filtering, with fallback to application_date
+                applicationDate: apiItem.created_at ? new Date(apiItem.created_at) : (apiItem.application_date ? new Date(apiItem.application_date) : new Date()),
                 resumeUrl: apiItem.resume || '',
                 notes: apiItem.note || '',
                 isSchedule: apiItem.is_schedule || 0,
