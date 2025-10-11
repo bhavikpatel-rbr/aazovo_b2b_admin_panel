@@ -330,7 +330,7 @@ const JobApplicationListing = () => {
         dispatch(getJobApplicationsAction());
         setShowOnlyScheduled(false);
         setShowOnlyToday(false);
-        toast.push(<Notification title="Data Refreshed" type="success" duration={3000}>Filters cleared and data reloaded.</Notification>)
+       
     }, [filterFormMethods, handleSetTableData, dispatch]);
     
     const handleRemoveFilter = (key: keyof FilterFormData, valueToRemove: string) => { setFilterCriteria(prev => { const newCriteria = { ...prev }; const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined; if (currentFilterArray) { (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove); } return newCriteria; }); handleSetTableData({ pageIndex: 1 }); };

@@ -151,19 +151,23 @@ const jobPostFormSchema = z.object({
     description: z.string().optional().or(z.literal('')),
     location: z.string().optional().nullable(),
     experience: z.string().optional().nullable(),
-    vacancies: z.string().optional().nullable(),
+    // UPDATED: Changed vacancies validation to only accept positive numbers.
+    vacancies: z.coerce
+        .number({ invalid_type_error: 'Vacancies must be a number.' })
+        .int({ message: 'Vacancies must be a whole number.' })
+        .min(1, { message: 'Must have at least one vacancy.' })
+        .optional()
+        .nullable(),
     status: z.enum(jobPostStatusFormValues, { errorMap: () => ({ message: 'Please select a status.' }) }),
     job_plateforms: z.any().optional().nullable(),
 })
 type JobPostFormData = z.infer<typeof jobPostFormSchema>
 
-// UPDATED: No Zod schema for dynamic filters. Using a simple type.
 type FilterFormData = Record<string, SelectOption[]>
 
 const exportReasonSchema = z.object({
   reason: z.string().refine(
     (value) => {
-      // Remove all whitespace characters and check the length
       const withoutSpaces = value.replace(/\s/g, "");
       return withoutSpaces.length >= 10 && withoutSpaces.length <= 255;
     },
@@ -373,7 +377,6 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, co
     );
 };
 
-// UPDATED: ActiveFiltersDisplay is now dynamic
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, labelMap }: {
     filterData: FilterFormData;
     onRemoveFilter: (key: string, value: string) => void;
@@ -415,7 +418,6 @@ const JobPostsListing = () => {
     const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData.data.map((dept: JobDepartmentListItem) => ({ value: String(dept.id), label: dept.name })) : [], [departmentsData?.data]);
     const userOptions: SelectOption[] = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(user => ({ value: String(user.id), label: `(${user.employee_id}) - ${user.name || ' '}` })) : [], [getAllUserData]);
 
-    // NEW: Configuration for dynamic filters
     const FILTERABLE_CONFIG = useMemo(() => [
         { key: 'status', label: 'Status', type: 'select', options: JOB_POST_STATUS_OPTIONS_FORM },
         { key: 'job_department_id', label: 'Department', type: 'select', options: departmentOptions },
@@ -455,7 +457,6 @@ const JobPostsListing = () => {
         }
     };
 
-    // UPDATED: filterCriteria state is now a generic object
     const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'created_at' }, query: '' });
     const [selectedItems, setSelectedItems] = useState<JobPostItem[]>([]);
@@ -479,11 +480,10 @@ const JobPostsListing = () => {
         fetchData();
     }, [dispatch]);
 
-    const defaultFormValues: JobPostFormData = useMemo(() => ({ job_title: '', job_department_id: departmentOptions[0]?.value || '', description: '', location: '', experience: '', vacancies: '1', status: 'Active', job_plateforms: [{ portal: '', link: '', application_count: 0, id: null }] }), [departmentOptions]);
+    const defaultFormValues: JobPostFormData = useMemo(() => ({ job_title: '', job_department_id: departmentOptions[0]?.value || '', description: '', location: '', experience: '', vacancies: 1, status: 'Active', job_plateforms: [{ portal: '', link: '', application_count: 0, id: null }] }), [departmentOptions]);
     const formMethods = useForm<JobPostFormData>({ resolver: zodResolver(jobPostFormSchema), defaultValues: defaultFormValues, mode: 'onChange' });
     useEffect(() => { if ((isAddDrawerOpen || isEditDrawerOpen) && departmentOptions.length > 0 && !formMethods.getValues('job_department_id')) { formMethods.setValue('job_department_id', defaultFormValues.job_department_id, { shouldValidate: true }) } }, [departmentOptions, isAddDrawerOpen, isEditDrawerOpen, formMethods, defaultFormValues.job_department_id]);
     
-    // UPDATED: No Zod resolver for dynamic filter form
     const filterFormMethods = useForm<FilterFormData>({ defaultValues: filterCriteria });
     
     const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: '' }, mode: 'onChange' });
@@ -499,7 +499,7 @@ const JobPostsListing = () => {
             if (Array.isArray(tempPlatforms) && tempPlatforms.length > 0) { parsedPlatforms = tempPlatforms.map((p) => ({ id: p.id || null, portal: p.portal || '', link: p.link || '', application_count: Number(p.application_count) || 0 })) }
             else { parsedPlatforms = [{ portal: '', link: '', application_count: 0, id: null }] }
         }
-        formMethods.reset({ job_title: item.job_title || '', job_department_id: String(item.job_department_id), description: item.description || '', location: item.location || '', experience: item.experience || '', vacancies: String(item.vacancies || ''), status: (item.status as JobPostStatusForm) || 'Active', job_plateforms: parsedPlatforms });
+        formMethods.reset({ job_title: item.job_title || '', job_department_id: String(item.job_department_id), description: item.description || '', location: item.location || '', experience: item.experience || '', vacancies: Number(item.vacancies) || 1, status: (item.status as JobPostStatusForm) || 'Active', job_plateforms: parsedPlatforms });
         setIsEditDrawerOpen(true)
     }, [formMethods]);
     const closeEditDrawer = useCallback(() => { setEditingItem(null); setIsEditDrawerOpen(false) }, []);
@@ -535,7 +535,6 @@ const JobPostsListing = () => {
     const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
     const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })) }, []);
     
-    // UPDATED: onApplyFiltersSubmit now works with the dynamic form data
     const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
         const activeFilters = Object.entries(data).reduce((acc, [key, value]) => {
             if (value && value.length > 0) {
@@ -548,7 +547,6 @@ const JobPostsListing = () => {
         closeFilterDrawer();
     }, [closeFilterDrawer, handleSetTableData]);
     
-    // UPDATED: onClearFilters is simpler
     const onClearFilters = useCallback(() => {
         filterFormMethods.reset({});
         setFilterCriteria({});
@@ -557,7 +555,6 @@ const JobPostsListing = () => {
         setFilteredColumns(columns);
     }, [filterFormMethods, handleSetTableData]);
 
-    // UPDATED: handleCardClick works with the new state
     const handleCardClick = (status?: JobPostStatusForm | 'all') => {
         onClearFilters();
         if (status && status !== 'all') {
@@ -568,7 +565,6 @@ const JobPostsListing = () => {
         }
     };
     
-    // UPDATED: handleRemoveFilter is now generic
     const handleRemoveFilter = (key: string, valueToRemove: string) => {
         setFilterCriteria(prev => {
             const newFilters = { ...prev };
@@ -578,7 +574,7 @@ const JobPostsListing = () => {
                 if (newValues.length > 0) {
                     newFilters[key] = newValues;
                 } else {
-                    delete newFilters[key]; // Remove the key if the array is empty
+                    delete newFilters[key];
                 }
             }
             return newFilters;
@@ -590,7 +586,6 @@ const JobPostsListing = () => {
         const sourceData: JobPostItem[] = Array.isArray(jobPostsData?.data) ? jobPostsData?.data : [];
         let processedData: JobPostItem[] = cloneDeep(sourceData);
     
-        // UPDATED: Dynamic filtering logic
         const activeFilters = Object.entries(filterCriteria).filter(
             ([, values]) => values && values.length > 0
         );
@@ -608,10 +603,8 @@ const JobPostsListing = () => {
                     const config = FILTERABLE_CONFIG.find(c => c.key === key);
                     
                     if (config?.type === 'text') {
-                        // For text, it's a "contains" search
                         return String(itemValue).toLowerCase().includes(String(selectedValues[0]).toLowerCase());
                     } else {
-                        // For selects, it's an "is one of" search
                         return selectedValues.includes(String(itemValue));
                     }
                 });
@@ -653,7 +646,6 @@ const JobPostsListing = () => {
         return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
     }, [jobPostsData?.data, tableData, filterCriteria, FILTERABLE_CONFIG]);
 
-    // UPDATED: activeFilterCount calculation
     const activeFilterCount = useMemo(() => {
         return Object.values(filterCriteria).filter(value => Array.isArray(value) && value.length > 0).length;
     }, [filterCriteria]);
@@ -667,7 +659,8 @@ const JobPostsListing = () => {
     const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<JobPostItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA] }); else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))) } }, []);
 
     const columns: ColumnDef<JobPostItem>[] = useMemo(() => [
-        { header: 'Job Title', accessorKey: 'job_title', size: 150, enableSorting: true, cell: (props) => { const value = props.getValue<string>() || ''; const maxLength = 20; const isTrimmed = value.length > maxLength; const displayValue = isTrimmed ? `${value.slice(0, maxLength)}...` : value; return (<Tooltip title={isTrimmed ? value : ''}><span className="font-semibold cursor-help">{displayValue}</span></Tooltip>) } },
+        // UPDATED: Removed `cursor-help` class from the span to hide the `?` on hover.
+        { header: 'Job Title', accessorKey: 'job_title', size: 150, enableSorting: true, cell: (props) => { const value = props.getValue<string>() || ''; const maxLength = 20; const isTrimmed = value.length > maxLength; const displayValue = isTrimmed ? `${value.slice(0, maxLength)}...` : value; return (<Tooltip title={isTrimmed ? value : ''}><span className="font-semibold">{displayValue}</span></Tooltip>) } },
         { header: 'Department', accessorKey: 'job_department_id', size: 160, enableSorting: true, cell: (props) => { return departmentOptions.find(d => d.value === String(props.getValue()))?.label || ""; } },
         { header: 'Location', accessorKey: 'location', size: 130, enableSorting: true },
         { header: 'Vacancies', accessorKey: 'vacancies', size: 90, enableSorting: true, meta: { cellClass: 'text-center', headerClass: 'text-center' } },
@@ -714,7 +707,23 @@ const JobPostsListing = () => {
                 <FormItem label={<div>Status<span className="text-red-500"> *</span></div>} invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}><Controller name="status" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={JOB_POST_STATUS_OPTIONS_FORM} value={JOB_POST_STATUS_OPTIONS_FORM.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></FormItem>
                 <FormItem label="Location" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.location} errorMessage={currentFormMethods.formState.errors.location?.message}><Controller name="location" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbMapPin />} placeholder="e.g., Remote, New York" />)} /></FormItem>
                 <FormItem label="Experience Required" invalid={!!currentFormMethods.formState.errors.experience} errorMessage={currentFormMethods.formState.errors.experience?.message}><Controller name="experience" control={currentFormMethods.control} render={({ field }) => (<Input {...field} placeholder="e.g., 2+ Years, Entry Level" />)} /></FormItem>
-                <FormItem label="Total Vacancies" invalid={!!currentFormMethods.formState.errors.vacancies} errorMessage={currentFormMethods.formState.errors.vacancies?.message}><Controller name="vacancies" control={currentFormMethods.control} render={({ field }) => (<Input {...field} type="text" prefix={<TbUsers />} placeholder="e.g., 5 or 'Multiple'" />)} /></FormItem>
+                {/* UPDATED: Changed vacancies input to type="number" and updated placeholder. */}
+                <FormItem label="Total Vacancies" invalid={!!currentFormMethods.formState.errors.vacancies} errorMessage={currentFormMethods.formState.errors.vacancies?.message}>
+                    <Controller
+                        name="vacancies"
+                        control={currentFormMethods.control}
+                        render={({ field }) => (
+                            <Input
+                                {...field}
+                                value={field.value ?? ''}
+                                type="number"
+                                min="1"
+                                prefix={<TbUsers />}
+                                placeholder="e.g., 5"
+                            />
+                        )}
+                    />
+                </FormItem>
                 <FormItem label="Description" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.description} errorMessage={currentFormMethods.formState.errors.description?.message}>
                     <Controller name="description" control={currentFormMethods.control} render={({ field }) => (<RichTextEditor {...field} content={field.value} onChange={(val) => field.onChange(val.html)} placeholder="Detailed job description..." />)} /></FormItem>
             </div>
@@ -769,7 +778,6 @@ const JobPostsListing = () => {
                             isDataReady={isDataReady}
                         />
                     </div>
-                    {/* UPDATED: ActiveFiltersDisplay call with new props */}
                     <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} labelMap={filterLabelMap} />
 
                     <div className="mt-4"><JobPostsTable columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /></div>
@@ -783,7 +791,6 @@ const JobPostsListing = () => {
                 <Form id="jobPostForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-1">{renderDrawerForm(formMethods, editingItem)}</Form>
             </Drawer>
             
-            {/* UPDATED: Filter drawer is now fully dynamic */}
             <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={<div className="text-right w-full flex justify-end gap-2"><Button size="sm" onClick={onClearFilters} type="button">Clear</Button><Button size="sm" variant="solid" form="filterJobPostForm" type="submit">Apply</Button></div>}>
                 <Form id="filterJobPostForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
                     {FILTERABLE_CONFIG.map(({ key, label, type, options }) => (
@@ -810,7 +817,6 @@ const JobPostsListing = () => {
                                                 value={field.value?.[0]?.value || ''}
                                                 onChange={(e) => {
                                                     const text = e.target.value;
-                                                    // Store as SelectOption[] to keep filterCriteria structure consistent
                                                     const newFieldValue = text ? [{ value: text, label: text }] : [];
                                                     field.onChange(newFieldValue);
                                                 }}
