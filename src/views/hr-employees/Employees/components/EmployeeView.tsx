@@ -135,10 +135,10 @@ const EmployeeProfileHeader: React.FC<{ employee: Employee }> = ({
             </div>
 
             <div className="flex-grow flex flex-col md:flex-row items-center justify-end gap-2">
-                 <div className="p-3 border rounded-md text-center">
+                 {/* <div className="p-3 border rounded-md text-center">
                     <p className="text-gray-500 text-xs mb-1 uppercase">Role</p>
                     <h6 className="font-bold mb-0">{roleName}</h6>
-                </div>
+                </div> */}
                 <div className="flex items-center gap-2">
                     <Button variant="solid" icon={<TbPencil />} onClick={() => navigate(`/hr-employees/employees/edit/${employee.id}`)}>Edit</Button>
                     <Button icon={<TbArrowLeft />} onClick={() => navigate('/hr-employees/employees')}>Back to List</Button>
