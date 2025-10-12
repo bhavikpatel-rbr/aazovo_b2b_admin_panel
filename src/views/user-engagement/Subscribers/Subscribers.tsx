@@ -61,22 +61,16 @@ import {
   TbSearch,
   TbTrash,
   TbUserCircle,
-  TbUserStar,
   TbWorld,
   TbX
 } from "react-icons/tb";
-
 // Types
 import type { TableQueries } from "@/@types/common";
 import type {
   CellContext,
   ColumnDef,
-  OnSortParam,
-  RowSelectionState
+  OnSortParam
 } from "@/components/shared/DataTable";
-import { SelectOption } from "../RequestFeedback/RequestAndFeedback";
-
-// Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addNotificationAction,
@@ -89,10 +83,9 @@ import {
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
-import { shallowEqual, useSelector } from "react-redux";
 import { getMenuRights } from "@/utils/getMenuRights";
-
-// --- Define Types ---
+import { shallowEqual, useSelector } from "react-redux";
+import { SelectOption } from "../RequestFeedback/RequestAndFeedback";
 export type ApiSubscriberItem = {
   id: number | string;
   email: string;
@@ -736,11 +729,11 @@ const SubscribersListing = () => {
     dispatch(getSubscribersAction());
 
     // Provide user feedback
-    toast.push(
-      <Notification title="Data Refreshed" type="success" duration={3000}>
-        All filters cleared and data updated.
-      </Notification>
-    );
+    // toast.push(
+    //   <Notification title="Data Refreshed" type="success" duration={3000}>
+    //     All filters cleared and data updated.
+    //   </Notification>
+    // );
   }, [filterFormMethods, dispatch]);
 
   const handleCardClick = (status: string) => { onClearFilters(); setFilterCriteria({ status: status }); };
@@ -932,6 +925,7 @@ const SubscribersListing = () => {
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<SubscriberItem>[]>(columns);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
+
   const activeFilterCount = useMemo(() => { let count = 0; if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) count++; if (filterCriteria.status && filterCriteria.status !== "") count++; return count; }, [filterCriteria]);
   const counts = rawApiSubscribers?.counts || {};
   const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
@@ -955,7 +949,7 @@ const SubscribersListing = () => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 mb-4 gap-2">
             <Tooltip title="Click to show all subscribers"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200 dark:border-blue-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200"><TbCaravan size={24} /></div><div><div className="text-blue-500">{renderCardContent(counts?.total)}</div><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show new subscribers"><div onClick={() => { }}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200 dark:border-violet-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200"><TbUserStar size={24} /></div><div><div className="text-violet-500">{renderCardContent(counts?.new)}</div><span className="font-semibold text-xs">New</span></div></Card></div></Tooltip>
+            {/* <Tooltip title="Click to show new subscribers"><div onClick={() => { handleCardClick("Subscribed") }}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200 dark:border-violet-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200"><TbUserStar size={24} /></div><div><div className="text-violet-500">{renderCardContent(counts?.new)}</div><span className="font-semibold text-xs">New</span></div></Card></div></Tooltip> */}
             <Tooltip title="Click to show subscribed users"><div onClick={() => handleCardClick("Subscribed")}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200 dark:border-green-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200"><TbMailForward size={24} /></div><div><div className="text-green-500">{renderCardContent(counts?.subscribed)}</div><span className="font-semibold text-xs">Subscribed</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show unsubscribed users"><div onClick={() => handleCardClick("Unsubscribed")}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200 dark:border-red-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-200"><TbCalendarCancel size={24} /></div><div><div className="text-red-500">{renderCardContent(counts?.unsubscribed)}</div><span className="font-semibold text-xs">Unsubscribed</span></div></Card></div></Tooltip>
           </div>
@@ -973,7 +967,7 @@ const SubscribersListing = () => {
 
           <div className="mt-4 flex-grow overflow-auto">
 
-            <DataTable menuName="subscriber" columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} noData={!tableLoading && pageData.length === 0} />
+            <DataTable menuName="subscriber" columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total: filteredColumns?.length === 1 && filteredColumns?.[0]?.id === "select" ? 0 : total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} noData={!tableLoading && pageData.length === 0} />
           </div>
         </AdaptiveCard>
       </Container>
@@ -1236,13 +1230,13 @@ const SubscribersListing = () => {
           required format.
         </p>
         <div className="mb-4">
-          <a
+          {/* <a
             href="/subscriber-import-template.csv"
             download
             className="inline-flex items-center gap-1 text-indigo-600 hover:underline"
           >
             <TbCloudDownload /> Download Template
-          </a>
+          </a> */}
         </div>
         <FormItem label="Upload File">
           <Input
