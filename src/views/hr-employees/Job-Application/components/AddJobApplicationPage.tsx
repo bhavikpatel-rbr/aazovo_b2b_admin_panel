@@ -109,25 +109,85 @@ const DocumentViewer: React.FC<{
 // --- Schemas & Types ---
 const phoneRegex = new RegExp(/^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/);
 
+
 const familyDetailSchema = z.object({
-    familyName: z.string().min(1, "Name is required."),
-    familyRelation: z.string().min(1, "Relation is required."),
-    familyOccupation: z.string().min(1, "Occupation is required."),
-    familyDateOfBirth: z.date().nullable(),
+  familyName: z
+    .string()
+    .trim()
+    .min(1, "Name is required.")
+    .refine((val) => val.trim().length > 0, "Name cannot be empty or whitespace."),
+
+  familyRelation: z
+    .string()
+    .trim()
+    .min(1, "Relation is required.")
+    .refine((val) => val.trim().length > 0, "Relation cannot be empty or whitespace."),
+
+  familyOccupation: z
+    .string()
+    .trim()
+    .min(1, "Occupation is required.")
+    .refine((val) => val.trim().length > 0, "Occupation cannot be empty or whitespace."),
+
+  // ✅ Handles both Date and string inputs, allows null
+  familyDateOfBirth: z
+    .preprocess(
+      (val) => (val === "" || val === null ? null : new Date(val as string)),
+      z.date().nullable()
+    ),
 });
 
+
 // MODIFIED: Made education dates required and more robust
-const educationalDetailSchema = z.object({
-    degree: z.string().min(1, "Degree is required."),
-    university: z.string().min(1, "University is required."),
-    percentageGrade: z.string().min(1, "Percentage/Grade is required."),
-    educationFromDate: z.coerce.date({ required_error: "Start date is required.", invalid_type_error: "Invalid start date." }),
-    educationToDate: z.coerce.date({ required_error: "End date is required.", invalid_type_error: "Invalid end date." }),
-    specialization: z.string().optional(),
-}).refine(data => {
-    if (data.educationFromDate && data.educationToDate) return data.educationToDate >= data.educationFromDate;
-    return true;
-}, { message: "End date must be on or after start date", path: ["educationToDate"], });
+const educationalDetailSchema = z
+    .object({
+        degree: z
+            .string()
+            .trim()
+            .min(1, "Degree is required.")
+            .refine((val) => val.trim().length > 0, "Degree cannot be empty or whitespace."),
+
+        university: z
+            .string()
+            .trim()
+            .min(1, "University is required.")
+            .refine((val) => val.trim().length > 0, "University cannot be empty or whitespace."),
+
+        percentageGrade: z
+            .string()
+            .trim()
+            .min(1, "Percentage/Grade is required.")
+            .refine((val) => val.trim().length > 0, "Percentage/Grade cannot be empty or whitespace."),
+
+        specialization: z
+            .string()
+            .trim()
+            .optional()
+            .refine((val) => !val || val.trim().length > 0, "Specialization cannot be whitespace."),
+
+        educationFromDate: z.coerce.date({
+            required_error: "Start date is required.",
+            invalid_type_error: "Invalid start date.",
+        }),
+
+        educationToDate: z.coerce.date({
+            required_error: "End date is required.",
+            invalid_type_error: "Invalid end date.",
+        }),
+    })
+    .refine(
+        (data) => {
+            if (data.educationFromDate && data.educationToDate) {
+                return data.educationToDate >= data.educationFromDate;
+            }
+            return true;
+        },
+        {
+            message: "End date must be on or after start date.",
+            path: ["educationToDate"],
+        }
+    );
+
 
 const employmentDetailSchema = z.object({
     organization: z.string().min(1, "Organization is required."),
@@ -147,7 +207,13 @@ export const applicationFormSchema = z.object({
     mobileNo: z.string().min(10, "Mobile number must be at least 10 digits.").regex(phoneRegex, "Invalid phone number format"),
     gender: z.string().optional().nullable(),
     dateOfBirth: z.date().optional().nullable(),
-    age: z.number().nullable(),
+    age: z
+        .number()
+        .int("Age must be an integer")
+        .min(0, "Age cannot be negative")
+        .max(120, "Age seems too high")
+        .nullable()
+        .optional(),
     nationality: z.number().optional().nullable(),
     maritalStatus: z.string().optional().nullable(),
     bloodGroup: z.string().optional().nullable(),
@@ -269,7 +335,7 @@ const transformApiToFormData = (apiData: any): ApplicationFormData => {
             familyOccupation: fd.familyOccupation || "",
             familyDateOfBirth: parseDate(fd.dob || fd.familyDateOfBirth)
         })),
-        
+
         educationalDetails: safeJsonParse(apiData.education_details).map((ed: any) => ({
             degree: ed.degree || "",
             university: ed.university || "",
@@ -379,7 +445,7 @@ const AddJobApplicationPage = () => {
     });
 
     useEffect(() => {
-        if (isEditMode && jobApplicationsData?.data) { 
+        if (isEditMode && jobApplicationsData?.data) {
             const fetchApplicationData = () => {
                 setIsLoadingData(true);
                 try {
@@ -401,8 +467,8 @@ const AddJobApplicationPage = () => {
             };
             fetchApplicationData();
         } else if (!isEditMode) {
-             reset({ status: "New", workExperienceType: "fresher", applicationDate: new Date(), educationalDetails: [], employmentDetails: [], familyDetails: [] });
-             setIsLoadingData(false);
+            reset({ status: "New", workExperienceType: "fresher", applicationDate: new Date(), educationalDetails: [], employmentDetails: [], familyDetails: [] });
+            setIsLoadingData(false);
         }
     }, [isEditMode, applicationId, navigate, reset, jobApplicationsData]);
 
@@ -493,7 +559,7 @@ const AddJobApplicationPage = () => {
                     <Card id="personalDetails" className="mb-6">
                         <h4 className="mb-6">1. Personal Details</h4>
                         <div className="grid md:grid-cols-4 gap-x-4 gap-y-2">
-                             <FormItem label={<div>Application Status<span className="text-red-500"> * </span></div>} error={errors.status?.message}><Controller name="status" control={control} render={({ field }) => <UiSelect placeholder="Select status" invalid={!!errors.status} options={applicationStatusOptions} value={applicationStatusOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />} /></FormItem>
+                            <FormItem label={<div>Application Status<span className="text-red-500"> * </span></div>} error={errors.status?.message}><Controller name="status" control={control} render={({ field }) => <UiSelect placeholder="Select status" invalid={!!errors.status} options={applicationStatusOptions} value={applicationStatusOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />} /></FormItem>
                             <FormItem label={<div>Job Department<span className="text-red-500"> * </span></div>} error={errors.department?.message}><Controller name="department" control={control} render={({ field }) => <UiSelect {...field} placeholder="Select Department" invalid={!!errors.department} options={departmentOptions} value={departmentOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
                             <FormItem label={<div>Applicant Name<span className="text-red-500"> * </span></div>} error={errors.name?.message}><Controller name="name" control={control} render={({ field }) => <Input {...field} invalid={!!errors.name} placeholder="Full name" />} /></FormItem>
                             <FormItem label={<div>Email<span className="text-red-500"> * </span></div>} error={errors.email?.message}><Controller name="email" control={control} render={({ field }) => <Input {...field} invalid={!!errors.email} type="email" placeholder="email@example.com" />} /></FormItem>
@@ -512,7 +578,7 @@ const AddJobApplicationPage = () => {
                             <FormItem label={<div>Applying for Job Title</div>} error={errors.jobTitle?.message}><Controller name="jobTitle" control={control} render={({ field }) => <Input {...field} invalid={!!errors.jobTitle} placeholder="e.g., Software Engineer" />} /></FormItem>
                             <FormItem label="Local Address" error={errors.localAddress?.message} className="md:col-span-2"><Controller name="localAddress" control={control} render={({ field }) => <Input textArea rows={2} invalid={!!errors.localAddress} placeholder="Enter Local Address" {...field} />} /></FormItem>
                             <FormItem label="Permanent Address" error={errors.permanentAddress?.message} className="md:col-span-2"><Controller name="permanentAddress" control={control} render={({ field }) => <Input textArea rows={2} invalid={!!errors.permanentAddress} placeholder="Enter Permanent Address" {...field} />} /></FormItem>
-                            
+
                             {workExperienceType === 'experienced' && (<>
                                 <FormItem label={<div>Total Experience</div>} error={errors.total_experience?.message}><Controller name="total_experience" control={control} render={({ field }) => <Input {...field} invalid={!!errors.total_experience} placeholder="e.g., 2 years 3 months" />} /></FormItem>
                                 <FormItem label={<div>Expected Salary</div>} error={errors.expected_salary?.message}><Controller name="expected_salary" control={control} render={({ field }) => <Input {...field} invalid={!!errors.expected_salary} placeholder="e.g., 5 LPA or Negotiable" />} /></FormItem>
@@ -520,34 +586,34 @@ const AddJobApplicationPage = () => {
                                 <FormItem label="Reference" error={errors.reference?.message} className={referenceValue && referenceValue.trim() !== "" ? "md:col-span-1" : "md:col-span-3"}><Controller name="reference" control={control} render={({ field }) => <Input {...field} invalid={!!errors.reference} placeholder="Reference contact or details" />} /></FormItem>
                                 {referenceValue && referenceValue.trim() !== "" && (<FormItem label={<div>Specify Reference</div>} error={errors.reference_specify?.message} className="md:col-span-2"><Controller name="reference_specify" control={control} render={({ field }) => <Input textArea rows={1} invalid={!!errors.reference_specify} {...field} placeholder="More details about the reference" />} /></FormItem>)}
                             </>)}
-                            
+
                             <FormItem label="Job ID" error={errors.jobId?.message}><Controller name="jobId" control={control} render={({ field }) => <Input {...field} invalid={!!errors.jobId} placeholder="e.g., JP001 or 0015" />} /></FormItem>
                             <FormItem label={<div>Application Date</div>} error={errors.applicationDate?.message}><Controller name="applicationDate" control={control} render={({ field }) => <DatePicker placeholder="Select date" {...field} invalid={!!errors.applicationDate} value={field.value} onChange={date => field.onChange(date)} />} /></FormItem>
-                           
+
                             {/* --- MODIFIED RESUME FIELD --- */}
                             <FormItem label="Resume" error={errors.resume?.message} className="lg:col-span-2 md:col-span-2">
                                 <div className="flex items-center gap-2">
-                                    <Controller 
-                                        name="resume" 
-                                        control={control} 
+                                    <Controller
+                                        name="resume"
+                                        control={control}
                                         render={({ field: { onChange, onBlur, name, ref } }) => (
-                                            <Input 
-                                                type="file" 
-                                                name={name} 
-                                                ref={ref} 
-                                                onBlur={onBlur} 
-                                                invalid={!!errors.resume} 
-                                                onChange={(e) => { onChange(e.target.files?.[0] || null); }} 
-                                                accept=".pdf,.doc,.docx,.txt" 
+                                            <Input
+                                                type="file"
+                                                name={name}
+                                                ref={ref}
+                                                onBlur={onBlur}
+                                                invalid={!!errors.resume}
+                                                onChange={(e) => { onChange(e.target.files?.[0] || null); }}
+                                                accept=".pdf,.doc,.docx,.txt"
                                                 className="flex-grow"
                                             />
-                                        )} 
+                                        )}
                                     />
                                     {resumeValue && (
-                                        <Button 
-                                            type="button" 
-                                            variant="twoTone" 
-                                            icon={<TbEye />} 
+                                        <Button
+                                            type="button"
+                                            variant="twoTone"
+                                            icon={<TbEye />}
                                             onClick={handlePreview}
                                         >
                                             Preview
@@ -563,7 +629,7 @@ const AddJobApplicationPage = () => {
                                 )}
                             </FormItem>
                             {/* --- END MODIFICATION --- */}
-                            <FormItem label="Job Application Link" error={errors.jobApplicationLink?.message}className="md:col-span-4" ><Controller name="jobApplicationLink" control={control} render={({ field }) => <Input {...field} invalid={!!errors.jobApplicationLink} placeholder="https://job-portal/apply/123 or text" />} /></FormItem>
+                            <FormItem label="Job Application Link" error={errors.jobApplicationLink?.message} className="md:col-span-4" ><Controller name="jobApplicationLink" control={control} render={({ field }) => <Input {...field} invalid={!!errors.jobApplicationLink} placeholder="https://job-portal/apply/123 or text" />} /></FormItem>
                             <FormItem label="Cover Letter" error={errors.coverLetter?.message} className="md:col-span-2"><Controller name="coverLetter" control={control} render={({ field }) => <Input {...field} invalid={!!errors.coverLetter} textArea rows={3} placeholder="Enter cover letter content..." />} /></FormItem>
                             <FormItem label="Remarks/General Notes" error={errors.notes?.message} className="md:col-span-2"><Controller name="notes" control={control} render={({ field }) => <Input {...field} invalid={!!errors.notes} textArea rows={3} placeholder="Enter additional notes or remarks..." />} /></FormItem>
                         </div>

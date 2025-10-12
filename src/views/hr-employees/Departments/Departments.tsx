@@ -99,8 +99,10 @@ const statusOptions: SelectOption[] = [
 const departmentFormSchema = z.object({
   name: z
     .string()
-    .min(1, "Department name is required.")
-    .max(100, "Department name cannot exceed 100 characters."),
+    .trim()
+    .min(1, "Department is required.")
+    .max(100, "Department name cannot exceed 100 characters.")
+    .refine((val) => val.trim().length > 0, "Department cannot be empty or whitespace."),
   status: z.enum(["Active", "Inactive"], {
     required_error: "Status is required.",
   }),
@@ -567,7 +569,7 @@ const DepartmentListing = () => {
     dispatch(getDepartmentsAction());
     // toast.push(<Notification title="Data Refreshed" type="success">Filters cleared and data reloaded.</Notification>)
     setIsFilterDrawerOpen(false);
-}, [filterFormMethods, handleSetTableData, dispatch]);
+  }, [filterFormMethods, handleSetTableData, dispatch]);
 
   const handleCardClick = (status: 'Active' | 'Inactive' | 'all') => {
     onClearFilters();

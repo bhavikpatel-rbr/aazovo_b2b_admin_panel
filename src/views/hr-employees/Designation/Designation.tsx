@@ -100,8 +100,10 @@ const statusColors: Record<string, string> = {
 const designationFormSchema = z.object({
   name: z
     .string()
-    .min(1, "Designation name is required.")
-    .max(150, "Designation name cannot exceed 150 characters."),
+    .trim()
+    .min(1, "Designation is required.")
+    .max(100, "Designation name cannot exceed 150 characters.")
+    .refine((val) => val.trim().length > 0, "Designation cannot be empty or whitespace."),
   department_id: z.array(z.string()).min(1, "At least one department is required."),
   reporting_manager: z.string().optional().nullable(),
   status: z.enum(["Active", "Inactive"], {
