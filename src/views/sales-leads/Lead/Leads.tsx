@@ -11,7 +11,6 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 // --- Icons ---
-import { TbCurrencyDollar } from 'react-icons/tb';
 
 dayjs.extend(isBetween);
 dayjs.extend(isSameOrBefore);
@@ -62,8 +61,6 @@ import {
   TbColumns,
   TbDownload,
   TbEye,
-  TbFileDescription,
-  TbFileInvoice,
   TbFileText,
   TbFileZip,
   TbFilter,
@@ -113,10 +110,10 @@ import {
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
+import { getMenuRights } from "@/utils/getMenuRights";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
 import { shallowEqual, useSelector } from "react-redux";
-import { getMenuRights } from "@/utils/getMenuRights";
 
 
 // --- START: NEW COMPONENT FOR PENDING LEAD DETAILS VIEW MODAL ---
@@ -255,7 +252,7 @@ const PendingLeadsModal = ({
     setSelectedLead(leadData);
     setIsViewModalOpen(true);
   };
-console.log("pendingLeads",pendingLeads);
+  console.log("pendingLeads", pendingLeads);
 
   return (
     <>
@@ -280,13 +277,13 @@ console.log("pendingLeads",pendingLeads);
                 </Table.THead>
                 <Table.TBody>
                   {pendingLeads.map((item) => (
-                    
+
                     <Table.Tr key={item.id}>
                       <Table.Td>{item.lead?.lead_number || `LD-${item.lead?.id}`}</Table.Td>
                       <Table.Td>{item.lead?.product?.name || ' '}</Table.Td>
                       <Table.Td>
                         <div className="text-xs">
-                          <p><strong>B:</strong> {item?.lead_info?.buyer?.name ||item?.lead?.lead_member_detail?.name }</p>
+                          <p><strong>B:</strong> {item?.lead_info?.buyer?.name || item?.lead?.lead_member_detail?.name}</p>
                           <p><strong>S:</strong> {item.lead?.lead_info?.seller?.name || ' '}</p>
                         </div>
                       </Table.Td>
@@ -573,8 +570,8 @@ const priorityOptions = [
 ];
 // --- NEW: Options for a new filter ---
 const memberTypeOptions = [
-    { value: 'Buyer', label: 'Buyer' },
-    { value: 'Supplier', label: 'Supplier' },
+  { value: 'Buyer', label: 'Buyer' },
+  { value: 'Supplier', label: 'Supplier' },
 ];
 const eventTypeOptions = [
   { value: "Meeting", label: "Meeting" },
@@ -2814,7 +2811,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     total: number;
     allFilteredAndSortedData: LeadListItem[];
   } => {
-    
+
     let processedData = mappedLeads;
     if (filterCriteria.dateRange?.[0] || filterCriteria.dateRange?.[1]) {
       const [start, end] = filterCriteria.dateRange.map((d) =>
@@ -2867,31 +2864,31 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           spIds.has(item.assigned_sales_person_id)
       );
     }
-    
+
     // --- NEW: FILTERING LOGIC ---
     if (filterCriteria.filterMemberType?.length) {
-        processedData = processedData.filter((item) => {
-            const hasBuyer = item.buyer && Object.keys(item.buyer).length > 0;
-            const hasSupplier = item.seller && Object.keys(item.seller).length > 0;
-            const matchesBuyer = filterCriteria.filterMemberType.includes('Buyer') && hasBuyer;
-            const matchesSupplier = filterCriteria.filterMemberType.includes('Supplier') && hasSupplier;
-            return matchesBuyer || matchesSupplier;
-        });
+      processedData = processedData.filter((item) => {
+        const hasBuyer = item.buyer && Object.keys(item.buyer).length > 0;
+        const hasSupplier = item.seller && Object.keys(item.seller).length > 0;
+        const matchesBuyer = filterCriteria.filterMemberType.includes('Buyer') && hasBuyer;
+        const matchesSupplier = filterCriteria.filterMemberType.includes('Supplier') && hasSupplier;
+        return matchesBuyer || matchesSupplier;
+      });
     }
     if (filterCriteria.filterCountryIds?.length) {
-        const countryIds = new Set(filterCriteria.filterCountryIds);
-        processedData = processedData.filter((item) => {
-            const buyerCountryId = item.buyer?.country?.id;
-            const sellerCountryId = item.seller?.country?.id;
-            return (buyerCountryId && countryIds.has(buyerCountryId)) || (sellerCountryId && countryIds.has(sellerCountryId));
-        });
+      const countryIds = new Set(filterCriteria.filterCountryIds);
+      processedData = processedData.filter((item) => {
+        const buyerCountryId = item.buyer?.country?.id;
+        const sellerCountryId = item.seller?.country?.id;
+        return (buyerCountryId && countryIds.has(buyerCountryId)) || (sellerCountryId && countryIds.has(sellerCountryId));
+      });
     }
     if (filterCriteria.filterProductSpecIds?.length) {
-        const specIds = new Set(filterCriteria.filterProductSpecIds);
-        processedData = processedData.filter((item) => {
-            const specId = item.rawApiData?.product_spec?.id;
-            return !!specId && specIds.has(specId);
-        });
+      const specIds = new Set(filterCriteria.filterProductSpecIds);
+      processedData = processedData.filter((item) => {
+        const specId = item.rawApiData?.product_spec?.id;
+        return !!specId && specIds.has(specId);
+      });
     }
     // --- END NEW FILTERING LOGIC ---
 
@@ -3016,7 +3013,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     return Array.from(countries, ([id, name]) => ({ value: id, label: name }))
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [mappedLeads]);
-  
+
   const productSpecOptions = useMemo(() => {
     if (!Array.isArray(mappedLeads)) return [];
     const specs = new Map<number, string>();
@@ -3641,7 +3638,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
                 data={pageData}
                 loading={tableIsLoading}
                 pagingData={{
-                  total,
+                  total: filteredColumns?.length === 0 ? 0 : total,
                   pageIndex: tableData.pageIndex as number,
                   pageSize: tableData.pageSize as number,
                 }}
@@ -3957,43 +3954,43 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           {/* --- NEW: FILTER UI ELEMENTS --- */}
           <FormItem label="Member Type">
             <Controller
-                name="filterMemberType"
-                control={filterFormMethods.control}
-                render={({ field }) => (
+              name="filterMemberType"
+              control={filterFormMethods.control}
+              render={({ field }) => (
                 <UiSelect
-                    isMulti
-                    options={memberTypeOptions}
-                    value={memberTypeOptions.filter((o) =>
+                  isMulti
+                  options={memberTypeOptions}
+                  value={memberTypeOptions.filter((o) =>
                     field.value?.includes(o.value)
-                    )}
-                    onChange={(opts: any) =>
+                  )}
+                  onChange={(opts: any) =>
                     field.onChange(opts?.map((o: any) => o.value) || [])
-                    }
-                    placeholder="Select member types..."
+                  }
+                  placeholder="Select member types..."
                 />
-                )}
+              )}
             />
-            </FormItem>
-           
-            <FormItem label="Product Specification">
+          </FormItem>
+
+          <FormItem label="Product Specification">
             <Controller
-                name="filterProductSpecIds"
-                control={filterFormMethods.control}
-                render={({ field }) => (
+              name="filterProductSpecIds"
+              control={filterFormMethods.control}
+              render={({ field }) => (
                 <UiSelect
-                    isMulti
-                    options={productSpecOptions}
-                    value={productSpecOptions.filter((o) =>
+                  isMulti
+                  options={productSpecOptions}
+                  value={productSpecOptions.filter((o) =>
                     field.value?.includes(o.value)
-                    )}
-                    onChange={(opts: any) =>
+                  )}
+                  onChange={(opts: any) =>
                     field.onChange(opts?.map((o: any) => o.value) || [])
-                    }
-                    placeholder="Select specifications..."
+                  }
+                  placeholder="Select specifications..."
                 />
-                )}
+              )}
             />
-            </FormItem>
+          </FormItem>
           {/* --- END NEW FILTER UI ELEMENTS --- */}
           <FormItem label="Date Range">
             <Controller

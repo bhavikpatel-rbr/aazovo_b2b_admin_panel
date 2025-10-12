@@ -429,7 +429,7 @@ const PendingLeadsModal = ({
   const navigate = useNavigate();
   const { getaccountdoc } = useSelector(masterSelector);
   const [pendingLeads, setPendingLeads] = useState<VerifiedLead[]>([]);
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<VerifiedLead | null>(null);
@@ -491,7 +491,7 @@ const PendingLeadsModal = ({
     navigate(path);
   };
 
-console.log("pendingLeads",pendingLeads);
+  console.log("pendingLeads", pendingLeads);
 
   return (
     <>
@@ -525,9 +525,9 @@ console.log("pendingLeads",pendingLeads);
                 <Table.TBody>
                   {pendingLeads.map((item) => (
                     <Table.Tr key={item.id}>
-                      
+
                       <Table.Td>
-<span className="font-semibold">{item?.lead_type == "Manual lead" ? `ML-${item?.id?.toString().padStart(5, '0')}` : item.lead_type == "Product lead" ? `PL-${item?.id?.toString().padStart(5, '0')}` : item.lead_type == "Wall lead" ? `WL-${item?.id?.toString().padStart(5, '0')}` : null}</span>
+                        <span className="font-semibold">{item?.lead_type == "Manual lead" ? `ML-${item?.id?.toString().padStart(5, '0')}` : item.lead_type == "Product lead" ? `PL-${item?.id?.toString().padStart(5, '0')}` : item.lead_type == "Wall lead" ? `WL-${item?.id?.toString().padStart(5, '0')}` : null}</span>
                         {/* {item?.lead_number || `LD-${item?.id}`} */}
                       </Table.Td>
                       <Table.Td>{item?.product?.name || " "}</Table.Td>
@@ -535,7 +535,7 @@ console.log("pendingLeads",pendingLeads);
                         <div className="text-xs">
                           <p>
                             <strong>B:</strong>{" "}
-                            {item?.lead_info?.buyer?.name ||item?.lead_member_detail?.name }
+                            {item?.lead_info?.buyer?.name || item?.lead_member_detail?.name}
                           </p>
                           <p>
                             <strong>S:</strong>{" "}
@@ -920,11 +920,11 @@ const AccountDocumentActionColumn = ({
           <TbChecklist />
         </div>
       </Tooltip>
-     { getMenuRights("account_documents")?.is_edit && <Tooltip title="Edit">
+      {getMenuRights("account_documents")?.is_edit && <Tooltip title="Edit">
         <div className="text-xl cursor-pointer" onClick={onEdit}>
           <TbPencil />
         </div>
-      </Tooltip> }
+      </Tooltip>}
       <Tooltip title="View">
         <div className="text-xl cursor-pointer" onClick={onView}>
           <TbEye />
@@ -1438,9 +1438,6 @@ const ViewDocumentDialog = ({
         const [structureResponse, dataResponse] = await Promise.all([structurePromise, dataPromise]);
 
         const uiStructure = transformApiDataToFormStructure(structureResponse);
-
-        console.log("uiStructure",uiStructure);
-        
         if (uiStructure) {
           setFormStructure(uiStructure);
           setFilledData(dataResponse?.form_data || {});
@@ -1461,7 +1458,7 @@ const ViewDocumentDialog = ({
     setIsVerifying(true);
     try {
       // axiosInstance.post(`/account_doc/status/${document.id}`, { status: "Verified" });
-      await dispatch(editaccountdocAction({ ...document, id: document.id,company_id: String(document.company_id), status: "Verified" })).unwrap()
+      await dispatch(editaccountdocAction({ ...document, id: document.id, company_id: String(document.company_id), status: "Verified" })).unwrap()
 
       toast.push(<Notification type="success" title="Document Verified!" />);
       onActionSuccess(); // Refresh the main table
@@ -1474,9 +1471,6 @@ const ViewDocumentDialog = ({
   };
 
   if (!document) return null;
-
-  console.log("document",document);
-  
   const {
     status,
     document_number,
@@ -1490,12 +1484,9 @@ const ViewDocumentDialog = ({
     company,
     form,
     document: docTypeInfo,
-    
+
   } = document;
 
-
-  console.log("form[0]?.form_name",form.form_name);
-  
   const statusKey = (status?.toLowerCase().replace(/ /g, "_") ??
     "pending") as keyof typeof accountDocumentStatusColor;
   const statusColor = accountDocumentStatusColor[statusKey] || "bg-gray-100";
@@ -1503,9 +1494,6 @@ const ViewDocumentDialog = ({
 
   const canVerify = status && status !== 'approved' && status !== 'rejected';
 
-
-  console.log("isFormLoading",isFormLoading);
-  
   return (
     <Dialog
       isOpen={true}
@@ -1600,8 +1588,8 @@ const ViewDocumentDialog = ({
         </div>
         {/* --- Dialog Footer --- */}
         <div className="flex justify-between items-center p-4 border-t dark:border-gray-700">
-         <div></div>
-           
+          <div></div>
+
           {canVerify && form?.id && (
             <Button
               variant="solid"
@@ -2158,7 +2146,7 @@ const AssignTaskDialog = ({
   };
 
   return (
-    <Dialog isOpen={true}  width={700} onClose={onClose}>
+    <Dialog isOpen={true} width={700} onClose={onClose}>
       <h5 className="mb-4">Assign Task for Doc: {document.document_number}</h5>
       <UiForm onSubmit={handleSubmit(onAssignTask)}>
         <UiFormItem
@@ -2172,52 +2160,52 @@ const AssignTaskDialog = ({
             render={({ field }) => <Input {...field} autoFocus />}
           />
         </UiFormItem>
-        
-          <UiFormItem
-            label="Assign To"
-            invalid={!!errors.assign_to}
-            errorMessage={errors.assign_to?.message}
-          >
-            <Controller
-              name="assign_to"
-              control={control}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder="Select User(s)"
-                  options={userOptions}
-                  value={userOptions.filter((o) =>
-                    field.value?.includes(o.value)
-                  )}
-                  onChange={(opts) =>
-                    field.onChange(opts?.map((o) => o.value) || [])
-                  }
-                />
-              )}
-            />
-          </UiFormItem>
-          
-        
+
         <UiFormItem
-            label="Priority"
-            invalid={!!errors.priority}
-            errorMessage={errors.priority?.message}
-          >
-            <Controller
-              name="priority"
-              control={control}
-              render={({ field }) => (
-                <UiSelect
-                  placeholder="Select Priority"
-                  options={taskPriorityOptions}
-                  value={taskPriorityOptions.find(
-                    (p) => p.value === field.value
-                  )}
-                  onChange={(opt) => field.onChange(opt?.value)}
-                />
-              )}
-            />
-          </UiFormItem>
+          label="Assign To"
+          invalid={!!errors.assign_to}
+          errorMessage={errors.assign_to?.message}
+        >
+          <Controller
+            name="assign_to"
+            control={control}
+            render={({ field }) => (
+              <UiSelect
+                isMulti
+                placeholder="Select User(s)"
+                options={userOptions}
+                value={userOptions.filter((o) =>
+                  field.value?.includes(o.value)
+                )}
+                onChange={(opts) =>
+                  field.onChange(opts?.map((o) => o.value) || [])
+                }
+              />
+            )}
+          />
+        </UiFormItem>
+
+
+        <UiFormItem
+          label="Priority"
+          invalid={!!errors.priority}
+          errorMessage={errors.priority?.message}
+        >
+          <Controller
+            name="priority"
+            control={control}
+            render={({ field }) => (
+              <UiSelect
+                placeholder="Select Priority"
+                options={taskPriorityOptions}
+                value={taskPriorityOptions.find(
+                  (p) => p.value === field.value
+                )}
+                onChange={(opt) => field.onChange(opt?.value)}
+              />
+            )}
+          />
+        </UiFormItem>
         <UiFormItem
           label="Due Date (Optional)"
           invalid={!!errors.due_date}
@@ -2923,56 +2911,56 @@ const AccountDocumentSelectedFooter = ({
 
 // --- Skeleton Loader Component ---
 const AccountDocumentSkeleton = () => {
-    return (
-        <Container className="h-auto">
-            <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-                {/* Header Skeleton */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                    <Skeleton className="h-8 w-48 mb-2 sm:mb-0" />
-                    <div className="flex items-center gap-2">
-                        <Skeleton className="h-10 w-32" />
-                        <Skeleton className="h-10 w-32" />
-                    </div>
-                </div>
-                {/* Cards Skeleton */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                        <Card key={i} bodyClass="flex gap-2 p-2">
-                            <Skeleton className="h-12 w-12 rounded-md" />
-                            <div className="flex-1 space-y-2">
-                                <Skeleton className="h-5 w-10" />
-                                <Skeleton className="h-3 w-16" />
-                            </div>
-                        </Card>
-                    ))}
-                </div>
-                {/* Filter Shortcuts Skeleton */}
-                <div className="flex flex-wrap items-center gap-2 mb-4">
-                    {Array.from({ length: 10 }).map((_, i) => (
-                        <Skeleton key={i} className="h-8 w-24" />
-                    ))}
-                </div>
-                {/* Table Tools Skeleton */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full mb-4">
-                    <Skeleton className="h-10 flex-grow" />
-                    <div className="flex gap-1">
-                        <Skeleton className="h-10 w-10" />
-                        <Skeleton className="h-10 w-10" />
-                        <Skeleton className="h-10 w-24" />
-                        <Skeleton className="h-10 w-28" />
-                    </div>
-                </div>
-                {/* Table Skeleton */}
-                <div className="flex-grow overflow-auto">
-                    <div className="space-y-2">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                            <Skeleton key={i} className="h-16 w-full" />
-                        ))}
-                    </div>
-                </div>
-            </AdaptiveCard>
-        </Container>
-    );
+  return (
+    <Container className="h-auto">
+      <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
+        {/* Header Skeleton */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+          <Skeleton className="h-8 w-48 mb-2 sm:mb-0" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+        </div>
+        {/* Cards Skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} bodyClass="flex gap-2 p-2">
+              <Skeleton className="h-12 w-12 rounded-md" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-5 w-10" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </Card>
+          ))}
+        </div>
+        {/* Filter Shortcuts Skeleton */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <Skeleton key={i} className="h-8 w-24" />
+          ))}
+        </div>
+        {/* Table Tools Skeleton */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full mb-4">
+          <Skeleton className="h-10 flex-grow" />
+          <div className="flex gap-1">
+            <Skeleton className="h-10 w-10" />
+            <Skeleton className="h-10 w-10" />
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-28" />
+          </div>
+        </div>
+        {/* Table Skeleton */}
+        <div className="flex-grow overflow-auto">
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
+        </div>
+      </AdaptiveCard>
+    </Container>
+  );
 };
 
 
@@ -2984,7 +2972,7 @@ const AccountDocument = () => {
     masterSelector,
     shallowEqual
   );
-  
+
   const [isLoading, setIsLoading] = useState(true); // Added loading state
 
   const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] = useState<boolean>(false);
@@ -3076,7 +3064,7 @@ const AccountDocument = () => {
   const onClearFilters = () => {
     // Reset all client-side filters
     handleShortcutClick("Total");
-    
+
     // Re-fetch data from the server
     dispatch(getaccountdocAction());
 
@@ -3726,34 +3714,38 @@ const AccountDocument = () => {
                 </Card>
               </div>
             </Tooltip>
-            <div className="cursor-default">
-              <Card
-                bodyClass={cardBodyClass}
-                className={classNames(cardClass, "border-violet-300")}
-              >
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                  <TbFileCheck size={24} />
-                </div>
-                <div>
-                  <h6 className="text-violet-500">{counts.aazovo}</h6>
-                  <span className="font-semibold text-xs">Aazovo Docs</span>
-                </div>
-              </Card>
-            </div>
-            <div className="cursor-default">
-              <Card
-                bodyClass={cardBodyClass}
-                className={classNames(cardClass, "border-pink-200")}
-              >
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
-                  <TbFileExcel size={24} />
-                </div>
-                <div>
-                  <h6 className="text-pink-500">{counts.omc}</h6>
-                  <span className="font-semibold text-xs">OMC Docs</span>
-                </div>
-              </Card>
-            </div>
+            <Tooltip title="Click to Aazovo Docs Documents">
+              <div onClick={() => handleShortcutClick("Aazovo Docs")}>
+                <Card
+                  bodyClass={cardBodyClass}
+                  className={classNames(cardClass, "border-violet-300")}
+                >
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                    <TbTagStarred size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-violet-500">{counts.aazovo}</h6>
+                    <span className="font-semibold text-xs">Aazovo Docs</span>
+                  </div>
+                </Card>
+              </div>
+            </Tooltip>
+            <Tooltip title="Click to OMC Docs Documents">
+              <div onClick={() => handleShortcutClick("OMC Docs")}>
+                <Card
+                  bodyClass={cardBodyClass}
+                  className={classNames(cardClass, "border-pink-400")}
+                >
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                    <TbTagStarred size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-pink-500">{counts.omc}</h6>
+                    <span className="font-semibold text-xs">OMC Docs</span>
+                  </div>
+                </Card>
+              </div>
+            </Tooltip>
           </div>
 
           {/* --- START: Header Filter Shortcuts --- */}

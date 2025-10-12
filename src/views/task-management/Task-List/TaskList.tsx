@@ -2270,7 +2270,7 @@ const TaskList = ({ isDashboard }: { isDashboard: boolean }) => {
                             data={pageData}
                             loading={tableLoading}
                             pagingData={{
-                                total,
+                                total: visibleColumns?.length ? total : 0 ,
                                 pageIndex: tableData.pageIndex as number,
                                 pageSize: tableData.pageSize as number,
                             }}

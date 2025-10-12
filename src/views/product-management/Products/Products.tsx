@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
-import cloneDeep from "lodash/cloneDeep";
+import dayjs from "dayjs"; // Import dayjs
 import React, {
   ChangeEvent,
   useCallback,
@@ -11,14 +11,14 @@ import React, {
 } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
-import dayjs from "dayjs"; // Import dayjs
 
 // UI Components
+import { RichTextEditor } from "@/components/shared";
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
 import DebouceInput from "@/components/shared/DebouceInput";
-import { RichTextEditor } from "@/components/shared";
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
   Button,
@@ -31,14 +31,12 @@ import {
   Form,
   FormItem,
   Input,
-  Select as UiSelect,
   Skeleton, // ADDED
   Tag,
+  Select as UiSelect,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Notification from "@/components/ui/Notification";
-import Spinner from "@/components/ui/Spinner";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
 
@@ -47,8 +45,6 @@ import {
   TbBell,
   TbBox,
   TbBrandProducthunt,
-  TbBrandWhatsapp,
-  TbCalendarEvent,
   TbCancel,
   TbCheck,
   TbCircleCheck,
@@ -64,7 +60,6 @@ import {
   TbFilter,
   TbInfoCircle,
   TbMail,
-  TbMailForward,
   TbPencil,
   TbPhoto,
   TbPlus,
@@ -73,51 +68,48 @@ import {
   TbReload,
   TbSearch,
   TbSettings,
-  TbSwitchHorizontal,
   TbTagStarred,
-  TbTrash,
-  TbUser,
-  TbX,
+  TbX
 } from "react-icons/tb";
 
 // Types
+import type { TableQueries } from "@/@types/common";
 import type {
   CellContext,
   ColumnDef,
   OnSortParam,
   Row,
 } from "@/components/shared/DataTable";
-import type { TableQueries } from "@/@types/common";
 
 // Redux
 import { authSelector } from "@/reduxtool/auth/authSlice";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-  addProductAction,
+  addAllActionAction,
   addNotificationAction,
+  addProductAction,
   addScheduleAction, // Added
   addTaskAction, // Added
-  addAllActionAction, // Added
   changeProductStatusAction,
   deleteAllProductsAction,
   deleteProductAction,
   editProductAction,
   getAllUsersAction,
   getBrandAction,
-  getParentCategoriesAction,
   getCountriesAction,
   getDomainsAction,
+  getParentCategoriesAction,
   getProductslistingAction, // MODIFIED: Assuming this is your action name
   getSubcategoriesByCategoryIdAction,
   getUnitAction,
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import { useSelector } from "react-redux";
-import { Link, useNavigate } from "react-router-dom";
+import { getMenuRights } from "@/utils/getMenuRights";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
-import { getMenuRights } from "@/utils/getMenuRights";
+import { useSelector } from "react-redux";
+import { Link, useNavigate } from "react-router-dom";
 
 // --- Type Definitions ---
 // ... (existing type definitions are correct)
@@ -1305,13 +1297,13 @@ const ActionColumn = React.memo(
         >
           <TbMail size={18} /> <span className="text-xs">Send Email</span>
         </Dropdown.Item>
-        <Dropdown.Item
+        {/* <Dropdown.Item
           onClick={() => onOpenModal("whatsapp", rowData)}
           className="flex items-center gap-2"
         >
           <TbBrandWhatsapp size={18} />{" "}
           <span className="text-xs">Send Whatsapp</span>
-        </Dropdown.Item>
+        </Dropdown.Item> */}
         <Dropdown.Item
           onClick={() => onOpenModal("notification", rowData)}
           className="flex items-center gap-2"
@@ -2089,8 +2081,8 @@ const Products = () => {
         id: apiItem.id,
         name: apiItem.name,
         email: "product.support@example.com",
-        contactNumber: "19876543210",
-        contactNumberCode: "+1",
+        // contactNumber: "19876543210",
+        // contactNumberCode: "+1",
         subject: `Inquiry about: ${apiItem.name}`,
         type: "Product Inquiry",
         slug: apiItem.slug,

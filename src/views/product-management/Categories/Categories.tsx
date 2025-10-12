@@ -1099,13 +1099,18 @@ const Categories = () => {
     }
     if (tableData.query && tableData.query.trim() !== "") {
       const query = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter((item) =>
-        item.name?.toLowerCase().includes(query) ||
-        item.slug?.toLowerCase().includes(query) ||
-        String(item.id).toLowerCase().includes(query) ||
-        item.status.toLowerCase().includes(query) ||
-        item.parentCategoryName?.toLowerCase().includes(query)
-      );
+      processedData = processedData.filter((item) => {
+        const formattedId = String(item.id).padStart(6, '0');
+        if (formattedId.includes(query)) {
+          return true;
+        }
+        return Object.values(item).some(value => {
+          if (value === null || value === undefined) {
+            return false;
+          }
+          return String(value).toLowerCase().includes(query);
+        });
+      });
     }
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key && processedData.length > 0) {
