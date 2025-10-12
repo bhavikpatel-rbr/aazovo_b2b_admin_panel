@@ -182,7 +182,12 @@ const requestFeedbackFormSchema = z.object({
     .string()
     .email("Invalid email address.")
     .min(1, "Email is required."),
-  mobile_no: z.string().min(1, "Mobile number is required.").max(20),
+  mobile_no: z.string({
+    required_error: "Mobile number is required",
+  })
+    .min(7, 'Mobile number must be at least 10 digits')
+    .max(15, 'Mobile number must be no more than 15 digits')
+    .regex(/^\+?[0-9]{10,15}$/, 'Invalid mobile number'),
   company_name: z.string().max(150).optional().or(z.literal("")).nullable(),
   type: z.enum(["Request", "Feedback"], { required_error: 'Type is required.' }),
   category_id: z.string().optional().nullable(),
@@ -238,7 +243,7 @@ const ItemActionColumn = ({
   onAddSchedule: () => void;
 }) => (
   <div className="flex items-center justify-center gap-1">
-   { getMenuRights("request_feedback")?.is_edit && <Tooltip title="Edit">
+    {getMenuRights("request_feedback")?.is_edit && <Tooltip title="Edit">
       <div
         className="text-xl p-1 cursor-pointer text-gray-500 hover:text-emerald-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
         role="button"
@@ -246,7 +251,7 @@ const ItemActionColumn = ({
       >
         <TbPencil />
       </div>
-    </Tooltip> }
+    </Tooltip>}
     <Tooltip title="View">
       <div
         className="text-xl p-1 cursor-pointer text-gray-500 hover:text-blue-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -817,19 +822,19 @@ const RequestAndFeedbackListing = () => {
     setTableData((prev) => ({ ...prev, pageIndex: 1 }));
     setIsFilterDrawerOpen(false);
   }, []);
-  
+
   const onClearFilters = useCallback(() => {
     filterFormMethods.reset({});
     setFilterCriteria({});
     if (searchInputRef.current) {
-        searchInputRef.current.value = '';
+      searchInputRef.current.value = '';
     }
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
     dispatch(getRequestFeedbacksAction());
-    toast.push(<Notification title="Data Refreshed" type="success" duration={3000}>Filters cleared and data updated.</Notification>);
+    // toast.push(<Notification title="Data Refreshed" type="success" duration={3000}>Filters cleared and data updated.</Notification>);
   }, [filterFormMethods, dispatch]);
 
-const handleCardClick = useCallback(
+  const handleCardClick = useCallback(
     (status?: RequestFeedbackStatus | "all") => {
       onClearFilters();
       if (status && status !== "all") {

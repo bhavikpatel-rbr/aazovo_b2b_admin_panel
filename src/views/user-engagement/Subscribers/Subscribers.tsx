@@ -292,9 +292,23 @@ export const statusColors: Record<string, string> = {
 const addEditSubscriberFormSchema = z.object({
   email: z.string().min(1, "Email is required.").email("Invalid email address."),
   name: z.string().max(100).optional().nullable(),
-  mobile_no: z.string().max(20).optional().nullable(),
+  mobile_no: z.string({
+    required_error: "Mobile number is required",
+  })
+    .min(7, 'Mobile number must be at least 10 digits')
+    .max(15, 'Mobile number must be no more than 15 digits')
+    .regex(/^\+?[0-9]{10,15}$/, 'Invalid mobile number'),
   subscriptionTypes: z.array(z.string()).min(1, "At least one subscription type is required."),
-  source: z.string().max(100).optional().nullable(),
+  source: z
+    .string({
+      invalid_type_error: "Source must be a string",
+    })
+    .trim()
+    .max(100, "Source URL cannot exceed 100 characters.")
+    .url({ message: "Please enter a valid URL (e.g., https://example.com)" })
+    .or(z.literal('')) // Allows an empty string ""
+    .nullable() // Allows null
+    .optional(), // Allows undefined
   status: z.enum(statusValues, { required_error: "Status is required." }),
   remarks: z.string().max(1000).optional().nullable(),
 });
@@ -707,25 +721,25 @@ const SubscribersListing = () => {
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); }, []);
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
-  
+
   const onClearFilters = useCallback(() => {
     const defaultFilters = filterFormSchema.parse({});
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     setSelectedRows([]);
     if (searchInputRef.current) {
-        searchInputRef.current.value = '';
+      searchInputRef.current.value = '';
     }
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
-    
+
     // Re-fetch data from the server
     dispatch(getSubscribersAction());
 
     // Provide user feedback
     toast.push(
-        <Notification title="Data Refreshed" type="success" duration={3000}>
-            All filters cleared and data updated.
-        </Notification>
+      <Notification title="Data Refreshed" type="success" duration={3000}>
+        All filters cleared and data updated.
+      </Notification>
     );
   }, [filterFormMethods, dispatch]);
 

@@ -542,21 +542,83 @@ const Brands = () => {
   const [selectedItems, setSelectedItems] = useState<BrandItem[]>([]);
 
   const brandNameOptions = useMemo(() => Array.isArray(mappedBrands) ? [...new Set(mappedBrands.map((brand) => brand.name))].sort((a, b) => a.localeCompare(b)).map((name) => ({ value: name, label: name })) : [], [mappedBrands]);
-
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+    // 1. Start with a clean copy of the mapped brands data
     let processedData: BrandItem[] = cloneDeep(mappedBrands);
-    if (filterCriteria.filterNames && filterCriteria.filterNames.length > 0) { const selectedNames = filterCriteria.filterNames.map((opt) => opt.value.toLowerCase()); processedData = processedData.filter((item) => selectedNames.includes(item.name.toLowerCase())); }
-    if (filterCriteria.filterStatuses && filterCriteria.filterStatuses.length > 0) { const selectedStatuses = filterCriteria.filterStatuses.map((opt) => opt.value); processedData = processedData.filter((item) => selectedStatuses.includes(item.status)); }
-    if (tableData.query && tableData.query.trim() !== "") { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter((item) => item.name?.toLowerCase().includes(query) || item.slug?.toLowerCase().includes(query) || String(item.id).toLowerCase().includes(query) || item.mobileNo?.toLowerCase().includes(query) || item.status.toLowerCase().includes(query)); }
+
+    // 2. Apply the drawer filters first (if any)
+    if (filterCriteria.filterNames && filterCriteria.filterNames.length > 0) {
+      const selectedNames = filterCriteria.filterNames.map((opt) => opt.value.toLowerCase());
+      processedData = processedData.filter((item) =>
+        selectedNames.includes(item.name.toLowerCase())
+      );
+    }
+    if (filterCriteria.filterStatuses && filterCriteria.filterStatuses.length > 0) {
+      const selectedStatuses = filterCriteria.filterStatuses.map((opt) => opt.value);
+      processedData = processedData.filter((item) =>
+        selectedStatuses.includes(item.status)
+      );
+    }
+
+    // 3. Apply the global quick search on the already filtered data
+    if (tableData.query && tableData.query.trim() !== "") {
+      const query = tableData.query.toLowerCase().trim();
+
+      processedData = processedData.filter((item) => {
+        // Create an array of all searchable fields for the current item
+        const searchableFields = [
+          String(item.id).padStart(6, '0'), // Padded ID for matching display value
+          item.name,
+          item.slug,
+          item.mobileNo,
+          item.status,
+        ];
+
+        // Check if any of the fields include the search query
+        return searchableFields.some(field =>
+          field && field.toString().toLowerCase().includes(query)
+        );
+      });
+    }
+
+    // 4. Apply sorting to the final filtered data
     const { order, key } = tableData.sort as OnSortParam;
-    if (order && key && processedData.length > 0) { const sortKey = key as keyof BrandItem; processedData.sort((a, b) => { let aValue = a[sortKey]; let bValue = b[sortKey]; if (sortKey === "createdAt" || sortKey === "updatedAt") { aValue = new Date(aValue as string).getTime(); bValue = new Date(bValue as string).getTime(); } else if (sortKey === "id" || sortKey === "showHeader") { aValue = Number(aValue); bValue = Number(bValue); } if (aValue === null || aValue === undefined) aValue = "" as any; if (bValue === null || bValue === undefined) bValue = "" as any; if (typeof aValue === "string" && typeof bValue === "string") return order === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue); else if (typeof aValue === "number" && typeof bValue === "number") return order === "asc" ? aValue - bValue : bValue - aValue; return 0; }); }
+    if (order && key && processedData.length > 0) {
+      const sortKey = key as keyof BrandItem;
+      processedData.sort((a, b) => {
+        let aValue = a[sortKey];
+        let bValue = b[sortKey];
+
+        if (sortKey === "createdAt" || sortKey === "updatedAt") {
+          aValue = new Date(aValue as string).getTime();
+          bValue = new Date(bValue as string).getTime();
+        } else if (sortKey === "id" || sortKey === "showHeader") {
+          aValue = Number(aValue);
+          bValue = Number(bValue);
+        }
+
+        if (aValue === null || aValue === undefined) aValue = "" as any;
+        if (bValue === null || bValue === undefined) bValue = "" as any;
+
+        if (typeof aValue === "string" && typeof bValue === "string") {
+          return order === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+        } else if (typeof aValue === "number" && typeof bValue === "number") {
+          return order === "asc" ? aValue - bValue : bValue - aValue;
+        }
+        return 0;
+      });
+    }
+
+    // 5. Paginate the data for the current view
     const dataToExport = [...processedData];
     const currentTotal = processedData.length;
     const pageIndex = tableData.pageIndex as number;
     const pageSize = tableData.pageSize as number;
     const startIndex = (pageIndex - 1) * pageSize;
     const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+
     return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
+
   }, [mappedBrands, tableData, filterCriteria]);
 
   const activeFilterCount = useMemo(() => {
