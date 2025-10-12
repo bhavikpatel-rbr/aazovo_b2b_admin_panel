@@ -13,6 +13,7 @@ dayjs.extend(relativeTime);
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
 import DebouceInput from "@/components/shared/DebouceInput";
@@ -28,21 +29,18 @@ import {
   FormItem,
   Input,
   Select,
+  Skeleton,
   Tag,
-  Skeleton, // Added Skeleton
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
 import Notification from "@/components/ui/Notification";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import Spinner from "@/components/ui/Spinner";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  TbAlarm,
   TbArrowDownLeft,
   TbArrowUpRight,
   TbBell,
@@ -50,12 +48,11 @@ import {
   TbCalendarDown,
   TbCalendarEvent,
   TbCalendarUp,
-  TbCancel,
   TbChecks,
-  TbCircleCheck,
   TbClockHour4,
   TbCloudUpload,
   TbColumns,
+  TbCopy,
   TbDownload,
   TbEye,
   TbFileText,
@@ -65,27 +62,24 @@ import {
   TbMail,
   TbPencil,
   TbPlus,
-  TbRefresh,
   TbReload,
   TbSearch,
+  TbShoppingCart,
+  TbTag,
   TbTagStarred,
-  TbTrash,
   TbUser,
   TbUserCircle,
-  TbX,
-  TbCheck,
-  TbCopy,
-  TbTag,
-  TbShoppingCart,
+  TbX
 } from "react-icons/tb";
 
 // Redux
+import { authSelector } from "@/reduxtool/auth/authSlice";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addAllActionAction,
   addNotificationAction,
   addScheduleAction,
   addTaskAction,
-  addAllActionAction,
   deleteAllDemandsAction,
   deleteAllOffersAction,
   deleteDemandAction,
@@ -97,7 +91,6 @@ import {
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual, useSelector } from "react-redux";
-import { authSelector } from "@/reduxtool/auth/authSlice";
 
 // Types
 import type { TableQueries as CommonTableQueries } from "@/@types/common";
@@ -107,9 +100,9 @@ import type {
   OnSortParam,
   Row,
 } from "@/components/shared/DataTable";
+import { getMenuRights } from "@/utils/getMenuRights";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
-import { getMenuRights } from "@/utils/getMenuRights";
 
 interface TableQueries extends CommonTableQueries { }
 
@@ -434,7 +427,7 @@ const ViewDetailsDialog: React.FC<{
   // I've added this to demonstrate the UI. You should get this from your `item` prop.
   const itemWithProducts = {
     ...item,
-    products: item.products ,
+    products: item.products,
   };
   // --- End of Mock Data ---
 
@@ -487,10 +480,10 @@ const ViewDetailsDialog: React.FC<{
             </h6>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
               <DialogDetailRow label="Created By" value={item.createdByInfo.userName} />
-             
+
               <DialogDetailRow label="Created Date" value={dayjs(item.createdDate).format("D MMM YYYY, h:mm A")} />
               <DialogDetailRow label="Last Updated" value={item.updated_at ? dayjs(item.updated_at).format("D MMM YYYY, h:mm A") : ' '} />
-             
+
             </div>
           </div>
 
@@ -964,7 +957,7 @@ const AddActivityDialog: React.FC<{
               type="submit"
               loading={isLoading}
               disabled={!isValid || isLoading}
-             
+
             >
               Save Activity
             </Button>
@@ -2026,7 +2019,7 @@ const OffersDemands = () => {
         return;
       }
       if (type === "whatsapp") {
-        const phone = "1234567890"; // Placeholder phone number
+        const phone = ""; // Placeholder phone number
         if (!phone) {
           toast.push(
             <Notification type="danger" title="Invalid Phone Number" />
@@ -2861,56 +2854,56 @@ const OffersDemands = () => {
             </div>
           </div>
           {currentTab === TABS.ALL && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
-            <Tooltip title="Click to show all items">
-              <div onClick={onClearFilters}>
-                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}>
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={24} /></div>
-                  <div>{renderCardContent(offerDemandCounts?.total, "text-blue-500")}<span className="font-semibold text-xs">Total</span></div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show only offers">
-              <div onClick={() => handleCardClick("item", "Offer")}>
-                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}>
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbArrowUpRight size={24} /></div>
-                  <div>{renderCardContent(offerDemandCounts?.offers, "text-green-500")}<span className="font-semibold text-xs">Offers</span></div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show only demands">
-              <div onClick={() => handleCardClick("item", "Demand")}>
-                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}>
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbArrowDownLeft size={24} /></div>
-                  <div>{renderCardContent(offerDemandCounts?.demands, "text-violet-500")}<span className="font-semibold text-xs">Demands</span></div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show items created today">
-              <div onClick={() => handleCardClick("item", "Today")}>
-                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-amber-300")}>
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-amber-100 text-amber-500"><TbClockHour4 size={24} /></div>
-                  <div>{renderCardContent(offerDemandCounts?.today, "text-amber-500")}<span className="font-semibold text-xs">Today</span></div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show offers created today">
-              <div onClick={() => handleCardClick("item", "Today")}>
-                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-teal-200")}>
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-teal-100 text-teal-500"><TbCalendarUp size={24} /></div>
-                  <div>{renderCardContent(offerDemandCounts?.today_offers, "text-teal-500")}<span className="font-semibold text-xs">Today Offers</span></div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show demands created today">
-              <div onClick={() => handleCardClick("item", "Today")}>
-                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-rose-200")}>
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-rose-100 text-rose-500"><TbCalendarDown size={24} /></div>
-                  <div>{renderCardContent(offerDemandCounts?.today_demands, "text-rose-500")}<span className="font-semibold text-xs">Today Demands</span></div>
-                </Card>
-              </div>
-            </Tooltip>
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+              <Tooltip title="Click to show all items">
+                <div onClick={onClearFilters}>
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}>
+                    <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={24} /></div>
+                    <div>{renderCardContent(offerDemandCounts?.total, "text-blue-500")}<span className="font-semibold text-xs">Total</span></div>
+                  </Card>
+                </div>
+              </Tooltip>
+              <Tooltip title="Click to show only offers">
+                <div onClick={() => handleCardClick("item", "Offer")}>
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}>
+                    <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbArrowUpRight size={24} /></div>
+                    <div>{renderCardContent(offerDemandCounts?.offers, "text-green-500")}<span className="font-semibold text-xs">Offers</span></div>
+                  </Card>
+                </div>
+              </Tooltip>
+              <Tooltip title="Click to show only demands">
+                <div onClick={() => handleCardClick("item", "Demand")}>
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}>
+                    <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbArrowDownLeft size={24} /></div>
+                    <div>{renderCardContent(offerDemandCounts?.demands, "text-violet-500")}<span className="font-semibold text-xs">Demands</span></div>
+                  </Card>
+                </div>
+              </Tooltip>
+              <Tooltip title="Click to show items created today">
+                <div onClick={() => handleCardClick("item", "Today")}>
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-amber-300")}>
+                    <div className="h-12 w-12 rounded-md flex items-center justify-center bg-amber-100 text-amber-500"><TbClockHour4 size={24} /></div>
+                    <div>{renderCardContent(offerDemandCounts?.today, "text-amber-500")}<span className="font-semibold text-xs">Today</span></div>
+                  </Card>
+                </div>
+              </Tooltip>
+              <Tooltip title="Click to show offers created today">
+                <div onClick={() => handleCardClick("item", "Today")}>
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-teal-200")}>
+                    <div className="h-12 w-12 rounded-md flex items-center justify-center bg-teal-100 text-teal-500"><TbCalendarUp size={24} /></div>
+                    <div>{renderCardContent(offerDemandCounts?.today_offers, "text-teal-500")}<span className="font-semibold text-xs">Today Offers</span></div>
+                  </Card>
+                </div>
+              </Tooltip>
+              <Tooltip title="Click to show demands created today">
+                <div onClick={() => handleCardClick("item", "Today")}>
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-rose-200")}>
+                    <div className="h-12 w-12 rounded-md flex items-center justify-center bg-rose-100 text-rose-500"><TbCalendarDown size={24} /></div>
+                    <div>{renderCardContent(offerDemandCounts?.today_demands, "text-rose-500")}<span className="font-semibold text-xs">Today Demands</span></div>
+                  </Card>
+                </div>
+              </Tooltip>
+            </div>
           )}
           <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
             <nav className="-mb-px flex space-x-8" aria-label="Tabs">
@@ -2972,7 +2965,7 @@ const OffersDemands = () => {
                 data={pageData}
                 loading={isOverallLoading || dataForExportLoading}
                 pagingData={{
-                  total: totalItems,
+                  total: filteredColumns?.length ? totalItems : 0,
                   pageIndex: currentTableConfig.pageIndex as number,
                   pageSize: currentTableConfig.pageSize as number,
                 }}
@@ -3063,7 +3056,7 @@ const OffersDemands = () => {
       </ConfirmDialog>
       <Drawer
         title="Filters"
-     
+
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
