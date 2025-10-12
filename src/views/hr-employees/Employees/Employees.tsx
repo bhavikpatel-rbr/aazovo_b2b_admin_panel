@@ -1,9 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import classNames from "classnames";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from 'react-router-dom';
 import { z } from "zod";
-import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -14,15 +14,15 @@ import DebouceInput from "@/components/shared/DebouceInput";
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
     Card,
+    Checkbox,
+    DatePicker,
     Drawer,
     Dropdown,
     Form,
     FormItem,
     Input,
-    Select as UiSelect,
-    Checkbox,
-    DatePicker,
-    Skeleton
+    Skeleton,
+    Select as UiSelect
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
@@ -33,6 +33,7 @@ import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
+import { BsThreeDotsVertical } from "react-icons/bs";
 import {
     TbBell,
     TbBrandWhatsapp,
@@ -47,16 +48,14 @@ import {
     TbPencil,
     TbPlus,
     TbReload,
-    TbSearch,
     TbTagStarred,
     TbUserCheck,
     TbUserCircle,
     TbUserExclamation,
     TbUsers,
     TbUserX,
-    TbX,
+    TbX
 } from "react-icons/tb";
-import { BsThreeDotsVertical } from "react-icons/bs";
 
 // Types
 import type { TableQueries } from "@/@types/common";
@@ -69,22 +68,22 @@ import type {
 // Redux & Utils
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+    addAllActionAction,
     addNotificationAction,
     addScheduleAction,
-    addAllActionAction,
+    getAllUsersAction,
     getDepartmentsAction,
     getDesignationsAction,
     getEmployeesListingAction,
     getRolesAction,
-    getAllUsersAction,
     submitExportReasonAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import dayjs from "dayjs";
-import { shallowEqual, useSelector } from "react-redux";
-import { encryptStorage } from "@/utils/secureLocalStorage";
-import { config } from "localforage";
 import { getMenuRights } from "@/utils/getMenuRights";
+import { encryptStorage } from "@/utils/secureLocalStorage";
+import dayjs from "dayjs";
+import { config } from "localforage";
+import { shallowEqual, useSelector } from "react-redux";
 
 
 // --- Type Definitions ---
@@ -119,18 +118,18 @@ const eventTypeOptions: SelectOption[] = [{ value: 'Meeting', label: 'Meeting' }
 const employeeFilterFormSchema = z.object({ filterDepartments: z.array(z.object({ value: z.string(), label: z.string() })).optional(), filterDesignations: z.array(z.object({ value: z.string(), label: z.string() })).optional(), filterStatuses: z.array(z.object({ value: z.string(), label: z.string() })).optional(), filterRoles: z.array(z.object({ value: z.string(), label: z.string() })).optional() });
 type EmployeeFilterFormData = z.infer<typeof employeeFilterFormSchema>;
 const exportReasonSchema = z.object({
-  reason: z.string().refine(
-    (value) => {
-      // Remove all whitespace characters and check the length
-      const withoutSpaces = value.replace(/\s/g, "");
-      return withoutSpaces.length >= 10 && withoutSpaces.length <= 255;
-    },
-    {
-      // You can provide a single message or separate refines for min and max
-      message:
-        "Reason must be between 10 and 255 characters, excluding spaces.",
-    }
-  ),
+    reason: z.string().refine(
+        (value) => {
+            // Remove all whitespace characters and check the length
+            const withoutSpaces = value.replace(/\s/g, "");
+            return withoutSpaces.length >= 10 && withoutSpaces.length <= 255;
+        },
+        {
+            // You can provide a single message or separate refines for min and max
+            message:
+                "Reason must be between 10 and 255 characters, excluding spaces.",
+        }
+    ),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 const notificationSchema = z.object({ notification_title: z.string().min(3, "Subject is required."), message: z.string().min(10, "Message must be at least 10 characters."), send_users: z.array(z.string()).min(1, "At least one recipient is required.") });
@@ -412,16 +411,16 @@ const EmployeesListing = () => {
     const openFilterDrawer = () => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); };
     const closeFilterDrawer = () => setIsFilterDrawerOpen(false);
     const onApplyFiltersSubmit = (data: EmployeeFilterFormData) => { setFilterCriteria(data); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); };
-    
+
     const onClearFilters = useCallback(() => {
         filterFormMethods.reset({});
         setFilterCriteria({});
-       
+
         setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
         dispatch(getEmployeesListingAction());
         // toast.push(<Notification title="Data Refreshed" type="success" duration={3000}>Filters cleared and data reloaded.</Notification>);
     }, [filterFormMethods, dispatch]);
-    
+
     const handleRemoveFilter = (key: keyof EmployeeFilterFormData, valueToRemove: string) => { setFilterCriteria(prev => { const newCriteria = { ...prev }; const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined; if (currentFilterArray) { (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove); } return newCriteria; }); handleSetTableData({ pageIndex: 1 }); };
 
     const handleCardFilterClick = (status: EmployeeStatus | null) => {
@@ -446,14 +445,73 @@ const EmployeesListing = () => {
     // Memoized Data Processing
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
         let processedData = [...employees];
-        if (filterCriteria.filterDepartments?.length) { const v = filterCriteria.filterDepartments.map((o) => o.label.toLowerCase()); processedData = processedData.filter((e: any) => v.includes(e.department?.toLowerCase())); }
-        if (filterCriteria.filterDesignations?.length) { const v = filterCriteria.filterDesignations.map((o) => o.label.toLowerCase()); processedData = processedData.filter((e: any) => v.includes(e.designation?.toLowerCase())); }
-        if (filterCriteria.filterStatuses?.length) { const v = filterCriteria.filterStatuses.map((o) => o.value); processedData = processedData.filter((e) => v.includes(e.status)); }
-        if (filterCriteria.filterRoles?.length) { const v = filterCriteria.filterRoles.map((o) => o.label.toLowerCase()); processedData = processedData.filter((e: any) => e.roles.some((role: any) => v.includes(role?.toLowerCase()))); }
-        if (tableData.query) { const query = tableData.query.toLowerCase(); processedData = processedData.filter((e: any) => e.name.toLowerCase().includes(query) || e.email.toLowerCase().includes(query)); }
+
+        // --- Specific column filters ---
+        if (filterCriteria.filterDepartments?.length) {
+            const v = filterCriteria.filterDepartments.map((o) => o.label.toLowerCase());
+            processedData = processedData.filter((e: any) => v.includes(e.department?.toLowerCase()));
+        }
+        if (filterCriteria.filterDesignations?.length) {
+            const v = filterCriteria.filterDesignations.map((o) => o.label.toLowerCase());
+            processedData = processedData.filter((e: any) => v.includes(e.designation?.toLowerCase()));
+        }
+        if (filterCriteria.filterStatuses?.length) {
+            const v = filterCriteria.filterStatuses.map((o) => o.value);
+            processedData = processedData.filter((e) => v.includes(e.status));
+        }
+        if (filterCriteria.filterRoles?.length) {
+            const v = filterCriteria.filterRoles.map((o) => o.label.toLowerCase());
+            processedData = processedData.filter((e: any) => e.roles.some((role: any) => v.includes(role?.toLowerCase())));
+        }
+
+        // --- Generic search query filter ---
+        if (tableData.query) {
+            const query = tableData.query.toLowerCase();
+            processedData = processedData.filter((employee: any) => {
+                // Iterate over all the values of the employee object
+                return Object.values(employee).some(value => {
+                    if (typeof value === 'string') {
+                        return value.toLowerCase().includes(query);
+                    }
+                    if (Array.isArray(value)) {
+                        // Check if any item in the array is a string and includes the query
+                        return value.some(item => typeof item === 'string' && item.toLowerCase().includes(query));
+                    }
+                    // For other types like numbers, convert them to a string for searching
+                    if (typeof value === 'number') {
+                        return String(value).toLowerCase().includes(query);
+                    }
+                    // Add more type checks here if needed
+                    return false;
+                });
+            });
+        }
+
+        // --- Sorting ---
         const { order, key } = tableData.sort as OnSortParam;
-        if (order && key) { processedData.sort((a: any, b: any) => { let aVal = a[key as keyof EmployeeItem] as any; let bVal = b[key as keyof EmployeeItem] as any; if (key === "createdAt" || key === "joiningDate") { aVal = aVal ? new Date(aVal).getTime() : 0; bVal = bVal ? new Date(bVal).getTime() : 0; } else if (key === "roles") { aVal = a.roles.join(", "); bVal = b.roles.join(", "); } if (typeof aVal === "number" && typeof bVal === "number") return order === "asc" ? aVal - bVal : bVal - aVal; return order === "asc" ? String(aVal ?? "").localeCompare(String(bVal ?? "")) : String(bVal ?? "").localeCompare(String(aVal ?? "")); }); }
-        return { pageData: processedData.slice((tableData.pageIndex - 1) * tableData.pageSize, tableData.pageIndex * tableData.pageSize), total: processedData.length, allFilteredAndSortedData: processedData };
+        if (order && key) {
+            processedData.sort((a: any, b: any) => {
+                let aVal = a[key as keyof EmployeeItem] as any;
+                let bVal = b[key as keyof EmployeeItem] as any;
+                if (key === "createdAt" || key === "joiningDate") {
+                    aVal = aVal ? new Date(aVal).getTime() : 0;
+                    bVal = bVal ? new Date(bVal).getTime() : 0;
+                } else if (key === "roles") {
+                    aVal = a.roles.join(", ");
+                    bVal = b.roles.join(", ");
+                }
+                if (typeof aVal === "number" && typeof bVal === "number") {
+                    return order === "asc" ? aVal - bVal : bVal - aVal;
+                }
+                return order === "asc" ? String(aVal ?? "").localeCompare(String(bVal ?? "")) : String(bVal ?? "").localeCompare(String(aVal ?? ""));
+            });
+        }
+
+        return {
+            pageData: processedData.slice((tableData.pageIndex - 1) * tableData.pageSize, tableData.pageIndex * tableData.pageSize),
+            total: processedData.length,
+            allFilteredAndSortedData: processedData
+        };
     }, [employees, tableData, filterCriteria]);
 
     const activeFilterCount = useMemo(() => Object.values(filterCriteria).filter(value => Array.isArray(value) && value.length > 0).length, [filterCriteria]);
@@ -482,7 +540,7 @@ const EmployeesListing = () => {
         },
         { header: "Designation", accessorKey: "designation", size: 200, cell: (props) => (<div >{props.row.original?.designation ?? ""}</div>) },
         { header: "Department", accessorKey: "department", size: 200, cell: (props) => (<div >{props.row.original?.department ?? ""}</div>) },
-        { header: "Roles", accessorKey: "role_name", size: 200, cell: (props) => (<div >{props.row.original?.role_name ?? ""}</div>) },
+        { header: "Roles", accessorKey: "role_name", size: 200, cell: (props) => (<div >{props.row.original?.role_name?.toUpperCase() ?? ""}</div>) },
         // { header: "Roles", accessorKey: "roles", cell: (props) => (<div className="flex flex-wrap gap-1">{props.row.original?.roles?.map((role: any) => (<Tag key={role} className="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100 text-[10px] font-semibold border-0">{role || ""}</Tag>))}</div>) },
         { header: "Joined At", accessorKey: "joiningDate", size: 150, cell: (props) => props.row.original?.joiningDate ? <span className="text-sm">{dayjs(props.row.original.joiningDate).format("D MMM YYYY")}</span> : '-' },
         { header: "Action", id: "action", size: 120, meta: { HeaderClass: "text-center" }, cell: (props) => (<ActionColumn rowData={props.row.original} onOpenModal={handleOpenModal} />) },

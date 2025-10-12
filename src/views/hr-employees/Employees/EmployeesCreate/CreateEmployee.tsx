@@ -1,32 +1,26 @@
 // src/views/hr-employees/EmployeeFormPage.tsx
 
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { useForm, Controller, useFieldArray, type Control, type FieldErrors, UseFormReturn } from 'react-hook-form';
-import { NavLink, useNavigate, useParams } from 'react-router-dom';
-import { useSelector } from 'react-redux';
 import { useAppDispatch } from '@/reduxtool/store';
-import isEmpty from 'lodash/isEmpty';
+import { zodResolver } from '@hookform/resolvers/zod';
 import classNames from 'classnames';
 import dayjs from "dayjs";
-import { zodResolver } from '@hookform/resolvers/zod';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Controller, useFieldArray, useForm, UseFormReturn, type Control, type FieldErrors } from 'react-hook-form';
+import { useSelector } from 'react-redux';
+import { NavLink, useNavigate, useParams } from 'react-router-dom';
 import { z } from "zod";
 
 // --- UI Components ---
-import Container from '@/components/shared/Container';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
-import { Card, Button, Input, DatePicker, Select, Radio, Checkbox, FormItem, Spinner, Notification, toast, Avatar } from '@/components/ui';
+import Container from '@/components/shared/Container';
+import { Button, Card, Checkbox, DatePicker, FormItem, Input, Notification, Radio, Select, Spinner, toast } from '@/components/ui';
 import { BiChevronRight } from 'react-icons/bi';
 import { HiOutlineTrash } from 'react-icons/hi';
-import { TbPlus, TbTrash, TbX, TbChevronLeft, TbChevronRight, TbFile, TbFileSpreadsheet, TbFileTypePdf } from "react-icons/tb";
+import { TbChevronLeft, TbChevronRight, TbFile, TbFileSpreadsheet, TbFileTypePdf, TbPlus, TbX } from "react-icons/tb";
 
 // Redux
-import { addEmployeesAction, editEmployeesAction, apiGetEmployeeById, getParentCategoriesAction } from '@/reduxtool/master/middleware';
 import { masterSelector } from '@/reduxtool/master/masterSlice';
-import {
-    getRolesAction, getDepartmentsAction, getDesignationsAction,
-    getCountriesAction, getCategoriesAction,
-    getBrandAction, getProductsAction, getMemberAction, getEmployeesListingAction
-} from '@/reduxtool/master/middleware';
+import { addEmployeesAction, apiGetEmployeeById, editEmployeesAction, getBrandAction, getCountriesAction, getDepartmentsAction, getDesignationsAction, getEmployeesListingAction, getMemberAction, getParentCategoriesAction, getProductsAction, getRolesAction } from '@/reduxtool/master/middleware';
 
 
 interface ImageViewerProps {
@@ -199,7 +193,7 @@ interface EquipmentItemFE {
 interface EmployeeFormSchema {
     id?: string;
     registration: { fullName: string; dateOfJoining: Date | null; mobileNumber: string; mobileNumberCode: { label: string, value: string }; email: string; experience: string; password?: string; status: { label: string, value: string }; jobStatus: { label: string, value: string } | null; };
-    personalInformation: { dateOfBirth: Date | null; age: number | string; gender: { label: string, value: string } | null; nationalityId: { label: string, value: string } | null; bloodGroup: { label: string, value: string } | null; permanentAddress: string; localAddress: string; marital_status: { label: string, value: string } | null; }; 
+    personalInformation: { dateOfBirth: Date | null; age: number | string; gender: { label: string, value: string } | null; nationalityId: { label: string, value: string } | null; bloodGroup: { label: string, value: string } | null; permanentAddress: string; localAddress: string; marital_status: { label: string, value: string } | null; };
     roleResponsibility: { roleId: { label: string, value: string } | null; departmentId: { label: string, value: string }[]; designationId: { label: string, value: string } | null; countryId: { label: string, value: string }[]; categoryId: { label: string, value: string }[]; subcategoryId: { label: string, value: string }[]; brandId: { label: string, value: string }[]; productServiceId: { label: string, value: string }[]; reportingHrId: { label: string, value: string }[]; reportingHeadId: { label: string, value: string } | null; };
     training: { inductionDateCompletion: Date | null; inductionRemarks: string; departmentTrainingDateCompletion: Date | null; departmentTrainingRemarks: string; };
     offBoarding: { exit_interview_conducted: 'yes' | 'no' | ''; exit_interview_remark: string; resignation_letter_received: 'yes' | 'no' | ''; resignation_letter_remark: string; company_assets_returned: 'all' | 'partial' | 'none' | ''; assets_returned_remarks: string; full_and_final_settlement: 'yes' | 'no' | ''; fnf_remarks: string; notice_period_status: 'served' | 'waived' | ''; notice_period_remarks: string; };
@@ -210,15 +204,27 @@ interface FormSectionBaseProps { control: Control<EmployeeFormSchema>; errors: F
 type FormSectionKey = keyof Omit<EmployeeFormSchema, 'id'>;
 
 
-// --- ZOD SCHEMA ---
 const employeeFormValidationSchema = z.object({
     id: z.string().optional(),
     registration: z.object({
-        fullName: z.string().min(1, 'Full Name is required'),
-        dateOfJoining: z.date({ required_error: "Date of joining is required." }),
-        mobileNumber: z.string().min(1, 'Mobile number is required'),
-        email: z.string().min(1, 'Email is required').email('Invalid email format'),
-    }).passthrough(), 
+        fullName: z.string({
+            required_error: "Full Name is required",
+        }).min(1, 'Full Name is required'),
+        dateOfJoining: z.date({
+            required_error: "Date of joining is required.",
+            invalid_type_error: "That's not a valid date!",
+        }),
+        mobileNumber: z.string({
+            required_error: "Mobile number is required",
+        })
+            .min(7, 'Mobile number must be at least 10 digits')
+            .max(15, 'Mobile number must be no more than 15 digits')
+            .regex(/^\+?[0-9]{10,15}$/, 'Invalid mobile number'),
+        email: z.string({
+            required_error: "Email is required",
+        }).min(1, 'Email is required').email('Invalid email format'),
+        password: z.string().optional(), // Keep password optional at the base level
+    }).passthrough(),
 
     personalInformation: z.any().optional(),
     roleResponsibility: z.any().optional(),
@@ -226,8 +232,39 @@ const employeeFormValidationSchema = z.object({
     offBoarding: z.any().optional(),
     equipmentsAssetsProvided: z.any().optional(),
     documentSubmission: z.any().optional(),
-});
+})
+    .superRefine((data, ctx) => {
+        const password = data.registration.password;
 
+        // In "add mode" (no ID)
+        if (!data.id) {
+            if (!password) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "Password is required",
+                    path: ["registration.password"],
+                });
+            } else if (password.length < 6) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "Password must be at least 6 characters",
+                    path: ["registration.password"],
+                });
+            }
+        }
+        // In "edit mode" (with an ID)
+        else {
+            // Only validate the length if a new password is being entered.
+            // An empty string or undefined means the password is not being updated.
+            if (password && password.length < 6) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "Password must be at least 6 characters",
+                    path: ["registration.password"],
+                });
+            }
+        }
+    });
 
 // --- FORM SECTION & NAVIGATOR COMPONENTS ---
 const Navigator = ({ activeSection, onNavigate }: { activeSection: FormSectionKey, onNavigate: (key: FormSectionKey) => void }) => {
@@ -652,9 +689,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
     };
 
     const onInvalidSubmit = (errorData: FieldErrors<EmployeeFormSchema>) => {
-        console.log(errorData);
-
-        toast.push(<Notification title="Error" type="danger">Please fix the errors before submitting.</Notification>);
+        // toast.push(<Notification title="Error" type="danger">Please fix the errors before submitting.</Notification>);
         for (const key of sectionKeys) {
             if (errorData[key]) {
                 setActiveSection(key);
