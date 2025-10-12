@@ -1445,7 +1445,7 @@ const SendWhatsAppDialog: React.FC<{
     },
   });
   const onSendMessage = (data: { message: string }) => {
-    const phone = lead.member_phone?.replace(/\D/g, "") || "1234567890";
+    const phone = lead.member_phone?.replace(/\D/g, "") || "";
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(
       data.message
     )}`;

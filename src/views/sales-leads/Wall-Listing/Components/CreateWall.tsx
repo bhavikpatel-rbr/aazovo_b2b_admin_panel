@@ -199,9 +199,9 @@ const WallItemForm = () => {
                             <Controller name="wallItems.0.intent" control={formMethods.control} render={({ field }) => (<UiSelect options={intentOptions} value={intentOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
                             {formMethods.formState.errors.wallItems?.[0]?.intent && <p className="text-red-500 text-xs mt-1">{formMethods.formState.errors.wallItems[0].intent.message}</p>}
                           </FormItem>
-                          <FormItem label="Location"><Controller name="wallItems.0.location" control={formMethods.control} render={({ field }) => <Input {...field} value={field.value || ''} /> } /></FormItem>
+                          <FormItem label="Location"><Controller name="wallItems.0.location" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="Location" value={field.value || ''} /> } /></FormItem>
                           <FormItem label="Payment Term"><Controller name="wallItems.0.paymentTermId" control={formMethods.control} render={({ field }) => (<UiSelect isLoading={isLoadingPageData} options={paymentTermsOption} value={paymentTermsOption.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
-                          <FormItem label="ETA"><Controller name="wallItems.0.eta" control={formMethods.control} render={({ field }) => <DatePicker {...field} value={field.value} onChange={date => field.onChange(date)} inputFormat="YYYY-MM-DD" /> } /></FormItem>
+                          <FormItem label="ETA"><Controller name="wallItems.0.eta" control={formMethods.control} render={({ field }) => <DatePicker placeholder="ETA" {...field} value={field.value} onChange={date => field.onChange(date)} inputFormat="YYYY-MM-DD" /> } /></FormItem>
                           <FormItem label="Dispatch Status"><Controller name="wallItems.0.dispatchStatus" control={formMethods.control} render={({ field }) => (<UiSelect options={dispatchStatusOptions} value={dispatchStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
                       </div>
                   </div>
@@ -217,17 +217,17 @@ const WallItemForm = () => {
                             {formMethods.formState.errors.wallItems?.[0]?.productStatus && <p className="text-red-500 text-xs mt-1">{formMethods.formState.errors.wallItems[0].productStatus.message}</p>}
                           </FormItem>
                           <FormItem label={<div>Active Hours<span className="text-red-500"> *</span></div>}>
-                            <Controller name="wallItems.0.activeHours" control={formMethods.control} render={({ field }) => <Input {...field} value={field.value || ''} /> } />
+                            <Controller name="wallItems.0.activeHours" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="Active Hours" value={field.value || ''} /> } />
                             {formMethods.formState.errors.wallItems?.[0]?.activeHours && <p className="text-red-500 text-xs mt-1">{formMethods.formState.errors.wallItems[0].activeHours.message}</p>}
                           </FormItem>
                           <FormItem label={<div>Quantity<span className="text-red-500"> *</span></div>}>
                             <Controller name="wallItems.0.qty" control={formMethods.control} render={({ field }) => <InputNumber {...field} /> } />
                             {formMethods.formState.errors.wallItems?.[0]?.qty && <p className="text-red-500 text-xs mt-1">{formMethods.formState.errors.wallItems[0].qty.message}</p>}
                           </FormItem>
-                          <FormItem label="Price"><Controller name="wallItems.0.price" control={formMethods.control} render={({ field }) => <InputNumber {...field} value={field.value ?? undefined} /> } /></FormItem>
+                          <FormItem label="Price"><Controller name="wallItems.0.price" control={formMethods.control} render={({ field }) => <InputNumber placeholder="Price" {...field} value={field.value ?? undefined} /> } /></FormItem>
                           <FormItem label="Color"><Controller name="wallItems.0.color" control={formMethods.control} render={({ field }) => <Input {...field} value={field.value || ''} /> } /></FormItem>
-                          <FormItem label="Cartoon Type"><Controller name="wallItems.0.cartoonTypeId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyCartoonTypes} value={dummyCartoonTypes.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
-                          <FormItem label="Product Spec"><Controller name="wallItems.0.productSpecId" control={formMethods.control} render={({ field }) => (<UiSelect isLoading={isLoadingPageData} options={productSpecOptionsForSelect} value={productSpecOptionsForSelect.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
+                          <FormItem label="Cartoon Type"><Controller name="wallItems.0.cartoonTypeId" control={formMethods.control} render={({ field }) => (<UiSelect placeholder="Cartoon Type" options={dummyCartoonTypes} value={dummyCartoonTypes.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
+                          <FormItem label="Product Spec"><Controller name="wallItems.0.productSpecId" control={formMethods.control} render={({ field }) => (<UiSelect placeholder="Product Spec" isLoading={isLoadingPageData} options={productSpecOptionsForSelect} value={productSpecOptionsForSelect.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
                           <FormItem label="Device Condition" className="md:col-span-2"><Controller name="wallItems.0.deviceCondition" control={formMethods.control} render={({ field }) => (<Radio.Group value={field.value} onChange={field.onChange}> {deviceConditionRadioOptions.map(opt => <Radio key={opt.value} value={opt.value}>{opt.label}</Radio>)} </Radio.Group>)} /></FormItem>
                           <FormItem label="Remarks" className="md:col-span-4"><Controller name="wallItems.0.remarks" control={formMethods.control} render={({ field }) => <Input textArea {...field} value={field.value || ''} rows={3} /> } /></FormItem>
                       </div>
@@ -247,9 +247,9 @@ const WallItemForm = () => {
                                 <Controller name="wallItems.0.intent" control={formMethods.control} render={({ field }) => (<UiSelect options={intentOptions} value={intentOptions.find(opt => opt.value === field.value)} onChange={opt => syncCommonField('intent', opt?.value)} />)}/>
                                 {formMethods.formState.errors.wallItems?.[0]?.intent && <p className="text-red-500 text-xs mt-1">{formMethods.formState.errors.wallItems[0].intent.message}</p>}
                             </FormItem>
-                             <FormItem label="Location"><Controller name="wallItems.0.location" control={formMethods.control} render={({ field }) => <Input {...field} onChange={e => syncCommonField('location', e.target.value)} />}/></FormItem>
+                             <FormItem label="Location"><Controller name="wallItems.0.location" control={formMethods.control} render={({ field }) => <Input placeholder="Location" {...field} onChange={e => syncCommonField('location', e.target.value)} />}/></FormItem>
                             <FormItem label="Payment Term"><Controller name="wallItems.0.paymentTermId" control={formMethods.control} render={({ field }) => (<UiSelect isLoading={isLoadingPageData} options={paymentTermsOption} value={paymentTermsOption.find(opt => opt.value === field.value)} onChange={opt => syncCommonField('paymentTermId', opt?.value)} isClearable />)}/></FormItem>
-                            <FormItem label="ETA"><Controller name="wallItems.0.eta" control={formMethods.control} render={({ field }) => <DatePicker {...field} value={field.value} onChange={date => syncCommonField('eta', date)} inputFormat="YYYY-MM-DD" /> }/></FormItem>
+                            <FormItem label="ETA"><Controller name="wallItems.0.eta" control={formMethods.control} render={({ field }) => <DatePicker placeholder="ETA" {...field} value={field.value} onChange={date => syncCommonField('eta', date)} inputFormat="YYYY-MM-DD" /> }/></FormItem>
                             <FormItem label="Dispatch Status"><Controller name="wallItems.0.dispatchStatus" control={formMethods.control} render={({ field }) => (<UiSelect options={dispatchStatusOptions} value={dispatchStatusOptions.find(opt => opt.value === field.value)} onChange={opt => syncCommonField('dispatchStatus', opt?.value)} isClearable />)}/></FormItem>
                         </div>
                     </div>
@@ -265,28 +265,28 @@ const WallItemForm = () => {
                                     </div>
                                     <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
                                         <FormItem label={<div>Product Name<span className="text-red-500"> *</span></div>}>
-                                          <Controller name={`wallItems.${index}.productId`} control={formMethods.control} render={({ field }) => (<UiSelect isLoading={isLoadingPageData} options={productOptions} value={productOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value || 0)} isClearable />)} />
+                                          <Controller name={`wallItems.${index}.productId`} control={formMethods.control} render={({ field }) => (<UiSelect placeholder="Product Name" isLoading={isLoadingPageData} options={productOptions} value={productOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value || 0)} isClearable />)} />
                                           {formMethods.formState.errors.wallItems?.[index]?.productId && <p className="text-red-500 text-xs mt-1">{formMethods.formState.errors.wallItems[index]?.productId?.message}</p>}
                                         </FormItem>
                                         <FormItem label={<div>Product Status<span className="text-red-500"> *</span></div>}>
-                                            <Controller name={`wallItems.${index}.productStatus`} control={formMethods.control} render={({ field }) => (<UiSelect options={productStatusOptions} value={productStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} /> )}/>
+                                            <Controller name={`wallItems.${index}.productStatus`} control={formMethods.control} render={({ field }) => (<UiSelect placeholder="Product Status" options={productStatusOptions} value={productStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} /> )}/>
                                             {formMethods.formState.errors.wallItems?.[index]?.productStatus && <p className="text-red-500 text-xs mt-1">{formMethods.formState.errors.wallItems[index]?.productStatus?.message}</p>}
                                         </FormItem>
                                         <FormItem label={<div>Active Hours<span className="text-red-500"> *</span></div>}>
-                                            <Controller name={`wallItems.${index}.activeHours`} control={formMethods.control} render={({ field }) => <Input {...field} />}/>
+                                            <Controller name={`wallItems.${index}.activeHours`} control={formMethods.control} render={({ field }) => <Input placeholder="Active Hours" {...field} />}/>
                                             {formMethods.formState.errors.wallItems?.[index]?.activeHours && <p className="text-red-500 text-xs mt-1">{formMethods.formState.errors.wallItems[index]?.activeHours?.message}</p>}
                                         </FormItem>
                                         <FormItem label={<div>Quantity<span className="text-red-500"> *</span></div>}>
-                                          <Controller name={`wallItems.${index}.qty`} control={formMethods.control} render={({ field }) => <InputNumber {...field} /> } />
+                                          <Controller name={`wallItems.${index}.qty`} control={formMethods.control} render={({ field }) => <InputNumber placeholder="Quantity" {...field} /> } />
                                           {formMethods.formState.errors.wallItems?.[index]?.qty && <p className="text-red-500 text-xs mt-1">{formMethods.formState.errors.wallItems[index]?.qty?.message}</p>}
                                         </FormItem>
-                                        <FormItem label="Price"><Controller name={`wallItems.${index}.price`} control={formMethods.control} render={({ field }) => <InputNumber {...field} value={field.value ?? undefined} /> } /></FormItem>
-                                        <FormItem label="Color"><Controller name={`wallItems.${index}.color`} control={formMethods.control} render={({ field }) => <Input {...field} value={field.value || ''} /> } /></FormItem>
-                                        <FormItem label="Cartoon Type"><Controller name={`wallItems.${index}.cartoonTypeId`} control={formMethods.control} render={({ field }) => (<UiSelect options={dummyCartoonTypes} value={dummyCartoonTypes.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
-                                        <FormItem label="Product Spec"><Controller name={`wallItems.${index}.productSpecId`} control={formMethods.control} render={({ field }) => (<UiSelect isLoading={isLoadingPageData} options={productSpecOptionsForSelect} value={productSpecOptionsForSelect.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
+                                        <FormItem label="Price"><Controller name={`wallItems.${index}.price`} control={formMethods.control} render={({ field }) => <InputNumber placeholder="Price" {...field} value={field.value ?? undefined} /> } /></FormItem>
+                                        <FormItem label="Color"><Controller name={`wallItems.${index}.color`} control={formMethods.control} render={({ field }) => <Input placeholder="Color" {...field} value={field.value || ''} /> } /></FormItem>
+                                        <FormItem label="Cartoon Type"><Controller name={`wallItems.${index}.cartoonTypeId`} control={formMethods.control} render={({ field }) => (<UiSelect placeholder="Cartoon Type" options={dummyCartoonTypes} value={dummyCartoonTypes.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
+                                        <FormItem label="Product Spec"><Controller name={`wallItems.${index}.productSpecId`} control={formMethods.control} render={({ field }) => (<UiSelect placeholder="Product Spec" isLoading={isLoadingPageData} options={productSpecOptionsForSelect} value={productSpecOptionsForSelect.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} /></FormItem>
                                         {/* MODIFIED: Moved Device Condition here */}
                                         <FormItem label="Device Condition" className="lg:col-span-2"><Controller name={`wallItems.${index}.deviceCondition`} control={formMethods.control} render={({ field }) => (<Radio.Group value={field.value} onChange={field.onChange}> {deviceConditionRadioOptions.map(opt => <Radio key={opt.value} value={opt.value}>{opt.label}</Radio>)} </Radio.Group>)} /></FormItem>
-                                        <FormItem label="Remarks" className="lg:col-span-full"><Controller name={`wallItems.${index}.remarks`} control={formMethods.control} render={({ field }) => <Input textArea {...field} value={field.value || ''} /> } /></FormItem>
+                                        <FormItem label="Remarks" className="lg:col-span-full"><Controller name={`wallItems.${index}.remarks`} control={formMethods.control} render={({ field }) => <Input placeholder="Remarks" textArea {...field} value={field.value || ''} /> } /></FormItem>
                                     </div>
                                 </div>
                             ))}
