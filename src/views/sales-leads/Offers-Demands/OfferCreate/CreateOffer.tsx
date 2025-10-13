@@ -58,11 +58,11 @@ const productDataSchema = z.object({
 });
 
 const offerFormSchema = z.object({
-    name: z.string().min(1, "Offer Name is required."),
-    assign_user: z.number({ required_error: "Assigned User is required."}).nullable(),
+    name: z.string().trim().min(1, "Offer Name is required."),
+    assign_user: z.number({ required_error: "Assigned User is required." }).nullable(),
     product_data: z.array(productDataSchema).min(1, "Add at least one product group."),
-    groupA: z.string().min(1, "Note is required."),
-    groupB: z.string().min(1, "Note is required."),
+    groupA: z.string().trim().min(1, "Note is required."),
+    groupB: z.string().trim().min(1, "Note is required."),
 });
 
 // --- Type Definitions ---
@@ -111,7 +111,7 @@ const CreateOffer = () => {
 
     const userOptions: OptionType[] = useMemo(() => Array.isArray(usersData) ? usersData.map((u: any) => ({ value: u.id, label: `(${u.employee_id}) - ${u.name || ' '}` })) : [], [usersData]);
     const productOptions: OptionType[] = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map((p: any) => ({ value: p.id, label: p.name })) : [], [productsMasterData]);
-    const memberOptions: OptionType[] = useMemo(() => Array.isArray(memberData) ? memberData.map((m: any) => ({ value: m.id, label:`(${m.customer_code}) - ${m.name || ' '}` })) : [], [memberData]);
+    const memberOptions: OptionType[] = useMemo(() => Array.isArray(memberData) ? memberData.map((m: any) => ({ value: m.id, label: `(${m.customer_code}) - ${m.name || ' '}` })) : [], [memberData]);
     const statusOptions: OptionType[] = [{ value: "active", label: "Active" }, { value: "non-active", label: "Non-Active" }];
     const productSpecOptions: OptionType[] = useMemo(() => Array.isArray(ProductSpecificationsData) ? ProductSpecificationsData.map((spec: any) => ({ value: spec.id, label: spec.name })) : [], [ProductSpecificationsData]);
     const paymentTermsOption: OptionType<number>[] = useMemo(() => Array.isArray(PaymentTermsData) ? PaymentTermsData.map((p: any) => ({ value: p.id, label: p.term_name || 'Unnamed' })) : [], [PaymentTermsData]);
@@ -190,7 +190,7 @@ const CreateOffer = () => {
                 if (item.price !== undefined) line += ` @$${item.price.toFixed(2)}`;
                 noteB_Items += line + '\n';
             });
-            
+
             let additionalInfo = '';
             if (specLabel) additionalInfo += `${specLabel}\n`;
             additionalInfo += `${productStatus}\n`;
@@ -239,7 +239,7 @@ const CreateOffer = () => {
 
     const handleCancel = () => navigate("/sales-leads/offers-demands");
     const isLoading = masterLoadingStatus === "loading" && !initialDataLoaded;
-    
+
     return (
         <Form id="offerForm" onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
             <Card>
@@ -247,7 +247,7 @@ const CreateOffer = () => {
                     <div className="p-4">
                         <h4 className="mb-6">{isEdit ? 'Edit Offer' : 'Create Offer'}</h4>
                         <div className="grid md:grid-cols-2 gap-4">
-                            <FormItem label="Offer Name" invalid={!!errors.name} errorMessage={errors.name?.message}>
+                            <FormItem label={<div>Offer Name<span className="text-red-500"> * </span></div>} invalid={!!errors.name} errorMessage={errors.name?.message}>
                                 <Controller name="name" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Q4 Gadget Offer" />} />
                             </FormItem>
                             <FormItem label="Assign User" invalid={!!errors.assign_user} errorMessage={errors.assign_user?.message}>
@@ -265,13 +265,13 @@ const CreateOffer = () => {
                         <h5 className="mb-0">Product Group #{index + 1}</h5>
                         {fields.length > 1 && <Button shape="circle" size="sm" type="button" color="red-600" icon={<TbTrash />} onClick={() => remove(index)} />}
                     </div>
-                    
+
                     <div className="p-4 border rounded-md dark:border-gray-600 grid lg:grid-cols-3 gap-4 items-start mb-6">
                         <FormItem label="Product" invalid={!!errors.product_data?.[index]?.product_id} errorMessage={errors.product_data?.[index]?.product_id?.message}>
-                            <Controller name={`product_data.${index}.product_id`} control={control} render={({ field: { value }}) => <UiSelect placeholder="Select Product..." options={productOptions} value={productOptions.find(opt => opt.value === value)} onChange={(option) => handleProductChange(index, option ? option.value as number : null)} isLoading={isLoading} />} />
+                            <Controller name={`product_data.${index}.product_id`} control={control} render={({ field: { value } }) => <UiSelect placeholder="Select Product..." options={productOptions} value={productOptions.find(opt => opt.value === value)} onChange={(option) => handleProductChange(index, option ? option.value as number : null)} isLoading={isLoading} />} />
                         </FormItem>
-                        <FormItem label="Sellers"><Controller name={`product_data.${index}.seller_ids`} control={control} render={({ field: { onChange, value }}) => <UiSelect isMulti placeholder="Select Sellers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} />} /></FormItem>
-                        <FormItem label="Buyers"><Controller name={`product_data.${index}.buyer_ids`} control={control} render={({ field: { onChange, value }}) => <UiSelect isMulti placeholder="Select Buyers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} />} /></FormItem>
+                        <FormItem label="Sellers"><Controller name={`product_data.${index}.seller_ids`} control={control} render={({ field: { onChange, value } }) => <UiSelect isMulti placeholder="Select Sellers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} />} /></FormItem>
+                        <FormItem label="Buyers"><Controller name={`product_data.${index}.buyer_ids`} control={control} render={({ field: { onChange, value } }) => <UiSelect isMulti placeholder="Select Buyers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} />} /></FormItem>
                     </div>
 
                     {watchedProductGroups[index]?.product_id && (
@@ -280,7 +280,7 @@ const CreateOffer = () => {
                                 <FormItem label="Product Status"><Controller name={`product_data.${index}.product_status`} control={control} render={({ field }) => <UiSelect options={statusOptions} value={statusOptions.find(opt => opt.value === field.value)} onChange={(option) => field.onChange(option ? option.value : null)} />} /></FormItem>
                                 <FormItem label="Product Spec"><Controller name={`product_data.${index}.spec_id`} control={control} render={({ field }) => <UiSelect placeholder="Select a Spec" options={productSpecOptions} value={productSpecOptions.find(o => o.value === field.value)} onChange={(option) => field.onChange(option ? option.value : null)} isClearable />} /></FormItem>
                             </div>
-                            
+
                             <h6 className="font-semibold text-sm mb-2 mt-6">Additional Details (for Note Generation)</h6>
                             <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-4 mb-4 p-4 border rounded-md dark:border-gray-600">
                                 <FormItem label="Location"><Controller name={`product_data.${index}.location`} control={control} render={({ field }) => <Input {...field} value={field.value || ''} placeholder="e.g., Warehouse A" />} /></FormItem>
@@ -296,11 +296,11 @@ const CreateOffer = () => {
                                     <thead className="bg-gray-50 dark:bg-gray-700"><tr><th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Color</th><th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-36">Price</th><th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-32">Qty</th></tr></thead>
                                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                         {watchedProductGroups[index].items.map((item, itemIndex) => (
-                                        <tr key={`${field.id}-item-${itemIndex}`}>
-                                            <td className="px-4 py-3 whitespace-nowrap font-semibold">{item.color || '-'}</td>
-                                            <td className="px-2 py-1 whitespace-nowrap"><Controller name={`product_data.${index}.items.${itemIndex}.price`} control={control} render={({ field }) => <Input {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''} type="number" size="sm" placeholder="0.00" />} /></td>
-                                            <td className="px-2 py-1 whitespace-nowrap"><Controller name={`product_data.${index}.items.${itemIndex}.qty`} control={control} render={({ field }) => <Input {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''} type="number" size="sm" placeholder="0" />} /></td>
-                                        </tr>
+                                            <tr key={`${field.id}-item-${itemIndex}`}>
+                                                <td className="px-4 py-3 whitespace-nowrap font-semibold">{item.color || '-'}</td>
+                                                <td className="px-2 py-1 whitespace-nowrap"><Controller name={`product_data.${index}.items.${itemIndex}.price`} control={control} render={({ field }) => <Input {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''} type="number" size="sm" placeholder="0.00" />} /></td>
+                                                <td className="px-2 py-1 whitespace-nowrap"><Controller name={`product_data.${index}.items.${itemIndex}.qty`} control={control} render={({ field }) => <Input {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''} type="number" size="sm" placeholder="0" />} /></td>
+                                            </tr>
                                         ))}
                                     </tbody>
                                 </table>
@@ -312,8 +312,8 @@ const CreateOffer = () => {
 
             <Card bodyClass="p-4"><Button type="button" variant="outline" icon={<TbFileText />} onClick={handleGenerateAndCopyNotes}>Generate Notes</Button></Card>
             <div className="grid md:grid-cols-2 gap-6">
-                <Card bodyClass="p-4"><h5 className="mb-4">Group A Notes</h5><FormItem invalid={!!errors.groupA} errorMessage={errors.groupA?.message}><Controller name="groupA" control={control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Click 'Generate Notes'..." rows={12} />} /></FormItem></Card>
-                <Card bodyClass="p-4"><h5 className="mb-4">Group B Notes</h5><FormItem invalid={!!errors.groupB} errorMessage={errors.groupB?.message}><Controller name="groupB" control={control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Click 'Generate Notes'..." rows={12} />} /></FormItem></Card>
+                <Card bodyClass="p-4"><h5 className="mb-4">Group A Notes <span className="text-red-500"> * </span></h5><FormItem invalid={!!errors.groupA} errorMessage={errors.groupA?.message}><Controller name="groupA" control={control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Click 'Generate Notes'..." rows={12} />} /></FormItem></Card>
+                <Card bodyClass="p-4"><h5 className="mb-4">Group B Notes <span className="text-red-500"> * </span></h5><FormItem invalid={!!errors.groupB} errorMessage={errors.groupB?.message}><Controller name="groupB" control={control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Click 'Generate Notes'..." rows={12} />} /></FormItem></Card>
             </div>
             <Card bodyClass="flex justify-end gap-2 p-4">
                 <Button type="button" onClick={handleCancel} disabled={isSubmitting}>Cancel</Button>
