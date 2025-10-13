@@ -642,12 +642,12 @@ const TasksByStatusTable = ({ data }: { data: any }) => {
                         )}
                     </tbody>
                 </Table>
-                <div className="p-4 bg-gray-50 dark:bg-gray-800 border-t grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                {/* <div className="p-4 bg-gray-50 dark:bg-gray-800 border-t grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                     <div><div className="text-sm text-gray-500">Unassigned</div><div className="font-bold text-lg">{counts.unassigned || 0}</div></div>
                     <div><div className="text-sm text-gray-500">No Status</div><div className="font-bold text-lg text-red-500">{counts.no_status || 0}</div></div>
                     <div><div className="text-sm text-gray-500">New Today</div><div className="font-bold text-lg">{counts.today || 0}</div></div>
                     <div><div className="text-sm text-gray-500">Completed Total</div><div className="font-bold text-lg text-emerald-500">{counts.completed || 0}</div></div>
-                </div>
+                </div> */}
             </div>
         </div>
     );

@@ -102,7 +102,7 @@ export type BoardProps = { containerHeight?: boolean; useClone?: DraggableChildr
 const transformApiTaskToTicket = (apiTask: any): Ticket => {
     return {
         id: apiTask.id.toString(), name: apiTask.task_title, description: apiTask.additional_description || apiTask.note_remark || '',
-        dueDate: apiTask.due_data ? new Date(apiTask.due_data).toISOString() : undefined, labels: apiTask.status ? [apiTask.status] : [],
+        dueDate: apiTask.due_date ? new Date(apiTask.due_date).toISOString() : undefined, labels: apiTask.status ? [apiTask.status] : [],
         members: (apiTask.assign_to_users || []).map((user: any) => ({ id: user.id.toString(), name: user.name, email: user.email || `user-${user.id}@example.com`, img: user.profile_pic_path || '' })),
         comments: (apiTask.activity_notes || []).map((note: any) => ({ id: note?.id?.toString(), name: note?.user?.name, src: note?.user?.profile_pic_path || '', message: note?.activity_comment, date: new Date(note?.created_at).toISOString() })),
         attachments: (apiTask.attachments || []).map((att: any) => ({ id: att.id.toString(), name: att.attachment_name, src: att.attachment_path, size: att.attachment_type })),
@@ -305,13 +305,15 @@ const ActualTaskListView: React.FC<TaskListViewProps> = ({ tasks, onEdit }) => {
     
     if (!tasks || tasks.length === 0) { return <Card className="mt-6"><div className="text-center py-10 text-slate-500 dark:text-slate-400">No tasks to display.</div></Card>; }
    
+    console.log("tr",tasks);
+    
     return (
         <Card className="mt-6 shadow-sm border border-slate-200 dark:border-slate-700" bodyClass="p-0"><div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
             <thead className="bg-slate-50 dark:bg-slate-800"><tr><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Task Title</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Priority</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Assignees</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Due Date</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th></tr></thead>
             <tbody className="bg-white dark:bg-slate-800/80 divide-y divide-slate-200 dark:divide-slate-700">
                 {tasks.map((task) => (
                     <tr key={task.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group">
-                        <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-medium text-slate-800 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 cursor-pointer" onClick={() => handleViewTicket(task.id)}>{task.name}</div></td>
+                        <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-medium text-slate-800 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 cursor-pointer" >{task.name}</div></td>
                         <td className="px-6 py-4 whitespace-nowrap"><Tag className={taskLabelColors[task.status] || taskLabelColors.default}>{task.status}</Tag></td>
                         <td className="px-6 py-4 whitespace-nowrap">{task.priority ? <Tag className={taskLabelColors[task.priority] || taskLabelColors.default}>{task.priority}</Tag> : <span className="text-xs text-slate-400">-</span>}</td>
                         <td className="px-6 py-4 whitespace-nowrap">{task.members && task.members.length > 0 ? <UsersAvatarGroup avatarProps={{ size: 28, className:"ring-1 ring-white dark:ring-slate-800" }} users={task.members} /> : <span className="text-xs text-slate-400">Unassigned</span>}</td>
