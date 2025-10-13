@@ -306,7 +306,7 @@ const NumberSystems = () => {
       <div className="space-y-1">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           <FormItem label={<div>System Name<span className="text-red-500"> *</span></div>} invalid={!!formMethods.formState.errors.name} errorMessage={formMethods.formState.errors.name?.message}><Controller name="name" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., European System" />} /></FormItem>
-          <FormItem label="Prefix" invalid={!!formMethods.formState.errors.prefix} errorMessage={formMethods.formState.errors.prefix?.message}><Controller name="prefix" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., EU" />} /></FormItem>
+          <FormItem label={<div>Prefix<span className="text-red-500"> *</span></div>} invalid={!!formMethods.formState.errors.prefix} errorMessage={formMethods.formState.errors.prefix?.message}><Controller name="prefix" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., EU" />} /></FormItem>
         </div>
 
         <div className="border-t border-gray-200 dark:border-gray-600 pt-2">
@@ -339,7 +339,7 @@ const NumberSystems = () => {
 
         <div className="border-t border-gray-200 dark:border-gray-600 pt-2 space-y-4">
           <FormItem label={<div>Status<span className="text-red-500"> *</span></div>} invalid={!!formMethods.formState.errors.status} errorMessage={formMethods.formState.errors.status?.message as string}><Controller name="status" control={formMethods.control} render={({ field }) => <Select placeholder="Select status" options={apiStatusOptions} value={apiStatusOptions.find(o => o.value === field.value)} onChange={o => field.onChange(o?.value)} />} /></FormItem>
-          <FormItem label="Applicable Countries" invalid={!!formMethods.formState.errors.country_ids} errorMessage={formMethods.formState.errors.country_ids?.message as string}><Controller name="country_ids" control={formMethods.control} render={({ field }) => <Select isMulti placeholder="Select countries..." options={applicableCountryOptions} value={applicableCountryOptions.filter(o => field.value?.includes(o.value))} onChange={v => field.onChange(v ? v.map(o => o.value) : [])} />} /></FormItem>
+          <FormItem  label={<div>Applicable Countries<span className="text-red-500"> *</span></div>}  invalid={!!formMethods.formState.errors.country_ids} errorMessage={formMethods.formState.errors.country_ids?.message as string}><Controller name="country_ids" control={formMethods.control} render={({ field }) => <Select isMulti placeholder="Select countries..." options={applicableCountryOptions} value={applicableCountryOptions.filter(o => field.value?.includes(o.value))} onChange={v => field.onChange(v ? v.map(o => o.value) : [])} />} /></FormItem>
         </div>
       </div>
     )
