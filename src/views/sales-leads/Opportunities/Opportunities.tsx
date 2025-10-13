@@ -1486,6 +1486,9 @@ const CSV_KEYS_OPPORTUNITIES_EXPORT: (keyof OpportunityExportItem)[] = [
   "created_date_formatted",
 ];
 function exportToCsvOpportunities(filename: string, rows: OpportunityItem[]) {
+
+  console.log("rows",rows);
+  
   if (!rows || !rows.length) {
     toast.push(
       <Notification title="No Data" type="info">
@@ -3768,82 +3771,87 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
 
 
   const mappedOpportunities = useMemo(() => {
-    // This function maps raw API data to the component's internal data structure.
-    const mapItem = (apiItem: ApiOpportunityItem): OpportunityItem => {
-      let uiStatus: OpportunityItem["status"] = "pending";
-      if (apiItem.status?.toLowerCase() === "pending") uiStatus = "pending";
-      else if (apiItem.status?.toLowerCase() === "active") uiStatus = "active";
-      else if (apiItem.status?.toLowerCase() === "on hold" || apiItem.status?.toLowerCase() === "on_hold") uiStatus = "on_hold";
-      else if (apiItem.status?.toLowerCase() === "closed") uiStatus = "closed";
-      else if (apiItem.status) uiStatus = apiItem.status.toLowerCase();
+  // This function maps raw API data to the component's internal data structure.
+  const mapItem = (apiItem: ApiOpportunityItem): OpportunityItem => {
+    let uiStatus: OpportunityItem["status"] = "pending";
+    if (apiItem.status?.toLowerCase() === "pending") uiStatus = "pending";
+    else if (apiItem.status?.toLowerCase() === "active") uiStatus = "active";
+    else if (apiItem.status?.toLowerCase() === "on hold" || apiItem.status?.toLowerCase() === "on_hold") uiStatus = "on_hold";
+    else if (apiItem.status?.toLowerCase() === "closed") uiStatus = "closed";
+    else if (apiItem.status) uiStatus = apiItem.status.toLowerCase();
 
-      let uiOppStatus: OpportunityItem["opportunity_status"] = "New";
-      if (apiItem.opportunity_status?.toLowerCase() === "new") uiOppStatus = "New";
-      else if (apiItem.opportunity_status?.toLowerCase() === "shortlisted") uiOppStatus = "Shortlisted";
-      else if (apiItem.opportunity_status?.toLowerCase() === "converted") uiOppStatus = "Converted";
-      else if (apiItem.opportunity_status?.toLowerCase() === "rejected") uiOppStatus = "Rejected";
-      else if (apiItem.opportunity_status) uiOppStatus = apiItem.opportunity_status;
-console.log("apiItem",apiItem);
+    let uiOppStatus: OpportunityItem["opportunity_status"] = "New";
+    if (apiItem.opportunity_status?.toLowerCase() === "new") uiOppStatus = "New";
+    else if (apiItem.opportunity_status?.toLowerCase() === "shortlisted") uiOppStatus = "Shortlisted";
+    else if (apiItem.opportunity_status?.toLowerCase() === "converted") uiOppStatus = "Converted";
+    else if (apiItem.opportunity_status?.toLowerCase() === "rejected") uiOppStatus = "Rejected";
+    else if (apiItem.opportunity_status) uiOppStatus = apiItem.opportunity_status;
 
-      return {
-        id: String(apiItem.id),
-        product_id: apiItem.product_id, // UPDATED: Pass product_id
-        opportunity_id: apiItem.opportunity_id || `OPP-${apiItem.id}`,
-        product_name: apiItem.product_name || " ",
-        status: uiStatus,
-        opportunity_status: uiOppStatus,
-        match_score: apiItem.match_score ?? 0,
-        created_date: apiItem.created_at || new Date().toISOString(),
-        buy_listing_id: apiItem.buy_listing_id || undefined,
-        sell_listing_id: apiItem.sell_listing_id || undefined,
-        spb_role: apiItem.spb_role || undefined,
-        product_category: apiItem.product_category || undefined,
-        product_subcategory: apiItem.product_subcategory || undefined,
-        brand: apiItem.brand || undefined,
-        product_specs: apiItem.product_specs_name || apiItem.product_specs || undefined,
-        qty: (typeof apiItem.qty === "string" ? parseInt(apiItem.qty, 10) : apiItem.qty) ?? undefined,
-        product_status_listing: apiItem.product_status || apiItem.product_status_listing,
-        want_to: apiItem.want_to || undefined,
-        member: apiItem.member || {},
-        company_name: apiItem.company_name || " ",
-        company_id: apiItem.company_id || undefined,
-        customer_name: apiItem.customer_name || " ",
-        member_id: apiItem.member_id || undefined,
-        email: apiItem.email || undefined,
-        mobile_no: apiItem.phonecode && apiItem.mobile_no ? `${apiItem.phonecode}${apiItem.mobile_no}` : apiItem.mobile_no || undefined,
-        member_type: apiItem.member_type || "Standard",
-        matches_found_count: apiItem.matches_found_count ?? undefined,
-        updated_at: apiItem.updated_at || undefined,
-        assigned_to: String(apiItem.assigned_to || ""),
-        notes: apiItem.notes || undefined,
-        listing_url: apiItem.listing_url || undefined,
-        updated_by_name: apiItem.updated_by_name || "System",
-        updated_by_role: apiItem.updated_by_role || "Auto-Update",
-        device_condition: apiItem.device_condition || undefined,
-        device_type: apiItem.device_type || undefined,
-        product_image_url: apiItem.product_image_url || `https://placehold.co/100x100/e2e8f0/64748b?text=${(apiItem.product_name || "P").substring(0, 2).toUpperCase()}`,
-        company_code: apiItem.company_code || `C-${apiItem.company_id}`,
-        company_verified: apiItem.company_verified ?? Math.random() > 0.5,
-        company_billing_enabled: apiItem.company_billing_enabled ?? Math.random() > 0.7,
-        customer_code: apiItem.customer_code || `M-${apiItem.member_id}`,
-        member_verified: apiItem.member_verified ?? false,
-        country: apiItem.country || "USA",
-        country_flag: apiItem.country_flag || undefined,
-        member_business_type: apiItem.member_business_type || "Wholesaler",
-        continent: apiItem.continent || undefined,
-        state: apiItem.state || undefined,
-        city: apiItem.city || undefined,
-        pincode: apiItem.pincode || undefined,
-        favouriteBrands: apiItem.member?.favourite_brands_list?.map(b => b.name) || [],
-      };
+    return {
+      id: String(apiItem.id),
+      product_id: apiItem.product_id,
+      opportunity_id: apiItem.opportunity_id || `OPP-${apiItem.id}`,
+      product_name: apiItem.product_name || " ",
+      status: uiStatus,
+      opportunity_status: uiOppStatus,
+      match_score: apiItem.match_score ?? 0,
+      created_date: apiItem.created_at || new Date().toISOString(),
+      buy_listing_id: apiItem.buy_listing_id || undefined,
+      sell_listing_id: apiItem.sell_listing_id || undefined,
+      spb_role: apiItem.spb_role || undefined,
+      product_category: apiItem.product_category || undefined,
+      product_subcategory: apiItem.product_subcategory || undefined,
+      brand: apiItem.brand || undefined,
+      product_specs: apiItem.product_specs_name || apiItem.product_specs || undefined,
+      qty: (typeof apiItem.qty === "string" ? parseInt(apiItem.qty, 10) : apiItem.qty) ?? undefined,
+      product_status_listing: apiItem.product_status || apiItem.product_status_listing,
+      want_to: apiItem.want_to || undefined,
+      member: apiItem.member || {},
+      company_name: apiItem.company_name || " ",
+      company_id: apiItem.company_id || undefined,
+      
+      // === START: CORRECTED MAPPINGS ===
+      customer_name: apiItem.member?.name || apiItem.customer_name || " ",
+      member_id: apiItem.member?.member_code || apiItem.member_id || undefined,
+      email: apiItem.member?.email || apiItem.email || undefined,
+      mobile_no: (apiItem.member?.number_code && apiItem.member?.number)
+          ? `${apiItem.member.number_code}${apiItem.member.number}`
+          : apiItem.member?.number || (apiItem.phonecode && apiItem.mobile_no ? `${apiItem.phonecode}${apiItem.mobile_no}` : apiItem.mobile_no) || undefined,
+      customer_code: apiItem.member?.member_code || apiItem.customer_code || `M-${apiItem.member_id}`,
+      // === END: CORRECTED MAPPINGS ===
+      
+      member_type: apiItem.member_type || "Standard",
+      matches_found_count: apiItem.matches_found_count ?? undefined,
+      updated_at: apiItem.updated_at || undefined,
+      assigned_to: String(apiItem.assigned_to || ""),
+      notes: apiItem.notes || undefined,
+      listing_url: apiItem.listing_url || undefined,
+      updated_by_name: apiItem.updated_by_name || "System",
+      updated_by_role: apiItem.updated_by_role || "Auto-Update",
+      device_condition: apiItem.device_condition || undefined,
+      device_type: apiItem.device_type || undefined,
+      product_image_url: apiItem.product_image_url || `https://placehold.co/100x100/e2e8f0/64748b?text=${(apiItem.product_name || "P").substring(0, 2).toUpperCase()}`,
+      company_code: apiItem.company_code || `C-${apiItem.company_id}`,
+      company_verified: apiItem.company_verified ?? Math.random() > 0.5,
+      company_billing_enabled: apiItem.company_billing_enabled ?? Math.random() > 0.7,
+      member_verified: apiItem.member_verified ?? false,
+      country: apiItem.country || "USA",
+      country_flag: apiItem.country_flag || undefined,
+      member_business_type: apiItem.member?.category || apiItem.member_business_type || "Wholesaler",
+      continent: apiItem.continent || undefined,
+      state: apiItem.state || undefined,
+      city: apiItem.city || undefined,
+      pincode: apiItem.pincode || undefined,
+      favouriteBrands: apiItem.member?.favourite_brands_list?.map(b => b.name) || [],
     };
+  };
 
-    const allOpportunities = Opportunitieslist?.data?.map(mapItem) || [];
-    const paginatedOpportunities = Opportunitieslist?.data?.map(mapItem) || [];
+  const allOpportunities = Opportunitieslist?.data?.map(mapItem) || [];
+  const paginatedOpportunities = Opportunitieslist?.data?.map(mapItem) || [];
 
-    return { allOpportunities, paginatedOpportunities };
+  return { allOpportunities, paginatedOpportunities };
 
-  }, [Opportunitieslist]);
+}, [Opportunitieslist]);
 
 
   useEffect(() => {
@@ -4198,7 +4206,7 @@ console.log("apiItem",apiItem);
     });
   };
 
-  const getColumnsForStandardView = useCallback(
+ const getColumnsForStandardView = useCallback(
     (isDashboard: boolean): ColumnDef<OpportunityItem>[] => {
       const allColumns: ColumnDef<OpportunityItem>[] = [
         {
@@ -4213,7 +4221,8 @@ console.log("apiItem",apiItem);
                
                 <div className="flex flex-col gap-0.5">
                   {" "}
-                  <Tooltip title={item.product_name}>
+                  {/* CHANGED: Added placement="top" */}
+                  <Tooltip title={item.product_name} placement="top">
                     {" "}
                     <span className="font-semibold text-sm text-gray-800 dark:text-gray-100 truncate block max-w-[200px]">
                       {" "}
@@ -4230,8 +4239,10 @@ console.log("apiItem",apiItem);
                   <div className="text-[11px] text-gray-500 dark:text-gray-400">
                     {" "}
                     {item.buy_listing_id && (
+                      // CHANGED: Added placement="top"
                       <Tooltip
                         title={`Go to Wall Listing ${item.buy_listing_id}`}
+                        placement="top"
                       >
                         {" "}
                         <Link
@@ -4245,8 +4256,10 @@ console.log("apiItem",apiItem);
                       </Tooltip>
                     )}{" "}
                     {item.sell_listing_id && (
+                      // CHANGED: Added placement="top"
                       <Tooltip
                         title={`Go to Wall Listing ${item.sell_listing_id}`}
+                        placement="top"
                       >
                         {" "}
                         <Link
@@ -4304,8 +4317,10 @@ console.log("apiItem",apiItem);
                     {" "}
                     {item.name}{" "} ({item.member_code}{" "})
                   </span>{" "}
+                  {/* CHANGED: Added placement="top" */}
                   <Tooltip
                     title={row?.original.company_verified ? "Verified" : "Not Verified"}
+                    placement="top"
                   >
                     {" "}
 
@@ -4325,7 +4340,8 @@ console.log("apiItem",apiItem);
                       <div className="flex items-center gap-1.5">
                         <span>{item.number || " "}</span>
                         {item.number && (
-                          <Tooltip title="Copy number">
+                          // CHANGED: Added placement="top"
+                          <Tooltip title="Copy number" placement="top">
                             <button
                               className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
                               onClick={(e) => {
@@ -4367,7 +4383,8 @@ console.log("apiItem",apiItem);
           cell: ({ row: { original: item } }) => (
             <div className="flex flex-col gap-y-2 text-xs">
               {" "}
-              <Tooltip title="Specification">
+              {/* CHANGED: Added placement="top" */}
+              <Tooltip title="Specification" placement="top">
                 <InfoLine
                   icon={<TbInfoCircle size={14} />}
                   text={item.product_specs}
@@ -4376,7 +4393,8 @@ console.log("apiItem",apiItem);
                 />
               </Tooltip>
               {" "}
-              <Tooltip title="Device Condition">
+              {/* CHANGED: Added placement="top" */}
+              <Tooltip title="Device Condition" placement="left-start">
                 <InfoLine
                   icon={<TbProgressCheck size={14} />}
                   text={item.device_condition}
@@ -4385,7 +4403,8 @@ console.log("apiItem",apiItem);
               </Tooltip>
 
               {item.opportunity_status && (
-                <Tooltip title="Opportunity Status">
+                // CHANGED: Added placement="top"
+                <Tooltip title="Opportunity Status" placement="left-start">
                   <div className="flex items-center gap-1.5">
                     {" "}
                     <span className="text-gray-400 dark:text-gray-500 flex-shrink-0">
@@ -4424,9 +4443,9 @@ console.log("apiItem",apiItem);
       }
       return allColumns;
     },
+    // Keep dependencies the same
     [currentTab, handleOpenModal, handleCardClick, handleCopyClick]
   );
-
   const getColumnsForExpandableView = useCallback(
     (isDashboard: boolean): ColumnDef<OpportunityItem>[] => {
       const allColumns: ColumnDef<OpportunityItem>[] = [
