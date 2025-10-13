@@ -158,7 +158,7 @@ const exportReasonSchema = z.object({
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 // --- Constants & Helper Functions ---
-const CSV_HEADERS_BRAND = ["ID", "Name", "Slug", "Icon URL", "Show Header (1=Yes, 0=No)", "Status", "Meta Title", "Meta Description", "Meta Keywords", "Mobile No.", "Created At", "Updated At",];
+const CSV_HEADERS_BRAND = ["ID", "Name", "Slug",  "Show Header (1=Yes, 0=No)", "Status", "Meta Title", "Meta Description", "Meta Keywords", "Mobile No.", "Created At", "Updated At",];
 type BrandCsvItem = { id: number; name: string; slug: string; icon_full_path: string | null; showHeader: number; status: BrandStatus; metaTitle: string | null; metaDescription: string | null; metaKeyword: string | null; mobileNo: string | null; createdAt: string; updatedAt: string; };
 
 function exportToCsvBrand(filename: string, rows: BrandItem[]) {
@@ -166,7 +166,7 @@ function exportToCsvBrand(filename: string, rows: BrandItem[]) {
     toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
     return false;
   }
-  const transformedRows: BrandCsvItem[] = rows.map((item) => ({ id: item.id, name: item.name, slug: item.slug, icon_full_path: item.icon_full_path, showHeader: item.showHeader, status: item.status, metaTitle: item.metaTitle, metaDescription: item.metaDescription, metaKeyword: item.metaKeyword, mobileNo: item.mobileNo, createdAt: new Date(item.createdAt).toLocaleString(), updatedAt: new Date(item.updatedAt).toLocaleString(), }));
+  const transformedRows: BrandCsvItem[] = rows.map((item) => ({ id: item.id.toString().padStart(6, '0'), name: item.name,  icon_full_path: item.icon_full_path, showHeader: item.showHeader, status: item.status, metaTitle: item.metaTitle, metaDescription: item.metaDescription, metaKeyword: item.metaKeyword, mobileNo: item.mobileNo, createdAt: new Date(item.createdAt).toLocaleString(), updatedAt: new Date(item.updatedAt).toLocaleString(), }));
   const csvKeys: (keyof BrandCsvItem)[] = ["id", "name", "slug", "icon_full_path", "showHeader", "status", "metaTitle", "metaDescription", "metaKeyword", "mobileNo", "createdAt", "updatedAt",];
   const separator = ",";
   const csvContent = CSV_HEADERS_BRAND.join(separator) + "\n" + transformedRows.map((row) => csvKeys.map((k) => { let cellValue = row[k]; if (cellValue === null || cellValue === undefined) cellValue = ""; else cellValue = String(cellValue).replace(/"/g, '""'); if (String(cellValue).search(/("|,|\n)/g) >= 0) cellValue = `"${cellValue}"`; return cellValue; }).join(separator)).join("\n");

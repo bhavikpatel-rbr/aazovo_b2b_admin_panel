@@ -359,7 +359,7 @@ const PendingLeadViewModal: React.FC<{
             <button
               type="button"
               key={tab.key}
-              className={classNames('px-4 py-3 -mb-px font-semibold focus:outline-none whitespace-nowrap', {
+              className={classNames('px-4 py-3  font-semibold ', {
                 'text-indigo-600 border-b-2 border-indigo-600': activeTab === tab.key,
                 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200': activeTab !== tab.key,
               })}
@@ -376,13 +376,7 @@ const PendingLeadViewModal: React.FC<{
 
         <div className="flex justify-between items-center mt-2">
           <div>
-            <Button
-              variant="plain"
-              icon={<TbX />}
-              onClick={onClose}
-            >
-              Close
-            </Button>
+            
           </div>
           <div className="flex items-center gap-4">
             {!leadData?.customer?.company_actual ? (
@@ -569,11 +563,7 @@ const PendingLeadsModal = ({
               </div>
             )}
           </div>
-          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
-            <Button variant="solid" onClick={onClose}>
-              Close
-            </Button>
-          </div>
+          
         </div>
       </Dialog>
 
