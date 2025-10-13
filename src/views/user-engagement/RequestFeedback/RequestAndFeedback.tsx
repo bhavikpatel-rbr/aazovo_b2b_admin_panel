@@ -1,4 +1,3 @@
-// src/views/your-path/MergedTaskList.tsx
 import React, { useState, useMemo, useCallback, Ref, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import cloneDeep from "lodash/cloneDeep";
@@ -28,6 +27,7 @@ import {
   Notification,
   Checkbox,
   Skeleton,
+  DatePicker,
 } from "@/components/ui";
 import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
@@ -96,6 +96,53 @@ import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 import { getMenuRights } from "@/utils/getMenuRights";
 
+// --- START: Types & Constants for Actions ---
+export type ActionModalType = 'notification' | 'task' | 'schedule';
+interface ActionModalState {
+    isOpen: boolean;
+    type: ActionModalType | null;
+    data: RequestFeedbackItem | null;
+}
+
+const notificationSchema = z.object({
+    notification_title: z.string().min(3, "Title must be at least 3 characters."),
+    send_users: z.array(z.number()).min(1, "At least one user must be selected."),
+    message: z.string().min(10, "Message must be at least 10 characters."),
+});
+type NotificationFormData = z.infer<typeof notificationSchema>;
+
+const taskSchema = z.object({
+    task_title: z.string().min(3, "Task title must be at least 3 characters."),
+    assign_to: z.array(z.number()).min(1, "At least one assignee is required."),
+    priority: z.string().min(1, "Please select a priority."),
+    due_date: z.date().nullable().optional(),
+    description: z.string().optional(),
+});
+type TaskFormData = z.infer<typeof taskSchema>;
+
+const scheduleSchema = z.object({
+    event_title: z.string().min(3, "Title must be at least 3 characters."),
+    event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
+    date_time: z.date({ required_error: "Event date & time is required." }),
+    remind_from: z.date().nullable().optional(),
+    notes: z.string().optional(),
+});
+type ScheduleFormData = z.infer<typeof scheduleSchema>;
+
+const taskPriorityOptions: SelectOption[] = [
+    { value: "Low", label: "Low" },
+    { value: "Medium", label: "Medium" },
+    { value: "High", label: "High" },
+];
+
+const eventTypeOptions: SelectOption[] = [
+    { value: "Meeting", label: "Meeting" },
+    { value: "FollowUpCall", label: "Follow-up Call" },
+    { value: "Other", label: "Other" },
+];
+// --- END: Types & Constants for Actions ---
+
+
 // --- Define Types & Constants ---
 export type SelectOption = { value: any; label: string };
 
@@ -103,8 +150,9 @@ export type RequestFeedbackType = "Request" | "Feedback";
 
 export type RequestFeedbackStatus =
   | "Pending"
-
+  | "In progress"
   | "Resolved"
+  | "Rejected"
 
 export type RequestFeedbackItem = {
   id: string | number;
@@ -155,7 +203,9 @@ const TYPE_OPTIONS: SelectOption[] = [
 
 const STATUS_OPTIONS: { value: RequestFeedbackStatus; label: string }[] = [
   { value: "Pending", label: "Pending" },
+  { value: "In progress", label: "In progress" },
   { value: "Resolved", label: "Resolved" },
+  { value: "Rejected", label: "Rejected" },
 ];
 
 const RATING_OPTIONS: SelectOption[] = [
@@ -195,7 +245,7 @@ const requestFeedbackFormSchema = z.object({
   feedback_details: z
     .string()
     .optional().nullable(),
-  status: z.enum(["Pending", "Resolved"], {
+  status: z.enum(["Pending", "In progress", "Resolved", "Rejected"], {
     errorMap: () => ({ message: "Please select a status." }),
   }),
   rating: z.string().optional().nullable(),
@@ -295,6 +345,250 @@ const ItemActionColumn = ({
     </Dropdown>
   </div>
 );
+
+// --- START: Action Dialog Components ---
+
+const AddNotificationDialog: React.FC<{
+  item: RequestFeedbackItem;
+  onClose: () => void;
+  userOptions: SelectOption[];
+}> = ({ item, onClose, userOptions }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
+        resolver: zodResolver(notificationSchema),
+        defaultValues: {
+            notification_title: `Regarding Entry: ${item.name}`,
+            send_users: [],
+            message: `This is a notification for entry from "${item.name}" (ID: ${item.id}). Please review.`,
+        },
+        mode: 'onChange',
+    });
+
+    const onSend = async (formData: NotificationFormData) => {
+        setIsLoading(true);
+        const payload = {
+            ...formData,
+            module_id: String(item.id),
+            module_name: 'RequestFeedback',
+        };
+        try {
+            await dispatch(addNotificationAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Notification Sent!" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to send" children={error?.message} />);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Notify User about: {item.name}</h5>
+            <Form onSubmit={handleSubmit(onSend)}>
+                <div className="max-h-[60vh] overflow-y-auto pr-4">
+                    <FormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}>
+                        <Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} />
+                    </FormItem>
+                    <FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}>
+                        <Controller name="send_users" control={control} render={({ field }) => (
+                            <Select isMulti placeholder="Select User(s)" options={userOptions}
+                                value={userOptions.filter(o => field.value?.includes(o.value))}
+                                onChange={options => field.onChange(options?.map(o => o.value) || [])}
+                            />
+                        )} />
+                    </FormItem>
+                    <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
+                        <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
+                    </FormItem>
+                </div>
+                <div className="text-right mt-6">
+                    <Button type="button" onClick={onClose} disabled={isLoading} className="mr-2">Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Send</Button>
+                </div>
+            </Form>
+        </Dialog>
+    );
+};
+
+const AssignTaskDialog: React.FC<{
+  item: RequestFeedbackItem;
+  onClose: () => void;
+  userOptions: SelectOption[];
+}> = ({ item, onClose, userOptions }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({
+        resolver: zodResolver(taskSchema),
+        defaultValues: {
+            task_title: `Follow up with ${item.name}`,
+            assign_to: [],
+            priority: 'Medium',
+            description: `Regarding entry ID ${item.id} from ${item.name}.`,
+        },
+        mode: 'onChange',
+    });
+
+    const onAssignTask = async (data: TaskFormData) => {
+        setIsLoading(true);
+        const payload = {
+            ...data,
+            due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined,
+            module_id: String(item.id),
+            module_name: 'RequestFeedback',
+        };
+        try {
+            await dispatch(addTaskAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Task Assigned!" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message} />);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Assign Task for {item.name}</h5>
+            <Form onSubmit={handleSubmit(onAssignTask)}>
+                <div className="max-h-[60vh] overflow-y-auto pr-4">
+                    <FormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}>
+                        <Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} />
+                    </FormItem>
+                    <FormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}>
+                        <Controller name="assign_to" control={control} render={({ field }) => (
+                            <Select isMulti placeholder="Select User(s)" options={userOptions}
+                                value={userOptions.filter(o => field.value?.includes(o.value))}
+                                onChange={opts => field.onChange(opts?.map(o => o.value) || [])}
+                            />
+                        )} />
+                    </FormItem>
+                    <FormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}>
+                        <Controller name="priority" control={control} render={({ field }) => (
+                            <Select placeholder="Select Priority" options={taskPriorityOptions}
+                                value={taskPriorityOptions.find(p => p.value === field.value)}
+                                onChange={opt => field.onChange(opt?.value)}
+                            />
+                        )} />
+                    </FormItem>
+                    <FormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}>
+                        <Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} />
+                    </FormItem>
+                    <FormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}>
+                        <Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
+                    </FormItem>
+                </div>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Assign Task</Button>
+                </div>
+            </Form>
+        </Dialog>
+    );
+};
+
+const AddScheduleDialog: React.FC<{
+  item: RequestFeedbackItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
+        resolver: zodResolver(scheduleSchema),
+        defaultValues: {
+            event_title: `Meeting regarding ${item.name}`,
+            date_time: null as any,
+            notes: `Regarding entry ID ${item.id} from ${item.name}.`,
+            remind_from: null,
+            event_type: undefined,
+        },
+        mode: 'onChange',
+    });
+
+    const onAddSchedule = async (data: ScheduleFormData) => {
+        setIsLoading(true);
+        const payload = {
+            ...data,
+            date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
+            remind_from: data.remind_from ? dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') : undefined,
+            module_id: Number(item.id),
+            module_name: 'RequestFeedback',
+        };
+        try {
+            await dispatch(addScheduleAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Event Scheduled!" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message} />);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog isOpen={true} width={700} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Add Schedule for {item.name}</h5>
+            <Form onSubmit={handleSubmit(onAddSchedule)}>
+                <div className="max-h-[60vh] overflow-y-auto pr-4">
+                    <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+                        <Controller name="event_title" control={control} render={({ field }) => <Input {...field} autoFocus />} />
+                    </FormItem>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
+                            <Controller name="event_type" control={control} render={({ field }) => (
+                                <Select placeholder="Select Type" options={eventTypeOptions}
+                                    value={eventTypeOptions.find(o => o.value === field.value)}
+                                    onChange={(opt: any) => field.onChange(opt?.value)}
+                                />
+                            )} />
+                        </FormItem>
+                        <FormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
+                            <Controller name="date_time" control={control} render={({ field }) => <DatePicker.DateTimepicker placeholder="Select date & time" value={field.value} onChange={field.onChange} />} />
+                        </FormItem>
+                    </div>
+                    <FormItem label="Reminder (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+                        <Controller name="remind_from" control={control} render={({ field }) => <DatePicker.DateTimepicker placeholder="Select reminder date & time" value={field.value} onChange={field.onChange} />} />
+                    </FormItem>
+                    <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+                        <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} value={field.value ?? ""} />} />
+                    </FormItem>
+                </div>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Save Event</Button>
+                </div>
+            </Form>
+        </Dialog>
+    );
+};
+
+
+const ActionModals: React.FC<{
+    modalState: ActionModalState;
+    onClose: () => void;
+    userOptions: SelectOption[];
+}> = ({ modalState, onClose, userOptions }) => {
+    const { isOpen, type, data: item } = modalState;
+
+    if (!isOpen || !item) {
+        return null;
+    }
+
+    switch (type) {
+        case 'notification':
+            return <AddNotificationDialog item={item} onClose={onClose} userOptions={userOptions} />;
+        case 'task':
+            return <AssignTaskDialog item={item} onClose={onClose} userOptions={userOptions} />;
+        case 'schedule':
+            return <AddScheduleDialog item={item} onClose={onClose} />;
+        default:
+            return null;
+    }
+};
+
+// --- END: Action Dialog Components ---
 
 const ItemSearch = React.forwardRef<
   HTMLInputElement,
@@ -531,6 +825,7 @@ const RequestAndFeedbackListing = () => {
   const {
     requestFeedbacksData = { data: [], counts: {} },
     departmentsData = [],
+    getAllUserData = [],
   } = useSelector(masterSelector, shallowEqual);
 
   const [initialLoading, setInitialLoading] = useState(true);
@@ -564,6 +859,26 @@ const RequestAndFeedbackListing = () => {
     []
   );
   const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  const [actionModalState, setActionModalState] = useState<ActionModalState>({
+    isOpen: false,
+    type: null,
+    data: null,
+  });
+
+  const userOptions = useMemo(() => {
+    return Array.isArray(getAllUserData)
+        ? getAllUserData.map((user: any) => ({ value: user.id, label: user.name }))
+        : [];
+  }, [getAllUserData]);
+  
+  const openActionModal = useCallback((type: ActionModalType, item: RequestFeedbackItem) => {
+      setActionModalState({ isOpen: true, type, data: item });
+  }, []);
+
+  const closeActionModal = useCallback(() => {
+      setActionModalState({ isOpen: false, type: null, data: null });
+  }, []);
 
   const isDataReady = !initialLoading;
   const tableLoading = initialLoading || isSubmitting || isDeleting;
@@ -805,17 +1120,6 @@ const RequestAndFeedbackListing = () => {
     const phone = item.mobile_no?.replace(/\D/g, "");
     if (phone) window.open(`https://wa.me/${phone}`, "_blank");
   }, []);
-  const openActionModal = (
-    item: RequestFeedbackItem,
-    type: "notification" | "task" | "schedule"
-  ) => {
-    toast.push(
-      <Notification
-        title="Action"
-        type="info"
-      >{`Opening ${type} modal for ${item.name}`}</Notification>
-    );
-  };
 
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
     setFilterCriteria(data);
@@ -999,11 +1303,14 @@ const RequestAndFeedbackListing = () => {
             onViewDetail={() => openViewDialog(props.row.original)}
             onSendEmail={() => handleSendEmail(props.row.original)}
             onSendWhatsapp={() => handleSendWhatsapp(props.row.original)}
+            onAddNotification={() => openActionModal('notification', props.row.original)}
+            onAssignTask={() => openActionModal('task', props.row.original)}
+            onAddSchedule={() => openActionModal('schedule', props.row.original)}
           />
         ),
       },
     ],
-    [openEditDrawer, openViewDialog, handleSendEmail, handleSendWhatsapp]
+    [openEditDrawer, openViewDialog, handleSendEmail, handleSendWhatsapp, openActionModal]
   );
 
   const [filteredColumns, setFilteredColumns] =
@@ -1197,7 +1504,15 @@ const RequestAndFeedbackListing = () => {
           </div>
         </AdaptiveCard>
       </Container>
+      
       <RequestFeedbacksSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
+      
+      <ActionModals 
+        modalState={actionModalState} 
+        onClose={closeActionModal} 
+        userOptions={userOptions} 
+      />
+
       <Drawer
         title={editingItem ? "Edit Entry" : "Add New Entry"}
         isOpen={isAddDrawerOpen || isEditDrawerOpen}
