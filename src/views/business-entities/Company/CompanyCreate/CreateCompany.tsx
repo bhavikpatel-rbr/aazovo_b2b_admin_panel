@@ -608,7 +608,7 @@ const transformApiToFormSchema = (
       photo_upload: item.photo_upload || null,
       remark: item.remark || '',
     })) || [],
-  company_references: apiData.company_references?.map(ref => ({
+    company_references: apiData.company_references?.map(ref => ({
       id: String(ref.id),
       person_name: ref.person_name || '',
       company_id: findOptionByValue(allCompaniesForRef, ref.company_id),
@@ -899,11 +899,11 @@ const CompanyDetailsSection = ({
 
   const companyLogoValue = watch("company_logo");
   const selectedCountry = watch("country_id");
-  const isIndiaSelected = selectedCountry?.value === '101' || selectedCountry?.value === '1' ; // '101' is typically India's ID
+  const isIndiaSelected = selectedCountry?.value === '101' || selectedCountry?.value === '1'; // '101' is typically India's ID
 
-  console.log("isIndiaSelected",isIndiaSelected);
-  console.log("selectedCountry?.value",selectedCountry?.value);
-  
+  console.log("isIndiaSelected", isIndiaSelected);
+  console.log("selectedCountry?.value", selectedCountry?.value);
+
   useEffect(() => {
     if (selectedCountry) {
       if (isIndiaSelected) {
@@ -954,43 +954,43 @@ const CompanyDetailsSection = ({
           <Controller name="state" control={control} render={({ field }) => (<Input placeholder="Enter state" {...field} />)} />
         </FormItem>
         <FormItem
-  label={<div>Pincode</div>}
-  invalid={!!errors.zip_code}
-  errorMessage={errors.zip_code?.message as string}
->
-  <Controller
-    name="zip_code"
-    control={control}
-    // Keep your validation rules as a fallback
-    
-    render={({ field }) => {
-      // Create a custom onChange handler
-      const handleNumericChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        // Use a regex to allow only numbers (and an empty string)
-        if (/^[0-9]*$/.test(value)) {
-          // If the value is numeric, call the original onChange from react-hook-form
-          field.onChange(value);
-        }
-      };
+          label={<div>Pincode</div>}
+          invalid={!!errors.zip_code}
+          errorMessage={errors.zip_code?.message as string}
+        >
+          <Controller
+            name="zip_code"
+            control={control}
+            // Keep your validation rules as a fallback
 
-      return (
-        <Input
-          placeholder="Pincode"
-          // Spread the rest of the field props (like onBlur, name, ref)
-          {...field}
-          // But override the onChange with our custom one
-          onChange={handleNumericChange}
-          // Keep the value from the field to ensure it's controlled
-          value={field.value}
-          // For the best mobile UX, use inputMode="numeric" and type="text"
-          inputMode="numeric"
-          type="text"
-        />
-      );
-    }}
-  />
-</FormItem>
+            render={({ field }) => {
+              // Create a custom onChange handler
+              const handleNumericChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+                const value = e.target.value;
+                // Use a regex to allow only numbers (and an empty string)
+                if (/^[0-9]*$/.test(value)) {
+                  // If the value is numeric, call the original onChange from react-hook-form
+                  field.onChange(value);
+                }
+              };
+
+              return (
+                <Input
+                  placeholder="Pincode"
+                  // Spread the rest of the field props (like onBlur, name, ref)
+                  {...field}
+                  // But override the onChange with our custom one
+                  onChange={handleNumericChange}
+                  // Keep the value from the field to ensure it's controlled
+                  value={field.value}
+                  // For the best mobile UX, use inputMode="numeric" and type="text"
+                  inputMode="numeric"
+                  type="text"
+                />
+              );
+            }}
+          />
+        </FormItem>
         <FormItem label={<div>Company Address</div>} invalid={!!errors.company_address} errorMessage={errors.company_address?.message as string} className="md:col-span-5">
           <Controller name="company_address" control={control} render={({ field }) => (<Input placeholder="Company Address" {...field} />)} />
         </FormItem>
@@ -1006,74 +1006,74 @@ const CompanyDetailsSection = ({
           <Controller name="alternate_email_id" control={control} render={({ field }) => (<Input type="email" placeholder="Alternate Email" {...field} />)} />
         </FormItem>
 
-        <FormItem 
-    className="sm:col-span-6 lg:col-span-4" 
-    label={<div>Primary Contact Number <span className="text-red-500">*</span></div>} 
-    invalid={!!errors.primary_contact_number || !!errors.primary_contact_number_code} 
-    errorMessage={(errors.primary_contact_number?.message || (errors.primary_contact_number_code as any)?.message) as string}
->
-    <div className="flex items-start gap-2">
-        <div className="w-2/6">
-            <Controller 
-                name="primary_contact_number_code" 
-                control={control} 
+        <FormItem
+          className="sm:col-span-6 lg:col-span-4"
+          label={<div>Primary Contact Number <span className="text-red-500">*</span></div>}
+          invalid={!!errors.primary_contact_number || !!errors.primary_contact_number_code}
+          errorMessage={(errors.primary_contact_number?.message || (errors.primary_contact_number_code as any)?.message) as string}
+        >
+          <div className="flex items-start gap-2">
+            <div className="w-2/6">
+              <Controller
+                name="primary_contact_number_code"
+                control={control}
                 render={({ field }) => (
-                    <Select options={countryCodeOptions} placeholder="Code" {...field} />
-                )} 
-            />
-        </div>
-        <div className="w-3/5">
-            <Controller 
-                name="primary_contact_number" 
-                control={control} 
+                  <Select options={countryCodeOptions} placeholder="Code" {...field} />
+                )}
+              />
+            </div>
+            <div className="w-3/5">
+              <Controller
+                name="primary_contact_number"
+                control={control}
                 render={({ field }) => (
-                    <Input 
-                        placeholder="Primary Contact" 
-                        {...field} // Spread the other field props (value, onBlur, ref)
-                        // Override the onChange handler
-                        onChange={(e) => {
-                            const value = e.target.value;
-                            // Use regex to remove any non-digit characters
-                            const numericValue = value.replace(/\D/g, '');
-                            // Call the original onChange from react-hook-form with the sanitized value
-                            field.onChange(numericValue);
-                        }} 
-                    />
-                )} 
-            />
-        </div>
-    </div>
-</FormItem>
+                  <Input
+                    placeholder="Primary Contact"
+                    {...field} // Spread the other field props (value, onBlur, ref)
+                    // Override the onChange handler
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Use regex to remove any non-digit characters
+                      const numericValue = value.replace(/\D/g, '');
+                      // Call the original onChange from react-hook-form with the sanitized value
+                      field.onChange(numericValue);
+                    }}
+                  />
+                )}
+              />
+            </div>
+          </div>
+        </FormItem>
         <FormItem className="sm:col-span-6 lg:col-span-4" label="Alternate Contact Number">
-  <div className="flex items-start gap-2">
-    <div className="w-2/6">
-      <Controller
-        name="alternate_contact_number_code"
-        control={control}
-        render={({ field }) => (
-          <Select options={countryCodeOptions} placeholder="Code" {...field} />
-        )}
-      />
-    </div>
-    <div className="w-3/5">
-      <Controller
-        name="alternate_contact_number"
-        control={control}
-        render={({ field }) => (
-          <Input
-            placeholder="Alternate Contact"
-            {...field}
-            onChange={(e) => {
-              // Allow only numeric input by removing non-digit characters
-              const numericValue = e.target.value.replace(/\D/g, '');
-              field.onChange(numericValue);
-            }}
-          />
-        )}
-      />
-    </div>
-  </div>
-</FormItem>
+          <div className="flex items-start gap-2">
+            <div className="w-2/6">
+              <Controller
+                name="alternate_contact_number_code"
+                control={control}
+                render={({ field }) => (
+                  <Select options={countryCodeOptions} placeholder="Code" {...field} />
+                )}
+              />
+            </div>
+            <div className="w-3/5">
+              <Controller
+                name="alternate_contact_number"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    placeholder="Alternate Contact"
+                    {...field}
+                    onChange={(e) => {
+                      // Allow only numeric input by removing non-digit characters
+                      const numericValue = e.target.value.replace(/\D/g, '');
+                      field.onChange(numericValue);
+                    }}
+                  />
+                )}
+              />
+            </div>
+          </div>
+        </FormItem>
         <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>Landline</div>} invalid={!!errors.general_contact_number || !!errors.general_contact_number_code} errorMessage={(errors.general_contact_number?.message || (errors.general_contact_number_code as any)?.message) as string}>
           <div className="flex items-start gap-2">
             <div className="w-3/3"> <Controller name="general_contact_number" control={control} render={({ field }) => (<Input placeholder="Company Landline" {...field} />)} /> </div>
@@ -1161,28 +1161,28 @@ const CompanyDetailsSection = ({
         return (
           <Card key={item.id} className="mb-4 rounded-md border dark:border-gray-600" bodyClass="p-4">
             <div className="grid md:grid-cols-10 gap-3 items-start">
-             <FormItem 
-    label={`Certificate ID ${index + 1}`} 
-    className="col-span-10 md:col-span-3" 
-    invalid={!!errors.company_certificate?.[index]?.certificate_id} 
-    errorMessage={(errors.company_certificate?.[index]?.certificate_id as any)?.message as string}
->
-    <Controller 
-        name={`company_certificate.${index}.certificate_id`} 
-        control={control} 
-        render={({ field }) => (
-            <Input 
-                placeholder="e.g., 12345 or select" 
-                {...field}
-                // Add the onChange handler to restrict input to numbers only
-                onChange={(e) => {
-                    const numericValue = e.target.value.replace(/\D/g, '');
-                    field.onChange(numericValue);
-                }}
-            />
-        )} 
-    />
-</FormItem>
+              <FormItem
+                label={`Certificate ID ${index + 1}`}
+                className="col-span-10 md:col-span-3"
+                invalid={!!errors.company_certificate?.[index]?.certificate_id}
+                errorMessage={(errors.company_certificate?.[index]?.certificate_id as any)?.message as string}
+              >
+                <Controller
+                  name={`company_certificate.${index}.certificate_id`}
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      placeholder="e.g., 12345 or select"
+                      {...field}
+                      // Add the onChange handler to restrict input to numbers only
+                      onChange={(e) => {
+                        const numericValue = e.target.value.replace(/\D/g, '');
+                        field.onChange(numericValue);
+                      }}
+                    />
+                  )}
+                />
+              </FormItem>
               <FormItem label={`Name ${index + 1}`} className="col-span-10 md:col-span-3" invalid={!!errors.company_certificate?.[index]?.certificate_name} errorMessage={errors.company_certificate?.[index]?.certificate_name?.message as string}>
                 <Controller name={`company_certificate.${index}.certificate_name`} control={control} render={({ field }) => (<Input placeholder="e.g., ISO 9001" {...field} />)} />
               </FormItem>
@@ -1253,30 +1253,30 @@ const CompanyDetailsSection = ({
             <FormItem label={`Email ${index + 1}`} invalid={!!errors.office_info?.[index]?.office_email} errorMessage={errors.office_info?.[index]?.office_email?.message as string}>
               <Controller name={`office_info.${index}.office_email`} control={control} render={({ field }) => (<Input type="email" placeholder="office.contact@example.com" {...field} />)} />
             </FormItem>
-            <FormItem 
-    label={`Phone ${index + 1}`} 
-    invalid={!!errors.office_info?.[index]?.office_phone} 
-    errorMessage={errors.office_info?.[index]?.office_phone?.message as string}
->
-    <Controller 
-        name={`office_info.${index}.office_phone`} 
-        control={control} 
-        render={({ field }) => (
-            <Input 
-                type="tel" 
-                placeholder="Office Phone Number" 
-                {...field}
-                // Add the onChange handler to restrict input
-                onChange={(e) => {
-                    // Remove any character that is not a number
-                    const numericValue = e.target.value.replace(/\D/g, '');
-                    // Update the form state with the sanitized value
-                    field.onChange(numericValue);
-                }}
-            />
-        )} 
-    />
-</FormItem>
+            <FormItem
+              label={`Phone ${index + 1}`}
+              invalid={!!errors.office_info?.[index]?.office_phone}
+              errorMessage={errors.office_info?.[index]?.office_phone?.message as string}
+            >
+              <Controller
+                name={`office_info.${index}.office_phone`}
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    type="tel"
+                    placeholder="Office Phone Number"
+                    {...field}
+                    // Add the onChange handler to restrict input
+                    onChange={(e) => {
+                      // Remove any character that is not a number
+                      const numericValue = e.target.value.replace(/\D/g, '');
+                      // Update the form state with the sanitized value
+                      field.onChange(numericValue);
+                    }}
+                  />
+                )}
+              />
+            </FormItem>
 
             <div className="md:col-span-4 border-t dark:border-gray-600 pt-4 mt-2">
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1289,27 +1289,27 @@ const CompanyDetailsSection = ({
                 <FormItem label={`City ${index + 1}`} invalid={!!errors.office_info?.[index]?.city} errorMessage={errors.office_info?.[index]?.city?.message as string}>
                   <Controller name={`office_info.${index}.city`} control={control} render={({ field }) => (<Input placeholder="Enter city" {...field} />)} />
                 </FormItem>
-                <FormItem 
-    label={`Pincode ${index + 1}`} 
-    invalid={!!errors.office_info?.[index]?.zip_code} 
-    errorMessage={errors.office_info?.[index]?.zip_code?.message as string}
->
-    <Controller 
-        name={`office_info.${index}.zip_code`} 
-        control={control} 
-        render={({ field }) => (
-            <Input 
-                placeholder="Pincode" 
-                {...field}
-                // Add the onChange handler to restrict to numeric input
-                onChange={(e) => {
-                    const numericValue = e.target.value.replace(/\D/g, '');
-                    field.onChange(numericValue);
-                }}
-            />
-        )} 
-    />
-</FormItem>
+                <FormItem
+                  label={`Pincode ${index + 1}`}
+                  invalid={!!errors.office_info?.[index]?.zip_code}
+                  errorMessage={errors.office_info?.[index]?.zip_code?.message as string}
+                >
+                  <Controller
+                    name={`office_info.${index}.zip_code`}
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        placeholder="Pincode"
+                        {...field}
+                        // Add the onChange handler to restrict to numeric input
+                        onChange={(e) => {
+                          const numericValue = e.target.value.replace(/\D/g, '');
+                          field.onChange(numericValue);
+                        }}
+                      />
+                    )}
+                  />
+                </FormItem>
               </div>
             </div>
             <FormItem label={`Address ${index + 1}`} className="md:col-span-4" invalid={!!errors.office_info?.[index]?.address} errorMessage={errors.office_info?.[index]?.address?.message as string}>
@@ -1605,27 +1605,27 @@ const BankDetailsSection = ({ control, errors, formMethods, handlePreviewClick }
         <FormItem label="Primary IFSC Code" invalid={!!errors.primary_ifsc_code} errorMessage={errors.primary_ifsc_code?.message as string}>
           <Controller name="primary_ifsc_code" control={control} render={({ field }) => (<Input placeholder="Primary IFSC" {...field} />)} />
         </FormItem>
-       <FormItem 
-    label="Primary Account Number" 
-    invalid={!!errors.primary_account_number} 
-    errorMessage={errors.primary_account_number?.message as string}
->
-    <Controller 
-        name="primary_account_number" 
-        control={control} 
-        render={({ field }) => (
-            <Input 
-                placeholder="Primary Account No." 
+        <FormItem
+          label="Primary Account Number"
+          invalid={!!errors.primary_account_number}
+          errorMessage={errors.primary_account_number?.message as string}
+        >
+          <Controller
+            name="primary_account_number"
+            control={control}
+            render={({ field }) => (
+              <Input
+                placeholder="Primary Account No."
                 {...field}
                 // Add the onChange handler to restrict to numeric input
                 onChange={(e) => {
-                    const numericValue = e.target.value.replace(/\D/g, '');
-                    field.onChange(numericValue);
+                  const numericValue = e.target.value.replace(/\D/g, '');
+                  field.onChange(numericValue);
                 }}
-            />
-        )} 
-    />
-</FormItem>
+              />
+            )}
+          />
+        </FormItem>
         <FormItem label="Primary Bank Verification Photo" className="md:col-span-3" invalid={!!errors.primary_bank_verification_photo} errorMessage={(errors.primary_bank_verification_photo as any)?.message as string}>
           <Controller
             name="primary_bank_verification_photo"
@@ -1664,29 +1664,29 @@ const BankDetailsSection = ({ control, errors, formMethods, handlePreviewClick }
         <FormItem label="Secondary IFSC Code" invalid={!!errors.secondary_ifsc_code} errorMessage={errors.secondary_ifsc_code?.message as string}>
           <Controller name="secondary_ifsc_code" control={control} render={({ field }) => (<Input placeholder="Secondary IFSC" {...field} />)} />
         </FormItem>
-        <FormItem 
-    label="Secondary Account Number" 
-    invalid={!!errors.secondary_account_number} 
-    errorMessage={errors.secondary_account_number?.message as string}
->
-    <Controller 
-        name="secondary_account_number" 
-        control={control} 
-        render={({ field }) => (
-            <Input 
-                placeholder="Secondary Account No." 
+        <FormItem
+          label="Secondary Account Number"
+          invalid={!!errors.secondary_account_number}
+          errorMessage={errors.secondary_account_number?.message as string}
+        >
+          <Controller
+            name="secondary_account_number"
+            control={control}
+            render={({ field }) => (
+              <Input
+                placeholder="Secondary Account No."
                 {...field}
                 // Add the onChange handler to restrict input
                 onChange={(e) => {
-                    // Remove any character that is not a number
-                    const numericValue = e.target.value.replace(/\D/g, '');
-                    // Update the form state with the sanitized value
-                    field.onChange(numericValue);
+                  // Remove any character that is not a number
+                  const numericValue = e.target.value.replace(/\D/g, '');
+                  // Update the form state with the sanitized value
+                  field.onChange(numericValue);
                 }}
-            />
-        )} 
-    />
-</FormItem>
+              />
+            )}
+          />
+        </FormItem>
         <FormItem label="Secondary Bank Verification Photo" className="md:col-span-3" invalid={!!errors.secondary_bank_verification_photo} errorMessage={(errors.secondary_bank_verification_photo as any)?.message as string}>
           <Controller
             name="secondary_bank_verification_photo"
@@ -1727,27 +1727,27 @@ const BankDetailsSection = ({ control, errors, formMethods, handlePreviewClick }
               <FormItem label={`Type ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.type} errorMessage={(errors.company_bank_details?.[index]?.type as any)?.message as string}>
                 <Controller name={`company_bank_details.${index}.type`} control={control} render={({ field }) => (<Select placeholder="Select Type" options={bankTypeOptions} {...field} />)} />
               </FormItem>
-             <FormItem 
-    label={`Account Number ${index + 1}`} 
-    invalid={!!errors.company_bank_details?.[index]?.bank_account_number} 
-    errorMessage={errors.company_bank_details?.[index]?.bank_account_number?.message as string}
->
-    <Controller 
-        name={`company_bank_details.${index}.bank_account_number`} 
-        control={control} 
-        render={({ field }) => (
-            <Input 
-                placeholder="Account No." 
-                {...field}
-                // Add the onChange handler to restrict to numeric input
-                onChange={(e) => {
-                    const numericValue = e.target.value.replace(/\D/g, '');
-                    field.onChange(numericValue);
-                }}
-            />
-        )} 
-    />
-</FormItem>
+              <FormItem
+                label={`Account Number ${index + 1}`}
+                invalid={!!errors.company_bank_details?.[index]?.bank_account_number}
+                errorMessage={errors.company_bank_details?.[index]?.bank_account_number?.message as string}
+              >
+                <Controller
+                  name={`company_bank_details.${index}.bank_account_number`}
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      placeholder="Account No."
+                      {...field}
+                      // Add the onChange handler to restrict to numeric input
+                      onChange={(e) => {
+                        const numericValue = e.target.value.replace(/\D/g, '');
+                        field.onChange(numericValue);
+                      }}
+                    />
+                  )}
+                />
+              </FormItem>
               <FormItem label={`Bank Name ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.bank_name} errorMessage={(errors.company_bank_details?.[index] as any)?.bank_name?.message as string}>
                 <Controller name={`company_bank_details.${index}.bank_name`} control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
               </FormItem>
@@ -1901,40 +1901,40 @@ const ReferenceSection = ({ control, errors }: FormSectionBaseProps) => {
               <Controller name={`company_references.${index}.company_id`} control={control} render={({ field }) => (<Select placeholder="Company Name" options={companyOptions} {...field} />)} />
             </FormItem>
 
-            <FormItem 
-    label={`Contact Number ${index + 1}`} 
-    invalid={!!errors.company_references?.[index]?.number} 
-    errorMessage={errors.company_references?.[index]?.number?.message as string}
->
-    <div className="flex items-start gap-2">
-        <div className="w-2/6">
-            <Controller 
-                name={`company_references.${index}.number_code`} 
-                control={control} 
-                render={({ field }) => (
-                    <Select options={countryCodeOptions} placeholder="Code" {...field} />
-                )} 
-            />
-        </div>
-        <div className="w-3/5">
-            <Controller 
-                name={`company_references.${index}.number`} 
-                control={control} 
-                render={({ field }) => (
-                    <Input  
-                        placeholder="Contact Number" 
+            <FormItem
+              label={`Contact Number ${index + 1}`}
+              invalid={!!errors.company_references?.[index]?.number}
+              errorMessage={errors.company_references?.[index]?.number?.message as string}
+            >
+              <div className="flex items-start gap-2">
+                <div className="w-2/6">
+                  <Controller
+                    name={`company_references.${index}.number_code`}
+                    control={control}
+                    render={({ field }) => (
+                      <Select options={countryCodeOptions} placeholder="Code" {...field} />
+                    )}
+                  />
+                </div>
+                <div className="w-3/5">
+                  <Controller
+                    name={`company_references.${index}.number`}
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        placeholder="Contact Number"
                         {...field} // Spread props first
                         // Then override the onChange
                         onChange={(e) => {
-                            const numericValue = e.target.value.replace(/\D/g, '');
-                            field.onChange(numericValue);
-                        }} 
-                    />
-                )} 
-            />
-        </div>
-    </div>
-</FormItem>
+                          const numericValue = e.target.value.replace(/\D/g, '');
+                          field.onChange(numericValue);
+                        }}
+                      />
+                    )}
+                  />
+                </div>
+              </div>
+            </FormItem>
             <FormItem label={`Remark ${index + 1}`} className="sm:col-span-3">
               <Controller name={`company_references.${index}.remark`} control={control} render={({ field }) => (<Input placeholder="Add remarks here..." {...field} />)} />
             </FormItem>
@@ -2357,35 +2357,35 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
                 />
               </FormItem>
               <FormItem label={`Designation ${index + 1}`} invalid={!!errors.company_members?.[index]?.designation} errorMessage={errors.company_members?.[index]?.designation?.message as string}>
-                <Controller name={`company_members.${index}.designation`} control={control} render={({ field }) => (<Input  disabled placeholder="Sales Executive" {...field} />)} />
+                <Controller name={`company_members.${index}.designation`} control={control} render={({ field }) => (<Input disabled placeholder="Sales Executive" {...field} />)} />
               </FormItem>
               <FormItem label={`Person Name ${index + 1}`} invalid={!!errors.company_members?.[index]?.person_name} errorMessage={errors.company_members?.[index]?.person_name?.message as string}>
                 <Controller name={`company_members.${index}.person_name`} control={control} render={({ field }) => (<Input placeholder="Display Name" {...field} />)} />
               </FormItem>
-             <FormItem 
-    label={`Contact No. ${index + 1}`} 
-    invalid={!!errors.company_members?.[index]?.number} 
-    errorMessage={errors.company_members?.[index]?.number?.message as string}
->
-    <Controller 
-        name={`company_members.${index}.number`} 
-        control={control} 
-        render={({ field }) => (
-            <Input 
-                type="tel" 
-                placeholder="Contact Number" 
-                {...field} // Spread the field props first
-                // Then, override the onChange handler
-                onChange={(e) => {
-                    // Remove any non-digit characters
-                    const numericValue = e.target.value.replace(/\D/g, '');
-                    // Update the form state with the clean value
-                    field.onChange(numericValue);
-                }} 
-            />
-        )} 
-    />
-</FormItem>
+              <FormItem
+                label={`Contact No. ${index + 1}`}
+                invalid={!!errors.company_members?.[index]?.number}
+                errorMessage={errors.company_members?.[index]?.number?.message as string}
+              >
+                <Controller
+                  name={`company_members.${index}.number`}
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      type="tel"
+                      placeholder="Contact Number"
+                      {...field} // Spread the field props first
+                      // Then, override the onChange handler
+                      onChange={(e) => {
+                        // Remove any non-digit characters
+                        const numericValue = e.target.value.replace(/\D/g, '');
+                        // Update the form state with the clean value
+                        field.onChange(numericValue);
+                      }}
+                    />
+                  )}
+                />
+              </FormItem>
             </div>
           </Card>
         ))}
@@ -2432,30 +2432,30 @@ const TeamManagementSection = ({ control, errors }: FormSectionBaseProps) => {
             <FormItem label={`Person Name ${index + 1}`} invalid={!!errors.company_teams?.[index]?.person_name} errorMessage={errors.company_teams?.[index]?.person_name?.message as string}>
               <Controller name={`company_teams.${index}.person_name`} control={control} render={({ field }) => (<Input placeholder="Person Name" {...field} />)} />
             </FormItem>
-            <FormItem 
-    label={`Contact No. ${index + 1}`} 
-    invalid={!!errors.company_teams?.[index]?.number} 
-    errorMessage={errors.company_teams?.[index]?.number?.message as string}
->
-    <Controller 
-        name={`company_teams.${index}.number`} 
-        control={control} 
-        render={({ field }) => (
-            <Input 
-                type="tel" 
-                placeholder="Contact Number" 
-                {...field} // Spread the field props first
-                // Then, override the onChange handler
-                onChange={(e) => {
-                    // Remove any non-digit characters from the input
-                    const numericValue = e.target.value.replace(/\D/g, '');
-                    // Update the form state with the sanitized value
-                    field.onChange(numericValue);
-                }} 
-            />
-        )} 
-    />
-</FormItem>
+            <FormItem
+              label={`Contact No. ${index + 1}`}
+              invalid={!!errors.company_teams?.[index]?.number}
+              errorMessage={errors.company_teams?.[index]?.number?.message as string}
+            >
+              <Controller
+                name={`company_teams.${index}.number`}
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    type="tel"
+                    placeholder="Contact Number"
+                    {...field} // Spread the field props first
+                    // Then, override the onChange handler
+                    onChange={(e) => {
+                      // Remove any non-digit characters from the input
+                      const numericValue = e.target.value.replace(/\D/g, '');
+                      // Update the form state with the sanitized value
+                      field.onChange(numericValue);
+                    }}
+                  />
+                )}
+              />
+            </FormItem>
           </div>
         </Card>
       ))}
@@ -2490,10 +2490,31 @@ const companySchema = z.object({
   notification_email: optionalEmail,
 
   primary_contact_number_code: z.object({ value: z.string().min(1), label: z.string() }, { required_error: 'Code is required.' }),
-  primary_contact_number: z.string().trim().min(7, "Must be at least 7 digits.").regex(/^\d+$/, "Only digits allowed."),
+  primary_contact_number: z
+    .string({
+      invalid_type_error: "Primary contact number must be a string.",
+    })
+    .trim()
+    .regex(/^\d{7,}$/, "Contact number must contain at least 7 digits and only digits.")
+    .optional()
+    .nullable(),
   alternate_contact_number_code: z.object({ value: z.string(), label: z.string() }).optional().nullable(),
-  alternate_contact_number: z.string().trim().regex(/^\d*$/, "Only digits allowed.").optional().nullable(),
-  general_contact_number: z.string().trim().regex(/^\d*$/, "Only digits allowed.").optional().nullable(),
+  alternate_contact_number: z
+    .string({
+      invalid_type_error: "Alternate contact number must be a string.",
+    })
+    .trim()
+    .regex(/^\d{7,}$/, "Contact number must contain at least 7 digits and only digits.")
+    .optional()
+    .nullable(),
+  general_contact_number: z
+    .string({
+      invalid_type_error: "General contact number must be a string.",
+    })
+    .trim()
+    .regex(/^\d{7,}$/, "Contact number must contain at least 7 digits and only digits.")
+    .optional()
+    .nullable(),
 
   gst_number: z.string().trim().optional().nullable(),
   pan_number: z.string().trim().optional().nullable(),
@@ -2522,7 +2543,14 @@ const companySchema = z.object({
     gst_number: z.string().trim().optional().nullable(),
     contact_person: z.string().trim().optional().nullable(),
     office_email: optionalEmail,
-    office_phone: z.string().optional().nullable(),
+    office_phone: z
+      .string({
+        invalid_type_error: "Office contact number must be a string.",
+      })
+      .trim()
+      .regex(/^\d{7,}$/, "Contact number must contain at least 7 digits and only digits.")
+      .optional()
+      .nullable(),
   })).optional(),
 
   // KYC Docs
@@ -2584,10 +2612,17 @@ const companySchema = z.object({
   })
   ).optional(),
 
- company_references: z.array(z.object({
+  company_references: z.array(z.object({
     person_name: z.string().optional().nullable(),
     company_id: z.any().optional().nullable(),
-    number: z.string().optional().nullable(),
+    number: z
+      .string({
+        invalid_type_error: " number must be a string.",
+      })
+      .trim()
+      .regex(/^\d{7,}$/, "Contact number must contain at least 7 digits and only digits.")
+      .optional()
+      .nullable(),
     number_code: z.object({ value: z.string(), label: z.string() }).optional().nullable(),
     remark: z.string().optional().nullable(),
   })).optional(),
