@@ -1634,6 +1634,7 @@ const ItemTable = React.memo(
       onCheckBoxChange={onRowSelect}
       onIndeterminateCheckBoxChange={onAllRowSelect}
       noData={!loading && data.length === 0}
+      
     />
   )
 );
@@ -2519,92 +2520,106 @@ const OffersDemands = () => {
     currentTableConfig.query,
   ]);
 
-  const handleConfirmExportWithReason = useCallback(
+ const handleConfirmExportWithReason = useCallback(
     async (data: ExportReasonFormData) => {
-      setIsSubmittingExportReason(true);
-      setDataForExportLoading(true);
-      const moduleName = "Offers & Demands";
-      const date = dayjs().format("YYYYMMDD");
-      const filename = `offers_demands_export_${date}.csv`;
-      try {
-        await dispatch(
-          submitExportReasonAction({
-            reason: data.reason,
-            module: moduleName,
-            file_name: filename,
-          })
-        ).unwrap();
-      } catch (e) {
-        /* Optional: log reason submission error */
-      }
-      const exportParams = prepareApiParams(
-        currentTableConfig,
-        filterCriteria,
-        true
-      ); // true for export
-      let allOffersForExport: ActualApiOfferShape[] = [];
-      let allDemandsForExport: ActualApiDemandShape[] = [];
-      try {
-        if (
-          currentTab === TABS.OFFER ||
-          (currentTab === TABS.ALL &&
-            (!filterCriteria.itemType || filterCriteria.itemType === "Offer"))
-        ) {
-          const offerRes = await dispatch(
-            getOffersAction(exportParams)
-          ).unwrap();
-          allOffersForExport = offerRes?.data || [];
+        setIsSubmittingExportReason(true);
+        setDataForExportLoading(true);
+
+        const moduleName = "Offers & Demands";
+        const date = dayjs().format("YYYYMMDD");
+        const filename = `offers_demands_export_${date}.csv`;
+
+        try {
+            // This part is for submitting the reason. It can stay as is.
+            await dispatch(
+                submitExportReasonAction({
+                    reason: data.reason,
+                    module: moduleName,
+                    file_name: filename,
+                })
+            ).unwrap();
+        } catch (e) {
+            console.error("Failed to submit export reason:", e);
+            // We can continue with the export even if the reason submission fails.
         }
-        if (
-          currentTab === TABS.DEMAND ||
-          (currentTab === TABS.ALL &&
-            (!filterCriteria.itemType || filterCriteria.itemType === "Demand"))
-        ) {
-          const demandRes = await dispatch(
-            getDemandsAction(exportParams)
-          ).unwrap();
-          allDemandsForExport = demandRes?.data || [];
-        }
-        const transformedO = allOffersForExport.map(transformApiOffer);
-        const transformedD = allDemandsForExport.map(transformApiDemand);
-        let dataToExport: OfferDemandItem[] = [];
-        if (currentTab === TABS.OFFER) dataToExport = transformedO;
-        else if (currentTab === TABS.DEMAND) dataToExport = transformedD;
-        else {
-          if (!filterCriteria.itemType || filterCriteria.itemType === "Offer")
-            dataToExport.push(...transformedO);
-          if (!filterCriteria.itemType || filterCriteria.itemType === "Demand")
-            dataToExport.push(...transformedD);
-        }
-        const success = exportToCsvOffersDemands(filename, dataToExport);
-        if (success)
-          toast.push(
-            <Notification title="Export OK" type="success">
-              Data exported.
-            </Notification>
-          );
-      } catch (err) {
-        toast.push(
-          <Notification title="Export Failed" type="danger">
-            Could not fetch all data.
-          </Notification>
+
+        const exportParams = prepareApiParams(
+            currentTableConfig,
+            filterCriteria,
+            true // true for export (fetch_all: true)
         );
-      } finally {
-        setIsSubmittingExportReason(false);
-        setIsExportReasonModalOpen(false);
-        setDataForExportLoading(false);
-        fetchData();
-      }
+
+        // --- IMPORTANT DEBUGGING LOG ---
+        console.log("Export API Parameters:", exportParams);
+
+        try {
+            let allDataToExport: OfferDemandItem[] = [];
+
+            const shouldFetchOffers =
+                currentTab === TABS.OFFER ||
+                (currentTab === TABS.ALL &&
+                    (!filterCriteria.itemType || filterCriteria.itemType === "Offer"));
+
+            const shouldFetchDemands =
+                currentTab === TABS.DEMAND ||
+                (currentTab === TABS.ALL &&
+                    (!filterCriteria.itemType || filterCriteria.itemType === "Demand"));
+
+            if (shouldFetchOffers) {
+                const offerRes = await dispatch(getOffersAction(exportParams)).unwrap();
+                // --- IMPORTANT DEBUGGING LOG ---
+                console.log("Raw API response for OFFERS export:", offerRes);
+                const offersForExport = offerRes?.data || [];
+                if (Array.isArray(offersForExport)) {
+                    allDataToExport.push(...offersForExport.map(transformApiOffer));
+                }
+            }
+
+            if (shouldFetchDemands) {
+                const demandRes = await dispatch(getDemandsAction(exportParams)).unwrap();
+                // --- IMPORTANT DEBUGGING LOG ---
+                console.log("Raw API response for DEMANDS export:", demandRes);
+                const demandsForExport = demandRes?.data || [];
+                if (Array.isArray(demandsForExport)) {
+                    allDataToExport.push(...demandsForExport.map(transformApiDemand));
+                }
+            }
+
+            // --- IMPORTANT DEBUGGING LOG ---
+            console.log(`Total items prepared for CSV export: ${allDataToExport.length}`, allDataToExport);
+
+            const success = exportToCsvOffersDemands(filename, allDataToExport);
+            if (success) {
+                toast.push(
+                    <Notification title="Export Successful" type="success">
+                        Your file is downloading.
+                    </Notification>
+                );
+            }
+            // The `exportToCsvOffersDemands` function will show its own toast if there's no data.
+
+        } catch (err) {
+            console.error("Error fetching data for export:", err);
+            toast.push(
+                <Notification title="Export Failed" type="danger">
+                    Could not fetch the complete data for exporting. Please check the console for details.
+                </Notification>
+            );
+        } finally {
+            setIsSubmittingExportReason(false);
+            setIsExportReasonModalOpen(false);
+            setDataForExportLoading(false);
+            // No need to call fetchData() here as the export doesn't change the table state.
+        }
     },
     [
-      dispatch,
-      filterCriteria,
-      currentTableConfig,
-      currentTab,
-      fetchData,
-      prepareApiParams,
+        dispatch,
+        filterCriteria,
+        currentTableConfig,
+        currentTab,
+        prepareApiParams,
     ]
-  );
+);
 
   const handleCopy = useCallback((text: string, successMessage: string) => {
     if (!text) return;
@@ -2965,7 +2980,7 @@ const OffersDemands = () => {
                 data={pageData}
                 loading={isOverallLoading || dataForExportLoading}
                 pagingData={{
-                  total: filteredColumns?.length ? totalItems : 0,
+                  total: filteredColumns?.length > 0 && pageData?.length > 0  ? totalItems : 0,
                   pageIndex: currentTableConfig.pageIndex as number,
                   pageSize: currentTableConfig.pageSize as number,
                 }}
