@@ -77,7 +77,7 @@ import {
     updateTaskStatusAPI,
     addAllActionAction,
     // @ts-ignore
-    // deleteAllTasksAction,
+    deleteAllTasksAction,
 } from '@/reduxtool/master/middleware'
 
 // Utils
@@ -1647,6 +1647,7 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
 
         setIsDeleting(true);
         try {
+            // @ts-ignore
             await dispatch(deleteAllTasksAction({ ids: idsToDelete })).unwrap();
             toast.push(
                 <Notification title="Tasks Deleted" type="success">
@@ -1675,19 +1676,15 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
     }, []);
 
     const handleSendWhatsapp = useCallback((task: TaskItem) => {
-        console.log("task", task._originalData?.assign_to_users?.[0]?.mobile_number);
-
-        const primaryAssignee = task._originalData?.assign_to_users?.[0]?.mobile_number
-            ;
-        const phone = primaryAssignee?.replace(/\D/g, '');
-        console.log("phone", phone);
+        const primaryAssigneeData = task._originalData?.assign_to_users?.[0];
+        const phone = primaryAssigneeData?.mobile_number?.replace(/\D/g, '');
 
         if (!phone) {
             toast.push(<Notification type="warning" title="No Mobile Number" children="The primary assignee for this task does not have a mobile number." />);
             return;
         }
 
-        const message = `Hi ${primaryAssignee.name}, this is a message regarding the task: "${task.note}" (ID: ${task.id}).`;
+        const message = `Hi ${primaryAssigneeData.name}, this is a message regarding the task: "${task.note}" (ID: ${task.id}).`;
         window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
     }, []);
 
