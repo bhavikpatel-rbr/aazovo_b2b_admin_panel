@@ -1111,6 +1111,8 @@ const ViewOpportunitiesDialog: React.FC<{
       setIsLoading(true);
       try {
         const actionResult = await dispatch(getLeadOpportunitiesAction({ id: lead.id, key: lead.lead_intent })).unwrap();
+        console.log("actionResult?.data",actionResult?.data);
+        
         if (actionResult?.data) {
           const formattedData = actionResult.data.map((item: any) => ({
             id: item.id,
@@ -1121,8 +1123,8 @@ const ViewOpportunitiesDialog: React.FC<{
             price: item.price,
             device_condition: item.device_condition,
             color: item.color,
-            member_name: item.member_name,
-            customer_code: item.customer_code,
+            member_name: item.member.name,
+            customer_code: item.member.member_code,
             country_name: item.country_name,
             leads_count: item.leads_count,
           }));
