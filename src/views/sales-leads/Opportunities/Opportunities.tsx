@@ -2446,9 +2446,7 @@ const generateOpportunityMessage = (item: OpportunityItem): string => {
   if (item.opportunity_id) {
     parts.push(`Opportunity: ${item.opportunity_id}`);
   }
-  if (item.product_name) {
-    parts.push(`Product: ${item.product_name}`);
-  }
+    
 
   // Special check for quantity to allow the number 0
   if (item.qty !== null && item.qty !== undefined) {
