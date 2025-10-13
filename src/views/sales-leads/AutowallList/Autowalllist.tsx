@@ -812,9 +812,102 @@ const AddManualDialog = ({ isOpen, onClose, logData }: { isOpen: boolean; onClos
 
 // --- END: Action Modals ---
 
+// --- START: Product Wise View Component ---
+
+const ProductAccordion: React.FC<{ title: string; count: number; children: React.ReactNode }> = ({ title, count, children }) => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg mb-2 overflow-hidden">
+            <button
+                className="w-full flex justify-between items-center p-4 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700/50 transition-colors"
+                onClick={() => setIsOpen(!isOpen)}
+            >
+                <div className="flex items-center gap-3">
+                    <h6 className="font-semibold text-gray-800 dark:text-gray-100">{title}</h6>
+                    <Tag className="bg-primary-100 text-primary-600 dark:bg-primary-500/20 dark:text-primary-300">{count} {count > 1 ? 'messages' : 'message'}</Tag>
+                </div>
+                {isOpen ? <TbChevronDown className="h-5 w-5 text-gray-500" /> : <TbChevronRight className="h-5 w-5 text-gray-500" />}
+            </button>
+            {isOpen && (
+                <div className="p-4 bg-white dark:bg-gray-800/50">
+                    <div className="space-y-4">
+                        {children}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const ProductWiseView: React.FC<{ data: StaticLogItem[] }> = ({ data }) => {
+    const productGroupedData = useMemo(() => {
+        const groups: { [key: string]: StaticLogItem[] } = {};
+        const successLogs = data.filter(item => item.status === 'Success' && item.product !== '-');
+
+        for (const log of successLogs) {
+            if (!groups[log.product]) {
+                groups[log.product] = [];
+            }
+            groups[log.product].push(log);
+        }
+
+        const sortedKeys = Object.keys(groups).sort((a, b) => a.localeCompare(b));
+        const sortedGroups: { [key: string]: StaticLogItem[] } = {};
+        for(const key of sortedKeys) {
+            sortedGroups[key] = groups[key];
+        }
+
+        return sortedGroups;
+    }, [data]);
+
+    const productKeys = Object.keys(productGroupedData);
+
+    if (productKeys.length === 0) {
+        return (
+            <div className="flex justify-center items-center h-full p-8 text-gray-500">
+                No successful product logs found for the current filters.
+            </div>
+        );
+    }
+
+    return (
+        <div className="p-4">
+            {productKeys.map(productName => (
+                <ProductAccordion key={productName} title={productName} count={productGroupedData[productName].length}>
+                    {productGroupedData[productName].map(log => (
+                         <div key={log.id} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0 pb-4 last:pb-0">
+                            <div className="flex justify-between items-center mb-3 text-xs text-gray-500 dark:text-gray-400">
+                                <span>Member: <span className="font-semibold text-gray-700 dark:text-gray-300">{log.memberId}</span></span>
+                                <span>Date: <span className="font-semibold text-gray-700 dark:text-gray-300">{log.createdDate}</span></span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <h6 className="mb-2 text-sm font-semibold">AI Formatted</h6>
+                                    <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md border dark:border-gray-600 h-full">
+                                    <pre className="text-xs whitespace-pre-wrap font-sans">{log.aiFormatted}</pre>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h6 className="mb-2 text-sm font-semibold">Original WA Message</h6>
+                                    <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md border dark:border-gray-600 h-full">
+                                    <pre className="text-xs whitespace-pre-wrap font-sans">{log.originalMessage}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                         </div>
+                    ))}
+                </ProductAccordion>
+            ))}
+        </div>
+    );
+};
+// --- END: Product Wise View Component ---
+
 const TABS = {
   CHART: "chart_view",
   MESSAGE: "message_tab",
+  PRODUCT_WISE: "product_wise",
   SUCCESS: "success_wall",
   FAILED: "failed_wall",
 };
@@ -1054,6 +1147,8 @@ const AutoWallListing = () => {
           <div className="flex-grow overflow-auto bg-gray-50 dark:bg-gray-900/50">
             {currentTab === TABS.CHART ? (
               <ChartView data={globallyFilteredData} />
+            ) : currentTab === TABS.PRODUCT_WISE ? (
+              <ProductWiseView data={globallyFilteredData} />
             ) : (
               <DataTable
                 columns={columns}
