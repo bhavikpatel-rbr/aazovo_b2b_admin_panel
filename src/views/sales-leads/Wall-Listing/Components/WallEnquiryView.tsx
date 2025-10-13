@@ -131,7 +131,7 @@ const ListingDetailsView = ({ enquiry }: { enquiry: WallEnquiryData }) => (
                 <InfoPair label="Product Status" value={enquiry.product_status} />
                 <InfoPair label="Device Condition" value={enquiry.device_condition} />
                 <InfoPair label="Color" value={enquiry.color} />
-                <InfoPair label="Warranty" value={enquiry.warranty} />
+                {/* <InfoPair label="Warranty" value={enquiry.warranty} /> */}
                 <InfoPair label="Location" value={enquiry.location} />
             </div>
         </DetailSection>
@@ -141,7 +141,7 @@ const ListingDetailsView = ({ enquiry }: { enquiry: WallEnquiryData }) => (
                 <InfoPair label="Brand" value={enquiry.product?.brand?.name} />
                 <InfoPair label="Category" value={enquiry.product?.category?.name} />
                 <InfoPair label="Sub-Category" value={enquiry.product?.sub_category?.name} />
-                <InfoPair label="SKU Code" value={enquiry.product?.sku_code} />
+                {/* <InfoPair label="SKU Code" value={enquiry.product?.sku_code} /> */}
             </div>
         </DetailSection>
         <DetailSection title="Record Information" icon={<TbCalendar />}>
@@ -474,7 +474,7 @@ const WallEnquiryView = () => {
     }, [id, navigate, dispatch]);
 
     const handleCopyLink = useCallback(() => {
-        const link = `${window.location.origin}/wall-listing/view/${id}`;
+        const link = `${window.location.origin}/sales-leads/wall-item/${id}`;
         navigator.clipboard.writeText(link).then(() => {
             toast.push(<Notification title="Link Copied" type="success" />);
         });
