@@ -1,90 +1,88 @@
 // src/views/your-path/MergedTaskList.tsx
-import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import cloneDeep from 'lodash/cloneDeep'
-import classNames from 'classnames'
-import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import classNames from 'classnames'
 import dayjs from 'dayjs'
+import cloneDeep from 'lodash/cloneDeep'
+import React, { Ref, useCallback, useEffect, useMemo, useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
+import { useNavigate } from 'react-router-dom'
+import { z } from 'zod'
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import Container from '@/components/shared/Container'
 import DataTable from '@/components/shared/DataTable'
-import Tooltip from '@/components/ui/Tooltip'
-import Tag from '@/components/ui/Tag'
-import Button from '@/components/ui/Button'
-import Avatar from '@/components/ui/Avatar'
-import Notification from '@/components/ui/Notification'
-import toast from '@/components/ui/toast'
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import DebouceInput from "@/components/shared/DebouceInput"
 import StickyFooter from '@/components/shared/StickyFooter'
-import DebouceInput from "@/components/shared/DebouceInput";
+import { Checkbox, DatePicker, Dialog, Drawer, Dropdown, Input, Select, Skeleton } from '@/components/ui'; // Skeleton Imported
+import Avatar from '@/components/ui/Avatar'
+import Button from '@/components/ui/Button'
 import {
     Form as UiFormComponents,
     FormItem as UiFormItem,
 } from '@/components/ui/Form'
-import Badge from '@/components/ui/Badge'
-import { DatePicker, Dialog, Dropdown, Select, Input, Drawer, Checkbox, Skeleton } from '@/components/ui' // Skeleton Imported
+import Notification from '@/components/ui/Notification'
+import Tag from '@/components/ui/Tag'
+import toast from '@/components/ui/toast'
+import Tooltip from '@/components/ui/Tooltip'
 
 // Icons
-import {
-    TbPlus,
-    TbPencil,
-    TbChecks,
-    TbSearch,
-    TbCloudUpload,
-    TbFilter,
-    TbX,
-    TbUserCircle,
-    TbEye,
-    TbMail,
-    TbBrandWhatsapp,
-    TbBell,
-    TbUser,
-    TbTagStarred,
-    TbCalendarEvent,
-    TbActivity,
-    TbReload,
-    TbAlignLeft,
-    TbPaperclip,
-    TbMessageCircle,
-    TbColumns,
-    TbTrash
-} from 'react-icons/tb'
 import { BsThreeDotsVertical } from 'react-icons/bs'
+import {
+    TbActivity,
+    TbAlignLeft,
+    TbBell,
+    TbBrandWhatsapp,
+    TbCalendarEvent,
+    TbChecks,
+    TbCloudUpload,
+    TbColumns,
+    TbEye,
+    TbFilter,
+    TbMail,
+    TbMessageCircle,
+    TbPaperclip,
+    TbPencil,
+    TbPlus,
+    TbReload,
+    TbSearch,
+    TbTagStarred,
+    TbTrash,
+    TbUserCircle,
+    TbX
+} from 'react-icons/tb'
 
 // Types
+import type { TableQueries } from '@/@types/common'
 import type {
-    OnSortParam,
     ColumnDef,
+    OnSortParam,
     Row,
 } from '@/components/shared/DataTable'
-import type { TableQueries } from '@/@types/common'
 
 // Redux
-import { useAppDispatch } from '@/reduxtool/store'
-import { shallowEqual, useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 import {
-    getAllTaskAction,
-    submitExportReasonAction,
+    addAllActionAction,
     addNotificationAction,
     addScheduleAction,
-    getAllUsersAction,
-    deleteTaskAction,
-    updateTaskStatusAPI,
-    addAllActionAction,
     // @ts-ignore
-    deleteAllTasksAction,
+    // deleteAllTasksAction,
+    deleteTaskAction,
+    getAllTaskAction,
+    getAllUsersAction,
+    submitExportReasonAction,
+    updateTaskStatusAPI,
 } from '@/reduxtool/master/middleware'
+import { useAppDispatch } from '@/reduxtool/store'
+import { shallowEqual, useSelector } from 'react-redux'
 
 // Utils
-import { encryptStorage } from '@/utils/secureLocalStorage'
-import { config } from 'localforage'
 import { formatCustomDateTime } from '@/utils/formatCustomDateTime'
 import { getMenuRights } from '@/utils/getMenuRights'
+import { encryptStorage } from '@/utils/secureLocalStorage'
+import { config } from 'localforage'
 
 // --- Consolidated Type Definitions ---
 
@@ -137,18 +135,18 @@ const filterValidationSchema = z.object({
 export type FilterFormSchema = z.infer<typeof filterValidationSchema>
 
 const exportReasonSchema = z.object({
-  reason: z.string().refine(
-    (value) => {
-      // Remove all whitespace characters and check the length
-      const withoutSpaces = value.replace(/\s/g, "");
-      return withoutSpaces.length >= 10 && withoutSpaces.length <= 255;
-    },
-    {
-      // You can provide a single message or separate refines for min and max
-      message:
-        "Reason must be between 10 and 255 characters, excluding spaces.",
-    }
-  ),
+    reason: z.string().refine(
+        (value) => {
+            // Remove all whitespace characters and check the length
+            const withoutSpaces = value.replace(/\s/g, "");
+            return withoutSpaces.length >= 10 && withoutSpaces.length <= 255;
+        },
+        {
+            // You can provide a single message or separate refines for min and max
+            message:
+                "Reason must be between 10 and 255 characters, excluding spaces.",
+        }
+    ),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>
 
@@ -1648,7 +1646,7 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
         setIsDeleting(true);
         try {
             // @ts-ignore
-            await dispatch(deleteAllTasksAction({ ids: idsToDelete })).unwrap();
+            // await dispatch(deleteAllTasksAction({ ids: idsToDelete })).unwrap();
             toast.push(
                 <Notification title="Tasks Deleted" type="success">
                     {idsToDelete.length} task(s) have been deleted.
@@ -2267,7 +2265,7 @@ const TaskList = ({ isDashboard }: { isDashboard: boolean }) => {
                             data={pageData}
                             loading={tableLoading}
                             pagingData={{
-                                total: visibleColumns?.length ? total : 0 ,
+                                total: visibleColumns?.length ? total : 0,
                                 pageIndex: tableData.pageIndex as number,
                                 pageSize: tableData.pageSize as number,
                             }}
